@@ -219,20 +219,12 @@
     </joint>
 
     <link name="${arm_id}_link8"/>
-    <link name="camera_link" />x
 
     <joint name="${arm_id}_joint8" type="fixed">
       <origin rpy="0 0 0" xyz="0 0 0.107"/>
       <parent link="${arm_id}_link7"/>
       <child link="${arm_id}_link8"/>
       <axis xyz="0 0 0"/>
-    </joint>
-
-    <joint name="camera_joint" type="fixed">
-      <origin rpy="0 0 0" xyz="0 0 0.0" />
-      <parent link="${arm_id}_link8" />
-      <child link="camera_link" />
-      <axis xyz="0 0 0" />
     </joint>
 
 
