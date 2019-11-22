@@ -1,5 +1,12 @@
+# Backup files
 *~
+
+# Computer-generated files
 build
 devel
+
+# Any moveit_config (project-specific)
 *_moveit_config
+
+# All CMakeLists.txt are allowed except the root (symlinked)
 /CMakeLists.txt
