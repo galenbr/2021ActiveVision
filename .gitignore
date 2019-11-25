@@ -5,6 +5,10 @@
 build
 devel
 
+# Catkin-specific files
+.catkin_workspace
+/src/CMakeLists.txt
+
 # Any moveit_config (project-specific)
 *_moveit_config
 
