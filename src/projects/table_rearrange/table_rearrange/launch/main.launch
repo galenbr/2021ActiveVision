@@ -12,8 +12,10 @@
     <arg name="world_name" value="$(find ref_benchmark)/desc/table.world" />
     <arg name="paused" value="true" />
   </include>
-  <node name="spawn_franka_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -model panda -J panda_joint2 0.785398 -J panda_joint6 0.785398 -J panda_joint7 0.785398" />
-  <node name="spawn_table_urdf" pkg="gazebo_ros" type="spawn_model" args="-file $(find ref_benchmark)/desc/table_surface.urdf -urdf -model table_surface" />
+  <node name="spawn_franka_urdf" pkg="gazebo_ros" type="spawn_model"
+	args="-param robot_description -urdf -model panda -J panda_joint2 0.785398 -J panda_joint6 0.785398 -J panda_joint7 0.785398" />
+  <node name="spawn_table_urdf" pkg="gazebo_ros" type="spawn_model"
+	args="-file $(find ref_benchmark)/desc/table_surface.urdf -urdf -model table_surface" />
   
   <!-- Launch controllers -->
   <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller panda_hand_controller gazebo_ros_control" ns="/panda"/>
@@ -22,5 +24,8 @@
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true">
     <remap from="joint_states" to="panda/joint_states" />
   </node>
+
+  <!-- Start moveit -->
+  <include file="$(find panda_moveit_config)/launch/move_group.launch" />
   
 </launch>

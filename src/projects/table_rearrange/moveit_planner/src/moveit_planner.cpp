@@ -3,10 +3,9 @@
 namespace moveit_planner {  
   // Constructor/Destructor
   MoveitPlanner::MoveitPlanner(ros::NodeHandle& nh, const std::string& arm)
-    : n{nh}, armGroup{arm}, moveGroup{armGroup} {
-      ros::AsyncSpinner spinner(1);
+    : n{nh}, spinner{2}, armGroup{arm}, moveGroup{armGroup} {
       spinner.start();
-      
+
       setupServices();
       setupMoveit();
 
@@ -19,8 +18,15 @@ namespace moveit_planner {
   bool MoveitPlanner::moveToPose(const geometry_msgs::Pose& p, const bool& exe) {
     moveGroup.setPoseTarget(p);
     bool success = (moveGroup.plan(curPlan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-    if(success && exe)
+    ROS_INFO("CHECKING");
+    if(success)
+      ROS_INFO("PLAN SUCCESS");
+    if(!success)
+      ROS_INFO("PLAN FAILED");
+    if(success && exe) {
+      ROS_INFO("EXECUTING PATH");
       moveGroup.execute(curPlan);
+    }
 
     return success;
   }
@@ -60,8 +66,7 @@ namespace moveit_planner {
   }
 
   void MoveitPlanner::setupMoveit() {
-    curState = moveGroup.getCurrentState();
-    jointModelGroup = curState->getJointModelGroup(armGroup);
-    curState->copyJointGroupPositions(jointModelGroup, curJointPositions);
+    ros::spinOnce();
+    // TODO: Add setup
   }
 }

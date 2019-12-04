@@ -41,6 +41,7 @@ namespace moveit_planner {
     std::string getGroup() {return armGroup;};
   private:
     ros::NodeHandle n;
+    ros::AsyncSpinner spinner;
     std::string armGroup;
 
     // Setup
