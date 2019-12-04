@@ -4,28 +4,74 @@
 
 // std includes
 #include <string>
+#include <vector>
+
+// ros includes
+#include <ros/ros.h>
+#include <geometry_msgs/Pose.h>
+#include <geometry_msgs/Point.h>
+#include <geometry_msgs/Quaternion.h>
+#include <geometry_msgs/PoseStamped.h>
+
+// custom srv includes
+#include "moveit_planner/MoveQuat.h"
+#include "moveit_planner/MovePose.h"
+#include "moveit_planner/MoveJoint.h"
+#include "moveit_planner/MovePoint.h"
 
 // moveit includes
-#include <moveit/robot_model_loader/robot_model_loader.h>
-#include <moveit/robot_model/robot_model.h>
+#include "moveit/robot_state/robot_state.h"
+#include "moveit/move_group_interface/move_group_interface.h"
+#include "moveit/planning_scene_interface/planning_scene_interface.h"
 
 namespace moveit_planner {
 
-  // Class containing motion-planning methods (uses moveit C++ API)
-  // NOTE: Requires moveit to be launched
   class MoveitPlanner {
   public:
-    MoveitPlanner(const std::string&);
+    MoveitPlanner(ros::NodeHandle&, const std::string& arm);
     ~MoveitPlanner();
 
+    // Movement commands
+    bool moveToOrientation(const geometry_msgs::Quaternion& r, bool exe);
+    bool moveToPosition(const geometry_msgs::Point& p, bool exe);
+    bool moveToPose(const geometry_msgs::Pose& p, const bool& exe);
+    bool moveToJointSpace(const std::vector<double>& jointPositions, bool exe);
+
     // Getters/Setters
-    std::string getDescription() {return robot_description;};
+    std::string getGroup() {return armGroup;};
   private:
-    std::string robot_description;
+    ros::NodeHandle n;
+    std::string armGroup;
+
+    // Setup
+    void setupServices();
+    void setupMoveit();
 
     // moveit stuff
-    robot_model_loader::RobotModelLoader loader;
-    robot_model::RobotModelPtr modelPtr;
+    moveit::planning_interface::MoveGroupInterface moveGroup;
+    moveit::planning_interface::MoveGroupInterface::Plan curPlan;
+    moveit::core::RobotStatePtr curState;
+    const robot_state::JointModelGroup* jointModelGroup;
+    std::vector<double> curJointPositions;
+
+    // Services/Topics
+    ros::ServiceServer orientationClient;
+    ros::ServiceServer positionClient;
+    ros::ServiceServer poseClient;
+    ros::ServiceServer jsClient;
+
+    // Callbacks
+    bool orientationClientCallback(moveit_planner::MoveQuat::Request& req,
+				   moveit_planner::MoveQuat::Response& res);
+    bool positionClientCallback(moveit_planner::MovePoint::Request& req,
+				moveit_planner::MovePoint::Response& res);
+    bool poseClientCallback(moveit_planner::MovePose::Request& req,
+			    moveit_planner::MovePose::Response& res);
+    bool jsClientCallback(moveit_planner::MoveJoint::Request& req,
+			  moveit_planner::MoveJoint::Response& res);
+
+    // Misc
+    bool checkSuccess();
   };
 }
 

@@ -1,5 +1,7 @@
 # Backup files
 *~
+\#*
+\.#*
 
 # Computer-generated files
 build
