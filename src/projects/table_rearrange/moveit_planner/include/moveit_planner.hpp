@@ -16,6 +16,7 @@
 // custom srv includes
 #include "moveit_planner/MoveQuat.h"
 #include "moveit_planner/MovePose.h"
+#include "moveit_planner/MoveCart.h"
 #include "moveit_planner/MoveJoint.h"
 #include "moveit_planner/MovePoint.h"
 
@@ -32,10 +33,11 @@ namespace moveit_planner {
     ~MoveitPlanner();
 
     // Movement commands
-    bool moveToOrientation(const geometry_msgs::Quaternion& r, bool exe);
-    bool moveToPosition(const geometry_msgs::Point& p, bool exe);
+    // bool moveToOrientation(const geometry_msgs::Quaternion& r, bool exe);
+    // bool moveToPosition(const geometry_msgs::Point& p, bool exe);
     bool moveToPose(const geometry_msgs::Pose& p, const bool& exe);
     bool moveToJointSpace(const std::vector<double>& jointPositions, bool exe);
+    bool cartesianMove(const std::vector<geometry_msgs::Pose>& p, const bool& exe);
 
     // Getters/Setters
     std::string getGroup() {return armGroup;};
@@ -56,23 +58,22 @@ namespace moveit_planner {
     std::vector<double> curJointPositions;
 
     // Services/Topics
-    ros::ServiceServer orientationClient;
-    ros::ServiceServer positionClient;
     ros::ServiceServer poseClient;
     ros::ServiceServer jsClient;
+    ros::ServiceServer cartesianClient;
 
     // Callbacks
-    bool orientationClientCallback(moveit_planner::MoveQuat::Request& req,
-				   moveit_planner::MoveQuat::Response& res);
-    bool positionClientCallback(moveit_planner::MovePoint::Request& req,
-				moveit_planner::MovePoint::Response& res);
     bool poseClientCallback(moveit_planner::MovePose::Request& req,
 			    moveit_planner::MovePose::Response& res);
     bool jsClientCallback(moveit_planner::MoveJoint::Request& req,
 			  moveit_planner::MoveJoint::Response& res);
+    bool cartesianMoveCallback(moveit_planner::MoveCart::Request& req,
+			       moveit_planner::MoveCart::Response& res);
 
     // Misc
     bool checkSuccess();
+    double eef_step;
+    double jump_threshold;
   };
 }
 

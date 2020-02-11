@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_ros_planning_interface
   moveit_ros_move_group
   geometry_msgs
+  moveit_msgs
 )
 
 add_service_files(
@@ -16,6 +17,7 @@ add_service_files(
   MoveQuat.srv
   MovePose.srv
   MoveJoint.srv
+  MoveCart.srv
 )
 
 generate_messages(
