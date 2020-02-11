@@ -4,6 +4,7 @@
 \.#*
 
 # Computer-generated files
+install
 build
 devel
 
