@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<robot name="mug">
+  <link name="world" />
+
+  <link name="mug">
+    <visual>
+      <geometry>
+	<mesh filename="package://ycb_models/mesh/mug.dae" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+	<mesh filename="package://ycb_models/mesh/mug.dae" />
+      </geometry>
+    </collision>
+    <!-- PLACEHOLDER VALUES -->
+    <inertial>
+      <mass value="0.1" />
+      <inertia ixx="0.1" ixy="0.1" ixz="0.1"
+	       iyy="0.1" iyz="0.1"
+	       izz="0.1" />
+    </inertial>
+  </link>
+
+  <joint name="table_mug" type="floating">
+    <origin rpy="0 0 0" xyz="0 0 0" />
+    <parent link="world" />
+    <child link="mug" />
+  </joint>
+
+</robot>
