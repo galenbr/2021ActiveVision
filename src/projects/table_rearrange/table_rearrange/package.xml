@@ -10,8 +10,16 @@
   <buildtool_depend>catkin</buildtool_depend>
 
   <build_depend>roscpp</build_depend>
+  <build_depend>moveit_planner</build_depend>
+  <build_depend>randomizer</build_depend>
+  <build_depend>pcl_recorder</build_depend>
 
   <exec_depend>roscpp</exec_depend>
+  <exec_depend>moveit_planner</exec_depend>
+  <exec_depend>randomizer</exec_depend>
+  <exec_depend>ycb_models</exec_depend>
+  <exec_depend>pcl_recorder</exec_depend>
+  <exec_depend>pcl_processor</exec_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
