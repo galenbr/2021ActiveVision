@@ -1,15 +1,16 @@
 <?xml version="1.0"?>
 <robot name="table_surface">
   <link name="world" />
+
   <link name="table">
     <visual>
       <geometry>
-	<box size="0.5 1.5 0.05" />
+	<box size="0.6 1 0.05" />
       </geometry>
     </visual>
     <collision>
       <geometry>
-	<box size="0.5 1.5 0.05" />
+	<box size="0.6 1 0.05" />
       </geometry>
     </collision>
     <inertial>
@@ -17,9 +18,11 @@
       <inertia ixx="100" ixy="0" ixz="0" iyy="100" iyz="0" izz="100" />
     </inertial>
   </link>
+
   <joint name="fixed" type="fixed">
     <origin rpy="0 0 0" xyz="0.5 0 0.25" />
     <parent link="world" />
     <child link="table" />
   </joint>
+
 </robot>
