@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.1.0)
-
+## Compile as C++11, supported in ROS Kinetic and newer
+ add_compile_options(-std=c++11)
+ 
 project(ref_benchmark)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
