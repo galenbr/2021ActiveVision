@@ -1,0 +1,66 @@
+cmake_minimum_required(VERSION 2.8.3)
+project(piercing_experiments)
+
+## Compile as C++11, supported in ROS Kinetic and newer
+ add_compile_options(-std=c++11)
+
+find_package(catkin REQUIRED COMPONENTS
+  roscpp
+  rospy
+  std_msgs
+  moveit_core
+  moveit_ros_perception
+  moveit_ros_planning_interface
+  moveit_visual_tools
+  moveit_msgs
+  pluginlib
+  geometry_msgs
+  rosbag
+)
+find_package(Boost REQUIRED)
+## Generate messages in the 'msg' folder
+# add_message_files(
+#   FILES
+#   Message1.msg
+#   Message2.msg
+# )
+
+## Generate services in the 'srv' folder
+ add_service_files(
+   FILES
+   PrePose.srv
+   CartesianPath.srv
+ )
+
+## Generate actions in the 'action' folder
+# add_action_files(
+#   FILES
+#   Action1.action
+#   Action2.action
+# )
+
+## Generate added messages and services with any dependencies listed here
+ generate_messages(
+   DEPENDENCIES
+   std_msgs
+   geometry_msgs
+ )
+
+catkin_package()
+
+include_directories(
+  include
+  ${catkin_INCLUDE_DIRS}
+)
+
+ add_executable(main_pierce_node src/main_pierce.cpp)
+ add_executable(move_node src/move.cpp)
+ add_executable(record_node src/record.cpp)
+
+ add_dependencies(move_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+ add_dependencies(main_pierce_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+ add_dependencies(record_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+ target_link_libraries(main_pierce_node ${catkin_LIBRARIES})
+ target_link_libraries(move_node ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+ target_link_libraries(record_node ${catkin_LIBRARIES})
