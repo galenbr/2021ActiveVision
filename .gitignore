@@ -17,3 +17,6 @@ devel
 
 # All CMakeLists.txt are allowed except the root (symlinked)
 /CMakeLists.txt
+
+#vscode files
+\.vscode
