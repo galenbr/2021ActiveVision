@@ -19,4 +19,4 @@ devel
 /CMakeLists.txt
 
 #vscode files
-\.vscode
+.vscode/
