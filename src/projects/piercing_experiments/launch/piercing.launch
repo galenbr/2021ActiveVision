@@ -1,5 +1,4 @@
 <launch>
-
 <!--This Launch file launches the piercing experiment framework-->
 
 <!--This puts the yaml file on the param server-->
