@@ -1,0 +1,35 @@
+#!/bin/sh
+
+export folder_path=$HOME"/FF/"
+export vid_path=$folder_path"videos/";
+export bag_path=$folder_path"square/hybrid/exp"
+
+for i in 1 2 3
+do
+# Run the launch file
+cd ~/mer_lab &&
+roslaunch bag_extractor extract.launch ARG_NAME:=$bag_path$i/test.bag &&
+# TBD: Need to give it args to different bag files
+
+#Create a folder to save files
+cd ~/FF/ &&
+mkdir exp_frames_$i &&
+
+# Move images from the .ros folder to a folder
+mv ~/.ros/frame*.jpg exp_frames_$i &&
+
+# Run the stitching process
+cd ~/FF/exp_frames_$i &&
+ffmpeg -framerate 25 -i frame%04d.jpg -c:v libx264 -profile:v high -crf 20 -pix_fmt yuv420p output_$i.mp4 &&
+
+mv output_$i.mp4 $vid_path
+# export topics to csv
+rostopic echo -b $bag_path$i/test.bag -p /object_position >~/FF/csv/exp$i.csv &&
+
+# Delete extracted frames
+cd ~ &&
+rm -r ~/FF/exp_frames_$i &&
+
+# Run MATLAB scripts
+echo "EXP $i DONE!"
+done
