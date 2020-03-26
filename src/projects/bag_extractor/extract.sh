@@ -3,15 +3,15 @@
 export folder_path=$HOME"/FF/"
 export vid_path=$folder_path"videos/";
 #export bag_path=$folder_path"square/hybrid/exp"
-export bag_path=$folder_path"square/planner/exp"
+#export bag_path=$folder_path"square/planner/exp"
 #export bag_path=$folder_path"square/visual/exp"
+export bag_path=$folder_path"square/try/exp"
 
 for i in 1 2 3 4
 do
 # Run the launch file
 cd ~/mer_lab &&
 roslaunch bag_extractor extract.launch ARG_NAME:=$bag_path$i/test.bag &&
-# TBD: Need to give it args to different bag files
 
 #Create a folder to save files
 cd ~/FF/ &&
