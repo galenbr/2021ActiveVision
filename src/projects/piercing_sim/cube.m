@@ -13,7 +13,7 @@ classdef cube
             obj.mass = 0.05;
             obj.F = 1;
             obj.mg = obj.mass*10;
-            obj.piercing_angles = [15,30,45,60,90];
+            obj.piercing_angles = [15,21,30,45,60,90];
         end  % function
 %% Generate Force Function
         function vectors = generate_force(obj)
@@ -70,16 +70,19 @@ classdef cube
             piercing_angle = 0; max = 0;
             % Need Cube and force properties
 
-            %while(~slide)
+            while(~slide)
                 % Decompose Forces ie Calculate Force Vectors
+                vec = [sind(piercing_angle), 0 , -cosd(piercing_angle)];
+                force_vec = obj.F*vec;
                 % Calculate Static Friction
-    
-                %if(force_vectors(i,1)>-static_friction(1))
-                    %slide = true;
-                %else
-                %    continue;
-                %end
-            %end
+                static_friction = [-obj.u_s*obj.mg+obj.u_s*force_vec(3),0,0]; %Assuming friction is always in -x since block is always pushed in +x
+                if(force_vec(1)>-static_friction(1))
+                    slide = true;
+                else
+                    max = piercing_angle;
+                    piercing_angle = piercing_angle + 0.25;
+                end
+            end
         
         end  % function
     end  % methods
