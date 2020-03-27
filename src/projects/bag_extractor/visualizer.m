@@ -18,7 +18,6 @@ str_mod_act = strcat(str_,x);
 
 pos = readmatrix(str_mod_pos);
 act = readmatrix(str_mod_act);
-
 goal = readmatrix('/home/agandhi2/FF/csv/goal.csv');
 
 % Size of Matrix
@@ -54,7 +53,7 @@ for i = 1 : act_size(1)
 end
 
 % Computing Experiment Time
-exp_time = (start_time - act(1,1))/(10^9);
+exp_time = (start_time - act(1,1))/(10^9); % Converting to Seconds
 
 % Computing Path Length
 for len = 1:(pos_size-1)
@@ -66,8 +65,11 @@ for len = 1:(pos_size-1)
    plength = plength + norm(dx, dy);
    end
 end
-plength = plength*1000;
-% Write Results to File
+plength = plength*1000; % Converting to mm
+
+% Concatenate Results Matrix
 result(exp,:) = [exp, exp_time, error, plength];
 end
+
+% Write Results to File
 writematrix(result,'/home/agandhi2/FF/result.csv');

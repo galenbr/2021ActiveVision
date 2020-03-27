@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<robot name="padlock">
+  <link name="world" />
+
+  <link name="padlock">
+    <visual>
+      <geometry>
+	<mesh filename="package://lock_key/mesh/padlock.dae" />
+      </geometry>
+      <!--Need to create my own mesh files-->
+    </visual>
+    <collision>
+      <geometry>
+	<mesh filename="package://lock_key/mesh/padlock.dae" />
+      </geometry>
+    </collision>
+    <!-- PLACEHOLDER VALUES -->
+    <inertial>
+      <mass value="0.1" />
+      <inertia ixx="0.1" ixy="0.1" ixz="0.1"
+	       iyy="0.1" iyz="0.1"
+	       izz="0.1" />
+    </inertial>
+  </link>
+
+  <joint name="table_padlock" type="floating">
+    <origin rpy="0 0 0" xyz="0 0 0" />
+    <parent link="world" />
+    <child link="padlock" />
+  </joint>
+
+</robot>
