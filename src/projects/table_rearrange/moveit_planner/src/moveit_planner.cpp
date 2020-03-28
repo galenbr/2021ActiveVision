@@ -20,7 +20,10 @@ namespace moveit_planner {
 
   bool MoveitPlanner::moveToPose(const geometry_msgs::Pose& p, const bool& exe) {
     moveGroup.setPoseTarget(p);
-    bool success = (moveGroup.plan(curPlan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    auto errCode = moveGroup.plan(curPlan);
+    bool success = (errCode == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    if(!success)
+      ROS_WARN_STREAM("ERROR MOVING TO POSE " << errCode);
     if(success && exe)
       moveGroup.execute(curPlan);
 
@@ -35,7 +38,10 @@ namespace moveit_planner {
     }
     
     moveGroup.setJointValueTarget(jointPositions);
-    bool success = (moveGroup.plan(curPlan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    auto errCode = moveGroup.plan(curPlan);
+    bool success = (errCode == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    if(!success)
+      ROS_WARN_STREAM("ERROR MOVING TO JOINT " << errCode);
     if(success && exe)
       moveGroup.execute(curPlan);
 
@@ -72,6 +78,28 @@ namespace moveit_planner {
 					    moveit_planner::MoveCart::Response& res) {
     return cartesianMove(req.val, req.execute);
   }
+  bool MoveitPlanner::distanceAwayCallback(moveit_planner::MoveAway::Request& req,
+					   moveit_planner::MoveAway::Response& res) {
+    geometry_msgs::Quaternion desiredQuat = req.pose.orientation;
+
+    // Calculate z-axis direction
+    geometry_msgs::Point desiredZ;
+    desiredZ.x = 2*desiredQuat.x*desiredQuat.z + 2*desiredQuat.w*desiredQuat.y;
+    desiredZ.y = 2*desiredQuat.y*desiredQuat.z - 2*desiredQuat.w*desiredQuat.x;
+    desiredZ.z = 1 - 2*desiredQuat.x*desiredQuat.x - 2*desiredQuat.y*desiredQuat.y;
+
+    // Calculate new pose
+    geometry_msgs::Pose targetPose = req.pose;
+    targetPose.position.x = targetPose.position.x - desiredZ.x * req.distance;
+    targetPose.position.y = targetPose.position.y - desiredZ.y * req.distance;
+    targetPose.position.z = targetPose.position.z - desiredZ.z * req.distance;
+
+    // Setup response
+    res.awayPose = targetPose;
+
+    // Send to moveit
+    return moveToPose(targetPose, req.execute);
+  }
 
   // Private
   void MoveitPlanner::setupServices() {
@@ -85,6 +113,9 @@ namespace moveit_planner {
     cartesianClient = n.advertiseService("cartesian_move",
 					 &MoveitPlanner::cartesianMoveCallback,
 					 this);
+    distanceAwayClient = n.advertiseService("move_away_point",
+					    &MoveitPlanner::distanceAwayCallback,
+					    this);
   }
 
   void MoveitPlanner::setupMoveit() {

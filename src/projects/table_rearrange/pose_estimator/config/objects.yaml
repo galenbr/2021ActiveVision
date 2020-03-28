@@ -1,7 +1,2 @@
 table_objects:
-	# List of names used to refer to the objects
-	names:
-	  - mug
-	# Actual list of objects with all details necessary
-	objects:
-	  - mug
+  - mug

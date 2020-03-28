@@ -19,6 +19,7 @@
 #include "moveit_planner/MoveCart.h"
 #include "moveit_planner/MoveJoint.h"
 #include "moveit_planner/MovePoint.h"
+#include "moveit_planner/MoveAway.h"
 
 // moveit includes
 #include "moveit/robot_state/robot_state.h"
@@ -61,6 +62,7 @@ namespace moveit_planner {
     ros::ServiceServer poseClient;
     ros::ServiceServer jsClient;
     ros::ServiceServer cartesianClient;
+    ros::ServiceServer distanceAwayClient;
 
     // Callbacks
     bool poseClientCallback(moveit_planner::MovePose::Request& req,
@@ -69,6 +71,8 @@ namespace moveit_planner {
 			  moveit_planner::MoveJoint::Response& res);
     bool cartesianMoveCallback(moveit_planner::MoveCart::Request& req,
 			       moveit_planner::MoveCart::Response& res);
+    bool distanceAwayCallback(moveit_planner::MoveAway::Request& req,
+			      moveit_planner::MoveAway::Response& res);
 
     // Misc
     bool checkSuccess();

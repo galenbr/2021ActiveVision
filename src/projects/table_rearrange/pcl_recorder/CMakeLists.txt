@@ -9,10 +9,13 @@ find_package(catkin REQUIRED COMPONENTS
   message_runtime
   sensor_msgs
 )
+find_package(octomap REQUIRED)
 
 add_service_files(
   FILES
   GetPointCloud.srv
+  BeginPointCloudRange.srv
+  EndPointCloudRange.srv
 )
 
 generate_messages(
@@ -23,9 +26,9 @@ generate_messages(
 catkin_package()
 
 include_directories(
-  ${catkin_INCLUDE_DIRS}
+  ${catkin_INCLUDE_DIRS} ${OCTOMAP_INCLUDE_DIRS}
 )
 
 add_executable(pcl_recorder_node src/main.cpp)
-target_link_libraries(pcl_recorder_node ${catkin_LIBRARIES})
+target_link_libraries(pcl_recorder_node ${catkin_LIBRARIES} ${OCTOMAP_LIBRARIES})
 add_dependencies(pcl_recorder_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
