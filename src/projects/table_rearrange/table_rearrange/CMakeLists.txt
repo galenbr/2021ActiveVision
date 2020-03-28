@@ -12,10 +12,11 @@ find_package(catkin REQUIRED COMPONENTS
 	roscpp
 	moveit_planner
 	sensor_msgs
+	pose_estimator
 )
 
 catkin_package(
-	CATKIN_DEPENDS roscpp moveit_planner randomizer pcl_recorder
+	CATKIN_DEPENDS roscpp moveit_planner randomizer pcl_recorder pose_estimator
 )
 
 include_directories(${catkin_INCLUDE_DIRS} ${QT_INCLUDE_DIRS} include forms)

@@ -24,20 +24,20 @@
   	args="-file $(find ref_benchmark)/desc/table_surface.urdf -urdf -model table_surface" />
   <node name="spawn_mug_urdf" pkg="gazebo_ros" type="spawn_model"
   	args="-file $(find ycb_models)/desc/mug.urdf -urdf -model mug -z $(arg table_height) -x $(arg table_center)" />
+  <!-- <node name="spawn_master_chef_can_urdf" pkg="gazebo_ros" type="spawn_model" -->
+  <!-- 	args="-file $(find ycb_models)/desc/master_chef_can.urdf -urdf -model master_chef_can -z $(arg table_height) -x $(arg table_center)" /> -->
   
   <!-- Launch controllers -->
-  <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller panda_hand_controller gazebo_ros_control" ns="/panda"/>
-
+  <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
+	output="screen" args="joint_state_controller gazebo_ros_control
+			      panda_finger1_controller panda_finger2_controller" ns="/panda" />
   <!-- Start publishing to /tf for rviz -->
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true">
     <remap from="joint_states" to="panda/joint_states" />
   </node>
 
   <!-- Start moveit -->
-  <include file="$(find panda_moveit_config)/launch/move_group.launch" />
-
-  <node name="table_randomizer" pkg="randomizer" type="randomizer_node"
-  	args="$(arg table_height) $(arg table_center) $(arg table_width) $(arg table_length)" />
+  <include file="$(find ref_benchmark_moveit_config)/launch/move_group.launch" />
 
   <!-- Start rviz -->
   <!-- TODO: Move to another file -->
