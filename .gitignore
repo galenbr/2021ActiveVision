@@ -12,9 +12,6 @@ devel
 .catkin_workspace
 /src/CMakeLists.txt
 
-# Any moveit_config (project-specific)
-*_moveit_config
-
 # All CMakeLists.txt are allowed except the root (symlinked)
 /CMakeLists.txt
 
