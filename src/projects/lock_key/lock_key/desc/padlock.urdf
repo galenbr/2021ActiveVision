@@ -7,7 +7,9 @@
       <geometry>
 	<mesh filename="package://lock_key/mesh/lock.STL" />
       </geometry>
-      <!--Need to create my own mesh files-->
+            <material name="blue">
+            <color rgba = "0 0 0.8 1"/>
+            </material>
     </visual>
     <collision>
       <geometry>
