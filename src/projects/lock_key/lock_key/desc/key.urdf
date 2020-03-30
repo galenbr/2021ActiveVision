@@ -22,9 +22,11 @@
 	       izz="0.1" />
     </inertial>
   </link>
-
+  <gazebo reference = "key">
+  <material> Gazebo/Blue</material>
+  </gazebo>
   <joint name="table_key" type="floating">
-    <origin rpy="0 0 0" xyz="0 0 0.05" />
+    <origin rpy="1.57 0 1.57" xyz="-0.32  0.15 0" />
     <parent link="world" />
     <child link="key" />
   </joint>

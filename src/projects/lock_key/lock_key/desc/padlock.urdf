@@ -5,15 +5,13 @@
   <link name="padlock">
     <visual>
       <geometry>
-	<mesh filename="package://lock_key/mesh/lock.STL" />
+	    <mesh filename="package://lock_key/mesh/lock.STL" />
       </geometry>
-            <material name="blue">
-            <color rgba = "0 0 0.8 1"/>
-            </material>
+
     </visual>
     <collision>
       <geometry>
-	<mesh filename="package://lock_key/mesh/lock.STL" />
+	    <mesh filename="package://lock_key/mesh/lock.STL" />
       </geometry>
     </collision>
     <!-- PLACEHOLDER VALUES -->
@@ -24,9 +22,11 @@
 	       izz="0.1" />
     </inertial>
   </link>
-
+      <gazebo reference="padlock">
+      <material>Gazebo/Green</material>
+      </gazebo>
   <joint name="table_padlock" type="floating">
-    <origin rpy="0 0 0" xyz="0 0 0" />
+    <origin rpy="0 0 1.57" xyz="-0.1 0 0" />
     <parent link="world" />
     <child link="padlock" />
   </joint>
