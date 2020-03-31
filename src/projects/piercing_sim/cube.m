@@ -25,8 +25,13 @@ classdef cube
 %% Simulation Function        
         function simulator(obj,vectors)
             force_vectors = obj.F*vectors; % Decompose force vectors along co-ordinate axes
-            
             %% Compute forces
+            
+            % Recording Video
+            v = VideoWriter('trial.avi')
+            v.FrameRate = 2
+            open(v)
+            
             for i = 1:length(force_vectors)
                 static_friction = [-obj.u_s*obj.mg+obj.u_s*force_vectors(i,3),0,0]; %Assuming friction is always in -x since block is always pushed in +x
             if(force_vectors(i,1)>-static_friction(1))
@@ -42,14 +47,14 @@ classdef cube
             initial_vel = 0;acceleration_x = acceleration(1);
             %center_cube = [1,1,2];
             if(acceleration_x == 0)
-                end_time = 0.4;
+                end_time = 1;
             else
                 end_time = 1;
             end
             for time = 0:0.2:end_time
                 clf('reset');
-                figure(1)
-                set(gcf,'Position',[0, 0, 1000,1000])
+                figure('visible','off')
+                %set(gcf,'Position',[0, 0, 1000,1000])
                 title("Trial:"+i)
                 axis([0 20 -15 15 0 20])
                 grid on
@@ -60,13 +65,18 @@ classdef cube
                 q = quiver3(center_cube(1),center_cube(2),center_cube(3),vectors(i,1),vectors(i,2),vectors(i,3));
                 q.LineWidth = 5;
                 plotcube((obj.size*[1,1,1]),[s_x,0,0],0.8,[1,0,0]);
-                pause(.5)
+                F = getframe(gcf);
+                writeVideo(v,F)
+                %pause(.5)
             end
             end
+            close(v)
+            %figure()
+            %movie(F,1,2)
         end  % function
 %% Max Piercing Angle Function
-        function max = max_piercing_angle(obj)
-            slide = false;
+        function max = max_piercing_angle(obj,u)
+            slide = false; u_s = u;
             piercing_angle = 0; max = 0;
             % Need Cube and force properties
 
@@ -75,7 +85,7 @@ classdef cube
                 vec = [sind(piercing_angle), 0 , -cosd(piercing_angle)];
                 force_vec = obj.F*vec;
                 % Calculate Static Friction
-                static_friction = [-obj.u_s*obj.mg+obj.u_s*force_vec(3),0,0]; %Assuming friction is always in -x since block is always pushed in +x
+                static_friction = [-u_s*obj.mg+u_s*force_vec(3),0,0]; %Assuming friction is always in -x since block is always pushed in +x
                 if(force_vec(1)>-static_friction(1))
                     slide = true;
                 else
@@ -85,5 +95,22 @@ classdef cube
             end
         
         end  % function
+%% Max force before Sliding
+           function max_f = max_force(obj,p)
+           max_f = 0; slide = false; piercing_angle = p;
+           while(~slide)
+                   max_f = max_f + 0.01;
+               % Decompose Forces ie Calculate Force Vectors
+               vec = [sind(piercing_angle), 0 , -cosd(piercing_angle)];
+               force_vec = max_f*vec;
+               % Calculate Static Friction
+               static_friction = [-obj.u_s*obj.mg+obj.u_s*force_vec(3),0,0]; %Assuming friction is always in -x since block is always pushed in +x
+               if(force_vec(1)<-static_friction(1))
+                   continue;
+               else
+                   slide = true;
+               end  
+           end  % while
+           end  % function
     end  % methods
 end  % classdef
