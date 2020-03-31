@@ -5,10 +5,16 @@
 
 class PCLProcessor {
 public:
-  PCLProcessor(NodeHandle& n);
-  ~PCLProcessor();
+  PCLProcessor(ros::NodeHandle& n) : nh{n} {
+    setupServices();
+  };
+  ~PCLProcessor() {};
 
   // PCL Functions
 private:
-  NodeHandle nh;
+  ros::NodeHandle nh;
+
+  void setupServices() {
+    
+  }
 };

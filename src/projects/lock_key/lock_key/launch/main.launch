@@ -23,8 +23,10 @@
   <node name="spawn_table_urdf" pkg="gazebo_ros" type="spawn_model"
   	args="-file $(find lock_key)/desc/surface.urdf -urdf -model table_surface" />
   <node name="spawn_padlock_urdf" pkg="gazebo_ros" type="spawn_model"
-  	args="-file $(find lock_key)/desc/padlock.urdf -urdf -model mug -z $(arg table_height) -x $(arg table_center)" />
-  
+  	args="-file $(find lock_key)/desc/padlock.urdf -urdf -model padlock -z $(arg table_height) -x $(arg table_center)" />
+  <node name="spawn_key_urdf" pkg="gazebo_ros" type="spawn_model"
+  	args="-file $(find lock_key)/desc/key.urdf -urdf -model key -z $(arg table_height) -x $(arg table_center)" />
+
   <!-- Launch controllers -->
   <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller panda_hand_controller gazebo_ros_control" ns="/panda"/>
 

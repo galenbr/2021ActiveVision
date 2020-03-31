@@ -9,11 +9,17 @@ find_package(catkin REQUIRED COMPONENTS
   message_runtime
   sensor_msgs
   geometry_msgs
+  gazebo_msgs
 )
 
 add_service_files(
   FILES
   PoseEstimation.srv
+)
+
+add_message_files(
+  FILES
+  GazeboPoseEstimation.msg
 )
 
 generate_messages(

@@ -20,6 +20,7 @@ add_service_files(
   MovePose.srv
   MoveJoint.srv
   MoveCart.srv
+  MoveAway.srv
 )
 
 generate_messages(

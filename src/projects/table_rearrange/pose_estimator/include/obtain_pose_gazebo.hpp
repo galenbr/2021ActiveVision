@@ -1,5 +1,6 @@
 #include "ros/ros.h"
 
+#include "gazebo_msgs/ModelStates.h"
 #include "pose_estimator/PoseEstimation.h"
 
 #include <vector>
@@ -7,49 +8,56 @@
 
 class ObtainPoseGazebo {
 public:
-  ObtainPoseGazebo(ros::NodeHandle& n) : nh{n} {
-    if(!setupParameters())	// Parameters could not be setup, do not spin()
-      ROS_ERROR("Failed to setup parameters");
-    else {			// Setup remaining services and spin()
-      setupServices();
-      ros::spin();
-    }
+  ObtainPoseGazebo(ros::NodeHandle& n) : nh{n}, topic_name{"/pose_estimator/gazebo_pose"} {
+    setupTopics();
+
+    publishData();
   }
   ~ObtainPoseGazebo() {}	// Default destructor
 
   // Callbacks
-  bool poseEstimatorCallback(pose_estimator::PoseEstimation::Request& req,
-			     pose_estimator::PoseEstimation::Response& res) {
-    // TODO: Estimate and return pose
-    return false;		// TEMP
-  }
+  void receivedGazeboPoses(gazebo_msgs::ModelStates states) {
+    for(int i = 0; i < object_names.size(); ++i)
+      for(int j = 0; j < states.name.size(); ++j)
+	if(object_names[i] == states.name[j])
+	  object_poses[i] = states.pose[j];
+  };
+  bool getPoses(pose_estimator::PoseEstimation::Request &req,
+		pose_estimator::PoseEstimation::Response &res) {
+    // Do not need point cloud data
+    res.detected_object_names = object_names;
+    res.detected_object_poses = object_poses;
 
-private:
-  // NodeHandle
-  ros::NodeHandle nh;
-  ros::ServiceServer poseEstimatorServer;
-
-  // Setup
-  void setupServices() {
-    poseEstimatorServer = nh.advertiseService(topic_name,
-					      &ObtainPoseGazebo::poseEstimatorCallback,
-					      this);
-  }
-  bool setupParameters() {
-    if(!nh.getParam("/table_objects/names", obj_names)) {
-      ROS_ERROR("Failed to get /table_objects/names");
-      return false;
-    }
-    if(!nh.getParam("/pose_estimator_topic", topic_name)) {
-      ROS_ERROR("Failed to get /pose_estimator_topic");
-      return false;
-    }
-
-    ROS_INFO_STREAM("Publishing pose_estimation onto " << topic_name);
     return true;
   }
 
-  // Variables
-  std::vector<std::string> obj_names;
+private:
+  ros::NodeHandle nh;
+  ros::Subscriber gazeboSub;
+  ros::ServiceServer modelPoseServer;
+  
   std::string topic_name;
+  std::vector<std::string> object_names;
+  std::vector<geometry_msgs::Pose> object_poses;
+
+  // Setup
+  void setupTopics() {
+    nh.getParam("/table_objects", object_names); // Load desired objects from param server
+    for(int i = 0; i < object_names.size(); ++i)
+      object_poses.push_back(geometry_msgs::Pose{});
+
+    gazeboSub = nh.subscribe("/gazebo/model_states", 1, &ObtainPoseGazebo::receivedGazeboPoses, this);
+    modelPoseServer = nh.advertiseService(topic_name, &ObtainPoseGazebo::getPoses, this);
+  }
+
+  // Actual loop
+  void publishData() {
+    ros::Rate r(30);
+    while(ros::ok()) {
+      ros::spinOnce();
+      // Publish pose information
+      r.sleep();
+    }
+  }
+
 };

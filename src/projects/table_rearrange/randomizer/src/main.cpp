@@ -15,7 +15,7 @@
 #define PI 3.14159265
 
 // List of items to randomize
-std::vector<std::string> items{"mug::mug"};
+std::vector<std::string> items{"mug::mug", "master_chef_can::master_chef_can"};
 std::vector<geometry_msgs::Pose> initial_states{};
 
 // Table params
