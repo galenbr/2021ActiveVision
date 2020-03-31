@@ -18,5 +18,5 @@ devel
 #vscode files
 .vscode/
 
-#Matlab Video File
-/src/projects/piercing_sim/trial.avi
+#Matlab Results
+/src/projects/piercing_sim/Results
