@@ -116,21 +116,21 @@ function vectors = food_fork_forces(obj)
     end  % for loop
 end  % function
 %% Food Fork Interaction Simulation function
-function fall = fall_checker(obj,vector,u)
-    fall = true; u_s = u;
-    force_vector = obj.mg*vector;
-    %for i = 1:length(obj.piercing_angles)
-        static_friction = [u_s*force_vector(3),0,0];
-        if(force_vector(1)>-static_friction(1))
+function food_fork_simulation(obj,vectors)
+    fall = false;
+    force_vectors = obj.mg*vectors;
+    for i = 1:length(obj.piercing_angles)
+        static_friction = [-obj.u_s*force_vectors(i,3),0,0];
+        if(force_vectors(i,1)>-static_friction(i,1))
             % cube falls
-            fall = true;
+            fall = true
 %             sliding_friction = [-obj.u_r*force_vectors(i,3),0,0];
 %             resultant_force = force_vectors(i) + sliding_friction;
 %             acceleration = resultant_force/obj.mass;
         else
             % cube does not fall
             fall = false;
-%            acceleration = [0,0,0];
+            acceleration = [0,0,0];
         end  % if-else
 %             %% Simulate motion of Cube
 %     initial_vel = 0; end_time = 1; world_acceleration_z = acceleration(1);        
@@ -144,7 +144,9 @@ function fall = fall_checker(obj,vector,u)
 %         hold on
 %         s_x = initial_velocity
 %     end  % simulation loop
-    %end  % for loop
+    end  % for loop
+
+    
 end  % function
     end  % methods
 end  % classdef

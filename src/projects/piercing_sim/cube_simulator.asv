@@ -5,9 +5,9 @@ vectors = c.generate_force();
 % Run simulations
 %c.food_plate_simulator(vectors);
 %% Max piercing angle trend along various static friction values
-u = 0.1:0.02:0.9;
-max_p = 1:41;
-for i = 1:41;
+u = 0.1:0.05:0.9;
+max_p = 1:17;
+for i = 1:17;
     max_p(i) = c.max_piercing_angle(u(i));
 end
 
@@ -21,32 +21,33 @@ end  % for loop
 p = 15:0.5:90;
 
 %% Food fork interaction acceptable angles
-acceptable_angle = 1:41; fall = true; angle = 0; i = 1;
-for u1 = 0.1:0.02:0.9
+acceptable_angle = 1:17; fall = true; angle = 0;
+for u = 0.1:0.05:0.9;
 while(fall==true)
     vector = [cosd(angle),0,-sind(angle)];
-    fall = c.fall_checker(vector,u1);
+    fall = c.fall_checker(vector,u);
     if(fall ~= true)
         acceptable_angle(i) = angle;
         i = i+1;
     else
-        angle = angle+.1;
+        angle = angle+
     end  % if
 end  % while
-angle = 0; fall = true;
-end  % for loop
-u1 = 0.1:0.02:0.9;
-
+end  % for loop  
   %% Plot Results
 figure('Name','Force and Piercing Angle Trends')
-subplot(2,1,1)
+subplot(2,2,1)
 plot(p,max_f)
 xlabel('Piercing Angles')
 ylabel('Maximum Force')
 legend('u_s: 0.25, mass: 0.05kg')
-subplot(2,1,2)
-plot(u,max_p,u1,acceptable_angle)
-grid on
+subplot(2,2,2)
+plot(u,max_p)
 xlabel('Static Friction Co-efficient')
-ylabel('Piercing Angle')
-legend('Max angle, F: 1N, mass: 0.05kg', 'Acceptable angle')
+ylabel('Max Piercing Angle')
+legend('F: 1N, mass: 0.05kg')
+subplot(2,2,3)
+plot(u,acceptable_angle)
+xlabel('Static Friction Co-efficient')
+ylabel('Acceptable Piercing Angle')
+legend('F: 1N, mass: 0.05kg')
