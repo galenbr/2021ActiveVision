@@ -1,14 +1,12 @@
 // The movement class defines several services from the MoveIt! packages
 // as well as other useful methods integral to the experimental framework
-
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Pose.h>
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
-#include <piercing_experiments/PrePose.h>
-#include <piercing_experiments/CartesianPath.h>
-
+#include <piercing_experiments_msgs/PrePose.h>
+#include <piercing_experiments_msgs/CartesianPath.h>
 class Movement
 {
     public:
@@ -23,7 +21,7 @@ class Movement
         
         }
 
-        bool prepose_callback(piercing_experiments::PrePose::Request& req, piercing_experiments::PrePose::Response& res){
+        bool prepose_callback(piercing_experiments_msgs::PrePose::Request& req, piercing_experiments_msgs::PrePose::Response& res){
             move_group.setPoseTarget(req.target_1);
             moveit::planning_interface::MoveGroupInterface::Plan myPlan;
             bool success = (move_group.plan(myPlan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
@@ -33,7 +31,7 @@ class Movement
             
             
         }
-        bool cartesian_path_callback(piercing_experiments::CartesianPath::Request& req, piercing_experiments::CartesianPath::Response& res){
+        bool cartesian_path_callback(piercing_experiments_msgs::CartesianPath::Request& req, piercing_experiments_msgs::CartesianPath::Response& res){
             
             geometry_msgs::Pose pose  = move_group.getCurrentPose().pose;
             
