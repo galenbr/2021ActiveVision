@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-
+add_compile_options(-std=c++11)  ## Added this since it throws errors while compiling on Ubuntu 16.04 --Abhinav
 project(franka_gripper_gazebo)
 
 find_package(catkin REQUIRED COMPONENTS
