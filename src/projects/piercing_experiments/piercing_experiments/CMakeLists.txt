@@ -20,20 +20,6 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(Boost REQUIRED)
 
-## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   PrePose.srv
-#   CartesianPath.srv
-# )
-
-## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs
-#   geometry_msgs
-# )
-
 include_directories(include ${catkin_INCLUDE_DIRS})
 
  add_executable(main_pierce_node src/main_pierce.cpp)
