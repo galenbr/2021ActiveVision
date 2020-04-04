@@ -5,8 +5,8 @@
 namespace moveit_planner {  
   // Constructor/Destructor
   MoveitPlanner::MoveitPlanner(ros::NodeHandle& nh, const std::string& arm)
-    : n{nh}, spinner{2}, armGroup{arm}, moveGroup{armGroup},
-      eef_step{0.01}, jump_threshold{0} {
+    : n{nh}, spinner{2}, armGroup{arm}, moveGroup{armGroup}, curScaling{1.0},
+      eef_step{0.005}, jump_threshold{0} {
       spinner.start();
 
       setupServices();
@@ -55,6 +55,18 @@ namespace moveit_planner {
     moveit::planning_interface::MoveGroupInterface::Plan curPlan;
 
     moveGroup.computeCartesianPath(p, eef_step, jump_threshold, trajectory);
+
+    // Change trajectory speed to match set velocity scaling
+    if(curScaling < 1) {
+      for(int i = 0; i < trajectory.joint_trajectory.points.size(); ++i) {
+	for(int j = 0; j < trajectory.joint_trajectory.points[i].velocities.size(); ++j)
+	  trajectory.joint_trajectory.points[i].velocities[j] *= curScaling;
+	for(int j = 0; j < trajectory.joint_trajectory.points[i].accelerations.size(); ++j)
+	  trajectory.joint_trajectory.points[i].accelerations[j] *= (curScaling*curScaling);
+	trajectory.joint_trajectory.points[i].time_from_start *= 2 - curScaling;
+      }
+    }
+
     curPlan.trajectory_ = trajectory;
 
     if(exe)
@@ -100,6 +112,16 @@ namespace moveit_planner {
     // Send to moveit
     return moveToPose(targetPose, req.execute);
   }
+  bool MoveitPlanner::setVelocityCallback(moveit_planner::SetVelocity::Request& req,
+					  moveit_planner::SetVelocity::Response& res) {
+    if(req.velScaling <= 0 || req.velScaling > 1) // Invalid scaling
+      return false;
+    
+    moveGroup.setMaxVelocityScalingFactor(req.velScaling);
+    moveGroup.setMaxAccelerationScalingFactor(req.velScaling);
+    curScaling = req.velScaling;
+    return true;
+  }
 
   // Private
   void MoveitPlanner::setupServices() {
@@ -116,6 +138,9 @@ namespace moveit_planner {
     distanceAwayClient = n.advertiseService("move_away_point",
 					    &MoveitPlanner::distanceAwayCallback,
 					    this);
+    velocityClient = n.advertiseService("set_velocity_scaling",
+					&MoveitPlanner::setVelocityCallback,
+					this);
   }
 
   void MoveitPlanner::setupMoveit() {

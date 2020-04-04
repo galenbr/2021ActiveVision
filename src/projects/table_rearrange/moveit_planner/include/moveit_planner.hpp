@@ -17,14 +17,17 @@
 #include "moveit_planner/MoveQuat.h"
 #include "moveit_planner/MovePose.h"
 #include "moveit_planner/MoveCart.h"
+#include "moveit_planner/MoveAway.h"
 #include "moveit_planner/MoveJoint.h"
 #include "moveit_planner/MovePoint.h"
-#include "moveit_planner/MoveAway.h"
+#include "moveit_planner/SetVelocity.h"
 
 // moveit includes
 #include "moveit/robot_state/robot_state.h"
 #include "moveit/move_group_interface/move_group_interface.h"
 #include "moveit/planning_scene_interface/planning_scene_interface.h"
+#include "moveit/trajectory_processing/iterative_time_parameterization.h"
+#include "moveit/robot_trajectory/robot_trajectory.h"
 
 namespace moveit_planner {
 
@@ -57,12 +60,14 @@ namespace moveit_planner {
     moveit::core::RobotStatePtr curState;
     const robot_state::JointModelGroup* jointModelGroup;
     std::vector<double> curJointPositions;
+    double curScaling;
 
     // Services/Topics
     ros::ServiceServer poseClient;
     ros::ServiceServer jsClient;
     ros::ServiceServer cartesianClient;
     ros::ServiceServer distanceAwayClient;
+    ros::ServiceServer velocityClient;
 
     // Callbacks
     bool poseClientCallback(moveit_planner::MovePose::Request& req,
@@ -73,6 +78,8 @@ namespace moveit_planner {
 			       moveit_planner::MoveCart::Response& res);
     bool distanceAwayCallback(moveit_planner::MoveAway::Request& req,
 			      moveit_planner::MoveAway::Response& res);
+    bool setVelocityCallback(moveit_planner::SetVelocity::Request& req,
+			     moveit_planner::SetVelocity::Response& res);
 
     // Misc
     bool checkSuccess();

@@ -21,6 +21,7 @@ add_service_files(
   MoveJoint.srv
   MoveCart.srv
   MoveAway.srv
+  SetVelocity.srv
 )
 
 generate_messages(
