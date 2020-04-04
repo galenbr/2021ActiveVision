@@ -8,9 +8,8 @@ roscpp
 rospy
 std_msgs
 geometry_msgs
+message_generation
 )
-
- find_package(Boost REQUIRED)
 
 ## Generate services in the 'srv' folder
  add_service_files(
@@ -29,10 +28,3 @@ geometry_msgs
 catkin_package()
 
 include_directories(include ${catkin_INCLUDE_DIRS})
-
-
-# add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
-# add_executable(${PROJECT_NAME}_node src/piercing_experiments_msgs_node.cpp)
-
-# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})

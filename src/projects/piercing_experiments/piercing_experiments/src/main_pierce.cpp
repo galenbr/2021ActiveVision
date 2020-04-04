@@ -14,8 +14,8 @@ int main(int argc, char **argv)
     ros::service::waitForService( "prepose", timeout);
     ros::service::waitForService("cartesian_path", timeout);
 
-    ros::ServiceClient prepose_client = n.serviceClient<piercing_experiments::PrePose>("prepose");
-    piercing_experiments::PrePose pose;
+    ros::ServiceClient prepose_client = n.serviceClient<piercing_experiments_msgs::PrePose>("prepose");
+    piercing_experiments_msgs::PrePose pose;
 
      n.getParam("pre_pose/x_pos", pose.request.target_1.position.x);
      n.getParam("pre_pose/y_pos", pose.request.target_1.position.y);
@@ -36,8 +36,8 @@ int main(int argc, char **argv)
          return 1;
      }
     if(success){
-        ros::ServiceClient cartesian_client = n.serviceClient<piercing_experiments::CartesianPath>("cartesian_path");
-        piercing_experiments::CartesianPath ftarget;
+        ros::ServiceClient cartesian_client = n.serviceClient<piercing_experiments_msgs::CartesianPath>("cartesian_path");
+        piercing_experiments_msgs::CartesianPath ftarget;
 
         ftarget.request.final_target.position.x = 0.0;
         ftarget.request.final_target.position.y = 0.0;

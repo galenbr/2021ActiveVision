@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_msgs
   pluginlib
   geometry_msgs
+  piercing_experiments_msgs
   )
 
 find_package(Boost REQUIRED)
