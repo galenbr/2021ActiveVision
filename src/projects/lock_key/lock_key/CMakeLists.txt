@@ -45,10 +45,11 @@ find_package(Boost REQUIRED)
 #   DEPENDENCIES
 #   std_msgs  # Or other packages containing msgs
 # )
-catkin_package()
+catkin_package(
+  DEPENDS piercing_experiments_msgs
+)
 
 include_directories(include ${catkin_INCLUDE_DIRS})
-link_libraries(${catkin_LIBRARIES})
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -56,7 +57,5 @@ link_libraries(${catkin_LIBRARIES})
 # add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 add_executable(arm_move_node src/arm_move.cpp)
-
-add_dependencies(arm_move_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(arm_move_node ${catkin_LIBRARIES})
