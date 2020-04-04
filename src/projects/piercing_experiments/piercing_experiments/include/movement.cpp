@@ -1,14 +1,12 @@
 // The movement class defines several services from the MoveIt! packages
 // as well as other useful methods integral to the experimental framework
-
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Pose.h>
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
-#include <piercing_experiments/PrePose.h>
-#include <piercing_experiments/CartesianPath.h>
-
+#include <piercing_experiments_msgs/PrePose.h>
+#include <piercing_experiments_msgs/CartesianPath.h>
 class Movement
 {
     public:

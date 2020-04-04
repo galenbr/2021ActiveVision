@@ -16,25 +16,24 @@ find_package(catkin REQUIRED COMPONENTS
   pluginlib
   geometry_msgs
   rosbag
+  piercing_experiments_msgs
 )
 
 find_package(Boost REQUIRED)
 
 ## Generate services in the 'srv' folder
- add_service_files(
-   FILES
-   PrePose.srv
-   CartesianPath.srv
- )
+# add_service_files(
+#   FILES
+#   PrePose.srv
+#   CartesianPath.srv
+# )
 
 ## Generate added messages and services with any dependencies listed here
- generate_messages(
-   DEPENDENCIES
-   std_msgs
-   geometry_msgs
- )
-
-catkin_package()
+# generate_messages(
+#   DEPENDENCIES
+#   std_msgs
+#   geometry_msgs
+# )
 
 include_directories(include ${catkin_INCLUDE_DIRS})
 

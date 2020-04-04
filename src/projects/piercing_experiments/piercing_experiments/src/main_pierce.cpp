@@ -1,8 +1,8 @@
 //This node calls services for positioning the robot and then piercing the foam
 
 #include <ros/ros.h>
-#include <piercing_experiments/PrePose.h>
-#include <piercing_experiments/CartesianPath.h>
+#include <piercing_experiments_msgs/PrePose.h>
+#include <piercing_experiments_msgs/CartesianPath.h>
 #include <stdio.h>
 
 int main(int argc, char **argv)

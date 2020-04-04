@@ -19,6 +19,9 @@
   <exec_depend>roscpp</exec_depend>
   <exec_depend>rospy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
+  <!-- <depend>piercing_experiments_msgs</depend> -->
+  <build_depend>piercing_experiments_msgs</build_depend>
+  <exec_depend>piercing_experiments_msgs</exec_depend>
 
   <export>
     <!-- Other tools can request additional information be placed here -->
