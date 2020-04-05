@@ -43,4 +43,10 @@
 
   <!-- Start rviz -->
   <node name="rviz" type="rviz" pkg="rviz" args="-d $(find lock_key)/config/table_scene.rviz" />
+
+  <!-- <node name="joint_state_desired_publisher" pkg="topic_tools" type="relay" args="joint_states joint_states_desired" /> -->
+
+  <!--Start Movement Node-->
+  <!-- <node name="movement" type="arm_move_node" pkg="lock_key" /> -->
+
 </launch>
