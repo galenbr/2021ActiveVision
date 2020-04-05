@@ -20,8 +20,12 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(Boost REQUIRED)
 
+catkin_package( 
+INCLUDE_DIRS include 
+CATKIN_DEPENDS roscpp
+)
 include_directories(include ${catkin_INCLUDE_DIRS})
-
+ 
  add_executable(main_pierce_node src/main_pierce.cpp)
  add_executable(move_node src/move.cpp)
  add_executable(record_node src/record.cpp)
