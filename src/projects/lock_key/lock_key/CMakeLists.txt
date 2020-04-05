@@ -14,6 +14,8 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_msgs
   pluginlib
   geometry_msgs
+  piercing_experiments
+  #RobotMovement
   piercing_experiments_msgs
   )
 
@@ -45,7 +47,10 @@ find_package(Boost REQUIRED)
 #   DEPENDENCIES
 #   std_msgs  # Or other packages containing msgs
 # )
-catkin_package(DEPENDS piercing_experiments_msgs)
+catkin_package(DEPENDS piercing_experiments_msgs piercing_experiments)
+
+add_executable(test_include_library src/test_include_library.cpp)
+target_link_libraries(test_include_library ${catkin_LIBRARIES})
 
 include_directories(include ${catkin_INCLUDE_DIRS})
 

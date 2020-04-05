@@ -20,8 +20,18 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(Boost REQUIRED)
 
+catkin_package( 
+INCLUDE_DIRS include 
+LIBRARIES ${PROJECT_NAME}
+CATKIN_DEPENDS roscpp
+)
 include_directories(include ${catkin_INCLUDE_DIRS})
 
+ add_library(RobotMovement include/movement.cpp)
+ target_link_libraries(RobotMovement ${catkin_LIBRARIES})
+ install(TARGETS RobotMovement DESTINATION lib)
+ install(DIRECTORY include/RobotMovement/ DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
+ 
  add_executable(main_pierce_node src/main_pierce.cpp)
  add_executable(move_node src/move.cpp)
  add_executable(record_node src/record.cpp)
