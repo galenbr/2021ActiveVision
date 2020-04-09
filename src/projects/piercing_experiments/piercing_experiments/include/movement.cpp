@@ -12,14 +12,14 @@ class Movement
     public:
         Movement(ros::NodeHandle& _n) : n(_n), move_group("arm") {
             //Name the movegroup as "arm" for lock and key and as "panda_arm" for piercing experiments
-            ros::AsyncSpinner as(1);
-            as.start();
+            ros::AsyncSpinner spinner(2);
+            spinner.start();
             geometry_msgs::PoseStamped ps = move_group.getCurrentPose();
             ROS_INFO_STREAM(ps);
             prepose_server = n.advertiseService("prepose", &Movement::prepose_callback, this);
             cartesian_server = n.advertiseService("cartesian_path", &Movement::cartesian_path_callback, this);
-            //ros::spin();
-            ros::waitForShutdown();
+            ros::spinOnce();
+            ros::waitForShutdown;
         
         }
 

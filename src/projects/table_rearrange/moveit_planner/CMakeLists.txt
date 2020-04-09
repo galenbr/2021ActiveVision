@@ -30,6 +30,7 @@ generate_messages(
 )
 
 catkin_package(
+  INCLUDE_DIRS include  ## Added this so pkg can be included in other pkgs
   CATKIN_DEPENDS
     moveit_core
 )

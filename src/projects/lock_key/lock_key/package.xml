@@ -18,12 +18,14 @@
   <build_depend>rospy</build_depend>
   <build_depend>piercing_experiments_msgs</build_depend>
   <build_depend>piercing_experiments</build_depend>
+  <build_depend>moveit_planner</build_depend>
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>rospy</build_export_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>rospy</exec_depend>
   <exec_depend>piercing_experiments_msgs</exec_depend>
   <exec_depend>piercing_experiments</exec_depend>
+  <exec_depend>moveit_planner</exec_depend>
   <export>
 
   </export>
