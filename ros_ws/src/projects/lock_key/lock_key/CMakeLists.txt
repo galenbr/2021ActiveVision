@@ -65,3 +65,4 @@ link_directories(${PCL_LIBRARY_DIRS})
 add_executable(arm_move_node src/arm_move.cpp)
 
 target_link_libraries(arm_move_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+add_dependencies(arm_move_node moveit_planner_gencpp)

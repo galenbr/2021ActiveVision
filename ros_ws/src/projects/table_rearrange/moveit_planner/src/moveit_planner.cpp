@@ -31,11 +31,6 @@ namespace moveit_planner {
   }
   bool MoveitPlanner::moveToJointSpace(const std::vector<double>& jointPositions, bool exe) {
     ROS_INFO("RECEIVED JOINT SPACE REQUEST");
-    // First, check if the correct number of joints was given
-    if(jointPositions.size() != 7) {
-      ROS_INFO_STREAM("INCORRECT PARAMETERS SENT: " << jointPositions.size() << " VS " << 7);
-      return false;
-    }
     
     moveGroup.setJointValueTarget(jointPositions);
     auto errCode = moveGroup.plan(curPlan);
