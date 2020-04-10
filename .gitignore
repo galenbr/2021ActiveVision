@@ -19,12 +19,8 @@ devel
 .vscode/
 
 #Matlab Results
-<<<<<<< HEAD
-/src/projects/piercing_sim/Results
+Matlab/piercing_sim/Results
 
 #build and devel files
 ros_ws/build/
 ros_ws/devel/
-=======
-Matlab/piercing_sim/Results
->>>>>>> a429124e92913e0072f35f5289f9eb8de18d6998
