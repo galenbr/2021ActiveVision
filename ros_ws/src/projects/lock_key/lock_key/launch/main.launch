@@ -9,7 +9,10 @@
   <param name="robot_description" command="$(find xacro)/xacro --inorder $(find lock_key)/desc/franka_camera.xacro" />
   <rosparam file="$(find lock_key)/config/panda_control.yaml" command="load" />
   <!-- <rosparam file="$(find ref_benchmark)/config/panda_control.yaml" command="load" /> -->
-
+  
+  <!--Add the YAML to the para, Server-->
+  <rosparam command = "load" file="$(find lock_key)/config/params.yaml" />
+  
   <!-- Launch frames for rviz -->
   <node name="map_frame" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 map world 100" />
   <node name="frame1_map" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 world panda_link0 100" />

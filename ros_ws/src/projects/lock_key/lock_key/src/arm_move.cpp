@@ -27,14 +27,22 @@ int main(int argc, char **argv){
     ros::ServiceClient MovePoseClient = n.serviceClient<moveit_planner::MovePose>("move_to_pose");
 
     moveit_planner::MovePose pose;
+    n.getParam("pre_pose/x_pos", pose.request.val.position.x);
+    n.getParam("pre_pose/y_pos", pose.request.val.position.y);
+    n.getParam("pre_pose/z_pos", pose.request.val.position.z);
+    n.getParam("pre_pose/w_orn", pose.request.val.orientation.w);
+    n.getParam("pre_pose/x_orn", pose.request.val.orientation.x);
+    n.getParam("pre_pose/y_orn", pose.request.val.orientation.y);
+    n.getParam("pre_pose/z_orn", pose.request.val.orientation.z);
+    ROS_INFO_STREAM(pose.request.val);
 
-    pose.request.val.position.x = 0.43;
-    pose.request.val.position.y = 0.0;
-    pose.request.val.position.z = 0.305;
-    pose.request.val.orientation.w = 0.00179342;
-    pose.request.val.orientation.x = 0.92404;
-    pose.request.val.orientation.y = 0.382283;
-    pose.request.val.orientation.z = -0.00269858;
+    // pose.request.val.position.x = 0.05;
+    // pose.request.val.position.y = 0.25;
+    // pose.request.val.position.z = 0.5;
+    // pose.request.val.orientation.w = 0.00179342;
+    // pose.request.val.orientation.x = 0.92404;
+    // pose.request.val.orientation.y = 0.382283;
+    // pose.request.val.orientation.z = -0.00269858;
     pose.request.execute = true;
 
     MovePoseClient.call(pose);
