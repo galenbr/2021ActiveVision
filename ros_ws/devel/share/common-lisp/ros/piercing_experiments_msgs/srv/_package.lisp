@@ -1,0 +1,15 @@
+(cl:defpackage piercing_experiments_msgs-srv
+  (:use )
+  (:export
+   "CARTESIANPATH"
+   "<CARTESIANPATH-REQUEST>"
+   "CARTESIANPATH-REQUEST"
+   "<CARTESIANPATH-RESPONSE>"
+   "CARTESIANPATH-RESPONSE"
+   "PREPOSE"
+   "<PREPOSE-REQUEST>"
+   "PREPOSE-REQUEST"
+   "<PREPOSE-RESPONSE>"
+   "PREPOSE-RESPONSE"
+  ))
+

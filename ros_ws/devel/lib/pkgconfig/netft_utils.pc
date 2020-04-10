@@ -1,0 +1,8 @@
+prefix=/home/agandhi2/mer_lab/ros_ws/devel
+
+Name: netft_utils
+Description: Description of netft_utils
+Version: 1.0.1
+Cflags: -I/home/agandhi2/mer_lab/ros_ws/devel/include -I/home/agandhi2/mer_lab/ros_ws/src/projects/piercing_experiments/netft_utils/include
+Libs: -L${prefix}/lib -lnetft_utils_lean -llpfilter
+Requires: message_runtime

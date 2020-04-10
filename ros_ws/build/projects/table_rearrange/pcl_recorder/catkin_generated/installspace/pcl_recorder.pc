@@ -1,0 +1,8 @@
+prefix=/home/agandhi2/mer_lab/ros_ws/install
+
+Name: pcl_recorder
+Description: Description of pcl_recorder
+Version: 0.0.0
+Cflags: -I${prefix}/include
+Libs: -L${prefix}/lib 
+Requires: 

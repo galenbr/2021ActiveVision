@@ -1,0 +1,8 @@
+prefix=/home/agandhi2/mer_lab/ros_ws/install
+
+Name: lock_key_msgs
+Description: Description of lock_key_msgs
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

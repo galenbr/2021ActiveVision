@@ -1,0 +1,8 @@
+prefix=/home/agandhi2/mer_lab/ros_ws/devel
+
+Name: usb_cam
+Description: Description of usb_cam
+Version: 0.3.6
+Cflags: -I/home/agandhi2/mer_lab/ros_ws/src/projects/piercing_experiments/usb_cam/include
+Libs: -L${prefix}/lib -lusb_cam
+Requires: 

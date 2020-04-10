@@ -1,0 +1,8 @@
+prefix=/home/agandhi2/mer_lab/ros_ws/devel
+
+Name: lock_key
+Description: Description of lock_key
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: piercing_experiments_msgs piercing_experiments moveit_planner

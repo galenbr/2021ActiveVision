@@ -1,0 +1,10 @@
+(cl:defpackage pose_estimator-srv
+  (:use )
+  (:export
+   "POSEESTIMATION"
+   "<POSEESTIMATION-REQUEST>"
+   "POSEESTIMATION-REQUEST"
+   "<POSEESTIMATION-RESPONSE>"
+   "POSEESTIMATION-RESPONSE"
+  ))
+

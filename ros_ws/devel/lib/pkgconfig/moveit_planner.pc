@@ -1,0 +1,8 @@
+prefix=/home/agandhi2/mer_lab/ros_ws/devel
+
+Name: moveit_planner
+Description: Description of moveit_planner
+Version: 0.0.0
+Cflags: -I/home/agandhi2/mer_lab/ros_ws/devel/include -I/home/agandhi2/mer_lab/ros_ws/src/projects/table_rearrange/moveit_planner/include
+Libs: -L${prefix}/lib 
+Requires: moveit_core
