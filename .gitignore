@@ -19,4 +19,4 @@ devel
 .vscode/
 
 #Matlab Results
-/src/projects/piercing_sim/Results
+Matlab/piercing_sim/Results
