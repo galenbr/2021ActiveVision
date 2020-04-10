@@ -1,8 +1,0 @@
-prefix=/home/agandhi2/mer_lab/ros_ws/devel
-
-Name: franka_description
-Description: Description of franka_description
-Version: 0.7.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: xacro

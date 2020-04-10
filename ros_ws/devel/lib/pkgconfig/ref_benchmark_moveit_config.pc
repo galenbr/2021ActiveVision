@@ -1,8 +1,0 @@
-prefix=/home/agandhi2/mer_lab/ros_ws/devel
-
-Name: ref_benchmark_moveit_config
-Description: Description of ref_benchmark_moveit_config
-Version: 0.3.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 

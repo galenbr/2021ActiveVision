@@ -1,8 +1,0 @@
-prefix=/home/agandhi2/mer_lab/ros_ws/devel
-
-Name: ref_benchmark
-Description: Description of ref_benchmark
-Version: 0.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: roscpp moveit_planner randomizer pcl_recorder pose_estimator

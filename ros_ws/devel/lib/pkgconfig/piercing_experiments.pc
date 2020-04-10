@@ -1,8 +1,0 @@
-prefix=/home/agandhi2/mer_lab/ros_ws/devel
-
-Name: piercing_experiments
-Description: Description of piercing_experiments
-Version: 0.0.0
-Cflags: -I/home/agandhi2/mer_lab/ros_ws/src/projects/piercing_experiments/piercing_experiments/include
-Libs: -L${prefix}/lib 
-Requires: roscpp
