@@ -20,3 +20,7 @@ devel
 
 #Matlab Results
 /src/projects/piercing_sim/Results
+
+#build and devel files
+ros_ws/build/
+ros_ws/devel/
