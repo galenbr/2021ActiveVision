@@ -1,0 +1,8 @@
+prefix=/home/agandhi2/mer_lab/ros_ws/install
+
+Name: moveit_planner
+Description: Description of moveit_planner
+Version: 0.0.0
+Cflags: -I${prefix}/include
+Libs: -L${prefix}/lib 
+Requires: moveit_core

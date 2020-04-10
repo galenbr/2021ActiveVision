@@ -1,0 +1,8 @@
+prefix=/home/agandhi2/mer_lab/ros_ws/devel
+
+Name: pcl_processor
+Description: Description of pcl_processor
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

@@ -1,0 +1,8 @@
+prefix=/home/agandhi2/mer_lab/ros_ws/install
+
+Name: netft_utils
+Description: Description of netft_utils
+Version: 1.0.1
+Cflags: -I${prefix}/include
+Libs: -L${prefix}/lib -lnetft_utils_lean -llpfilter
+Requires: message_runtime
