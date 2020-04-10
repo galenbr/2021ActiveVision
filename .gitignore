@@ -1,0 +1,22 @@
+# Backup files
+*~
+\#*
+\.#*
+
+# Computer-generated files
+install
+build
+devel
+
+# Catkin-specific files
+.catkin_workspace
+/src/CMakeLists.txt
+
+# All CMakeLists.txt are allowed except the root (symlinked)
+/CMakeLists.txt
+
+#vscode files
+.vscode/
+
+#Matlab Results
+/src/projects/piercing_sim/Results
