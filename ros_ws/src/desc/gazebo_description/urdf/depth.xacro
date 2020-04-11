@@ -32,7 +32,7 @@
 	  <image>
 	    <width>640</width>
 	    <height>480</height>
-	    <format>R8G8B8</format>
+	    <format>B8G8R8</format>  <!--Changed format since channels were inverted, to go back, change to R8G8B8-->
 	  </image>
 	  <clip>
 	    <near>0.05</near>
