@@ -7,41 +7,34 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
-#  moveit_core
-#  moveit_ros_perception
-#  moveit_ros_planning_interface
-#  moveit_visual_tools
-#  moveit_msgs
   pluginlib
   geometry_msgs
-  piercing_experiments
-  piercing_experiments_msgs
   pcl_ros
-  pcl_conversions
+  #pcl_conversions
   sensor_msgs
   moveit_planner
   )
 
-  find_package(PCL 1.3 REQUIRED COMPONENTS
-  common
-  io
-)
+  find_package(PCL REQUIRED)# COMPONENTS
+  #common
+  #io
+#)
 
 find_package(Boost REQUIRED)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
+#add_message_files(
+#  FILES
 #   Message1.msg
 #   Message2.msg
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+ add_service_files(
+   FILES
+   imgCapture.srv
+   findKey.srv
+ )
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -51,11 +44,11 @@ find_package(Boost REQUIRED)
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
-# )
-catkin_package(DEPENDS piercing_experiments_msgs piercing_experiments moveit_planner)
+ generate_messages(
+   DEPENDENCIES
+   sensor_msgs  # Or other packages containing msgs
+ )
+catkin_package(DEPENDS moveit_planner)
 
 include_directories(include ${catkin_INCLUDE_DIRS})
 include_directories(${PCL_INCLUDE_DIRS})
@@ -63,6 +56,16 @@ add_definitions(${PCL_DEFINITIONS})
 link_directories(${PCL_LIBRARY_DIRS})
 
 add_executable(arm_move_node src/arm_move.cpp)
+add_executable(img_capture_node src/img_capture.cpp)
+add_executable(control_node src/controller.cpp)
+add_executable(find_key_node src/find_key.cpp)
+
+add_dependencies(arm_move_node moveit_planner_gencpp)
+add_dependencies(img_capture_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+add_dependencies(control_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+add_dependencies(find_key_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
 target_link_libraries(arm_move_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
-add_dependencies(arm_move_node moveit_planner_gencpp)
+target_link_libraries(img_capture_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(control_node ${catkin_LIBRARIES})
+target_link_libraries(find_key_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
