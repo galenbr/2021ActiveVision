@@ -25,20 +25,20 @@ bool key_service_callback(lock_key::findKey::Request &req, lock_key::findKey::Re
     // Convert sensor_msgs to pcl pointcloud2
     // TO DO: Put in a function
     pcl::PCLPointCloud2::Ptr pcl_pc2 (new pcl::PCLPointCloud2 ());
-    
+    std::string frameID = "/panda_camera_optical_link";
     pcl_conversions::toPCL(req.pc2, *pcl_pc2);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::fromPCLPointCloud2(*pcl_pc2, *cloud);
 
     //Downsampling the pointcloud
     // TO DO: Put in a function
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZ>);  
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);  
     // std::cerr << "PointCloud before filtering: " << cloud->width * cloud->height 
     //    << " data points (" << pcl::getFieldsList (*cloud) << ").";
 
-    pcl::VoxelGrid<pcl::PointXYZ> sor;
+    pcl::VoxelGrid<pcl::PointXYZRGB> sor;
     sor.setInputCloud (cloud);
-    sor.setLeafSize(0.01f, 0.01f, 0.01f);
+    sor.setLeafSize(0.002f, 0.002f, 0.002f);
     sor.filter(*cloud_filtered);
 
     // std::cerr << "PointCloud after filtering: " << cloud_filtered->width * cloud_filtered->height 
@@ -47,16 +47,16 @@ bool key_service_callback(lock_key::findKey::Request &req, lock_key::findKey::Re
     // Lets Try Segmentation
     // TO DO: Put in a function
 
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::SACSegmentation<pcl::PointXYZ> seg;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_f (new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::SACSegmentation<pcl::PointXYZRGB> seg;
     pcl::PointIndices::Ptr inliers(new pcl::PointIndices); 
     pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_plane (new pcl::PointCloud<pcl::PointXYZ> ());
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_plane (new pcl::PointCloud<pcl::PointXYZRGB> ());
     seg.setOptimizeCoefficients(true);
     seg.setModelType(pcl::SACMODEL_PLANE);
     seg.setMethodType(pcl::SAC_RANSAC);
     seg.setMaxIterations(100);
-    seg.setDistanceThreshold(0.1);
+    seg.setDistanceThreshold(0.01);
 
     int i=0, nr_points = (int) cloud_filtered->points.size ();
     while (cloud_filtered->points.size () > 0.3 * nr_points){
@@ -69,7 +69,7 @@ bool key_service_callback(lock_key::findKey::Request &req, lock_key::findKey::Re
         }
 
         // Extract the planar inliers from the input cloud
-        pcl::ExtractIndices<pcl::PointXYZ> extract;
+        pcl::ExtractIndices<pcl::PointXYZRGB> extract;
         extract.setInputCloud (cloud_filtered);
         extract.setIndices (inliers);
         extract.setNegative (false);
@@ -85,18 +85,18 @@ bool key_service_callback(lock_key::findKey::Request &req, lock_key::findKey::Re
     }
 
     // Creating the KdTree object for the search method of the extraction
-    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
+    pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB>);
     tree->setInputCloud (cloud_filtered);
 
     std::vector<pcl::PointIndices> cluster_indices;
-    pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
+    pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> ec;
     ec.setClusterTolerance (0.02); // 2cm
-    ec.setMinClusterSize (100);
-    ec.setMaxClusterSize (2500);
+    ec.setMinClusterSize (10);
+    ec.setMaxClusterSize (500);
     ec.setSearchMethod (tree);
     ec.setInputCloud (cloud_filtered);
     ec.extract (cluster_indices);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZRGB>);
     int j = 0;
     for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it){
         
@@ -109,18 +109,23 @@ bool key_service_callback(lock_key::findKey::Request &req, lock_key::findKey::Re
         // std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
         // std::stringstream ss;
         // ss << "cloud_cluster_" << j << ".pcd";
-        //writer.write<pcl::PointXYZ> (ss.str (), *cloud_cluster, false); //*
+        //writer.write<pcl::PointXYZRGB> (ss.str (), *cloud_cluster, false); //*
         // j++;
     }
 
     // Convert Cloud Cluster to PCL
+    // TO DO: put in function
     sensor_msgs::PointCloud2 ret;
     pcl::PCLPointCloud2 temppc2;
     pcl::toPCLPointCloud2(*cloud_cluster, temppc2);
     pcl_conversions::fromPCL(temppc2, ret);
 
     ret.header.stamp = ros::Time();
+    ret.header.frame_id = frameID;
     res.pc2 = ret;
+
+    // Find Position of Centroid of the key
+
     
     return true;
 
