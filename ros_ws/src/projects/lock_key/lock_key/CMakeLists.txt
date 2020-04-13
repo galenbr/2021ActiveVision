@@ -46,7 +46,8 @@ find_package(Boost REQUIRED)
 ## Generate added messages and services with any dependencies listed here
  generate_messages(
    DEPENDENCIES
-   sensor_msgs  # Or other packages containing msgs
+   sensor_msgs
+   geometry_msgs
  )
 catkin_package(DEPENDS moveit_planner)
 

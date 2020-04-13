@@ -1,3 +1,4 @@
 sensor_msgs/PointCloud2 pc2
 ---
 sensor_msgs/PointCloud2 pc2
+geometry_msgs/PoseStamped ps
