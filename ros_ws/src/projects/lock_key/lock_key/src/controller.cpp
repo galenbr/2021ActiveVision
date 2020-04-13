@@ -28,10 +28,16 @@ int main(int argc, char **argv){
     ROS_INFO("IMAGE RECEIVED");
     findKeyClient.call(keyImg);
     ROS_INFO("Key found");
-    ros::Publisher pub = n.advertise<sensor_msgs::PointCloud2>("debugPC2", 1);
-    pub.publish(keyImg.response.pc2);
-    ROS_INFO("KEY PUblished");
+
+    ros::Publisher pub = n.advertise<sensor_msgs::PointCloud2>("debugPC2", 5);
+    while (true)
+    {
+        pub.publish(keyImg.response.pc2);
+        ROS_INFO("KEY Published");
+    }
+    
     ros::spin();
+    
 
 
 
