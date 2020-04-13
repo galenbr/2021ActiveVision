@@ -5,6 +5,7 @@
 void wait_for_service(int32_t timeout){
     ros::service::waitForService("move_to_pose",timeout);
     ros::service::waitForService("imgCapture", timeout);
+    ROS_INFO("SERVICES READY");
 }
 
 int main(int argc, char **argv){
@@ -24,7 +25,10 @@ int main(int argc, char **argv){
 
     imgCaptureClient.call(reqImg);
     keyImg.request.pc2 = reqImg.response.pc2;
+    ROS_INFO("IMAGE RECEIVED");
     findKeyClient.call(keyImg);
+
+    ros::spin();
 
 
 

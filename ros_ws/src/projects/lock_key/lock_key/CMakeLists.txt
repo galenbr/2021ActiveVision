@@ -10,7 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   pluginlib
   geometry_msgs
   pcl_ros
-  #pcl_conversions
+  pcl_conversions
   sensor_msgs
   moveit_planner
   )
