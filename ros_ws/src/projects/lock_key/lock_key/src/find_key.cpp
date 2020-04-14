@@ -19,6 +19,8 @@
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/extract_clusters.h>
+// Centroid
+#include <pcl/common/centroid.h>
 
 bool key_service_callback(lock_key::findKey::Request &req, lock_key::findKey::Response &res){
     ROS_INFO("FINDING KEY");
@@ -120,13 +122,26 @@ bool key_service_callback(lock_key::findKey::Request &req, lock_key::findKey::Re
     pcl::toPCLPointCloud2(*cloud_cluster, temppc2);
     pcl_conversions::fromPCL(temppc2, ret);
 
+    
+
+    // Find Position of Centroid of the key
+    // TO DO: put in function
+    pcl::CentroidPoint<pcl::PointXYZ> centroid;
+    // Loop over points in segmented cloud
+    for (int i = 0; i < cloud_cluster->points.size(); i++){
+        centroid.add(pcl::PointXYZ (cloud_cluster->points[i].x, cloud_cluster->points[i].y, cloud_cluster->points[i].z));
+    }
+    pcl::PointXYZ key_cent;
+    centroid.get(key_cent);
+    // TO DO: Insert color check for lock/ key
+    ROS_INFO_STREAM(key_cent);
+    // Fill up the return object
     ret.header.stamp = ros::Time();
     ret.header.frame_id = frameID;
     res.pc2 = ret;
-
-    // Find Position of Centroid of the key
-
-    
+    res.p.x = key_cent.x;
+    res.p.y = key_cent.y;
+    res.p.z = key_cent.z;
     return true;
 
 }
