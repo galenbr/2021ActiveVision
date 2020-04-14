@@ -68,5 +68,5 @@
   <node name="img_capture" type="img_capture_node" pkg="lock_key" />
 
   <!--Start Find Key Node-->
-  <node name="find_key" type="find_key_node" pkg="lock_key" />
+  <!-- <node name="find_key" type="find_key_node" pkg="lock_key" /> -->
 </launch>
