@@ -28,17 +28,9 @@
   <!-- 	args="-file $(find ycb_models)/desc/master_chef_can.urdf -urdf -model master_chef_can -z $(arg table_height) -x $(arg table_center)" /> -->
   
   <!-- Launch controllers -->
-  <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
-	output="screen" args="joint_state_controller gazebo_ros_control
-			      panda_finger1_controller panda_finger2_controller" ns="/panda" />
-  <!-- Start publishing to /tf for rviz -->
-  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true">
-    <remap from="joint_states" to="panda/joint_states" />
-  </node>
+  <include file="$(find panda_moveit_controller)/launch/main.launch" />
+  <include file="$(find panda_finger_torque_controller)/launch/main.launch" />
 
   <!-- Start moveit -->
   <include file="$(find ref_benchmark_moveit_config)/launch/move_group.launch" />
-
-  <!-- Start rviz -->
-  <!-- TODO: Move to another file -->
 </launch>

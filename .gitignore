@@ -10,7 +10,7 @@ devel
 
 # Catkin-specific files
 .catkin_workspace
-/src/CMakeLists.txt
+/ros_ws/src/CMakeLists.txt
 
 # All CMakeLists.txt are allowed except the root (symlinked)
 /CMakeLists.txt
