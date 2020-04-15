@@ -1,10 +1,12 @@
 #include <ros/ros.h>
 
+#include <string>
+
 #include <franka_gripper_gazebo/GripMsg.h>
 
 class FrankaGripper {
 public:
-  FrankaGripper(ros::NodeHandle& nh);
+  FrankaGripper(ros::NodeHandle& nh, std::string f1_topic, std::string f2_topic);
   ~FrankaGripper();
 
   bool grip(franka_gripper_gazebo::GripMsg::Request& req,

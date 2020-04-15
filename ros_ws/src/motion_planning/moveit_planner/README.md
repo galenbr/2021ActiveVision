@@ -28,3 +28,6 @@ This package exposes several services to interact with moveit, they are:
 4. Set Velocity Scaling
    - Topic: "set_velocity_scaling"
    - Message: "moveit_planner/SetVelocity.h"
+5. Move Away from Target (moves a "distance" away from "pose" in that pose's z-direction)
+   - Topic: "move_away_point"
+   - Message: "moveit_planner/MoveAway.h"
