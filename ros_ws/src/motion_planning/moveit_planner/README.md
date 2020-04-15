@@ -12,7 +12,7 @@ This node can optionally be given as an argument the planning_group name to prop
 
 By default, the planning_group is the 'arm' group, but different names can be given:
 1. Through the command line: rosrun moveit_planner main_node panda_arm
-2. Through a launch file: <node name="moveit_planner" pkg="moveit_planner" type="main_node" args="panda_arm" />
+2. Through a launch file: node name="moveit_planner" pkg="moveit_planner" type="main_node" args="panda_arm"
 
 ## Services
 This package exposes several services to interact with moveit, they are:
