@@ -2,10 +2,10 @@
 
 #include <std_msgs/Float64.h>
 
-FrankaGripper::FrankaGripper(ros::NodeHandle& nh) : _nh{nh} {
+FrankaGripper::FrankaGripper(ros::NodeHandle& nh, std::string f1_topic, std::string f2_topic) : _nh{nh} {
   _grip_server = nh.advertiseService("gazebo_franka_grip", &FrankaGripper::grip, this);
-  _finger1_publisher = nh.advertise<std_msgs::Float64>("/panda/panda_finger1_controller/command", 1);
-  _finger2_publisher = nh.advertise<std_msgs::Float64>("/panda/panda_finger2_controller/command", 1);
+  _finger1_publisher = nh.advertise<std_msgs::Float64>(f1_topic, 1);
+  _finger2_publisher = nh.advertise<std_msgs::Float64>(f2_topic, 1);
 
   ros::spin();
 }
