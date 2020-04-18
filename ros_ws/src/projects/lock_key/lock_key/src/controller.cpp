@@ -1,8 +1,10 @@
 #include <ros/ros.h>
 // Services
-#include <lock_key/imgCapture.h>
-#include <lock_key/findKey.h>
-#include <moveit_planner/MovePose.h>
+#include "lock_key/imgCapture.h"
+#include "lock_key/findKey.h"
+#include "moveit_planner/MovePose.h"
+#include "moveit_planner/MoveCart.h"
+#include "franka_gripper_gazebo/GripMsg.h"
 // Publish Marker
 #include <visualization_msgs/Marker.h>
 // Transform Listener
@@ -32,11 +34,15 @@ int main(int argc, char **argv){
     ros::ServiceClient imgCaptureClient = n.serviceClient<lock_key::imgCapture>("imgCaptureServer");
     ros::ServiceClient findKeyClient = n.serviceClient<lock_key::findKey>("findKeyServer");
     ros::ServiceClient movePoseClient = n.serviceClient<moveit_planner::MovePose>("move_to_pose");
+    ros::ServiceClient moveCartClient = n.serviceClient<moveit_planner::MoveCart>("cartesian_move");
+    ros::ServiceClient gripperClient = n.serviceClient<franka_gripper_gazebo::GripMsg>("gazebo_franka_grip");
 
     // Client Objects
     lock_key::imgCapture reqImg;
     lock_key::findKey keyImg;
     moveit_planner::MovePose pose;
+    moveit_planner::MoveCart cart;
+    franka_gripper_gazebo::GripMsg grip;
 
     //Client Calls
     imgCaptureClient.call(reqImg);
@@ -49,16 +55,35 @@ int main(int argc, char **argv){
     geometry_msgs::PointStamped keypose;
     listener.transformPoint("panda_link0",keyImg.response.p,keypose);
     
-    // //Giving key position to Move Pose Client
+    //Manipulating position so as to create pre-grasp pose
+    keypose.point.x -= 0.001;
+    keypose.point.y += 0.005;
+    keypose.point.z -= 0.025;
+    
+    //Moving to pre-grasp pose
     pose.request.val.position = keypose.point;
-    pose.request.val.orientation.x = -0.4082483;
-    pose.request.val.orientation.y = 0.8164966;
-    pose.request.val.orientation.z = -0.4082483;
-    pose.request.val.orientation.w = 0;
+    pose.request.val.orientation.x = 0.7071068; //-0.4082483;
+    pose.request.val.orientation.y = 0.0; //0.8164966;
+    pose.request.val.orientation.z = 0.0; //-0.4082483;
+    pose.request.val.orientation.w = 0.7071068;
     pose.request.execute = true;
+    grip.request.force = 1000.0;
+    gripperClient.call(grip);
     movePoseClient.call(pose);
 
-
+    //Grasp
+    // Ideally we would first do cartesian move and then grasp, however the orientations are not working well w/o the hardware setup
+    // geometry_msgs::Pose p;
+    // p.position.y = -0.01;
+    // p.orientation = pose.request.val.orientation;
+    // cart.request.val.push_back(p);
+    // cart.request.execute = true;
+    // moveCartClient.call(cart);
+    ros::Duration(2).sleep();
+    ROS_INFO("Gripping");
+    grip.request.force = -1000.0;
+    gripperClient.call(grip);
+    ROS_INFO("Gripped");
     // Visualization and Debugging
     ros::Publisher cloud_pub = n.advertise<sensor_msgs::PointCloud2>("debugPC2", 1);
     ros::Publisher centroid_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 1);
