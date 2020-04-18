@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_conversions
   sensor_msgs
   moveit_planner
+  tf
   )
 
   find_package(PCL REQUIRED)# COMPONENTS

@@ -1,6 +1,6 @@
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
-#include <lock_key/findKey.h>
+#include "lock_key/findKey.h"
 #include <iostream>
 // PCL Includes for conversion
 #include <pcl_conversions/pcl_conversions.h>
@@ -139,9 +139,10 @@ bool key_service_callback(lock_key::findKey::Request &req, lock_key::findKey::Re
     ret.header.stamp = ros::Time();
     ret.header.frame_id = frameID;
     res.pc2 = ret;
-    res.p.x = key_cent.x;
-    res.p.y = key_cent.y;
-    res.p.z = key_cent.z;
+    res.p.header.frame_id = frameID;
+    res.p.point.x = key_cent.x;
+    res.p.point.y = key_cent.y;
+    res.p.point.z = key_cent.z;
     return true;
 
 }
