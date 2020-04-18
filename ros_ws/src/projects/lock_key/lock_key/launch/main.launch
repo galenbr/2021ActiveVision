@@ -37,10 +37,10 @@
   	args="-file $(find lock_key)/desc/key.urdf -urdf -model key -z $(arg table_height) -x $(arg table_center)" />
 
   <!-- Launch controllers -->
-  <!-- <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller panda_hand_controller gazebo_ros_control" ns="/panda"/> -->
   <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
-	output="screen" args="joint_state_controller gazebo_ros_control
-			      panda_finger1_controller panda_finger2_controller" ns="/panda" />
+	output="screen" args="joint_state_controller gazebo_ros_control" ns="/panda" />
+  
+  <include file="$(find panda_finger_torque_controller)/launch/main.launch" />
   <!-- Start publishing to /tf for rviz -->
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true">
     <remap from="joint_states" to="panda/joint_states" />
@@ -69,4 +69,7 @@
 
   <!--Start Find Key Node-->
   <node name="find_key" type="find_key_node" pkg="lock_key" />
+
+  <!--Gripper Node-->
+  <node name="gripper" type="gripper_node" pkg="franka_gripper_gazebo" />
 </launch>
