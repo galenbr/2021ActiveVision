@@ -24,8 +24,8 @@
   <gazebo reference = "block">
   <material> Gazebo/Black</material>
   </gazebo>
-  <joint name="table_key" type="floating">
-    <origin rpy="0 0 0" xyz="-0.1  0.15 0" />
+  <joint name="table_block" type="fixed">
+    <origin rpy="0 0 0" xyz="-0.105  0.155 0" />
     <parent link="world" />
     <child link="block" />
   </joint>
