@@ -34,9 +34,13 @@
   <material> Gazebo/Blue</material>
   </gazebo>
   <joint name="table_key" type="floating">
-    <origin rpy="1.57 0 1.57" xyz="-0.110  0.165 0.1" />
+    <origin rpy="1.57 0 1.57" xyz="0.007250 0.002750 0.030000" />
     <parent link="world" />
     <child link="key" />
   </joint>
 
 </robot>
+<!-- Inrtial Tensor of Key from Meshlab at a scale of 10^5 are
+| 0.000145 -0.000000 -0.000000 |
+| -0.000000 0.000152 0.000000 |
+| -0.000000 0.000000 0.000010 | -->
