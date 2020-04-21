@@ -58,7 +58,7 @@ bool key_service_callback(lock_key::findKey::Request &req, lock_key::findKey::Re
     seg.setModelType(pcl::SACMODEL_PLANE);
     seg.setMethodType(pcl::SAC_RANSAC);
     seg.setMaxIterations(100);
-    seg.setDistanceThreshold(0.01);
+    seg.setDistanceThreshold(0.001);
 
     int i=0, nr_points = (int) cloud_filtered->points.size ();
     while (cloud_filtered->points.size () > 0.3 * nr_points){
@@ -93,8 +93,8 @@ bool key_service_callback(lock_key::findKey::Request &req, lock_key::findKey::Re
     std::vector<pcl::PointIndices> cluster_indices;
     pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> ec;
     ec.setClusterTolerance (0.02); // 2cm
-    ec.setMinClusterSize (10);
-    ec.setMaxClusterSize (500);
+    ec.setMinClusterSize (100);
+    ec.setMaxClusterSize (700);
     ec.setSearchMethod (tree);
     ec.setInputCloud (cloud_filtered);
     ec.extract (cluster_indices);
@@ -119,7 +119,7 @@ bool key_service_callback(lock_key::findKey::Request &req, lock_key::findKey::Re
     // TO DO: put in function
     sensor_msgs::PointCloud2 ret;
     pcl::PCLPointCloud2 temppc2;
-    pcl::toPCLPointCloud2(*cloud_cluster, temppc2);
+    pcl::toPCLPointCloud2(*cloud_filtered, temppc2);
     pcl_conversions::fromPCL(temppc2, ret);
 
     

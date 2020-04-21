@@ -55,6 +55,40 @@ int main(int argc, char **argv){
     geometry_msgs::PointStamped keypose;
     listener.transformPoint("panda_link0",keyImg.response.p,keypose);
     
+        // Visualization and Debugging
+    ros::Publisher cloud_pub = n.advertise<sensor_msgs::PointCloud2>("debugPC2", 1);
+    ros::Publisher centroid_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 1);
+
+
+    visualization_msgs::Marker marker;
+
+    marker.type = visualization_msgs::Marker::SPHERE;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.scale.x = .005;
+    marker.scale.y = .005;
+    marker.scale.z = .005;
+    marker.color.a = 1;
+    marker.color.r = 1;
+    marker.color.g = 1;
+    marker.color.b = 1;
+    marker.pose.orientation.w = 1;
+    marker.header.frame_id="/panda_camera_optical_link";
+    marker.header.stamp = ros::Time();
+    marker.id = 0;
+    marker.pose.position.x = keyImg.response.p.point.x;
+    marker.pose.position.y = keyImg.response.p.point.y;
+    marker.pose.position.z = keyImg.response.p.point.z;
+
+    // ROS_INFO_STREAM(marker.pose);
+
+    int count =0;
+     while (count<50)
+     {
+        cloud_pub.publish(keyImg.response.pc2);
+        centroid_pub.publish(marker);
+        ROS_INFO("KEY Published");
+        count += 1;
+     }
     //Manipulating position so as to create pre-grasp pose
     keypose.point.x -= 0.001;
     keypose.point.y += 0.005;
@@ -84,39 +118,7 @@ int main(int argc, char **argv){
     grip.request.force = -1000.0;
     gripperClient.call(grip);
     ROS_INFO("Gripped");
-    // Visualization and Debugging
-    ros::Publisher cloud_pub = n.advertise<sensor_msgs::PointCloud2>("debugPC2", 1);
-    ros::Publisher centroid_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 1);
 
-
-    visualization_msgs::Marker marker;
-
-    marker.type = visualization_msgs::Marker::SPHERE;
-    marker.action = visualization_msgs::Marker::ADD;
-    marker.scale.x = .005;
-    marker.scale.y = .005;
-    marker.scale.z = .005;
-    marker.color.a = 1;
-    marker.color.r = 1;
-    marker.color.g = 1;
-    marker.color.b = 1;
-    marker.pose.orientation.w = 1;
-    marker.header.frame_id="/panda_camera_optical_link";
-    marker.header.stamp = ros::Time();
-    marker.id = 0;
-    marker.pose.position.x = keyImg.response.p.point.x;
-    marker.pose.position.y = keyImg.response.p.point.y;
-    marker.pose.position.z = keyImg.response.p.point.z;
-
-    // ROS_INFO_STREAM(marker.pose);
-
-
-    // while (true)
-    // {
-        cloud_pub.publish(keyImg.response.pc2);
-        centroid_pub.publish(marker);
-        //ROS_INFO("KEY Published");
-    // }
     
     ros::spin();
 
