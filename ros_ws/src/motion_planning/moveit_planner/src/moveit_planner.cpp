@@ -2,10 +2,12 @@
 
 #include "moveit_msgs/RobotTrajectory.h"
 
+#include "geometry_msgs/PoseStamped.h"
+
 namespace moveit_planner {  
   // Constructor/Destructor
   MoveitPlanner::MoveitPlanner(ros::NodeHandle& nh, const std::string& arm)
-    : n{nh}, spinner{2}, armGroup{arm}, moveGroup{armGroup}, curScaling{1.0},
+    : n{nh}, spinner{3}, armGroup{arm}, moveGroup{armGroup}, curScaling{1.0},
       eef_step{0.005}, jump_threshold{0} {
       spinner.start();
 
@@ -30,8 +32,6 @@ namespace moveit_planner {
     return success;
   }
   bool MoveitPlanner::moveToJointSpace(const std::vector<double>& jointPositions, bool exe) {
-    ROS_INFO("RECEIVED JOINT SPACE REQUEST");
-    
     moveGroup.setJointValueTarget(jointPositions);
     auto errCode = moveGroup.plan(curPlan);
     bool success = (errCode == moveit::planning_interface::MoveItErrorCode::SUCCESS);
@@ -70,10 +70,25 @@ namespace moveit_planner {
     // TODO: Check how to get success
     return true;
   }
+  bool MoveitPlanner::addCollisionObjects(const std::vector<moveit_msgs::CollisionObject>& collObjs) {
+    planningSceneInterface.applyCollisionObjects(collObjs);
+
+    return true;
+  }
 
   bool MoveitPlanner::poseClientCallback(moveit_planner::MovePose::Request& req,
 					 moveit_planner::MovePose::Response& res) {
     return moveToPose(req.val, req.execute);
+  }
+
+  bool MoveitPlanner::rotClientCallback(moveit_planner::MoveQuat::Request& req,
+					moveit_planner::MoveQuat::Response& res) {
+    geometry_msgs::PoseStamped curPose = moveGroup.getCurrentPose();
+    ROS_INFO_STREAM("Current pose: " << curPose);
+    geometry_msgs::Pose targetPose = curPose.pose;
+    targetPose.orientation = req.val;
+
+    return moveToPose(targetPose, req.execute);
   }
 
   bool MoveitPlanner::jsClientCallback(moveit_planner::MoveJoint::Request& req,
@@ -117,6 +132,15 @@ namespace moveit_planner {
     curScaling = req.velScaling;
     return true;
   }
+  bool MoveitPlanner::addCollisionCallback(moveit_planner::AddCollision::Request& req,
+					   moveit_planner::AddCollision::Response& res) {
+    // Place in a vector to use general private function
+    std::vector<moveit_msgs::CollisionObject> collObjects;
+    collObjects.push_back(req.collObject);
+
+    // Return whether it was successfull or not
+    return addCollisionObjects(collObjects);
+  }
 
   // Private
   void MoveitPlanner::setupServices() {
@@ -124,6 +148,10 @@ namespace moveit_planner {
     poseClient = n.advertiseService("move_to_pose",
 				    &MoveitPlanner::poseClientCallback,
 				    this);
+    // Not currently working, need to debug joint_states issue
+    // rotClient = n.advertiseService("move_to_orientation",
+    // 				   &MoveitPlanner::rotClientCallback,
+    // 				   this);
     jsClient = n.advertiseService("move_to_joint_space",
 				  &MoveitPlanner::jsClientCallback,
 				  this);
@@ -136,6 +164,9 @@ namespace moveit_planner {
     velocityClient = n.advertiseService("set_velocity_scaling",
 					&MoveitPlanner::setVelocityCallback,
 					this);
+    addCollClient = n.advertiseService("add_collision_object",
+				       &MoveitPlanner::addCollisionCallback,
+				       this);
   }
 
   void MoveitPlanner::setupMoveit() {

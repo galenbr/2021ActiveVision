@@ -5,6 +5,8 @@ project(moveit_planner)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  message_runtime
+  message_generation
   moveit_core
   moveit_ros_planning
   moveit_ros_planning_interface
@@ -22,21 +24,27 @@ add_service_files(
   MoveCart.srv
   MoveAway.srv
   SetVelocity.srv
+  AddCollision.srv
 )
 
 generate_messages(
   DEPENDENCIES
   geometry_msgs
+  moveit_msgs
 )
 
 catkin_package(
   INCLUDE_DIRS include  ## Added this so pkg can be included in other pkgs
   CATKIN_DEPENDS
+    roscpp
     moveit_core
+    geometry_msgs
+    moveit_msgs
+    message_runtime
 )
 
 include_directories(include ${catkin_INCLUDE_DIRS})
 link_libraries(${catkin_LIBRARIES})
 
 add_executable(main_node src/main.cpp src/moveit_planner.cpp)
-add_dependencies(main_node moveit_planner_gencpp)
+add_dependencies(main_node ${moveit_planner_EXPORTED_TARGETS})

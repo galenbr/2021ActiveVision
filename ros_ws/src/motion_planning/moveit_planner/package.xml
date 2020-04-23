@@ -10,11 +10,19 @@
   
   <build_depend>roscpp</build_depend>
   <build_depend>moveit_core</build_depend>
+  <build_depend>moveit_msgs</build_depend>
+  <build_depend>message_generation</build_depend>
+  <build_depend>message_runtime</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>moveit_msgs</build_depend>
 
   <build_export_depend>roscpp</build_export_depend>
 
   <exec_depend>roscpp</exec_depend>
   <exec_depend>moveit_core</exec_depend>
+  <exec_depend>moveit_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>message_runtime</exec_depend>
 
   <export>
   </export>

@@ -31,3 +31,6 @@ This package exposes several services to interact with moveit, they are:
 5. Move Away from Target (moves a "distance" away from "pose" in that pose's z-direction)
    - Topic: "move_away_point"
    - Message: "moveit_planner/MoveAway.h"
+6. Add Collision Object
+   - Topic: "add_collision_object"
+   - Message: "moveit_planner/AddCollision.h"
