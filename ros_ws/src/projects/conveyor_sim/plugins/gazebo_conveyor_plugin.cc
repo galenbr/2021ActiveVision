@@ -13,18 +13,30 @@ namespace gazebo {
     void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
       model = _model;
       this->updateConnection = event::Events::ConnectWorldUpdateBegin(std::bind(&ConveyorPlugin::OnUpdate, this));
+
+      if(!_sdf->HasElement("speed"))
+	gzerr << "No conveyor speed specified\n";
+      if(!_sdf->HasElement("length"))
+	gzerr << "No conveyor length specified\n";
+
+      speed = _sdf->GetElement("speed")->Get<double>();
+      length = _sdf->GetElement("length")->Get<double>();
     }
 
-    // Callback on model startup
     void OnUpdate() {
-      this->model->SetLinearVel(ignition::math::Vector3d(0, 0.3, 0)); // Hardcoded speed for now
+      this->model->SetLinearVel(ignition::math::Vector3d(0, speed, 0));
       curPose = this->model->GetLink()->WorldPose();
-      if(curPose.Pos().Y() >= 1) { // Hardcoded limit for now
-	curPose.Pos().Y() = 0.0;	// Hardcoded reset position for now
+      if(curPose.Pos().Y() >= length) {
+	curPose.Pos().Y() = 0.0; // Hardcoded start position, should change to initial position
 	this->model->SetLinkWorldPose(curPose, "canonical");
       }
     }
   private:
+    // Parameters
+    double speed;
+    double length;
+
+    // Other
     ignition::math::Pose3d curPose;
     physics::ModelPtr model;
     event::ConnectionPtr updateConnection;
