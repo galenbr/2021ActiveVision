@@ -1,0 +1,13 @@
+<launch>
+  <!-- Parameters -->
+  <!-- <rosparam command="load" file="$(find conveyor_sim)/config/to_spawn.yaml" /> -->
+  <rosparam command="load" file="$(find conveyor_sim)/config/conveyor_settings.yaml" />
+  <param name="/conveyor/description" command="$(find xacro)/xacro --inorder $(find conveyor_sim)/desc/conveyor_belt_segment.xacro" />
+  <param name="robot_description" command="$(find xacro)/xacro --inorder $(find ref_benchmark)/desc/franka_camera.xacro" />
+
+  <!-- Gazebo -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="paused" value="true" />
+  </include>
+
+</launch>
