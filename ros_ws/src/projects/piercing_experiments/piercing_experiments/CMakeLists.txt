@@ -28,12 +28,12 @@ include_directories(include ${catkin_INCLUDE_DIRS})
  
  add_executable(main_pierce_node src/main_pierce.cpp)
  add_executable(move_node src/move.cpp)
- add_executable(record_node src/record.cpp)
+ add_executable(recorder_node src/record.cpp)
 
  add_dependencies(move_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
  add_dependencies(main_pierce_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
- add_dependencies(record_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+ add_dependencies(recorder_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
  target_link_libraries(main_pierce_node ${catkin_LIBRARIES})
  target_link_libraries(move_node ${catkin_LIBRARIES} ${Boost_LIBRARIES})
- target_link_libraries(record_node ${catkin_LIBRARIES})
+ target_link_libraries(recorder_node ${catkin_LIBRARIES})
