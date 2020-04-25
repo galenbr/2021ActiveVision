@@ -1,14 +1,19 @@
 #include <ros/ros.h>
-#include <moveit_msgs/AttachedCollisionObject.h>
-#include <moveit_msgs/CollisionObject.h>
-#include <moveit/planning_scene_interface/planning_scene_interface.h>
-#include <moveit/move_group_interface/move_group_interface.h>
+#include "moveit_planner/AddCollision.h"
+// #include <moveit_msgs/AttachedCollisionObject.h>
+// #include <moveit_msgs/CollisionObject.h>
+// #include <moveit/planning_scene_interface/planning_scene_interface.h>
+// #include <moveit/move_group_interface/move_group_interface.h>
 
 int main(int argc, char **argv){
     ros::init(argc, argv, "collision_obj");
     ros::NodeHandle n;
 
-    moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
+    // Creating Service Client object
+    ros::ServiceClient addCollisionClient = n.serviceClient<moveit_planner::AddCollision>("add_collision_object");
+
+    // Creating Message Object
+    moveit_planner::AddCollision collisionObj;
 
     // Adding the table as a collision object
     moveit_msgs::CollisionObject surface;
@@ -32,10 +37,13 @@ int main(int argc, char **argv){
     surface.primitive_poses.push_back(surface_pose);
     surface.operation = surface.ADD;
 
-    std::vector<moveit_msgs::CollisionObject> collision_objects;
-    collision_objects.push_back(surface);
+    // std::vector<moveit_msgs::CollisionObject> collision_objects;
+    // collision_objects.push_back(surface);
 
-    planning_scene_interface.addCollisionObjects(collision_objects);
+
+    // Sending objects to client
+    collisionObj.request.collObject = surface;
+    addCollisionClient.call(collisionObj);
 
     ros::spin();
     
