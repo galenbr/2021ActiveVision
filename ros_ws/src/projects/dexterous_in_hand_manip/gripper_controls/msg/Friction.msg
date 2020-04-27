@@ -1,0 +1,2 @@
+int8 left_friction
+int8 right_friction
