@@ -1,14 +1,15 @@
 #include <ros/ros.h>
 #include "moveit_planner/AddCollision.h"
-// #include <moveit_msgs/AttachedCollisionObject.h>
-// #include <moveit_msgs/CollisionObject.h>
-// #include <moveit/planning_scene_interface/planning_scene_interface.h>
-// #include <moveit/move_group_interface/move_group_interface.h>
+#include <moveit_msgs/CollisionObject.h>
 
 int main(int argc, char **argv){
     ros::init(argc, argv, "collision_obj");
     ros::NodeHandle n;
 
+    // Wait for Service
+    int32_t timeout = 1000;
+    ros::service::waitForService("add_collision_object",timeout);
+    
     // Creating Service Client object
     ros::ServiceClient addCollisionClient = n.serviceClient<moveit_planner::AddCollision>("add_collision_object");
 
@@ -36,10 +37,6 @@ int main(int argc, char **argv){
     surface.primitives.push_back(primitive);
     surface.primitive_poses.push_back(surface_pose);
     surface.operation = surface.ADD;
-
-    // std::vector<moveit_msgs::CollisionObject> collision_objects;
-    // collision_objects.push_back(surface);
-
 
     // Sending objects to client
     collisionObj.request.collObject = surface;

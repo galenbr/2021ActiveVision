@@ -55,7 +55,7 @@ int main(int argc, char **argv){
     geometry_msgs::PointStamped keypose;
     listener.transformPoint("panda_link0",keyImg.response.p,keypose);
     
-        // Visualization and Debugging
+    // Visualization and Debugging
     ros::Publisher cloud_pub = n.advertise<sensor_msgs::PointCloud2>("debugPC2", 1);
     ros::Publisher centroid_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 1);
 
@@ -90,8 +90,8 @@ int main(int argc, char **argv){
         count += 1;
      }
     //Manipulating position so as to create pre-grasp pose
-    keypose.point.x -= 0.001;
-    keypose.point.y += 0.005;
+    keypose.point.x -= 0.05;
+    keypose.point.y += 0.01;
     keypose.point.z -= 0.025;
     
     //Moving to pre-grasp pose
