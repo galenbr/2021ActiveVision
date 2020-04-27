@@ -11,7 +11,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include </opt/ros/kinetic/include/dynamixel_sdk/dynamixel_sdk.h>
+#include "dynamixel_sdk/dynamixel_sdk.h"
 
 int Hand::getch()
 {
