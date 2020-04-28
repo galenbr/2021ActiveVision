@@ -7,10 +7,6 @@ find_package(catkin REQUIRED COMPONENTS
 )
 find_package(gazebo REQUIRED)
 
-if(${gazebo_VERSION_MAJOR} EQUAL "9")
-  message("Found correct gazebo version for conveyor_sim")
-endif()
-
 catkin_package()
 include_directories(${catkin_INCLUDE_DIRS} ${GAZEBO_INCLUDE_DIRS})
 
