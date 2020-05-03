@@ -27,6 +27,8 @@ public:
   bool set_controller_type(gripper_controls::SetControlType::Request &req, gripper_controls::SetControlType::Response &res){
     l_finger_type = req.left;
     r_finger_type = req.right;
+    l_finger_val = 0;
+    r_finger_val = 0;
     res.success = 1;
     return 1;
   }

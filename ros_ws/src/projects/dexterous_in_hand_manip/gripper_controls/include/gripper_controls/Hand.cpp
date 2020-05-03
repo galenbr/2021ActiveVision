@@ -156,8 +156,10 @@ bool Hand::slide_left_down(gripper_controls::PositionCommand::Request &req, grip
   send_torque = command_torque(1, torque_val);
   if (send_torque){
     float initial_position;
-    initial_position = read_position(1);
-    send_pos = command_position(0, req.data);
+    initial_position = -1*read_position(1);
+    for (float i = initial_position; i <= req.data; i = i + 0.01){
+      send_pos = command_position(0,i);
+    }
     if (send_pos)
       return 1;
     else{
@@ -188,8 +190,10 @@ bool Hand::slide_left_up(gripper_controls::PositionCommand::Request &req, grippe
   send_torque = command_torque(0, torque_val);
   if (send_torque){
     float initial_position;
-    initial_position = read_position(2);
-    send_pos = command_position(1, req.data);
+    initial_position = -1*read_position(2);
+    for (float i = initial_position; i <= req.data; i = i + 0.01){
+      send_pos = command_position(1,i);
+    }
     if (send_pos)
       return 1;
     else{
@@ -220,8 +224,10 @@ bool Hand::slide_right_down(gripper_controls::PositionCommand::Request &req, gri
   send_torque = command_torque(0, torque_val);
   if (send_torque){
     float initial_position;
-    initial_position = read_position(2);
-    send_pos = command_position(1, req.data);
+    initial_position = -1*read_position(2);
+    for (float i = initial_position; i <= req.data; i = i + 0.01){
+      send_pos = command_position(1,i);
+    }
     if (send_pos)
       return 1;
     else{
@@ -252,8 +258,10 @@ bool Hand::slide_right_up(gripper_controls::PositionCommand::Request &req, gripp
   send_torque = command_torque(1, torque_val);
   if (send_torque){
     float initial_position;
-    initial_position = read_position(1);
-    send_pos = command_position(0, req.data);
+    initial_position = -1*read_position(1);
+    for (float i = initial_position; i <= req.data; i = i + 0.01){
+      send_pos = command_position(0,i);
+    }
     if (send_pos)
       return 1;
     else{
@@ -285,8 +293,8 @@ bool Hand::rotate_anticlockwise(gripper_controls::PositionCommand::Request &req,
   send_torque = command_torque(0, torque_val);
   if (send_torque){
     float initial_position;
-    initial_position = read_position(2);
-    for (float i = initial_position; i >= req.data; i = i - 0.01){
+    initial_position = -1*read_position(2);
+    for (float i = initial_position; i <= req.data; i = i + 0.01){
       send_pos = command_position(1,i);
     }
     if (send_pos)
@@ -319,8 +327,8 @@ bool Hand::rotate_clockwise(gripper_controls::PositionCommand::Request &req, gri
   send_torque = command_torque(1, torque_val);
   if (send_torque){
     float initial_position;
-    initial_position = read_position(1);
-    for (float i = initial_position; i >= req.data; i = i - 0.01){
+    initial_position = -1*read_position(1);
+    for (float i = initial_position; i <= req.data; i = i + 0.01){
       send_pos = command_position(0,i);
     }
     if (send_pos)

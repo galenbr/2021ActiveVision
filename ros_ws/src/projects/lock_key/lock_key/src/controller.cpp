@@ -42,6 +42,7 @@ int main(int argc, char **argv){
     lock_key::findKey keyImg;
     moveit_planner::MovePose pose;
     moveit_planner::MoveCart cart;
+    moveit_planner::MoveCart cart2;
     franka_gripper_gazebo::GripMsg grip;
 
     //Client Calls
@@ -91,33 +92,44 @@ int main(int argc, char **argv){
      }
     //Manipulating position so as to create pre-grasp pose
     keypose.point.x -= 0.05;
-    keypose.point.y += 0.01;
-    keypose.point.z -= 0.025;
     
-    //Moving to pre-grasp pose
+    //Setting pre-grasp orientation
     pose.request.val.position = keypose.point;
-    pose.request.val.orientation.x = 0.7071068; //-0.4082483;
-    pose.request.val.orientation.y = 0.0; //0.8164966;
+    pose.request.val.orientation.x = 0.0;//0.3826834;// 0.7071068; //-0.4082483;
+    pose.request.val.orientation.y = 0.7071068; //0.8164966;
     pose.request.val.orientation.z = 0.0; //-0.4082483;
     pose.request.val.orientation.w = 0.7071068;
+
+    // Opening Gripper and moving to pre-grasp pose
     pose.request.execute = true;
     grip.request.force = 1000.0;
     gripperClient.call(grip);
     movePoseClient.call(pose);
 
-    //Grasp
-    // Ideally we would first do cartesian move and then grasp, however the orientations are not working well w/o the hardware setup
-    // geometry_msgs::Pose p;
-    // p.position.y = -0.01;
-    // p.orientation = pose.request.val.orientation;
-    // cart.request.val.push_back(p);
-    // cart.request.execute = true;
-    // moveCartClient.call(cart);
-    ros::Duration(2).sleep();
+    // Move to grasp
+    geometry_msgs::Pose p;
+    p.position = keypose.point;
+    p.orientation = pose.request.val.orientation;
+    p.position.x += 0.04;   
+    cart.request.val.push_back(p);
+    cart.request.execute = true;
+    moveCartClient.call(cart);
+    ros::Duration(1).sleep();
+    // Grasp
     ROS_INFO("Gripping");
-    grip.request.force = -1000.0;
+    grip.request.force = -10.0;
     gripperClient.call(grip);
     ROS_INFO("Gripped");
+    ros::Duration(1).sleep();
+    // Move away
+    cart2.request.val.push_back(p);
+    p.position.x -= 0.04;
+    cart2.request.val.push_back(p);
+    p.position.z += 0.05;
+    cart2.request.val.push_back(p);
+    cart2.request.execute = true;
+    moveCartClient.call(cart2);
+    ros::Duration(1).sleep();
 
     
     ros::spin();
