@@ -16,12 +16,12 @@ devel
 /ros_ws/CMakeLists.txt
 /CMakeLists.txt
 
-#vscode files
-.vscode/
-
 #Matlab Results
 Matlab/piercing_sim/Results
 
 #build and devel files
 ros_ws/build/
 ros_ws/devel/
+
+#vscode files
+ros_ws/.vscode/
