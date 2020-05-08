@@ -41,6 +41,7 @@ int main(int argc, char **argv){
     lock_key::imgCapture reqImg;
     lock_key::findKey keyImg;
     moveit_planner::MovePose pose;
+    moveit_planner::MovePose pose2;
     moveit_planner::MoveCart cart;
     moveit_planner::MoveCart cart2;
     franka_gripper_gazebo::GripMsg grip;
@@ -80,7 +81,7 @@ int main(int argc, char **argv){
     marker.pose.position.y = keyImg.response.p.point.y;
     marker.pose.position.z = keyImg.response.p.point.z;
 
-    // ROS_INFO_STREAM(marker.pose);
+    ROS_INFO_STREAM(marker.pose);
 
     int count =0;
      while (count<50)
@@ -91,7 +92,8 @@ int main(int argc, char **argv){
         count += 1;
      }
     //Manipulating position so as to create pre-grasp pose
-    keypose.point.x -= 0.05;
+    keypose.point.x -= 0.06;
+    keypose.point.z -= 0.006;
     
     //Setting pre-grasp orientation
     pose.request.val.position = keypose.point;
@@ -117,9 +119,12 @@ int main(int argc, char **argv){
     ros::Duration(1).sleep();
     // Grasp
     ROS_INFO("Gripping");
-    grip.request.force = -10.0;
+    grip.request.force = -0.10;
     gripperClient.call(grip);
     ROS_INFO("Gripped");
+    ros::Duration(1).sleep();
+    grip.request.force = -1000.0;
+    gripperClient.call(grip);
     ros::Duration(1).sleep();
     // Move away
     cart2.request.val.push_back(p);
@@ -130,6 +135,18 @@ int main(int argc, char **argv){
     cart2.request.execute = true;
     moveCartClient.call(cart2);
     ros::Duration(1).sleep();
+    // //Move to Lock
+    // ROS_INFO("Moving to Lock");
+    // pose2.request.val.position.x = 0.75;
+    // pose2.request.val.position.y = 0.0;
+    // pose2.request.val.position.z = 0.7;
+    // pose2.request.val.orientation.w = 1;
+    // pose2.request.val.orientation.x = 0.0;
+    // pose2.request.val.orientation.y = 0.0;
+    // pose2.request.val.orientation.z = 0.0;
+    // pose2.request.execute = true;
+    // movePoseClient.call(pose2);
+    
 
     
     ros::spin();
