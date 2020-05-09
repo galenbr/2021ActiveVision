@@ -88,7 +88,7 @@ namespace gazebo
 
   private:
     double low_friction{1e-1};
-    double high_friction{1e5};
+    double high_friction{1e8};
     physics::ModelPtr model;
     event::ConnectionPtr updateConnection;
     physics::FrictionPyramidPtr m_surface_left;

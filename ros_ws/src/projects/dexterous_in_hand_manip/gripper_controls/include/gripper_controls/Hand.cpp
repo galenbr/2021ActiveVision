@@ -7,6 +7,7 @@
 #include "gripper_controls/SetControlType.h"
 #include <gripper_controls/SetFriction.h>
 #include <iostream>
+#include <sensor_msgs/JointState.h>
 
 float Hand::read_position(int motor_num){
   ros::NodeHandle n;
@@ -25,10 +26,17 @@ float Hand::read_position(int motor_num){
   }
 }
 
+float Hand::read_effort(int motor_num){
+  ros::NodeHandle n;
+  sensor_msgs::JointStateConstPtr msg;
+  msg = ros::topic::waitForMessage<sensor_msgs::JointState>("/gripper/joint_states",n);
+  return msg->effort[motor_num];
+}
+
 bool Hand::command_position(int motor_num, float position){
   ros::NodeHandle n;
-  ros::service::waitForService("value_change");
-  ros::ServiceClient client_position = n.serviceClient<gripper_controls::SetControlValue>("value_change");
+  ros::service::waitForService("pos_change");
+  ros::ServiceClient client_position = n.serviceClient<gripper_controls::SetControlValue>("pos_change");
   gripper_controls::SetControlValue srv;
   srv.request.finger = motor_num;
   srv.request.value = position;
@@ -44,8 +52,8 @@ bool Hand::command_position(int motor_num, float position){
 
 bool Hand::command_torque(int motor_num, float torque){
   ros::NodeHandle n;
-  ros::service::waitForService("value_change");
-  ros::ServiceClient client_torque = n.serviceClient<gripper_controls::SetControlValue>("value_change");
+  ros::service::waitForService("effort_change");
+  ros::ServiceClient client_torque = n.serviceClient<gripper_controls::SetControlValue>("effort_change");
   gripper_controls::SetControlValue srv;
   srv.request.finger = motor_num;
   srv.request.value = torque;
@@ -153,7 +161,11 @@ bool Hand::slide_left_down(gripper_controls::PositionCommand::Request &req, grip
     set_friction_r = set_friction_right(true);
     finger_state = 1;
   }
-  send_torque = command_torque(1, torque_val);
+  float initial_torque;
+  initial_torque = read_effort(0); // Right finger
+  for (float i = initial_torque; i>=torque_val; i-=0.01){
+    send_torque = command_torque(1, i);
+  }
   if (send_torque){
     float initial_position;
     initial_position = -1*read_position(1);
@@ -187,7 +199,11 @@ bool Hand::slide_left_up(gripper_controls::PositionCommand::Request &req, grippe
     set_friction_r = set_friction_right(true);
     finger_state = 1;
   }
-  send_torque = command_torque(0, torque_val);
+  float initial_torque;
+  initial_torque = read_effort(1); // Left finger
+  for (float i = initial_torque; i>=torque_val; i-=0.01){
+    send_torque = command_torque(0, i);
+  }
   if (send_torque){
     float initial_position;
     initial_position = -1*read_position(2);
@@ -221,7 +237,11 @@ bool Hand::slide_right_down(gripper_controls::PositionCommand::Request &req, gri
     set_friction_r = set_friction_right(false);
     finger_state = 2;
   }
-  send_torque = command_torque(0, torque_val);
+  float initial_torque;
+  initial_torque = read_effort(1); // Left finger
+  for (float i = initial_torque; i>=torque_val; i-=0.01){
+    send_torque = command_torque(0, i);
+  }
   if (send_torque){
     float initial_position;
     initial_position = -1*read_position(2);
@@ -255,7 +275,11 @@ bool Hand::slide_right_up(gripper_controls::PositionCommand::Request &req, gripp
     set_friction_r = set_friction_right(false);
     finger_state = 2;
   }
-  send_torque = command_torque(1, torque_val);
+  float initial_torque;
+  initial_torque = read_effort(0); // Right finger
+  for (float i = initial_torque; i>=torque_val; i-=0.01){
+    send_torque = command_torque(1, i);
+  }
   if (send_torque){
     float initial_position;
     initial_position = -1*read_position(1);
@@ -288,9 +312,13 @@ bool Hand::rotate_anticlockwise(gripper_controls::PositionCommand::Request &req,
     // Set Friction Surfaces - Left -> High, Right -> High
     set_friction_l = set_friction_left(true);
     set_friction_r = set_friction_right(true);
-    finger_state = 2;
+    finger_state = 3;
   }
-  send_torque = command_torque(0, torque_val);
+  float initial_torque;
+  initial_torque = read_effort(1); // Left finger
+  for (float i = initial_torque; i>=torque_val; i-=0.01){
+    send_torque = command_torque(0, i);
+  }
   if (send_torque){
     float initial_position;
     initial_position = -1*read_position(2);
@@ -322,9 +350,13 @@ bool Hand::rotate_clockwise(gripper_controls::PositionCommand::Request &req, gri
     // Set Friction Surfaces - Left -> High, Right -> High
     set_friction_l = set_friction_left(true);
     set_friction_r = set_friction_right(true);
-    finger_state = 2;
+    finger_state = 3;
   }
-  send_torque = command_torque(1, torque_val);
+  float initial_torque;
+  initial_torque = read_effort(0); // Right finger
+  for (float i = initial_torque; i>=torque_val; i-=0.01){
+    send_torque = command_torque(1, i);
+  }
   if (send_torque){
     float initial_position;
     initial_position = -1*read_position(1);

@@ -9,6 +9,7 @@ private:
   int finger_state;
 
   float read_position(int motor_num);
+  float read_effort(int motor_num);
   bool command_position(int motor_num, float position);
   bool command_torque(int motor_num, float torque);
   bool set_actuator_modes(int size, int mode[]);

@@ -15,10 +15,6 @@
       <geometry>
         <box size="0.03 0.03 0.1"/>
       </geometry>
-      <contact_coefficients
-        mu="100"
-        kp="10"
-        kd="1"/>
     </collision>
     <visual>
       <geometry>
@@ -26,11 +22,11 @@
       </geometry>
     </visual>
     <inertial>
-      <mass value="0.1"/>
+      <mass value="0.072"/>
       <inertia
-        ixx="0.0075" ixy="0.0" ixz="0.0"
-        iyy="0.083333" iyz="0.0"
-        izz="0.090833"/>
+        ixx="0.0000654" ixy="0.0" ixz="0.0"
+        iyy="0.0000654" iyz="0.0"
+        izz="0.0000108"/>
     </inertial>
   </link>
 
