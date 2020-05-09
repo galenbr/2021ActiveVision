@@ -46,3 +46,7 @@ add_dependencies(high_lvl_ctrl ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPO
 add_executable(low_lvl_ctrl src/low_controller.cpp)
 target_link_libraries(low_lvl_ctrl ${catkin_LIBRARIES})
 add_dependencies(low_lvl_ctrl ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+add_executable(sequential_command_node src/sequential_commands.cpp)
+target_link_libraries(sequential_command_node ${catkin_LIBRARIES})
+add_dependencies(sequential_command_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
