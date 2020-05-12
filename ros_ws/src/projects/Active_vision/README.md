@@ -9,7 +9,7 @@ Here are a list of some important packages and their uses:
 4) test_movement: Contains the main nodes for Q-learning training and testing.
 
 ## Dependencies
-1) Ubuntu 16.04 LTS or above
+1) Ubuntu 16.04
 2) ROS Kinetic
 3) Gazebo v 7.16
 4) C++ 11
