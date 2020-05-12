@@ -118,6 +118,10 @@ int dir2;
 
 // Some global variables
 
+//
+//Some lines to show the details are commented for now but uncomment them if you need them
+//
+
 // Spawn a obejct model in the wrold and also set up the pose of the object
 void spawn_object_model(std::string model_string1)
 {
@@ -607,10 +611,7 @@ void automated_training_procedure(std::string object_xml_parsed)
 				std::cout<<grasp_quality<<std::endl;
 				d_file<<"Grasph Quality:"<<std::endl;
 				d_file<<grasp_quality<<std::endl;
-				//std::cout<<"reward:"<<std::endl;
-				//std::cout<<q_reward<<std::endl;
-				//std::cout<<"Q talbe:"<<std::endl;
-				//std::cout<<q_table[x_t][q_dir]<<std::endl;op
+				//Free the vector when the q-learning is done
 				free(explored_haf_pcd);
 				//free(unexplored_haf_pcd);
 
@@ -624,7 +625,7 @@ void automated_training_procedure(std::string object_xml_parsed)
 			d_file<<k<<std::endl;
 
 
-			//demonstrate the pointcloud
+			//uncomment the two lines below to demonstrate the pointcloud 
 			//record_image_array(6,0);
 			//sleep(10);
 			//record_image_array(5,0);
