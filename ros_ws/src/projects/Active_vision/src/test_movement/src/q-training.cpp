@@ -117,6 +117,7 @@ int dir1;
 int dir2;
 
 // Some global variables
+// Spawn a obejct model in the wrold and also set up the pose of the object
 void spawn_object_model(std::string model_string1)
 {
 	geometry_msgs::Pose start_pose;
@@ -124,39 +125,10 @@ void spawn_object_model(std::string model_string1)
 	start_pose.position.x = 0.35;
 	start_pose.position.y = 0.0;
 	start_pose.position.z = 1.0;
-	// // float x = float(rand() % 100)/100;
-	// // float y = sqrt(1-(x*x));
-	// // Eigen::Vector3f initial, final,axis;
-	// // float angle = 0;
-	// // initial<<0,0,1;
-	// // final<<x,y,0;
-	// // axis = initial.cross(final);
-	// // axis<<axis[0]/axis.norm(),axis[1]/axis.norm(),axis[2]/axis.norm();
-	// // angle = acos(initial.dot(final) / (initial.norm() * final.norm()));
-
-	// // Eigen::Quaterniond qOrientation(cos(angle/2), axis.x()*sin(angle/2), axis.y()*sin(angle/2), axis.z()*sin(angle/2));
-	// // float roll = float(rand() % 100)*2*M_PI/100;
-
-	// // For other orientation
-	// float roll = 1.5707;
-	// float angleDegrees;
-	// std::random_device rd;  //Will be used to obtain a seed for the random number engine
-	// std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
-	// std::uniform_real_distribution<float> dis(0, 180);
-	// angleDegrees = dis(gen);
-	// angleDegrees += 45;
-	// float pitch = float(angleDegrees)*2*M_PI/100;
-	// float yaw = 0;
-	// Eigen::Quaternionf qOrientation;
-	// qOrientation = Eigen::AngleAxisf(roll, Eigen::Vector3f::UnitX())
-	// * Eigen::AngleAxisf(pitch, Eigen::Vector3f::UnitY())
-	// * Eigen::AngleAxisf(yaw, Eigen::Vector3f::UnitZ());
-	// // For other orientation till here
-
-	// Uncomment from below this line
+	
 	float angleDegrees;
-	std::random_device rd;  //Will be used to obtain a seed for the random number engine
-	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+	std::random_device rd; 
+	std::mt19937 gen(rd()); 
 	std::uniform_real_distribution<float> dis(0, 90);
 	angleDegrees = dis(gen);
 	angleDegrees += rand()%180;
@@ -167,10 +139,8 @@ void spawn_object_model(std::string model_string1)
 	std::cout<<angle<<std::endl;
 	// Eigen::Quaternionf qOrientation;
 	Eigen::Quaternionf qOrientation(cos(angle/2), 0, 0, sin(angle/2));
-	qOrientation.normalize();	// std::cout << "Quaternion" << std::endl << q.coeffs() << std::endl;
-	// Uncomment till this line
+	qOrientation.normalize();	
 
-	// qOrientation.normalize();
 	start_pose.orientation.x = qOrientation.x();
 	start_pose.orientation.y = qOrientation.y();
 	start_pose.orientation.z = qOrientation.z();
@@ -199,6 +169,8 @@ void spawn_object_model(std::string model_string1)
 
 }
 
+
+// The service called when the grasp quality is published 
 void graspQuality_callback(const std_msgs::Float64::ConstPtr& graspQuality)
 {
 	//std::cout<<"graspQuality callback called"<<std::endl;
@@ -210,6 +182,7 @@ void graspQuality_callback(const std_msgs::Float64::ConstPtr& graspQuality)
 
 
 
+//Set random pose to the object such that the algorithm could work for one object random pose
 void set_random_object_orientation(geometry_msgs::Pose pose_to_go_to){
 	geometry_msgs::Pose new_pose;
 
@@ -250,7 +223,7 @@ void set_random_object_orientation(geometry_msgs::Pose pose_to_go_to){
 
 }
 
-
+//Delete the object after the algorithm is completed
 void delete_object_model()
 {
 	std::string name = "bowl";
@@ -269,6 +242,7 @@ void delete_object_model()
 
 }
 
+//Call the image stitching function service 
 int call_image_stitching(int index_1, int index_2){
     ros::ServiceClient client = nhptr->serviceClient<testing_image_transport::image_stitching>("image_stitching");
 
@@ -289,30 +263,29 @@ int call_image_stitching(int index_1, int index_2){
       }
 }
 
+//This function calculate the HAF vector based on the poindcloud data
 float* highest_point (const PointCloud::Ptr temp, pcl::PointXYZ minimum, pcl::PointXYZ maximum )
 {
   temp->points.resize (temp->width*temp->height);
-  //float k = (maximum.x - minimum.x)/5;
-  //float l = (maximum.y - minimum.y)/5;
-	//float m = (maximum.z - minimum.z)/5;
-  //float X[6] = {minimum.x, minimum.x + k , minimum.x + 2*k, minimum.x + 3*k, minimum.x + 4*k, maximum.x };
-  //float Y[6] = {minimum.y, minimum.y + l , minimum.y + 2*l, minimum.y + 3*l, minimum.y + 4*l, maximum.y };
-	float k = (maximum.x - minimum.x)/3;
+  float k = (maximum.x - minimum.x)/3;
   float l = (maximum.y - minimum.y)/3;
-	float m = (maximum.z)/2;
+  float m = (maximum.z)/2;
   float X[4] = {minimum.x, minimum.x + k , minimum.x + 2*k, minimum.x + 3*k };
   float Y[4] = {minimum.y, minimum.y + l , minimum.y + 2*l, minimum.y + 3*l };
+  // calculate the intervel for the HAF
   float x0 = 0.0;
   float x1 = 0.0;
   float y0 = 0.0;
   float y1 = 0.0;
- 	float highest_z = 0.0;
+  float highest_z = 0.0;
   float* explored_vector;
-	explored_vector = (float*)malloc(9 * sizeof(float));
+  explored_vector = (float*)malloc(9 * sizeof(float));
   int j = 0;
-	for (int tx = 0; tx <9; tx++){
-		explored_vector[j] = 0.0;
-	}
+  //initlize the vector to 0
+  for (int tx = 0; tx <9; tx++){
+	explored_vector[j] = 0.0;
+  }
+  //Find the highest points and assign the values to them such that the HAF is stored in the vector
   for (int x = 0; x < 3; x++)
   {
     for (int y= 0; y < 3; y++)
@@ -335,14 +308,11 @@ float* highest_point (const PointCloud::Ptr temp, pcl::PointXYZ minimum, pcl::Po
     }
   }
 
-  // std::cout<<"The region 25x1 vector is"<<std::endl;
-  // for(int i = 0 ; i<25 ; i++)
-  // {std::cout<<explored_vector[i]<<std::endl;}
 
   return explored_vector;
 
 }
-
+//Call the service to store the poindcloud data of the object
 void image_arr_callback(const PointCloud::Ptr& image_arr_msg)
 {
 	temp = *image_arr_msg;
@@ -350,6 +320,7 @@ void image_arr_callback(const PointCloud::Ptr& image_arr_msg)
 	//std::cout<<"Received a point cloud in callback of size:"<<exp_ptr->size()<<std::endl;
 }
 
+//Call the service to store the poindcloud data of the unexplored part
 void unexplored_callback(const PointCloud::Ptr& image_arr_msg2)
 {
 	unexplored_temp = *image_arr_msg2;
@@ -358,7 +329,7 @@ void unexplored_callback(const PointCloud::Ptr& image_arr_msg2)
 
 }
 
-
+//The service to get the stitched images
 void record_image_array(int which_cloud_to_stitch, int is_publish){
 	int image_stitching_return;
 	auto t1 = std::chrono::high_resolution_clock::now();
@@ -371,15 +342,17 @@ void record_image_array(int which_cloud_to_stitch, int is_publish){
 	//std::cout << duration<<std::endl;
 }
 
+//Function to get the grasp quality
 float calc_grasp_quality(){
 	return(graspVector.back());
 }
 
+//The main part of the training code and also the Q-Learning
 void automated_training_procedure(std::string object_xml_parsed)
 {
 
-	int no_of_objects = 1;
-	int no_of_data_per_object = 1;
+	int no_of_objects = 1; // Change the value if more objects are needed
+	int no_of_data_per_object = 1; // Change the value if more data is needed
 	int no_search_dir = 8;
 	int no_random_search = 5;
 	int max_search_step_no = 5;
@@ -401,7 +374,7 @@ void automated_training_procedure(std::string object_xml_parsed)
 	//int* unexplored_haf_pcd;
 	int q_dir;
 	//std::cout<<"memory check"<<std::endl;
-  //load trained q table
+        //load trained q table
 	float q_table[19683][8];
 	for(int i = 0; i < 19683; i++){
 		for(int j= 0; j < 8; j++){
@@ -432,6 +405,7 @@ void automated_training_procedure(std::string object_xml_parsed)
   //save file location
 	move_camera camera;
 	std::ofstream d_file;
+	//Please change this line of code for the saving location
 	d_file.open("/home/quin/catkin_ws/result.txt");
 
 
