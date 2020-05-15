@@ -1,0 +1,29 @@
+init_pose: {
+  x_pos: 0.4,
+  y_pos: 0.0,
+  z_pos: 0.5,
+  x_orn: 0.7071068,
+  y_orn: 0.0,
+  z_orn: 0.7071068,
+  w_orn: 0.0
+}
+
+grasp_pose: {
+  x_pos: 0.47,
+  y_pos: 0.0,
+  z_pos: 0.5,
+  x_orn: 0.7071068,
+  y_orn: 0.0,
+  z_orn: 0.7071068,
+  w_orn: 0.0
+}
+
+rest_pose: {
+  x_pos: 0.2,
+  y_pos: 0.0,
+  z_pos: 1.0,
+  x_orn: 0.7071068,
+  y_orn: 0.0,
+  z_orn: 0.7071068,
+  w_orn: 0.0
+}

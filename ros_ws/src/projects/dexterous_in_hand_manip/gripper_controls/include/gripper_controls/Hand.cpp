@@ -9,6 +9,7 @@
 #include <iostream>
 #include <sensor_msgs/JointState.h>
 
+// method for reading joint position motor1: right finger
 float Hand::read_position(int motor_num){
   ros::NodeHandle n;
   ros::service::waitForService("gazebo/get_joint_properties");
@@ -26,13 +27,18 @@ float Hand::read_position(int motor_num){
   }
 }
 
-float Hand::read_effort(int motor_num){
-  ros::NodeHandle n;
-  sensor_msgs::JointStateConstPtr msg;
-  msg = ros::topic::waitForMessage<sensor_msgs::JointState>("/gripper/joint_states",n);
-  return msg->effort[motor_num];
-}
 
+//
+// float Hand::read_effort(int motor_num){
+//   ros::NodeHandle n;
+//   sensor_msgs::JointStateConstPtr msg;
+//   msg = ros::topic::waitForMessage<sensor_msgs::JointState>("/gripper/joint_states",n);
+//   float effort_val{0};
+//   effort_val = msg->effort[motor_num];
+//   return effort_val;
+// }
+
+// method for sending position reference to low level controller motor1: right finger
 bool Hand::command_position(int motor_num, float position){
   ros::NodeHandle n;
   ros::service::waitForService("pos_change");
@@ -50,6 +56,7 @@ bool Hand::command_position(int motor_num, float position){
   }
 }
 
+// method for sending torque reference to low level controller motor1:right finger
 bool Hand::command_torque(int motor_num, float torque){
   ros::NodeHandle n;
   ros::service::waitForService("effort_change");
@@ -67,10 +74,12 @@ bool Hand::command_torque(int motor_num, float torque){
   }
 }
 
+// method for setting actuator modes
+// informs low level controller on controller type and calls controller manager switch service for the actual switch
 bool Hand::set_actuator_modes(int size, int mode[]){
   ros::NodeHandle n;
-  ros::service::waitForService("gripper/controller_manager/switch_controller");
-  ros::ServiceClient client_operating_mode = n.serviceClient<controller_manager_msgs::SwitchController>("gripper/controller_manager/switch_controller");
+  ros::service::waitForService("vf_hand/controller_manager/switch_controller");
+  ros::ServiceClient client_operating_mode = n.serviceClient<controller_manager_msgs::SwitchController>("vf_hand/controller_manager/switch_controller");
   // 3 -> position_controller 0 -> effort_controller
   std::string left{"l"};
   std::string right{"r"};
@@ -108,6 +117,7 @@ bool Hand::set_actuator_modes(int size, int mode[]){
   return 1;
 }
 
+// sets left finger friction reference for the low level controller
 bool Hand::set_friction_left(bool friction_surface){
   ros::NodeHandle n;
   ros::service::waitForService("set_friction");
@@ -125,6 +135,7 @@ bool Hand::set_friction_left(bool friction_surface){
   }
 }
 
+// sets right finger friction reference for the low level controller
 bool Hand::set_friction_right(bool friction_surface){
   ros::NodeHandle n;
   ros::service::waitForService("set_friction");
@@ -142,13 +153,26 @@ bool Hand::set_friction_right(bool friction_surface){
   }
 }
 
+// Hand object constructor
 Hand::Hand(){
   std::cout << "Hand object constructed" << std::endl;
   finger_state = 0;
+  left_effort = 0;
+  right_effort = 0;
+  sub_ = n_.subscribe("/panda/joint_states",1000,&Hand::stateCallback, this);
 }
+
+// callback for getting joint efforts
+void Hand::stateCallback(const sensor_msgs::JointState& msg){
+  left_effort = msg.effort[1];
+  right_effort = msg.effort[0];
+}
+
 
 bool Hand::slide_left_down(gripper_controls::PositionCommand::Request &req, gripper_controls::PositionCommand::Response &res){
   ros::NodeHandle n;
+  // predetermined max effort is always the same (a negative value, towards closing direction)
+  // and loaded from parameter server
   float torque_val{0};
   n.getParam("/high_level/finger_torque", torque_val);
   bool set_modes, set_friction_l, set_friction_r, send_torque, send_pos;
@@ -161,13 +185,21 @@ bool Hand::slide_left_down(gripper_controls::PositionCommand::Request &req, grip
     set_friction_r = set_friction_right(true);
     finger_state = 1;
   }
+  // ramped torque command
   float initial_torque;
-  initial_torque = read_effort(0); // Right finger
+  // position controller can end with a positive effort (towards opening direction)
+  // this statement is to prevent it
+  if (right_effort>0)
+    initial_torque = 0;
+  else
+    initial_torque = right_effort;
   for (float i = initial_torque; i>=torque_val; i-=0.01){
     send_torque = command_torque(1, i);
   }
+  // ramped position command
   if (send_torque){
     float initial_position;
+    // read the position of the other finger and multiply it with -1 to get the initial position
     initial_position = -1*read_position(1);
     for (float i = initial_position; i <= req.data; i = i + 0.01){
       send_pos = command_position(0,i);
@@ -199,11 +231,17 @@ bool Hand::slide_left_up(gripper_controls::PositionCommand::Request &req, grippe
     set_friction_r = set_friction_right(true);
     finger_state = 1;
   }
+  // ramped torque command
   float initial_torque;
-  initial_torque = read_effort(1); // Left finger
+  if (left_effort>0)
+    initial_torque = 0;
+  else
+    initial_torque = left_effort;
+  ROS_INFO("effort reading %f",initial_torque);
   for (float i = initial_torque; i>=torque_val; i-=0.01){
     send_torque = command_torque(0, i);
   }
+  // ramped position command
   if (send_torque){
     float initial_position;
     initial_position = -1*read_position(2);
@@ -237,11 +275,13 @@ bool Hand::slide_right_down(gripper_controls::PositionCommand::Request &req, gri
     set_friction_r = set_friction_right(false);
     finger_state = 2;
   }
+  // ramped torque command
   float initial_torque;
-  initial_torque = read_effort(1); // Left finger
+  initial_torque = left_effort;
   for (float i = initial_torque; i>=torque_val; i-=0.01){
     send_torque = command_torque(0, i);
   }
+  // ramped position command
   if (send_torque){
     float initial_position;
     initial_position = -1*read_position(2);
@@ -275,11 +315,14 @@ bool Hand::slide_right_up(gripper_controls::PositionCommand::Request &req, gripp
     set_friction_r = set_friction_right(false);
     finger_state = 2;
   }
+  // ramped torque command
   float initial_torque;
-  initial_torque = read_effort(0); // Right finger
+  // initial_torque = read_effort(0); // Right finger
+  initial_torque = right_effort;
   for (float i = initial_torque; i>=torque_val; i-=0.01){
     send_torque = command_torque(1, i);
   }
+  // ramped position command
   if (send_torque){
     float initial_position;
     initial_position = -1*read_position(1);
@@ -314,11 +357,15 @@ bool Hand::rotate_anticlockwise(gripper_controls::PositionCommand::Request &req,
     set_friction_r = set_friction_right(true);
     finger_state = 3;
   }
+  // ramped torque command
   float initial_torque;
-  initial_torque = read_effort(1); // Left finger
+  // initial_torque = read_effort(1); // Left finger
+  initial_torque = left_effort;
+  ROS_INFO("init torq %f",initial_torque);
   for (float i = initial_torque; i>=torque_val; i-=0.01){
     send_torque = command_torque(0, i);
   }
+  // ramped position command
   if (send_torque){
     float initial_position;
     initial_position = -1*read_position(2);
@@ -352,11 +399,14 @@ bool Hand::rotate_clockwise(gripper_controls::PositionCommand::Request &req, gri
     set_friction_r = set_friction_right(true);
     finger_state = 3;
   }
+  // ramped torque command
   float initial_torque;
-  initial_torque = read_effort(0); // Right finger
+  // initial_torque = read_effort(0); // Right finger
+  initial_torque = right_effort;
   for (float i = initial_torque; i>=torque_val; i-=0.01){
     send_torque = command_torque(1, i);
   }
+  // ramped position command
   if (send_torque){
     float initial_position;
     initial_position = -1*read_position(1);
@@ -381,13 +431,13 @@ bool Hand::hold_object(gripper_controls::Holdcommand::Request &req, gripper_cont
   // Set modes - Left -> Position(3), Right -> Position(3)
   int modes1[] = {3,3};
   set_modes = set_actuator_modes(2,modes1);
-  send_pos1 = command_position(0, req.left);
-  send_pos2 = command_position(1, req.right);
   if (finger_state != 3){
     set_friction_l = set_friction_left(true);
     set_friction_r = set_friction_right(true);
     finger_state = 3;
   }
+  send_pos1 = command_position(0, req.left);
+  send_pos2 = command_position(1, req.right);
 
   ros::Duration(1).sleep();
 

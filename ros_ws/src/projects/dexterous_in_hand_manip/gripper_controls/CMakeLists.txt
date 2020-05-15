@@ -7,11 +7,13 @@ add_compile_options(-std=c++11)
    rospy
    std_msgs
    message_generation
+   rosbag
  )
 
  add_message_files(DIRECTORY msg
    FILES
    Friction.msg
+   JointEffort.msg
 )
 
  add_service_files(
@@ -50,3 +52,7 @@ add_dependencies(low_lvl_ctrl ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPOR
 add_executable(sequential_command_node src/sequential_commands.cpp)
 target_link_libraries(sequential_command_node ${catkin_LIBRARIES})
 add_dependencies(sequential_command_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+add_executable(torque_pub_node src/torque_publisher.cpp)
+add_dependencies(torque_pub_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(torque_pub_node ${catkin_LIBRARIES})

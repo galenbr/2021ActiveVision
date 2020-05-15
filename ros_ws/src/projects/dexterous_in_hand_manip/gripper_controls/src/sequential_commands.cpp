@@ -21,6 +21,7 @@ int main(int argc, char **argv){
   ros::service::waitForService("Slide_Left_Finger_Down");
   ros::ServiceClient client_slfd = n.serviceClient<gripper_controls::PositionCommand>("Slide_Left_Finger_Down");
 
+  ros::Rate loop_rate(1);
   // 1. Hold object
   gripper_controls::Holdcommand srv_hold;
   srv_hold.request.left = 0.0;
@@ -31,6 +32,7 @@ int main(int argc, char **argv){
   else{
     ROS_INFO("Failure holding object");
   }
+  loop_rate.sleep();
 
   // 2. Slide left finger down 0.5
   gripper_controls::PositionCommand srv_slfd;
@@ -41,6 +43,7 @@ int main(int argc, char **argv){
   else{
     ROS_INFO("Failure slfd");
   }
+  loop_rate.sleep();
 
   // 3. Slide left finger up 0
   gripper_controls::PositionCommand srv_slfu;
@@ -51,6 +54,7 @@ int main(int argc, char **argv){
   else{
     ROS_INFO("Failure slfu");
   }
+  loop_rate.sleep();
 
   // 4. Slide right finger down 0.5
   gripper_controls::PositionCommand srv_srfd;
@@ -61,6 +65,7 @@ int main(int argc, char **argv){
   else{
     ROS_INFO("Failure srfd");
   }
+  loop_rate.sleep();
 
   // 5. Slide right finger up 0
   gripper_controls::PositionCommand srv_srfu;
@@ -71,26 +76,27 @@ int main(int argc, char **argv){
   else{
     ROS_INFO("Failure srfu");
   }
+  loop_rate.sleep();
 
-  // 6. Rotate clockwise
-  gripper_controls::PositionCommand srv_rot_clock;
-  srv_rot_clock.request.data = 0.5;
-  if (client_rot_clock.call(srv_rot_clock)){
-    ROS_INFO("Command rotate clockwise success");
-  }
-  else{
-    ROS_INFO("Failure rotate clockwise");
-  }
-
-  // 7. Rotate anticlockwise
-  gripper_controls::PositionCommand srv_rot_anti;
-  srv_rot_anti.request.data = 0.0;
-  if (client_rot_anti.call(srv_rot_anti)){
-    ROS_INFO("Command rotate anticlockwise success");
-  }
-  else{
-    ROS_INFO("Failure rotate anticlockwise");
-  }
+  // // 6. Rotate clockwise
+  // gripper_controls::PositionCommand srv_rot_clock;
+  // srv_rot_clock.request.data = 0.5;
+  // if (client_rot_clock.call(srv_rot_clock)){
+  //   ROS_INFO("Command rotate clockwise success");
+  // }
+  // else{
+  //   ROS_INFO("Failure rotate clockwise");
+  // }
+  //
+  // // 7. Rotate anticlockwise
+  // gripper_controls::PositionCommand srv_rot_anti;
+  // srv_rot_anti.request.data = 0.0;
+  // if (client_rot_anti.call(srv_rot_anti)){
+  //   ROS_INFO("Command rotate anticlockwise success");
+  // }
+  // else{
+  //   ROS_INFO("Failure rotate anticlockwise");
+  // }
 
 
 
