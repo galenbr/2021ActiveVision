@@ -1,4 +1,4 @@
 spawner:
   rate: 1			# Seconds between object spawning
-  models:			# Models to spawn, urdf be found under /spawner/urdfs/
+  models:			# Models to spawn, urdf should be found under /ycb_models/urdfs/
     - mug

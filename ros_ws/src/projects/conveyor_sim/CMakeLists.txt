@@ -19,6 +19,9 @@ target_link_libraries(conveyor_sim_node ${catkin_LIBRARIES})
 add_executable(conveyor_object_spawner src/object_spawner.cpp)
 target_link_libraries(conveyor_object_spawner ${catkin_LIBRARIES})
 
+add_executable(conveyor_object_despawner src/object_despawner.cpp)
+target_link_libraries(conveyor_object_despawner ${catkin_LIBRARIES})
+
 # Conveyor Plugin
 if(${gazebo_VERSION_MAJOR} EQUAL "9")
   message("Conveyor Sim - Gazebo version 9 found, adding plugins")

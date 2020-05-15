@@ -18,16 +18,19 @@ namespace gazebo {
 	gzerr << "No conveyor speed specified\n";
       if(!_sdf->HasElement("length"))
 	gzerr << "No conveyor length specified\n";
+      if(!_sdf->HasElement("root"))
+	gzerr << "No conveyor root specified\n";
 
       speed = _sdf->GetElement("speed")->Get<double>();
       length = _sdf->GetElement("length")->Get<double>();
+      root = _sdf->GetElement("root")->Get<double>();
     }
 
     void OnUpdate() {
       this->model->SetLinearVel(ignition::math::Vector3d(0, speed, 0));
       curPose = this->model->GetLink()->WorldPose();
-      if(curPose.Pos().Y() >= length) {
-	curPose.Pos().Y() = 0.0; // Hardcoded start position, should change to initial position
+      if(curPose.Pos().Y() - root >= length) {
+	curPose.Pos().Y() = root; // Hardcoded start position, should change to initial position
 	this->model->SetLinkWorldPose(curPose, "canonical");
       }
     }
@@ -35,6 +38,7 @@ namespace gazebo {
     // Parameters
     double speed;
     double length;
+    double root;
 
     // Other
     ignition::math::Pose3d curPose;

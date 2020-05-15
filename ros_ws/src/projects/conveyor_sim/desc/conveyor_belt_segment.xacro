@@ -5,6 +5,7 @@
   <xacro:arg name="conveyor_segment_length" default="0.05" />
   <xacro:arg name="conveyor_wall_height" default="0.1" />
   <xacro:arg name="conveyor_speed" default="0.3" />
+  <xacro:arg name="conveyor_root" default="0.0" />
 
   <xacro:macro name="conveyor_segment_wall" params="name">
     <link name="${name}">
@@ -78,8 +79,9 @@
 
   <gazebo>
     <plugin name="conveyor_plugin" filename="libConveyorBeltPlugin.so">
-      <speed>"$(arg conveyor_speed)"</speed>
-      <length>"$(arg conveyor_length)"</length>
+      <speed>$(arg conveyor_speed)</speed>
+      <length>$(arg conveyor_length)</length>
+      <root>$(arg conveyor_root)</root>
     </plugin>
   </gazebo>
   
