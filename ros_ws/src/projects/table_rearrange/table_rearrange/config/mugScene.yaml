@@ -1,0 +1,12 @@
+ycb_models:
+  names:
+    - mug
+  poses:
+    mug:
+      position:
+        x: 0.5
+        y: 0
+        z: 0.28
+randomizer:
+  names:
+    - mug::mug
