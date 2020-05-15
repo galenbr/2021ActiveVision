@@ -1,5 +1,5 @@
 # vf_hand_controller
-A control designed for use with the gripper.xacro file
+A control designed for use with the vf_hand.xacro file
 
 It includes both position and effort controllers. During launch it spawns position controllers and loads the effort controllers as stopped.
 

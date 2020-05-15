@@ -23,12 +23,10 @@ add_compile_options(-std=c++11)
 )
 
 catkin_package(
-  INCLUDE_DIRS include
   CATKIN_DEPENDS message_runtime roscpp rospy std_msgs
 )
 
 include_directories(
-  include
   ${catkin_INCLUDE_DIRS}
 )
 
