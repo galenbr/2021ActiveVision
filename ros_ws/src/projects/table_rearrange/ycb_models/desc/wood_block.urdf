@@ -1,36 +1,36 @@
 <?xml version="1.0"?>
-<robot name="mug">
+<robot name="wood_block">
   <link name="world" />
 
-  <link name="mug">
+  <link name="wood_block">
     <visual>
       <geometry>
-	<mesh filename="package://ycb_models/mesh/mug.dae" />
+	<mesh filename="package://ycb_models/mesh/wood_block/textured.dae" />
       </geometry>
     </visual>
     <collision>
       <geometry>
-	<mesh filename="package://ycb_models/mesh/mug.dae" />
+	<mesh filename="package://ycb_models/mesh/wood_block/textured.dae" />
       </geometry>
     </collision>
     <!-- PLACEHOLDER VALUES -->
     <inertial>
-      <origin xyz="-0.0188777 0.0268737 -0.016566" rpy="0 0 0" />
+      <origin xyz="0.0233731 -0.0102736 0.1027692" rpy="0 0 0" />
       <mass value="0.01" />
-      <inertia ixx="7.151e-04" ixy="0" ixz="0"
-	       iyy="7.151e-05" iyz="0"
-	       izz="8.182e-05" />
+      <inertia ixx="0.650192e-7" ixy="0.001248e-7" ixz="0.003288e-7"
+	       iyy="0.652637e-7" iyz="0.001982e-7"
+	       izz="0.202385e-7" />
     </inertial>
   </link>
 
-  <joint name="table_mug" type="floating">
+  <joint name="table_wood_block" type="floating">
     <origin rpy="0 0 0" xyz="0 0 0" />
     <parent link="world" />
-    <child link="mug" />
+    <child link="wood_block" />
   </joint>
 
   <!-- Gazebo-related details -->
-  <gazebo reference="mug">
+  <gazebo reference="wood_block">
     <dampingFactor>0.005</dampingFactor>
     <kp>1000000.0</kp>
     <kd>1.0</kd>

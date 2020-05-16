@@ -1,7 +1,3 @@
-/* 
- * YCB Object spawner node
- */
-
 // ROS Core Deps
 #include "ros/ros.h"
 #include "ros/package.h"
@@ -38,7 +34,7 @@ int main(int argc, char** argv) {
     }
 
     // Add to parameter server and string vectors
-    ros::param::set("/ycb_spawner/urdfs/" + objectNames[i], fileContents);
+    ros::param::set("/ycb_models/urdfs/" + objectNames[i], fileContents);
   }
 
   return 0;
