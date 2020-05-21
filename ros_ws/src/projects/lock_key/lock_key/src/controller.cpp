@@ -34,6 +34,7 @@ int main(int argc, char **argv){
     ros::ServiceClient imgCaptureClient = n.serviceClient<lock_key::imgCapture>("imgCaptureServer");
     ros::ServiceClient findKeyClient = n.serviceClient<lock_key::findKey>("findKeyServer");
     ros::ServiceClient movePoseClient = n.serviceClient<moveit_planner::MovePose>("move_to_pose");
+    ros::ServiceClient movePoseClient2 = n.serviceClient<moveit_planner::MovePose>("move_to_pose");
     ros::ServiceClient moveCartClient = n.serviceClient<moveit_planner::MoveCart>("cartesian_move");
     ros::ServiceClient gripperClient = n.serviceClient<franka_gripper_gazebo::GripMsg>("gazebo_franka_grip");
 
@@ -104,7 +105,7 @@ int main(int argc, char **argv){
 
     // Opening Gripper and moving to pre-grasp pose
     pose.request.execute = true;
-    grip.request.force = 1000.0;
+    grip.request.force = 50.0;
     gripperClient.call(grip);
     movePoseClient.call(pose);
 
@@ -123,9 +124,15 @@ int main(int argc, char **argv){
     gripperClient.call(grip);
     ROS_INFO("Gripped");
     ros::Duration(1).sleep();
-    grip.request.force = -1000.0;
+    grip.request.force = -10.0;
     gripperClient.call(grip);
-    ros::Duration(1).sleep();
+    ros::Duration(0.1).sleep();
+    grip.request.force = -20.0;
+    gripperClient.call(grip);
+    ros::Duration(0.1).sleep();
+    // grip.request.force = -50.0;
+    // gripperClient.call(grip);
+    // ros::Duration(0.2).sleep();
     // Move away
     cart2.request.val.push_back(p);
     p.position.x -= 0.04;
@@ -135,20 +142,17 @@ int main(int argc, char **argv){
     cart2.request.execute = true;
     moveCartClient.call(cart2);
     ros::Duration(1).sleep();
-    // //Move to Lock
-    // ROS_INFO("Moving to Lock");
-    // pose2.request.val.position.x = 0.75;
-    // pose2.request.val.position.y = 0.0;
-    // pose2.request.val.position.z = 0.7;
-    // pose2.request.val.orientation.w = 1;
-    // pose2.request.val.orientation.x = 0.0;
-    // pose2.request.val.orientation.y = 0.0;
-    // pose2.request.val.orientation.z = 0.0;
-    // pose2.request.execute = true;
-    // movePoseClient.call(pose2);
-    
-
-    
+    //Move to Lock
+    ROS_INFO("Moving to Lock");
+    pose2.request.val.position.x = 0.65;
+    pose2.request.val.position.y = 0.0;
+    pose2.request.val.position.z = 0.45;
+    pose2.request.val.orientation.w = 0.00653015;
+    pose2.request.val.orientation.x = 0.915333;
+    pose2.request.val.orientation.y = 0.402644;
+    pose2.request.val.orientation.z = 0.000463674;
+    pose2.request.execute = true;
+    movePoseClient2.call(pose2);
     ros::spin();
 
     return 0;
