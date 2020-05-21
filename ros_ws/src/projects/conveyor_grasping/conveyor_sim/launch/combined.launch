@@ -1,0 +1,5 @@
+<launch>
+  <include file="$(find conveyor_sim)/launch/conveyor_system.launch" />
+  <include file="$(find conveyor_sim)/launch/spawner.launch" />
+  <include file="$(find conveyor_sim)/launch/despawner.launch" />
+</launch>

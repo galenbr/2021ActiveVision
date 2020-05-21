@@ -8,6 +8,7 @@
   <!-- Launch robot_description onto param server -->
   <param name="robot_description" command="$(find xacro)/xacro --inorder $(find ref_benchmark)/desc/franka_camera.xacro" />
   <rosparam file="$(find ref_benchmark)/config/panda_control.yaml" command="load" />
+  <rosparam file="$(find ref_benchmark)/config/mugScene.yaml" command="load" />
 
   <!-- Launch frames for rviz -->
   <node name="map_frame" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 map world 100" />
@@ -22,10 +23,8 @@
   	args="-param robot_description -urdf -model panda -J panda_joint2 0.0 -J panda_joint6 0.785398 -J panda_joint7 0.785398" />
   <node name="spawn_table_urdf" pkg="gazebo_ros" type="spawn_model"
   	args="-file $(find ref_benchmark)/desc/table_surface.urdf -urdf -model table_surface" />
-  <node name="spawn_mug_urdf" pkg="gazebo_ros" type="spawn_model"
-  	args="-file $(find ycb_models)/desc/mug.urdf -urdf -model mug -z $(arg table_height) -x $(arg table_center)" />
-  <!-- <node name="spawn_master_chef_can_urdf" pkg="gazebo_ros" type="spawn_model" -->
-  <!-- 	args="-file $(find ycb_models)/desc/master_chef_can.urdf -urdf -model master_chef_can -z $(arg table_height) -x $(arg table_center)" /> -->
+  <!-- Launch scene -->
+  <node name="scene_spawner" pkg="ycb_models" type="object_scene_spawner" />
   
   <!-- Launch controllers -->
   <include file="$(find panda_moveit_controller)/launch/main.launch" />

@@ -1,4 +1,0 @@
-spawner:
-  rate: 1			# Seconds between object spawning
-  models:			# Models to spawn, urdf be found under /spawner/urdfs/
-    - mug

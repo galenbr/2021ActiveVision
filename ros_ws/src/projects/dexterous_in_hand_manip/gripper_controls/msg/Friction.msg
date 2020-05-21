@@ -1,2 +1,2 @@
-int8 left_friction
-int8 right_friction
+float32 left_friction
+float32 right_friction
