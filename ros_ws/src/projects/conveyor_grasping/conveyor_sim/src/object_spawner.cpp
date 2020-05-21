@@ -1,17 +1,22 @@
 #include "ros/ros.h"
 
 #include "gazebo_msgs/SpawnModel.h"
+#include "geometry_msgs/Quaternion.h"
 
 #include <vector>
 #include <string>
+#include <math.h>
 #include <time.h>
 #include <stdlib.h>
+
+#define DPI 6.28318530718
 
 double conveyor_width;
 double conveyor_length;
 double x, y, z;
 double spawn_speed;
 int curID{0};
+bool randOrientation{false};
 
 int getID() {
   curID++;
@@ -35,6 +40,21 @@ std::string attemptLoad(const std::string& param, ros::NodeHandle& nh, uint atte
   return "";
 }
 
+geometry_msgs::Quaternion randQuat() {
+  geometry_msgs::Quaternion ret;
+
+  double u = rand()/(double)RAND_MAX;
+  double v = rand()/(double)RAND_MAX;
+  double w = rand()/(double)RAND_MAX;
+
+  ret.x = sqrt(1 - u)*sin(DPI*v);
+  ret.y = sqrt(1 - u)*cos(DPI*v);
+  ret.z = sqrt(u)*sin(DPI*w);
+  ret.w = sqrt(u)*cos(DPI*w);
+
+  return ret;
+}
+
 int main(int argc, char** argv) {
   ros::init(argc, argv, "object_spawner_node");
   ros::NodeHandle nh;
@@ -43,6 +63,7 @@ int main(int argc, char** argv) {
 
   if(!nh.getParam("/conveyor/width", conveyor_width) ||
      !nh.getParam("/spawner/rate", spawn_speed) ||
+     !nh.getParam("/spawner/randOrientation", randOrientation) ||
      !nh.getParam("/conveyor/x", x) ||
      !nh.getParam("/conveyor/y", y) ||
      !nh.getParam("/conveyor/z", z)) {
@@ -83,13 +104,15 @@ int main(int argc, char** argv) {
   gazebo_msgs::SpawnModel spawnModelMsg;
   // Values that do not change
   spawnModelMsg.request.initial_pose.position.x = x;
-  spawnModelMsg.request.initial_pose.position.y = y + 0.05;
+  spawnModelMsg.request.initial_pose.position.y = y + 0.10;
   spawnModelMsg.request.initial_pose.position.z = z + 0.2;
   spawnModelMsg.request.initial_pose.orientation.w = 1;
   while(ros::ok()) {
     int toSpawn = rand() % urdfs.size();
     spawnModelMsg.request.model_name = "spawner_id_" + std::to_string(getID());
     spawnModelMsg.request.model_xml = urdfs[toSpawn];
+    if(randOrientation)
+      spawnModelMsg.request.initial_pose.orientation = randQuat();
     if(!spawnModelClient.call(spawnModelMsg))
       ROS_WARN("Could not spawn model");
 

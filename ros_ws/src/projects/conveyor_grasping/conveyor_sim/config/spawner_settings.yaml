@@ -3,3 +3,5 @@ spawner:
   models:
     - mug
     - wood_block
+    - master_chef_can
+  randOrientation: true
