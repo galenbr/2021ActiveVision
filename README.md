@@ -1,6 +1,9 @@
 # mer_lab
 Joint repository for the Manipulation and Environmental Robotics Lab
 
+## Build Status
+Deps & catkin\_make: [![Build Status](https://travis-ci.com/berkcalli/mer_lab.svg?token=BAvmoQF6psbcxv8Fyp8p&branch=master)](https://travis-ci.com/berkcalli/mer_lab)
+
 ## ROS Workspace
 The 'ros_ws' folder contains all the ROS packages and projects.  For a description of what each folder and directory does, please refer to their individual 'README.md' files.
 
