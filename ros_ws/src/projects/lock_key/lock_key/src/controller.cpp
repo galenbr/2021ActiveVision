@@ -124,7 +124,7 @@ int main(int argc, char **argv){
     gripperClient.call(grip);
     ROS_INFO("Gripped");
     ros::Duration(1).sleep();
-    grip.request.force = -10.0;
+    grip.request.force = -20.0;
     gripperClient.call(grip);
     ros::Duration(0.1).sleep();
     grip.request.force = -20.0;
