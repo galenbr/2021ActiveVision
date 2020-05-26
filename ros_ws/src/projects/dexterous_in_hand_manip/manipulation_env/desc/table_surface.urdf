@@ -2,6 +2,14 @@
 <robot name="table_surface">
   <link name="world" />
 
+  <gazebo reference="table">
+    <mu1>0.1</mu1>
+    <mu2>0.1</mu2>
+    <kp>10000000</kp>
+    <kd>1</kd>
+    <minDepth>0.001</minDepth>
+  </gazebo>
+
   <link name="table">
     <visual>
       <geometry>
@@ -24,5 +32,10 @@
     <parent link="world" />
     <child link="table" />
   </joint>
+
+
+  <gazebo reference="table">
+  <material>Gazebo/Wood</material>
+  </gazebo>
 
 </robot>

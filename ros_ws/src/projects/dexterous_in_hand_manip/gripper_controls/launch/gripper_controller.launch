@@ -11,5 +11,5 @@
   <!-- launch controllers -->
   <arg name="gripper_namespace" default=""/>
   <node name="low_lvl_ctrl" pkg="gripper_controls" type="low_lvl_ctrl" output="screen" args="$(arg gripper_namespace)"/>
-  <node name="high_lvl_ctrl" pkg="gripper_controls" type="high_lvl_ctrl" output="screen"/>
+  <node name="high_lvl_ctrl" pkg="gripper_controls" type="high_lvl_ctrl" output="screen" args="$(arg gripper_namespace)"/>
 </launch>

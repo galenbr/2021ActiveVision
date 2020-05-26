@@ -23,7 +23,7 @@ private:
 public:
   ros::NodeHandle n_;
   ros::Subscriber sub_;
-  Hand();
+  Hand(std::string topic);
   void stateCallback(const sensor_msgs::JointState& msg);
   bool slide_left_down(gripper_controls::PositionCommand::Request &req, gripper_controls::PositionCommand::Response &res);
   bool slide_left_up(gripper_controls::PositionCommand::Request &req, gripper_controls::PositionCommand::Response &res);

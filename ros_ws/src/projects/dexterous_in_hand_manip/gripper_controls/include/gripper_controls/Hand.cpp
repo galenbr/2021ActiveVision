@@ -18,7 +18,7 @@ float Hand::read_position(int motor_num){
   std::string joint = "J" + std::to_string(motor_num);
   srv.request.joint_name = joint;
   if (client_read_pos.call(srv)){
-    ROS_INFO("Read_position_success");
+    // ROS_INFO("Read_position_success");
     return srv.response.position[0];
   }
   else{
@@ -47,7 +47,7 @@ bool Hand::command_position(int motor_num, float position){
   srv.request.finger = motor_num;
   srv.request.value = position;
   if (client_position.call(srv)){
-    ROS_INFO("Command_position[%d]_Success=[%f]", motor_num, position);
+    // ROS_INFO("Command_position[%d]_Success=[%f]", motor_num, position);
     return 1;
   }
   else{
@@ -65,7 +65,7 @@ bool Hand::command_torque(int motor_num, float torque){
   srv.request.finger = motor_num;
   srv.request.value = torque;
   if (client_torque.call(srv)){
-    ROS_INFO("Command_torque_Success");
+    // ROS_INFO("Command_torque_Success");
     return 1;
   }
   else{
@@ -154,12 +154,12 @@ bool Hand::set_friction_right(bool friction_surface){
 }
 
 // Hand object constructor
-Hand::Hand(){
+Hand::Hand(std::string topic){
   std::cout << "Hand object constructed" << std::endl;
   finger_state = 0;
   left_effort = 0;
   right_effort = 0;
-  sub_ = n_.subscribe("/panda/joint_states",1000,&Hand::stateCallback, this);
+  sub_ = n_.subscribe(topic,1000,&Hand::stateCallback, this);
 }
 
 // callback for getting joint efforts
@@ -193,6 +193,7 @@ bool Hand::slide_left_down(gripper_controls::PositionCommand::Request &req, grip
     initial_torque = 0;
   else
     initial_torque = right_effort;
+  ROS_INFO("effort reading %f",initial_torque);
   for (float i = initial_torque; i>=torque_val; i-=0.01){
     send_torque = command_torque(1, i);
   }
@@ -277,7 +278,11 @@ bool Hand::slide_right_down(gripper_controls::PositionCommand::Request &req, gri
   }
   // ramped torque command
   float initial_torque;
-  initial_torque = left_effort;
+  if (left_effort>0)
+    initial_torque = 0;
+  else
+    initial_torque = left_effort;
+  ROS_INFO("effort reading %f",initial_torque);
   for (float i = initial_torque; i>=torque_val; i-=0.01){
     send_torque = command_torque(0, i);
   }
@@ -317,8 +322,13 @@ bool Hand::slide_right_up(gripper_controls::PositionCommand::Request &req, gripp
   }
   // ramped torque command
   float initial_torque;
-  // initial_torque = read_effort(0); // Right finger
-  initial_torque = right_effort;
+  // position controller can end with a positive effort (towards opening direction)
+  // this statement is to prevent it
+  if (right_effort>0)
+    initial_torque = 0;
+  else
+    initial_torque = right_effort;
+  ROS_INFO("effort reading %f",initial_torque);
   for (float i = initial_torque; i>=torque_val; i-=0.01){
     send_torque = command_torque(1, i);
   }

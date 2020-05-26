@@ -21,7 +21,7 @@ int main(int argc, char **argv){
   ros::service::waitForService("Slide_Left_Finger_Down");
   ros::ServiceClient client_slfd = n.serviceClient<gripper_controls::PositionCommand>("Slide_Left_Finger_Down");
 
-  ros::Rate loop_rate(1);
+  ros::Duration d(3);
   // 1. Hold object
   gripper_controls::Holdcommand srv_hold;
   srv_hold.request.left = 0.0;
@@ -32,18 +32,18 @@ int main(int argc, char **argv){
   else{
     ROS_INFO("Failure holding object");
   }
-  loop_rate.sleep();
+  d.sleep();
 
   // 2. Slide left finger down 0.5
   gripper_controls::PositionCommand srv_slfd;
-  srv_slfd.request.data = 0.3;
+  srv_slfd.request.data = 0.5;
   if (client_slfd.call(srv_slfd)){
     ROS_INFO("Command slide left finger down success");
   }
   else{
     ROS_INFO("Failure slfd");
   }
-  loop_rate.sleep();
+  d.sleep();
 
   // 3. Slide left finger up 0
   gripper_controls::PositionCommand srv_slfu;
@@ -54,18 +54,18 @@ int main(int argc, char **argv){
   else{
     ROS_INFO("Failure slfu");
   }
-  loop_rate.sleep();
+  d.sleep();
 
   // 4. Slide right finger down 0.5
   gripper_controls::PositionCommand srv_srfd;
-  srv_srfd.request.data = 0.3;
+  srv_srfd.request.data = 0.5;
   if (client_srfd.call(srv_srfd)){
     ROS_INFO("Command slide right finger down success");
   }
   else{
     ROS_INFO("Failure srfd");
   }
-  loop_rate.sleep();
+  d.sleep();
 
   // 5. Slide right finger up 0
   gripper_controls::PositionCommand srv_srfu;
@@ -76,7 +76,7 @@ int main(int argc, char **argv){
   else{
     ROS_INFO("Failure srfu");
   }
-  loop_rate.sleep();
+  d.sleep();
 
   // // 6. Rotate clockwise
   // gripper_controls::PositionCommand srv_rot_clock;
