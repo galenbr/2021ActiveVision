@@ -41,8 +41,6 @@ int main(int argc, char **argv){
     // Sending objects to client
     collisionObj.request.collObject = surface;
     addCollisionClient.call(collisionObj);
-
-    ros::spin();
     
     return 0;
 }
