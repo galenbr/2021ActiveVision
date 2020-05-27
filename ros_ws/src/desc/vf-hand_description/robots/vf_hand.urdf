@@ -11,16 +11,16 @@
 
   <!-- Collision properties of the fingers -->
   <gazebo reference="L1">
-    <mu1>1</mu1>
-    <mu2>1</mu2>
+    <mu1>10</mu1>
+    <mu2>10</mu2>
     <kp>10000000</kp>
     <kd>1</kd>
     <minDepth>0.001</minDepth>
   </gazebo>
 
   <gazebo reference="L2">
-    <mu1>1</mu1>
-    <mu2>1</mu2>
+    <mu1>10</mu1>
+    <mu2>10</mu2>
     <kp>10000000</kp>
     <kd>1</kd>
     <minDepth>0.001</minDepth>
@@ -123,9 +123,9 @@
       xyz="1 0 0" />
     <dynamics damping="0.01" friction="0.01"/>
     <limit
-      lower="0"
-      upper="0"
-      effort="10"
+      lower="-0.8"
+      upper="0.8"
+      effort="1"
       velocity="0.5" />
       <hardwareInterface>EffortJointInterface</hardwareInterface>
   </joint>
@@ -188,12 +188,22 @@
       xyz="1 0 0" />
     <dynamics damping="0.01" friction="0.01"/>
     <limit
-      lower="0"
-      upper="0"
-      effort="10"
+      lower="-0.8"
+      upper="0.8"
+      effort="1"
       velocity="0.5" />
       <hardwareInterface>EffortJointInterface</hardwareInterface>
   </joint>
+
+  <gazebo reference="base_link">
+  <material>Gazebo/Black</material>
+  </gazebo>
+  <gazebo reference="L1">
+  <material>Gazebo/Red</material>
+  </gazebo>
+  <gazebo reference="L2">
+  <material>Gazebo/Red</material>
+  </gazebo>
 
   <transmission name="head_swivel_trans1">
     <type>transmission_interface/SimpleTransmission</type>

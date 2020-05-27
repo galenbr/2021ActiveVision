@@ -37,4 +37,8 @@
     </inertial>
   </link>
 
+  <gazebo reference="table">
+  <material>Gazebo/Wood</material>
+  </gazebo>
+
 </robot>

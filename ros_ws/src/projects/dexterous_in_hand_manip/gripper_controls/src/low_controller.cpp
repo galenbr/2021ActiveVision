@@ -108,6 +108,12 @@ public:
     else
       return r_finger_friction;
   }
+  int get_applied_effort(int finger){
+    if(finger==0)
+      return left_effort;
+    else
+      return right_effort;
+  }
   void jsCallback(const sensor_msgs::JointState& msg){
     // get current effort and position
     left_effort = msg.effort[1];
@@ -155,6 +161,8 @@ int main(int argc, char **argv){
     if(lowctrl.get_finger_type(0)==3){
       input_l.data = lowctrl.get_finger_pos(0);
       lp.publish(input_l);
+      input_l.data = lowctrl.get_applied_effort(0);
+      le.publish(input_l);
     }
     else{
       input_l.data = lowctrl.get_finger_effort(0);
@@ -166,6 +174,8 @@ int main(int argc, char **argv){
     if(lowctrl.get_finger_type(1)==3){
       input_r.data = lowctrl.get_finger_pos(1);
       rp.publish(input_r);
+      input_r.data = lowctrl.get_applied_effort(1);
+      re.publish(input_r);
     }
 
     else{
