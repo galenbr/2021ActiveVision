@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="green_ball">
+  <!-- <xacro:include filename="$(find franka_description)/robots/panda_arm.xacro"/>
+  <xacro:include filename="$(find relaxed_ik)/robots/hand.xacro"/> -->
+
+  <!-- <panda_arm /> -->
+  <!-- <xacro:hand ns="panda" rpy="0 0 ${-pi/4}" connected_to="panda_link8"/> -->
+
+  <xacro:macro name="green_ball" params="radius:='0.07'">
+
+  <link name="end_sphere">
+    <visual>
+        <geometry>
+        <sphere radius="${radius}"/>
+        </geometry>
+        <material name="green">
+        <color rgba="0 1 0 1"/>
+        </material>
+    </visual>
+    <inertial>
+        <mass value="0.000001"/>
+        <inertia ixx="0.03" ixy="0.0" ixz="0.0" iyy="0.03" iyz="0.0" izz="0.03"/>
+    </inertial>
+  </link>
+  <gazebo reference="end_sphere">
+    <material>Gazebo/Green</material>
+  </gazebo>
+</xacro:macro>
+
+</robot>
