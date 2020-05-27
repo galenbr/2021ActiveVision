@@ -77,5 +77,5 @@
   <node name="find_key" type="find_key_node" pkg="lock_key" />
 
   <!--Gripper Node-->
-  <node name="gripper" type="gripper_node" pkg="franka_gripper_gazebo" />
+  <node name="gripper" type="pos_grasper_node" pkg="franka_pos_grasping_gazebo" />
 </launch>
