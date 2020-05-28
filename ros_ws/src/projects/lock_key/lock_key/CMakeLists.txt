@@ -15,6 +15,8 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_planner
   moveit_ros_planning_interface
   moveit_msgs
+  moveit_ros_planning
+  moveit_ros_move_group
   tf
   franka_gripper
   )
@@ -52,6 +54,7 @@ add_executable(control_node src/controller.cpp)
 add_executable(find_key_node src/find_key.cpp)
 add_executable(collision_obj_node src/collision_obj.cpp)
 add_executable(key_grasp_node src/key_grasp.cpp)
+add_executable(arm_constraints_node src/arm_constraints.cpp)
 
 add_dependencies(arm_move_node moveit_planner_gencpp)
 add_dependencies(img_capture_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
@@ -59,6 +62,7 @@ add_dependencies(control_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 add_dependencies(find_key_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 add_dependencies(collision_obj_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 add_dependencies(key_grasp_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+add_dependencies(arm_constraints_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
 target_link_libraries(arm_move_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 target_link_libraries(img_capture_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
@@ -66,3 +70,4 @@ target_link_libraries(control_node ${catkin_LIBRARIES})
 target_link_libraries(find_key_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 target_link_libraries(collision_obj_node ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 target_link_libraries(key_grasp_node ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(arm_constraints_node ${catkin_LIBRARIES} ${Boost_LIBRARIES})

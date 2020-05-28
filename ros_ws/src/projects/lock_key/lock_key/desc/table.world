@@ -8,4 +8,7 @@
       <uri>model://ground_plane</uri>
     </include>
   </world>
+  <scene>
+  <shadows>false</shadows>
+  </scene>
 </sdf>
