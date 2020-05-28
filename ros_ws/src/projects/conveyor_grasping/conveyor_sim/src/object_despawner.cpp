@@ -20,9 +20,11 @@ void recvModelStates(const gazebo_msgs::ModelStates& modelPoses) {
   // Do not look at name for now, just check all
   for(int i = 0; i < modelPoses.pose.size(); ++i)
     if(canDelete(modelPoses.pose[i])) {
+      ROS_INFO_STREAM("Deleting model " << modelPoses.name[i]);
       deleteModelMsg.request.model_name = modelPoses.name[i];
       if(!deleteModelClient.call(deleteModelMsg))
 	ROS_ERROR_STREAM("Could not delete model " << modelPoses.name[i]);
+      ROS_INFO_STREAM("Deleted");
     }
 }
 
@@ -32,7 +34,7 @@ int main(int argc, char** argv) {
 
   // Initialize services
   ros::service::waitForService("/gazebo/delete_model");
-  deleteModelClient = nh.serviceClient<gazebo_msgs::DeleteModel>("/gazebo/delete_model");
+  deleteModelClient = nh.serviceClient<gazebo_msgs::DeleteModel>("/gazebo/delete_model", true);
 
   // Initialize subscriber
   ros::Subscriber modelStateSub = nh.subscribe("/gazebo/model_states", 1, recvModelStates);

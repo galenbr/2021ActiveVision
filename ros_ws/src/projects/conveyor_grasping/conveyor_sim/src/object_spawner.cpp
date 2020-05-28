@@ -97,7 +97,8 @@ int main(int argc, char** argv) {
   }
 
   ros::service::waitForService("/gazebo/spawn_urdf_model");
-  ros::ServiceClient spawnModelClient = nh.serviceClient<gazebo_msgs::SpawnModel>("/gazebo/spawn_urdf_model");
+  // Make a persistent connection
+  ros::ServiceClient spawnModelClient = nh.serviceClient<gazebo_msgs::SpawnModel>("/gazebo/spawn_urdf_model", true);
 
   ros::Rate r{1/spawn_speed};
   int toSpawn{0};
