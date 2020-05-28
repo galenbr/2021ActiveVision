@@ -25,6 +25,7 @@ add_service_files(
   MoveAway.srv
   SetVelocity.srv
   AddCollision.srv
+  SetConstraints.srv
 )
 
 generate_messages(

@@ -1,5 +1,6 @@
 #include "moveit_planner.hpp"
 
+// moveit_msgs includes
 #include "moveit_msgs/RobotTrajectory.h"
 
 #include "geometry_msgs/PoseStamped.h"
@@ -75,6 +76,11 @@ namespace moveit_planner {
 
     return true;
   }
+  bool MoveitPlanner::setConstraints(const moveit_msgs::Constraints& constraints) {
+    moveGroup.setPathConstraints(constraints);
+
+    return true;
+  }
 
   bool MoveitPlanner::poseClientCallback(moveit_planner::MovePose::Request& req,
 					 moveit_planner::MovePose::Response& res) {
@@ -141,6 +147,10 @@ namespace moveit_planner {
     // Return whether it was successfull or not
     return addCollisionObjects(collObjects);
   }
+  bool MoveitPlanner::setConstraintsCallback(moveit_planner::SetConstraints::Request& req,
+					     moveit_planner::SetConstraints::Response& res) {
+    return setConstraints(req.constraints);
+  }
 
   // Private
   void MoveitPlanner::setupServices() {
@@ -167,10 +177,23 @@ namespace moveit_planner {
     addCollClient = n.advertiseService("add_collision_object",
 				       &MoveitPlanner::addCollisionCallback,
 				       this);
+    setConstClient = n.advertiseService("set_constraints",
+					&MoveitPlanner::setConstraintsCallback,
+					this);
   }
 
   void MoveitPlanner::setupMoveit() {
     ros::spinOnce();
+    moveit_msgs::JointConstraint jc;
+    jc.position = -0.765;
+    jc.tolerance_above = 3.14159;
+    jc.tolerance_below = 0.4;
+    jc.joint_name = "panda_joint2";
+    jc.weight = 1;
+ 
+    moveit_msgs::Constraints cons;
+    cons.joint_constraints.push_back(jc);
+    moveGroup.setPathConstraints(cons);
     // TODO: Add setup
   }
 }

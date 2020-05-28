@@ -22,14 +22,15 @@
 #include "moveit_planner/MovePoint.h"
 #include "moveit_planner/SetVelocity.h"
 #include "moveit_planner/AddCollision.h"
+#include "moveit_planner/SetConstraints.h"
 
 // moveit includes
-
+#include "moveit_msgs/Constraints.h"
 #include "moveit/robot_state/robot_state.h"
+#include "moveit/robot_trajectory/robot_trajectory.h"
 #include "moveit/move_group_interface/move_group_interface.h"
 #include "moveit/planning_scene_interface/planning_scene_interface.h"
 #include "moveit/trajectory_processing/iterative_time_parameterization.h"
-#include "moveit/robot_trajectory/robot_trajectory.h"
 
 namespace moveit_planner {
 
@@ -45,6 +46,7 @@ namespace moveit_planner {
     bool moveToJointSpace(const std::vector<double>& jointPositions, bool exe);
     bool cartesianMove(const std::vector<geometry_msgs::Pose>& p, const bool& exe);
     bool addCollisionObjects(const std::vector<moveit_msgs::CollisionObject>& collObjs);
+    bool setConstraints(const moveit_msgs::Constraints& constraints);
 
     // Getters/Setters
     std::string getGroup() {return armGroup;};
@@ -74,6 +76,7 @@ namespace moveit_planner {
     ros::ServiceServer distanceAwayClient;
     ros::ServiceServer velocityClient;
     ros::ServiceServer addCollClient;
+    ros::ServiceServer setConstClient;
 
     // Callbacks
     bool poseClientCallback(moveit_planner::MovePose::Request& req,
@@ -90,6 +93,8 @@ namespace moveit_planner {
 			     moveit_planner::SetVelocity::Response& res);
     bool addCollisionCallback(moveit_planner::AddCollision::Request& req,
 			      moveit_planner::AddCollision::Response& res);
+    bool setConstraintsCallback(moveit_planner::SetConstraints::Request& req,
+			       moveit_planner::SetConstraints::Response& res);
 
     // Misc
     bool checkSuccess();
