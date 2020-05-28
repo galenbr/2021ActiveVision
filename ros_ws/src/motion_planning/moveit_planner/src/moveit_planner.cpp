@@ -184,16 +184,6 @@ namespace moveit_planner {
 
   void MoveitPlanner::setupMoveit() {
     ros::spinOnce();
-    moveit_msgs::JointConstraint jc;
-    jc.position = -0.765;
-    jc.tolerance_above = 3.14159;
-    jc.tolerance_below = 0.4;
-    jc.joint_name = "panda_joint2";
-    jc.weight = 1;
- 
-    moveit_msgs::Constraints cons;
-    cons.joint_constraints.push_back(jc);
-    moveGroup.setPathConstraints(cons);
     // TODO: Add setup
   }
 }
