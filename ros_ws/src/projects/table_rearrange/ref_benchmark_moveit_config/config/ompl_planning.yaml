@@ -121,6 +121,8 @@ planner_configs:
     dense_delta_fraction: 0.001  # delta fraction for interface detection. default: 0.001
     max_failures: 5000  # maximum consecutive failure limit. default: 5000
 arm:
+  # planner_type: JointPlanner
+  # enforce_joint_model_state_space: true
   default_planner_config: RRTConnect
   planner_configs:
     - SBL
@@ -146,3 +148,13 @@ arm:
     - LazyPRMstar
     - SPARS
     - SPARStwo
+# Added some additional parameters, change collision map to true if using cameras to create collision maps
+# enforce_joint_model_state_space: true
+use_collision_map: false
+collision_map_safety_timeout: 10000.0
+joint_states_safety_timeout: 1.0
+tf_safety_timeout: 10.0
+default_robot_padding: 0.02
+link_padding:
+  - link: arm
+    padding: .02
