@@ -41,7 +41,8 @@
   <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
 	output="screen" args="joint_state_controller gazebo_ros_control" ns="/panda" />
   
-  <include file="$(find panda_finger_position_controller)/launch/main.launch" />
+  <!-- <include file="$(find panda_finger_position_controller)/launch/main.launch" /> -->
+  <include file="$(find panda_finger_torque_controller)/launch/main.launch" />
   <!-- Start publishing to /tf for rviz -->
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true">
     <remap from="joint_states" to="panda/joint_states" />
@@ -77,5 +78,5 @@
   <node name="find_key" type="find_key_node" pkg="lock_key" />
 
   <!--Gripper Node-->
-  <node name="gripper" type="pos_grasper_node" pkg="franka_pos_grasping_gazebo" />
+  <node name="gripper" type="gripper_node" pkg="franka_gripper_gazebo"/>
 </launch>
