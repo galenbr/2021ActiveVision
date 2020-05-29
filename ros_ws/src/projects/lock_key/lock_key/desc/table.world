@@ -1,5 +1,5 @@
 <?xml version="1.0" ?>
-<sdf version="1.4">
+<sdf version="1.5">
   <world name="lock_key_world">
     <include>
       <uri>model://sun</uri>
@@ -8,7 +8,7 @@
       <uri>model://ground_plane</uri>
     </include>
   </world>
-  <scene>
-  <shadows>false</shadows>
-  </scene>
+  <!-- <scene>
+  <shadows>0</shadows>
+  </scene> -->
 </sdf>

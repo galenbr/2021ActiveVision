@@ -150,11 +150,11 @@ arm:
     - SPARStwo
 # Added some additional parameters, change collision map to true if using cameras to create collision maps
 # enforce_joint_model_state_space: true
-use_collision_map: false
-collision_map_safety_timeout: 10000.0
-joint_states_safety_timeout: 1.0
-tf_safety_timeout: 10.0
-default_robot_padding: 0.02
-link_padding:
-  - link: arm
-    padding: .02
+# use_collision_map: false
+# collision_map_safety_timeout: 10000.0
+# joint_states_safety_timeout: 1.0
+# tf_safety_timeout: 10.0
+# default_robot_padding: 0.02
+# link_padding:
+#   - link: arm
+#     padding: .02

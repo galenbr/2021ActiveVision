@@ -39,7 +39,7 @@ int main(int argc, char **argv){
     ros::ServiceClient movePoseClient2 = n.serviceClient<moveit_planner::MovePose>("move_to_pose");
     ros::ServiceClient moveCartClient = n.serviceClient<moveit_planner::MoveCart>("cartesian_move");
     ros::ServiceClient gripperClient = n.serviceClient<franka_gripper_gazebo::GripMsg>("gazebo_franka_grip");
-    // ros::ServiceClient gripperPosClient = n.serviceClient<franka_pos_grasping_gazebo::GripPos>("gripPosServer");
+    ros::ServiceClient gripperPosClient = n.serviceClient<franka_pos_grasping_gazebo::GripPos>("gripPosServer");
 
     // Client Objects
     lock_key::imgCapture reqImg;
@@ -61,7 +61,7 @@ int main(int argc, char **argv){
     //Transforming Key position to robot frame
     geometry_msgs::PointStamped keypose;
     listener.transformPoint("panda_link0",keyImg.response.p,keypose);
-    
+    ROS_INFO_STREAM(keypose);
     // Visualization and Debugging
     ros::Publisher cloud_pub = n.advertise<sensor_msgs::PointCloud2>("debugPC2", 1);
     ros::Publisher centroid_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 1);
@@ -96,9 +96,9 @@ int main(int argc, char **argv){
         ROS_INFO("KEY Published");
         count += 1;
      }
-    //     // Opening Gripper
-    //  grasp.request.finger_pos = 0.04;
-    //  gripperPosClient.call(grasp);
+    // Opening Gripper
+     grasp.request.finger_pos = 0.04;
+     gripperPosClient.call(grasp);
     //Manipulating position so as to create pre-grasp pose
     keypose.point.x -= 0.06;
     keypose.point.z -= 0.006;
@@ -132,40 +132,40 @@ int main(int argc, char **argv){
     // ros::Duration(3).sleep();
 
 
-    // For the force controller
-    grip.request.force = -0.10;
-    gripperClient.call(grip);
-    ROS_INFO("Gripped");
-    ros::Duration(1).sleep();
-    grip.request.force = -20.0;
-    gripperClient.call(grip);
-    ros::Duration(0.1).sleep();
-    grip.request.force = -20.0;
-    gripperClient.call(grip);
-    ros::Duration(0.1).sleep();
-    grip.request.force = -50.0;
-    gripperClient.call(grip);
-    ros::Duration(0.2).sleep();
-    // Move away
-    cart2.request.val.push_back(p);
-    p.position.x -= 0.04;
-    cart2.request.val.push_back(p);
-    p.position.z += 0.05;
-    cart2.request.val.push_back(p);
-    cart2.request.execute = true;
-    moveCartClient.call(cart2);
-    ros::Duration(1).sleep();
-    //Move to Lock
-    ROS_INFO("Moving to Lock");
-    pose2.request.val.position.x = 0.65;
-    pose2.request.val.position.y = 0.0;
-    pose2.request.val.position.z = 0.45;
-    pose2.request.val.orientation.w = 0.00653015;
-    pose2.request.val.orientation.x = 0.915333;
-    pose2.request.val.orientation.y = 0.402644;
-    pose2.request.val.orientation.z = 0.000463674;
-    pose2.request.execute = true;
-    movePoseClient2.call(pose2);
+    // // For the force controller
+    // grip.request.force = -0.10;
+    // gripperClient.call(grip);
+    // ROS_INFO("Gripped");
+    // ros::Duration(1).sleep();
+    // grip.request.force = -20.0;
+    // gripperClient.call(grip);
+    // ros::Duration(0.1).sleep();
+    // grip.request.force = -20.0;
+    // gripperClient.call(grip);
+    // ros::Duration(0.1).sleep();
+    // grip.request.force = -50.0;
+    // gripperClient.call(grip);
+    // ros::Duration(0.2).sleep();
+    // // Move away
+    // cart2.request.val.push_back(p);
+    // p.position.x -= 0.04;
+    // cart2.request.val.push_back(p);
+    // p.position.z += 0.05;
+    // cart2.request.val.push_back(p);
+    // cart2.request.execute = true;
+    // moveCartClient.call(cart2);
+    // ros::Duration(1).sleep();
+    // //Move to Lock
+    // ROS_INFO("Moving to Lock");
+    // pose2.request.val.position.x = 0.65;
+    // pose2.request.val.position.y = 0.0;
+    // pose2.request.val.position.z = 0.45;
+    // pose2.request.val.orientation.w = 0.00653015;
+    // pose2.request.val.orientation.x = 0.915333;
+    // pose2.request.val.orientation.y = 0.402644;
+    // pose2.request.val.orientation.z = 0.000463674;
+    // pose2.request.execute = true;
+    // movePoseClient2.call(pose2);
     ros::spin();
 
     return 0;
