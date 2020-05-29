@@ -14,7 +14,7 @@ int main(int argc, char ** argv){
     p.orientation.y = 0.7071068;
     p.orientation.z = 0;
     p.position.x = 0.457262 - 0.06;
-    p.position.y = 0.104397
+    p.position.y = 0.104397;
     p.position.z = 0.264967 - 0.006;
     
     // p.position.x = 0.339306-0.06;
