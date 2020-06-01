@@ -228,7 +228,12 @@
 
   <!-- Variable friction plugin -->
   <gazebo>
-    <plugin name="friction_plugin" filename="libfriction_plugin.so"> </plugin>
+    <!-- <plugin name="friction_plugin" filename="libfriction_plugin.so"> </plugin> -->
+    <!-- <plugin name="param_plugin" filename="libparam_plugin.so"> </plugin> -->
+    <plugin name="param_plugin" filename="libunified_plugin.so"> </plugin>
   </gazebo>
+
+  <!-- <gazebo>
+  </gazebo> -->
 
 </robot>

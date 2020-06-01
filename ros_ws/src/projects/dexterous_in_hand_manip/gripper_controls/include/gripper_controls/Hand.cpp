@@ -179,12 +179,14 @@ bool Hand::slide_left_down(gripper_controls::PositionCommand::Request &req, grip
   // Set modes - Left -> Position(3), Right -> Effort(0)
   int modes[] = {3,0};
   set_modes = set_actuator_modes(2,modes);
-  if (finger_state != 1){
-    // Set Friction Surfaces - Left -> Low, Right -> High
-    set_friction_l = set_friction_left(false);
-    set_friction_r = set_friction_right(true);
-    finger_state = 1;
-  }
+  // if (finger_state != 1){
+  //   // Set Friction Surfaces - Left -> Low, Right -> High
+  //   set_friction_l = set_friction_left(false);
+  //   set_friction_r = set_friction_right(true);
+  //   finger_state = 1;
+  // }
+  set_friction_l = set_friction_left(false);
+  set_friction_r = set_friction_right(true);
   // ramped torque command
   float initial_torque;
   // position controller can end with a positive effort (towards opening direction)
@@ -226,12 +228,14 @@ bool Hand::slide_left_up(gripper_controls::PositionCommand::Request &req, grippe
   // Set modes - Left -> Torque(0), Right -> Position(3)
   int modes[] = {0,3};
   set_modes = set_actuator_modes(2,modes);
-  if (finger_state != 1){
-    // Set Friction Surfaces - Left -> Low, Right -> High
-    set_friction_l = set_friction_left(false);
-    set_friction_r = set_friction_right(true);
-    finger_state = 1;
-  }
+  // if (finger_state != 1){
+  //   // Set Friction Surfaces - Left -> Low, Right -> High
+  //   set_friction_l = set_friction_left(false);
+  //   set_friction_r = set_friction_right(true);
+  //   finger_state = 1;
+  // }
+  set_friction_l = set_friction_left(false);
+  set_friction_r = set_friction_right(true);
   // ramped torque command
   float initial_torque;
   if (left_effort>0)
@@ -270,12 +274,14 @@ bool Hand::slide_right_down(gripper_controls::PositionCommand::Request &req, gri
   // Set modes - Left -> Effort(0), Right -> Position(3)
   int modes[] = {0,3};
   set_modes = set_actuator_modes(2,modes);
-  if (finger_state != 2){
-    // Set Friction Surfaces - Left -> High, Right -> Low
-    set_friction_l = set_friction_left(true);
-    set_friction_r = set_friction_right(false);
-    finger_state = 2;
-  }
+  // if (finger_state != 2){
+  //   // Set Friction Surfaces - Left -> High, Right -> Low
+  //   set_friction_l = set_friction_left(true);
+  //   set_friction_r = set_friction_right(false);
+  //   finger_state = 2;
+  // }
+  set_friction_l = set_friction_left(true);
+  set_friction_r = set_friction_right(false);
   // ramped torque command
   float initial_torque;
   if (left_effort>0)
@@ -314,12 +320,14 @@ bool Hand::slide_right_up(gripper_controls::PositionCommand::Request &req, gripp
   // Set modes - Left -> Position(3), Right -> Effort(0)
   int modes[] = {3,0};
   set_modes = set_actuator_modes(2,modes);
-  if (finger_state != 2){
-    // Set Friction Surfaces - Left -> High, Right -> Low
-    set_friction_l = set_friction_left(true);
-    set_friction_r = set_friction_right(false);
-    finger_state = 2;
-  }
+  // if (finger_state != 2){
+  //   // Set Friction Surfaces - Left -> High, Right -> Low
+  //   set_friction_l = set_friction_left(true);
+  //   set_friction_r = set_friction_right(false);
+  //   finger_state = 2;
+  // }
+  set_friction_l = set_friction_left(true);
+  set_friction_r = set_friction_right(false);
   // ramped torque command
   float initial_torque;
   // position controller can end with a positive effort (towards opening direction)
@@ -361,12 +369,14 @@ bool Hand::rotate_anticlockwise(gripper_controls::PositionCommand::Request &req,
   // Set modes - Left -> Effort(0), Right -> Position(3)
   int modes[] = {0,3};
   set_modes = set_actuator_modes(2,modes);
-  if (finger_state != 3){
-    // Set Friction Surfaces - Left -> High, Right -> High
-    set_friction_l = set_friction_left(true);
-    set_friction_r = set_friction_right(true);
-    finger_state = 3;
-  }
+  // if (finger_state != 3){
+  //   // Set Friction Surfaces - Left -> High, Right -> High
+  //   set_friction_l = set_friction_left(true);
+  //   set_friction_r = set_friction_right(true);
+  //   finger_state = 3;
+  // }
+  set_friction_l = set_friction_left(true);
+  set_friction_r = set_friction_right(true);
   // ramped torque command
   float initial_torque;
   // initial_torque = read_effort(1); // Left finger
@@ -403,12 +413,14 @@ bool Hand::rotate_clockwise(gripper_controls::PositionCommand::Request &req, gri
   // Set modes - Left -> Position(3), Right -> Effort(0)
   int modes[] = {3,0};
   set_modes = set_actuator_modes(2,modes);
-  if (finger_state != 3){
-    // Set Friction Surfaces - Left -> High, Right -> High
-    set_friction_l = set_friction_left(true);
-    set_friction_r = set_friction_right(true);
-    finger_state = 3;
-  }
+  // if (finger_state != 3){
+  //   // Set Friction Surfaces - Left -> High, Right -> High
+  //   set_friction_l = set_friction_left(true);
+  //   set_friction_r = set_friction_right(true);
+  //   finger_state = 3;
+  // }
+  set_friction_l = set_friction_left(true);
+  set_friction_r = set_friction_right(true);
   // ramped torque command
   float initial_torque;
   // initial_torque = read_effort(0); // Right finger
@@ -441,11 +453,13 @@ bool Hand::hold_object(gripper_controls::Holdcommand::Request &req, gripper_cont
   // Set modes - Left -> Position(3), Right -> Position(3)
   int modes1[] = {3,3};
   set_modes = set_actuator_modes(2,modes1);
-  if (finger_state != 3){
-    set_friction_l = set_friction_left(true);
-    set_friction_r = set_friction_right(true);
-    finger_state = 3;
-  }
+  // if (finger_state != 3){
+  //   set_friction_l = set_friction_left(true);
+  //   set_friction_r = set_friction_right(true);
+  //   finger_state = 3;
+  // }
+  set_friction_l = set_friction_left(true);
+  set_friction_r = set_friction_right(true);
   send_pos1 = command_position(0, req.left);
   send_pos2 = command_position(1, req.right);
 

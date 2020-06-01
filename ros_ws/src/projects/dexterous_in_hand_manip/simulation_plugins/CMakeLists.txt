@@ -7,6 +7,7 @@ project(simulation_plugins)
    std_msgs
    message_generation
    gripper_controls
+   simulation_ui
  )
 
 find_package(gazebo REQUIRED)
@@ -18,13 +19,21 @@ add_library(friction_plugin SHARED src/friction_plugin.cc)
 target_link_libraries(friction_plugin ${GAZEBO_LIBRARIES} ${roscpp_LIBRARIES})
 add_dependencies(friction_plugin ${catkin_EXPORTED_TARGETS})
 
+add_library(param_plugin SHARED src/surf_param_plugin.cc)
+target_link_libraries(param_plugin ${GAZEBO_LIBRARIES} ${roscpp_LIBRARIES})
+add_dependencies(param_plugin ${catkin_EXPORTED_TARGETS})
+
+add_library(unified_plugin SHARED src/unified_plugin.cc)
+target_link_libraries(unified_plugin ${GAZEBO_LIBRARIES} ${roscpp_LIBRARIES})
+add_dependencies(unified_plugin ${catkin_EXPORTED_TARGETS})
+
  generate_messages(
   DEPENDENCIES
   std_msgs
 )
 
 catkin_package(
-  CATKIN_DEPENDS message_runtime roscpp rospy std_msgs gripper_controls
+  CATKIN_DEPENDS message_runtime roscpp rospy std_msgs gripper_controls simulation_ui
 )
 
 include_directories(
