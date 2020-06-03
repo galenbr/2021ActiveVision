@@ -39,6 +39,10 @@ private slots:
   void setHoldObjectLeft(double);
   void setHoldObjectRight(double);
   void executeHoldObject();
+  void setRotateClockwise(double);
+  void executeRotateClockwise();
+  void setRotateAnticlockwise(double);
+  void executeRotateAnticlockwise();
   void setSlideLeftFingerDown(double);
   void executeSlideLeftFingerDown();
   void setSlideLeftFingerUp(double);
@@ -60,6 +64,8 @@ private:
   ros::ServiceClient setLowFrictionClient;
   ros::ServiceClient setHighFrictionClient;
   ros::ServiceClient HoldObjectClient;
+  ros::ServiceClient RotateClockwiseClient;
+  ros::ServiceClient RotateAnticlockwiseClient;
   ros::ServiceClient SlideLeftFingerDownClient;
   ros::ServiceClient SlideLeftFingerUpClient;
   ros::ServiceClient SlideRightFingerDownClient;
@@ -70,6 +76,8 @@ private:
   Ui::MainWindow *ui;
   double HoldObjectLeftVal;
   double HoldObjectRightVal;
+  double RotateClockwiseVal;
+  double RotateAnticlockwiseVal;
   double SlideLeftFingerDownVal;
   double SlideLeftFingerUpVal;
   double SlideRightFingerDownVal;

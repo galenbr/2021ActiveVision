@@ -24,6 +24,8 @@ MainWindow::MainWindow(ros::NodeHandle& nh) :
     setHighFrictionClient = n.serviceClient<simulation_ui::SetParam>("set_highfriction");
     // High level controls communication
     HoldObjectClient = n.serviceClient<gripper_controls::Holdcommand>("Hold_object");
+    RotateClockwiseClient = n.serviceClient<gripper_controls::PositionCommand>("Rotate_clockwise");
+    RotateAnticlockwiseClient = n.serviceClient<gripper_controls::PositionCommand>("Rotate_anticlockwise");
     SlideLeftFingerDownClient = n.serviceClient<gripper_controls::PositionCommand>("Slide_Left_Finger_Down");
     SlideLeftFingerUpClient = n.serviceClient<gripper_controls::PositionCommand>("Slide_Left_Finger_Up");
     SlideRightFingerDownClient = n.serviceClient<gripper_controls::PositionCommand>("Slide_Right_Finger_Down");
@@ -56,6 +58,12 @@ MainWindow::MainWindow(ros::NodeHandle& nh) :
     connect(ui->spinbox_HoldObjectRight, SIGNAL (valueChanged(double)), this, SLOT (setHoldObjectRight(double)));
     connect(ui->pushButton_HoldObject, SIGNAL (pressed()), this, SLOT (changeStatusMessage()));
     connect(ui->pushButton_HoldObject, SIGNAL (released()), this, SLOT (executeHoldObject()));
+    connect(ui->spinbox_RotateClockwise, SIGNAL (valueChanged(double)), this, SLOT (setRotateClockwise(double)));
+    connect(ui->pushButton_RotateClockwise, SIGNAL (pressed()), this, SLOT (changeStatusMessage()));
+    connect(ui->pushButton_RotateClockwise, SIGNAL (released()), this, SLOT (executeRotateClockwise()));
+    connect(ui->spinbox_RotateAnticlockwise, SIGNAL (valueChanged(double)), this, SLOT (setRotateAnticlockwise(double)));
+    connect(ui->pushButton_RotateAnticlockwise, SIGNAL (pressed()), this, SLOT (changeStatusMessage()));
+    connect(ui->pushButton_RotateAnticlockwise, SIGNAL (released()), this, SLOT (executeRotateAnticlockwise()));
     connect(ui->spinbox_SlideLeftFingerDown, SIGNAL (valueChanged(double)), this, SLOT (setSlideLeftFingerDown(double)));
     connect(ui->pushButton_SlideLeftFingerDown, SIGNAL (pressed()), this, SLOT (changeStatusMessage()));
     connect(ui->pushButton_SlideLeftFingerDown, SIGNAL (released()), this, SLOT (executeSlideLeftFingerDown()));
@@ -193,6 +201,30 @@ void MainWindow::executeHoldObject(){
   srv_hold.request.left = HoldObjectLeftVal;
   srv_hold.request.right = HoldObjectRightVal;
   HoldObjectClient.call(srv_hold);
+  StatusMessage("Waiting for command");
+}
+
+void MainWindow::setRotateClockwise(double data){
+  RotateClockwiseVal = data;
+}
+
+void MainWindow::executeRotateClockwise(){
+  // StatusMessage("Executing Slide_Left_Finger_Down command");
+  gripper_controls::PositionCommand srv_rotate;
+  srv_rotate.request.data = RotateClockwiseVal;
+  RotateClockwiseClient.call(srv_rotate);
+  StatusMessage("Waiting for command");
+}
+
+void MainWindow::setRotateAnticlockwise(double data){
+  RotateAnticlockwiseVal = data;
+}
+
+void MainWindow::executeRotateAnticlockwise(){
+  // StatusMessage("Executing Slide_Left_Finger_Down command");
+  gripper_controls::PositionCommand srv_rotate;
+  srv_rotate.request.data = RotateAnticlockwiseVal;
+  RotateAnticlockwiseClient.call(srv_rotate);
   StatusMessage("Waiting for command");
 }
 

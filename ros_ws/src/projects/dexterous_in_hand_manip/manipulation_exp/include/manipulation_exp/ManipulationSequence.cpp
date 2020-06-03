@@ -7,6 +7,12 @@
 #include "ros/ros.h"
 #include <manipulation_exp/Sequence.h>
 
+ManipulationSequence::ManipulationSequence(){
+  ros::Duration d{3};
+  dur = d;
+  std::cout << "ManipulationSequence object constructed" << std::endl;
+}
+
 bool ManipulationSequence::reset_world(){
   ros::service::waitForService("/gazebo/reset_world");
   ros::ServiceClient client = n_.serviceClient<std_srvs::Empty>("/gazebo/reset_world");
@@ -205,8 +211,11 @@ bool ManipulationSequence::prehensile_pushing(manipulation_exp::Sequence::Reques
 bool ManipulationSequence::sliding_test(manipulation_exp::Sequence::Request &req, manipulation_exp::Sequence::Response &res){
   bool sld, slu, srd, sru;
   sld = slide_left_down();
+  dur.sleep();
   slu = slide_left_up();
+  dur.sleep();
   srd = slide_right_down();
+  dur.sleep();
   sru = slide_right_up();
   return 1;
 }
@@ -214,6 +223,7 @@ bool ManipulationSequence::sliding_test(manipulation_exp::Sequence::Request &req
 bool ManipulationSequence::rotating_test(manipulation_exp::Sequence::Request &req, manipulation_exp::Sequence::Response &res){
   bool rc, rac;
   rc = rotate_clockwise();
+  dur.sleep();
   rac = rotate_anticlockwise();
   return 1;
 }

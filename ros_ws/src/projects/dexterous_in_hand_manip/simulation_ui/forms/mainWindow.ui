@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>968</height>
+    <width>684</width>
+    <height>810</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,7 +19,7 @@
      <rect>
       <x>30</x>
       <y>60</y>
-      <width>571</width>
+      <width>441</width>
       <height>29</height>
      </rect>
     </property>
@@ -41,7 +41,7 @@
      <rect>
       <x>30</x>
       <y>170</y>
-      <width>571</width>
+      <width>441</width>
       <height>29</height>
      </rect>
     </property>
@@ -60,7 +60,7 @@
      <rect>
       <x>30</x>
       <y>240</y>
-      <width>571</width>
+      <width>441</width>
       <height>29</height>
      </rect>
     </property>
@@ -116,10 +116,10 @@
    <widget class="QPushButton" name="quit_button">
     <property name="geometry">
      <rect>
-      <x>690</x>
-      <y>870</y>
+      <x>540</x>
+      <y>710</y>
       <width>99</width>
-      <height>27</height>
+      <height>31</height>
      </rect>
     </property>
     <property name="text">
@@ -144,7 +144,7 @@
      <rect>
       <x>30</x>
       <y>300</y>
-      <width>571</width>
+      <width>441</width>
       <height>29</height>
      </rect>
     </property>
@@ -163,7 +163,7 @@
      <rect>
       <x>30</x>
       <y>370</y>
-      <width>571</width>
+      <width>451</width>
       <height>29</height>
      </rect>
     </property>
@@ -206,9 +206,9 @@
    <widget class="Line" name="line">
     <property name="geometry">
      <rect>
-      <x>50</x>
+      <x>0</x>
       <y>420</y>
-      <width>681</width>
+      <width>801</width>
       <height>20</height>
      </rect>
     </property>
@@ -233,8 +233,8 @@
     <property name="geometry">
      <rect>
       <x>200</x>
-      <y>490</y>
-      <width>99</width>
+      <y>530</y>
+      <width>101</width>
       <height>27</height>
      </rect>
     </property>
@@ -245,8 +245,8 @@
    <widget class="QPushButton" name="pushButton_SlideLeftFingerDown">
     <property name="geometry">
      <rect>
-      <x>120</x>
-      <y>560</y>
+      <x>460</x>
+      <y>530</y>
       <width>181</width>
       <height>27</height>
      </rect>
@@ -258,8 +258,8 @@
    <widget class="QPushButton" name="pushButton_SlideLeftFingerUp">
     <property name="geometry">
      <rect>
-      <x>120</x>
-      <y>630</y>
+      <x>460</x>
+      <y>490</y>
       <width>181</width>
       <height>27</height>
      </rect>
@@ -271,8 +271,8 @@
    <widget class="QPushButton" name="pushButton_SlideRightFingerDown">
     <property name="geometry">
      <rect>
-      <x>120</x>
-      <y>690</y>
+      <x>460</x>
+      <y>610</y>
       <width>181</width>
       <height>27</height>
      </rect>
@@ -284,8 +284,8 @@
    <widget class="QPushButton" name="pushButton_SlideRightFingerUp">
     <property name="geometry">
      <rect>
-      <x>120</x>
-      <y>760</y>
+      <x>460</x>
+      <y>570</y>
       <width>181</width>
       <height>27</height>
      </rect>
@@ -297,8 +297,8 @@
    <widget class="QPushButton" name="pushButton_ResetWorld">
     <property name="geometry">
      <rect>
-      <x>630</x>
-      <y>710</y>
+      <x>40</x>
+      <y>670</y>
       <width>131</width>
       <height>27</height>
      </rect>
@@ -310,8 +310,8 @@
    <widget class="QPushButton" name="pushButton_ResetSimulation">
     <property name="geometry">
      <rect>
-      <x>630</x>
-      <y>750</y>
+      <x>40</x>
+      <y>710</y>
       <width>131</width>
       <height>31</height>
      </rect>
@@ -320,25 +320,12 @@
      <string>Reset_simulation</string>
     </property>
    </widget>
-   <widget class="Line" name="line_2">
-    <property name="geometry">
-     <rect>
-      <x>333</x>
-      <y>490</y>
-      <width>20</width>
-      <height>291</height>
-     </rect>
-    </property>
-    <property name="orientation">
-     <enum>Qt::Vertical</enum>
-    </property>
-   </widget>
    <widget class="Line" name="line_3">
     <property name="geometry">
      <rect>
-      <x>50</x>
-      <y>840</y>
-      <width>681</width>
+      <x>0</x>
+      <y>650</y>
+      <width>801</width>
       <height>20</height>
      </rect>
     </property>
@@ -350,7 +337,7 @@
     <property name="geometry">
      <rect>
       <x>40</x>
-      <y>490</y>
+      <y>530</y>
       <width>62</width>
       <height>27</height>
      </rect>
@@ -372,7 +359,7 @@
     <property name="geometry">
      <rect>
       <x>120</x>
-      <y>490</y>
+      <y>530</y>
       <width>62</width>
       <height>27</height>
      </rect>
@@ -393,8 +380,8 @@
    <widget class="QDoubleSpinBox" name="spinbox_SlideLeftFingerDown">
     <property name="geometry">
      <rect>
-      <x>40</x>
-      <y>560</y>
+      <x>380</x>
+      <y>530</y>
       <width>62</width>
       <height>27</height>
      </rect>
@@ -415,8 +402,8 @@
    <widget class="QDoubleSpinBox" name="spinbox_SlideLeftFingerUp">
     <property name="geometry">
      <rect>
-      <x>40</x>
-      <y>630</y>
+      <x>380</x>
+      <y>490</y>
       <width>62</width>
       <height>27</height>
      </rect>
@@ -437,8 +424,8 @@
    <widget class="QDoubleSpinBox" name="spinbox_SlideRightFingerDown">
     <property name="geometry">
      <rect>
-      <x>40</x>
-      <y>690</y>
+      <x>380</x>
+      <y>610</y>
       <width>62</width>
       <height>27</height>
      </rect>
@@ -459,8 +446,8 @@
    <widget class="QDoubleSpinBox" name="spinbox_SlideRightFingerUp">
     <property name="geometry">
      <rect>
-      <x>40</x>
-      <y>760</y>
+      <x>380</x>
+      <y>570</y>
       <width>62</width>
       <height>27</height>
      </rect>
@@ -481,10 +468,10 @@
    <widget class="QTextEdit" name="textEdit">
     <property name="geometry">
      <rect>
-      <x>410</x>
+      <x>40</x>
       <y>490</y>
-      <width>311</width>
-      <height>181</height>
+      <width>261</width>
+      <height>31</height>
      </rect>
     </property>
     <property name="html">
@@ -498,7 +485,7 @@ p, li { white-space: pre-wrap; }
    <widget class="QDoubleSpinBox" name="spinbox_MuTorsion">
     <property name="geometry">
      <rect>
-      <x>650</x>
+      <x>510</x>
       <y>60</y>
       <width>131</width>
       <height>27</height>
@@ -517,7 +504,7 @@ p, li { white-space: pre-wrap; }
    <widget class="QDoubleSpinBox" name="spinbox_PatchRadius">
     <property name="geometry">
      <rect>
-      <x>650</x>
+      <x>510</x>
       <y>170</y>
       <width>131</width>
       <height>27</height>
@@ -536,7 +523,7 @@ p, li { white-space: pre-wrap; }
    <widget class="QDoubleSpinBox" name="spinbox_SurfaceRadius">
     <property name="geometry">
      <rect>
-      <x>650</x>
+      <x>510</x>
       <y>240</y>
       <width>131</width>
       <height>27</height>
@@ -555,7 +542,7 @@ p, li { white-space: pre-wrap; }
    <widget class="QDoubleSpinBox" name="spinbox_LowFriction">
     <property name="geometry">
      <rect>
-      <x>650</x>
+      <x>510</x>
       <y>300</y>
       <width>131</width>
       <height>27</height>
@@ -574,7 +561,7 @@ p, li { white-space: pre-wrap; }
    <widget class="QDoubleSpinBox" name="spinbox_HighFriction">
     <property name="geometry">
      <rect>
-      <x>650</x>
+      <x>510</x>
       <y>370</y>
       <width>131</width>
       <height>27</height>
@@ -609,13 +596,83 @@ p, li { white-space: pre-wrap; }
      <bool>false</bool>
     </property>
    </widget>
+   <widget class="QDoubleSpinBox" name="spinbox_RotateAnticlockwise">
+    <property name="geometry">
+     <rect>
+      <x>40</x>
+      <y>610</y>
+      <width>62</width>
+      <height>27</height>
+     </rect>
+    </property>
+    <property name="decimals">
+     <number>1</number>
+    </property>
+    <property name="minimum">
+     <double>-0.800000000000000</double>
+    </property>
+    <property name="maximum">
+     <double>0.800000000000000</double>
+    </property>
+    <property name="singleStep">
+     <double>0.100000000000000</double>
+    </property>
+   </widget>
+   <widget class="QDoubleSpinBox" name="spinbox_RotateClockwise">
+    <property name="geometry">
+     <rect>
+      <x>40</x>
+      <y>570</y>
+      <width>62</width>
+      <height>27</height>
+     </rect>
+    </property>
+    <property name="decimals">
+     <number>1</number>
+    </property>
+    <property name="minimum">
+     <double>-0.800000000000000</double>
+    </property>
+    <property name="maximum">
+     <double>0.800000000000000</double>
+    </property>
+    <property name="singleStep">
+     <double>0.100000000000000</double>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_RotateAnticlockwise">
+    <property name="geometry">
+     <rect>
+      <x>120</x>
+      <y>610</y>
+      <width>181</width>
+      <height>27</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Rotate_anticlockwise</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_RotateClockwise">
+    <property name="geometry">
+     <rect>
+      <x>120</x>
+      <y>570</y>
+      <width>181</width>
+      <height>27</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Rotate_clockwise</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
+     <width>684</width>
      <height>25</height>
     </rect>
    </property>

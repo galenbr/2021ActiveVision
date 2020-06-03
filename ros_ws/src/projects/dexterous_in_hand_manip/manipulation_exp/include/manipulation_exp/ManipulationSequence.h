@@ -7,6 +7,7 @@ class ManipulationSequence
 {
 private:
   ros::NodeHandle n_;
+  ros::Duration dur;
   bool reset_world();
   bool release_object();
   bool go_to_rest();
@@ -25,6 +26,7 @@ private:
   bool rotate_anticlockwise();
 
 public:
+  ManipulationSequence();
   bool reset_sequence(manipulation_exp::Sequence::Request &req, manipulation_exp::Sequence::Response &res);
   bool prepare_grasp(manipulation_exp::Sequence::Request &req, manipulation_exp::Sequence::Response &res);
   bool object_grasp(manipulation_exp::Sequence::Request &req, manipulation_exp::Sequence::Response &res);
