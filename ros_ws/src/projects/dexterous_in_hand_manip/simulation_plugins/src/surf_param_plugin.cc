@@ -3,7 +3,7 @@
 #include <gazebo/common/common.hh>
 #include <gazebo/msgs/msgs.hh>
 #include <ros/ros.h>
-#include "gripper_controls/Friction.h"
+#include "simulation_ui/SimParam.h"
 #include "ros/callback_queue.h"
 #include "ros/subscribe_options.h"
 #include <thread>
@@ -24,11 +24,13 @@ namespace gazebo
       physics::SurfaceParamsPtr sur_right = col_right->GetSurface();
       m_surface_left = sur_left->FrictionPyramid();
       m_surface_right = sur_right->FrictionPyramid();
-      m_surface_left->SetMuPrimary(1e5);
-      m_surface_right->SetMuPrimary(1e5);
-      m_surface_left->SetMuSecondary(1e5);
-      m_surface_right->SetMuSecondary(1e5);
-      gzdbg << "Loaded" << std::endl;
+      m_surface_left->SetMuTorsion(0.5);
+      m_surface_right->SetMuTorsion(0.5);
+      m_surface_left->SetPatchRadius(0.5);
+      m_surface_right->SetPatchRadius(0.5);
+      m_surface_left->SetSurfaceRadius(0.5);
+      m_surface_right->SetSurfaceRadius(0.5);
+      gzdbg << "Loaded2" << std::endl;
 
       // New method
       // Initialize ros, if it has not already bee initialized.
@@ -36,18 +38,18 @@ namespace gazebo
       {
         int argc = 0;
         char **argv = NULL;
-        ros::init(argc, argv, "gazebo_client",
+        ros::init(argc, argv, "gazebo_client2",
             ros::init_options::NoSigintHandler);
       }
 
       // Create our ROS node. This acts in a similar manner to
       // the Gazebo node
-      this->rosNode.reset(new ros::NodeHandle("gazebo_client"));
+      this->rosNode.reset(new ros::NodeHandle("gazebo_client2"));
 
       // Create a named topic, and subscribe to it.
       ros::SubscribeOptions so =
-        ros::SubscribeOptions::create<gripper_controls::Friction>(
-            "/vf_hand/friction_setter",
+        ros::SubscribeOptions::create<simulation_ui::SimParam>(
+            "/vf_hand/parameter_setter",
             1,
             boost::bind(&ModelPush::OnRosMsg, this, _1),
             ros::VoidPtr(), &this->rosQueue);
@@ -58,18 +60,22 @@ namespace gazebo
         std::thread(std::bind(&ModelPush::QueueThread, this));
     }
 
-    void SetFriction(float left, float right){
+    void SetParam(double muTorsion, bool usePR, double PatchRadius, double SurfaceRadius){
       // update friction coefficients
-      m_surface_left->SetMuPrimary(left);
-      m_surface_left->SetMuSecondary(left);
-      m_surface_right->SetMuPrimary(right);
-      m_surface_right->SetMuSecondary(right);
+      m_surface_left->SetMuTorsion(muTorsion);
+      m_surface_right->SetMuTorsion(muTorsion);
+      m_surface_left->SetUsePatchRadius(usePR);
+      m_surface_right->SetUsePatchRadius(usePR);
+      m_surface_left->SetPatchRadius(PatchRadius);
+      m_surface_right->SetPatchRadius(PatchRadius);
+      m_surface_left->SetSurfaceRadius(SurfaceRadius);
+      m_surface_right->SetSurfaceRadius(SurfaceRadius);
     }
 
-    public: void OnRosMsg(const gripper_controls::FrictionConstPtr &_msg)
+    public: void OnRosMsg(const simulation_ui::SimParamConstPtr &_msg)
     {
       // called on every message
-      this->SetFriction(_msg->left_friction,_msg->right_friction);
+      this->SetParam(_msg->MuTorsion,_msg->usePR,_msg->PatchRadius,_msg->SurfaceRadius);
     }
 
   private:

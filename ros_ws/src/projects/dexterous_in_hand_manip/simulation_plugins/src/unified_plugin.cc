@@ -4,6 +4,7 @@
 #include <gazebo/msgs/msgs.hh>
 #include <ros/ros.h>
 #include "gripper_controls/Friction.h"
+#include "simulation_ui/SimParam.h"
 #include "ros/callback_queue.h"
 #include "ros/subscribe_options.h"
 #include <thread>
@@ -28,6 +29,12 @@ namespace gazebo
       m_surface_right->SetMuPrimary(1e5);
       m_surface_left->SetMuSecondary(1e5);
       m_surface_right->SetMuSecondary(1e5);
+      m_surface_left->SetMuTorsion(0.5);
+      m_surface_right->SetMuTorsion(0.5);
+      m_surface_left->SetPatchRadius(0.5);
+      m_surface_right->SetPatchRadius(0.5);
+      m_surface_left->SetSurfaceRadius(0.5);
+      m_surface_right->SetSurfaceRadius(0.5);
       gzdbg << "Loaded" << std::endl;
 
       // New method
@@ -53,6 +60,15 @@ namespace gazebo
             ros::VoidPtr(), &this->rosQueue);
       this->rosSub = this->rosNode->subscribe(so);
 
+
+      ros::SubscribeOptions so2 =
+        ros::SubscribeOptions::create<simulation_ui::SimParam>(
+            "/vf_hand/parameter_setter",
+            1,
+            boost::bind(&ModelPush::OnRosMsg2, this, _1),
+            ros::VoidPtr(), &this->rosQueue);
+      this->rosSub2 = this->rosNode->subscribe(so2);
+
       // Spin up the queue helper thread.
       this->rosQueueThread =
         std::thread(std::bind(&ModelPush::QueueThread, this));
@@ -72,6 +88,24 @@ namespace gazebo
       this->SetFriction(_msg->left_friction,_msg->right_friction);
     }
 
+    void SetParam(double muTorsion, bool usePR, double PatchRadius, double SurfaceRadius){
+      // update friction coefficients
+      m_surface_left->SetMuTorsion(muTorsion);
+      m_surface_right->SetMuTorsion(muTorsion);
+      m_surface_left->SetUsePatchRadius(usePR);
+      m_surface_right->SetUsePatchRadius(usePR);
+      m_surface_left->SetPatchRadius(PatchRadius);
+      m_surface_right->SetPatchRadius(PatchRadius);
+      m_surface_left->SetSurfaceRadius(SurfaceRadius);
+      m_surface_right->SetSurfaceRadius(SurfaceRadius);
+    }
+
+    public: void OnRosMsg2(const simulation_ui::SimParamConstPtr &_msg)
+    {
+      // called on every message
+      this->SetParam(_msg->MuTorsion,_msg->usePR,_msg->PatchRadius,_msg->SurfaceRadius);
+    }
+
   private:
     physics::ModelPtr model;
     event::ConnectionPtr updateConnection;
@@ -83,6 +117,7 @@ namespace gazebo
 
     /// \brief A ROS subscriber
     ros::Subscriber rosSub;
+    ros::Subscriber rosSub2;
 
     /// \brief A ROS callbackqueue that helps process messages
     ros::CallbackQueue rosQueue;
