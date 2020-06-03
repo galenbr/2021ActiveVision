@@ -127,9 +127,9 @@ int main(int argc, char **argv){
     ros::Duration(1).sleep();
     // Grasp
     ROS_INFO("Gripping");
-    // grasp.request.finger_pos = 0.0;
-    // gripperPosClient.call(grasp);
-    // ros::Duration(3).sleep();
+    grasp.request.finger_pos = 0.0;
+    gripperPosClient.call(grasp);
+    ros::Duration(3).sleep();
 
 
     // // For the force controller
@@ -146,26 +146,26 @@ int main(int argc, char **argv){
     // grip.request.force = -50.0;
     // gripperClient.call(grip);
     // ros::Duration(0.2).sleep();
-    // // Move away
-    // cart2.request.val.push_back(p);
-    // p.position.x -= 0.04;
-    // cart2.request.val.push_back(p);
-    // p.position.z += 0.05;
-    // cart2.request.val.push_back(p);
-    // cart2.request.execute = true;
-    // moveCartClient.call(cart2);
-    // ros::Duration(1).sleep();
-    // //Move to Lock
-    // ROS_INFO("Moving to Lock");
-    // pose2.request.val.position.x = 0.65;
-    // pose2.request.val.position.y = 0.0;
-    // pose2.request.val.position.z = 0.45;
-    // pose2.request.val.orientation.w = 0.00653015;
-    // pose2.request.val.orientation.x = 0.915333;
-    // pose2.request.val.orientation.y = 0.402644;
-    // pose2.request.val.orientation.z = 0.000463674;
-    // pose2.request.execute = true;
-    // movePoseClient2.call(pose2);
+    // Move away
+    cart2.request.val.push_back(p);
+    p.position.x -= 0.04;
+    cart2.request.val.push_back(p);
+    p.position.z += 0.05;
+    cart2.request.val.push_back(p);
+    cart2.request.execute = true;
+    moveCartClient.call(cart2);
+    ros::Duration(1).sleep();
+    //Move to Lock
+    ROS_INFO("Moving to Lock");
+    pose2.request.val.position.x = 0.65;
+    pose2.request.val.position.y = 0.0;
+    pose2.request.val.position.z = 0.45;
+    pose2.request.val.orientation.w = 0.00653015;
+    pose2.request.val.orientation.x = 0.915333;
+    pose2.request.val.orientation.y = 0.402644;
+    pose2.request.val.orientation.z = 0.000463674;
+    pose2.request.execute = true;
+    movePoseClient2.call(pose2);
     ros::spin();
 
     return 0;
