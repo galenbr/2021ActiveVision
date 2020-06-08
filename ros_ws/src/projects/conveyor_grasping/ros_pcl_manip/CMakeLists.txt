@@ -10,11 +10,14 @@ find_package(catkin REQUIRED COMPONENTS
   message_runtime)
 find_package(PCL REQUIRED COMPONENTS
   common
-  filters)
+  filters
+  sample_consensus
+  segmentation)
 
 add_service_files(
   FILES
   Downsample.srv
+  SegmentPlane.srv
   ESeg.srv)
 generate_messages(
   DEPENDENCIES
@@ -29,3 +32,7 @@ link_directories(${PCL_LIBRARY_DIRS})
 add_executable(ros_pcl_manip_node src/ros_pcl_manip_node)
 target_link_libraries(ros_pcl_manip_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 add_dependencies(ros_pcl_manip_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+
+add_executable(test_vision_node src/test_vision_node)
+target_link_libraries(test_vision_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+add_dependencies(test_vision_node ${${PROJECT_NAME}_EXPORTED_TARGETS})

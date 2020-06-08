@@ -1,0 +1,12 @@
+<launch>
+  <param name="camera_description" command="$(find xacro)/xacro --inorder $(find ros_pcl_manip)/desc/fixed_camera.xacro" />
+
+  <include file="$(find gazebo_ros)/launch/empty_world.launch" />
+  <node name="map_frame" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 map world 100" />
+  <node name="cam_pub" pkg="robot_state_publisher" type="robot_state_publisher">
+    <remap from="robot_description" to="camera_description" />
+  </node>
+  <node name="spawn_camera" pkg="gazebo_ros" type="spawn_model" args="-param camera_description -urdf -model fixed_camera" />
+
+  <node name="pcl_node" pkg="ros_pcl_manip" type="ros_pcl_manip_node" output="screen"/>
+</launch>
