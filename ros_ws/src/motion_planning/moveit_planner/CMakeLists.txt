@@ -13,10 +13,13 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_ros_move_group
   geometry_msgs
   moveit_msgs
+  tf
 )
 
 add_service_files(
   FILES
+  GetTF.srv
+  GetPose.srv
   MovePoint.srv
   MoveQuat.srv
   MovePose.srv
@@ -42,6 +45,7 @@ catkin_package(
     geometry_msgs
     moveit_msgs
     message_runtime
+    tf
 )
 
 include_directories(include ${catkin_INCLUDE_DIRS})
@@ -49,3 +53,6 @@ link_libraries(${catkin_LIBRARIES})
 
 add_executable(main_node src/main.cpp src/moveit_planner.cpp)
 add_dependencies(main_node ${moveit_planner_EXPORTED_TARGETS})
+
+add_executable(pose_node src/pose_node)
+add_dependencies(pose_node ${moveit_planner_EXPORTED_TARGETS})

@@ -1,4 +1,5 @@
 #include "moveit_planner.hpp"
+#include "moveit_planner/GetTF.h"
 
 // moveit_msgs includes
 #include "moveit_msgs/RobotTrajectory.h"
@@ -8,19 +9,44 @@
 namespace moveit_planner {  
   // Constructor/Destructor
   MoveitPlanner::MoveitPlanner(ros::NodeHandle& nh, const std::string& arm)
-    : n{nh}, spinner{3}, armGroup{arm}, moveGroup{armGroup}, curScaling{1.0},
+    : n{nh}, spinner{0}, armGroup{arm}, moveGroup{armGroup}, curScaling{1.0},
       eef_step{0.005}, jump_threshold{0} {
-      spinner.start();
+	spinner.start();
 
-      setupServices();
-      setupMoveit();
+	setupServices();
+	setupMoveit();
 
-      ros::waitForShutdown();
-    }
+	ros::waitForShutdown();
+      }
   MoveitPlanner::~MoveitPlanner() {
     delete jointModelGroup;
   }
 
+  bool MoveitPlanner::getPose(geometry_msgs::Pose& pose) {
+    // TODO: Performance improvements
+    ROS_INFO("Waiting for /get_transform service");
+    if(ros::service::waitForService("/get_transform", ros::Duration(5.0))) {
+      ROS_INFO("Service found");
+
+      ros::ServiceClient tempClient = n.serviceClient<moveit_planner::GetTF>("/get_transform");
+      moveit_planner::GetTF tempMsg;
+
+      tempMsg.request.from = baseLink;
+      tempMsg.request.to = endEffector;
+      if(tempClient.call(tempMsg)) {
+	pose = tempMsg.response.pose;
+	return true;
+      }
+      else {
+	ROS_ERROR_STREAM("Could not obtain transform from pose_node");
+	return false;
+      }
+    }
+    else {
+      ROS_ERROR("Could not find required service, is pose_node running?");
+      return false;
+    }
+  }
   bool MoveitPlanner::moveToPose(const geometry_msgs::Pose& p, const bool& exe) {
     moveGroup.setPoseTarget(p);
     auto errCode = moveGroup.plan(curPlan);
@@ -82,6 +108,10 @@ namespace moveit_planner {
     return true;
   }
 
+  bool MoveitPlanner::getPoseClientCallback(moveit_planner::GetPose::Request& req,
+					    moveit_planner::GetPose::Response& res) {
+    return getPose(res.pose);
+  }
   bool MoveitPlanner::poseClientCallback(moveit_planner::MovePose::Request& req,
 					 moveit_planner::MovePose::Response& res) {
     return moveToPose(req.val, req.execute);
@@ -162,6 +192,9 @@ namespace moveit_planner {
     // rotClient = n.advertiseService("move_to_orientation",
     // 				   &MoveitPlanner::rotClientCallback,
     // 				   this);
+    getPoseClient = n.advertiseService("get_pose",
+				       &MoveitPlanner::getPoseClientCallback,
+				       this);
     jsClient = n.advertiseService("move_to_joint_space",
 				  &MoveitPlanner::jsClientCallback,
 				  this);
@@ -184,6 +217,12 @@ namespace moveit_planner {
 
   void MoveitPlanner::setupMoveit() {
     ros::spinOnce();
-    // TODO: Add setup
+
+    endEffector = moveGroup.getEndEffectorLink();
+
+    std::vector<std::string> links = moveGroup.getLinkNames();
+    baseLink = links[0];
   }
+
+
 }
