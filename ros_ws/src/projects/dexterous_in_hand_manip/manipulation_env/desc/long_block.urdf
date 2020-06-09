@@ -3,8 +3,8 @@
 <robot name="block_object">
 
   <gazebo reference="block">
-    <mu1>0.8</mu1>
-    <mu2>0.8</mu2>
+    <mu1>100000</mu1>
+    <mu2>100000</mu2>
     <kp>10000000</kp>
     <kd>1</kd>
     <minDepth>0.001</minDepth>

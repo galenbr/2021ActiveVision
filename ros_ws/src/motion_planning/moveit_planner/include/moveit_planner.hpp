@@ -10,10 +10,12 @@
 #include <ros/ros.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Point.h>
+#include <tf/transform_listener.h>
 #include <geometry_msgs/Quaternion.h>
 #include <geometry_msgs/PoseStamped.h>
 
 // custom srv includes
+#include "moveit_planner/GetPose.h"
 #include "moveit_planner/MoveQuat.h"
 #include "moveit_planner/MovePose.h"
 #include "moveit_planner/MoveCart.h"
@@ -42,6 +44,7 @@ namespace moveit_planner {
     // Movement commands
     // bool moveToOrientation(const geometry_msgs::Quaternion& r, bool exe);
     // bool moveToPosition(const geometry_msgs::Point& p, bool exe);
+    bool getPose(geometry_msgs::Pose& pose);
     bool moveToPose(const geometry_msgs::Pose& p, const bool& exe);
     bool moveToJointSpace(const std::vector<double>& jointPositions, bool exe);
     bool cartesianMove(const std::vector<geometry_msgs::Pose>& p, const bool& exe);
@@ -53,7 +56,8 @@ namespace moveit_planner {
   private:
     ros::NodeHandle n;
     ros::AsyncSpinner spinner;
-    std::string armGroup;
+    tf::TransformListener listener;
+    std::string armGroup, endEffector, baseLink;
 
     // Setup
     void setupServices();
@@ -69,6 +73,7 @@ namespace moveit_planner {
     double curScaling;
 
     // Services/Topics
+    ros::ServiceServer getPoseClient;
     ros::ServiceServer poseClient;
     ros::ServiceServer rotClient;
     ros::ServiceServer jsClient;
@@ -79,6 +84,8 @@ namespace moveit_planner {
     ros::ServiceServer setConstClient;
 
     // Callbacks
+    bool getPoseClientCallback(moveit_planner::GetPose::Request& req,
+			       moveit_planner::GetPose::Response& res);
     bool poseClientCallback(moveit_planner::MovePose::Request& req,
 			    moveit_planner::MovePose::Response& res);
     bool rotClientCallback(moveit_planner::MoveQuat::Request& req,
