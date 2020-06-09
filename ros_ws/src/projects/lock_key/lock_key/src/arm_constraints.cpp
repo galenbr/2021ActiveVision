@@ -9,12 +9,21 @@ ros::NodeHandle n;
 ros::ServiceClient constraintClient = n.serviceClient<moveit_planner::SetConstraints>("set_constraints");
 moveit_planner::SetConstraints cons ;
 moveit_msgs::JointConstraint jc;
-    jc.position = 0.0;
-    jc.tolerance_above = 1.4;//3.14159;
+moveit_msgs::JointConstraint jc1;
+
+    jc.position = 0.3;
+    jc.tolerance_above = 0.4;//3.14159;
     jc.tolerance_below = 0.4;
     jc.joint_name = "panda_joint2";
-    jc.weight = 1;
+    jc.weight = 0.5;
 
+    jc1.position = -0.07;
+    jc.tolerance_above = 0.3;
+    jc.tolerance_below = 0.3;
+    jc.joint_name = "panda_joint1";
+    jc.weight = 1.0;
+
+    cons.request.constraints.joint_constraints.push_back(jc1);
     cons.request.constraints.joint_constraints.push_back(jc);
 
     return 0;
