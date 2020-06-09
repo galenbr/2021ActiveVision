@@ -1,8 +1,10 @@
 <launch>
+  <!-- Un pause simulation via setup node-->
+  <node name="setup" type="setup_node" pkg="lock_key" /> 
   <!-- Start Collision Objects Node -->
   <node name="collision_obj" type="collision_obj_node" pkg="lock_key" />
   <!-- Start Constraints Node -->
   <node name="constraints" type="arm_constraints_node" pkg="lock_key" />
   <!--Start Controller Node -->
-  <node name="controller" type="control_node" pkg="lock_key" />
+  <!-- <node name="controller" type="control_node" pkg="lock_key" /> -->
 </launch>
