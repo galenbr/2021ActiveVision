@@ -24,7 +24,7 @@ CloudPtr ROS_PCL::downsample(CloudPtr in_cloud, float leaf_size) {
 CloudPtr ROS_PCL::seg_plane(CloudPtr in_cloud, bool remove, float leaf_size) {
   // Variables
   CloudPtr downsampledCloud = downsample(in_cloud, leaf_size);
-  CloudPtr extractedPlane;
+  CloudPtr extractedPlane(new CloudType());
   pcl::PointIndices::Ptr planeInliers(new pcl::PointIndices);
   pcl::ExtractIndices<PointType> extract;
   pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
@@ -56,10 +56,7 @@ CloudPtr ROS_PCL::seg_plane(CloudPtr in_cloud, bool remove, float leaf_size) {
 bool ROS_PCL::downsample_service(ros_pcl_manip::Downsample::Request& req,
 				 ros_pcl_manip::Downsample::Response& res) {
   CloudPtr tempPtr = from_pc2(req.cloud);
-  ROS_INFO("Converted cloud into PCL");
-  ROS_INFO_STREAM((*tempPtr));
   tempPtr = downsample(tempPtr, req.size);
-  ROS_INFO("Downsampled cloud");
 
   res.cloud = to_pc2(tempPtr);
 
@@ -68,9 +65,7 @@ bool ROS_PCL::downsample_service(ros_pcl_manip::Downsample::Request& req,
 bool ROS_PCL::segment_plane_service(ros_pcl_manip::SegmentPlane::Request& req,
 				    ros_pcl_manip::SegmentPlane::Response& res) {
   CloudPtr negativePtr = from_pc2(req.cloud);
-  CloudPtr planePtr;
-
-  planePtr = seg_plane(negativePtr, true, req.leaf_size);
+  CloudPtr planePtr= seg_plane(negativePtr, true, req.leaf_size);
 
   res.plane = to_pc2(planePtr);
   res.negativeCloud = to_pc2(negativePtr);
