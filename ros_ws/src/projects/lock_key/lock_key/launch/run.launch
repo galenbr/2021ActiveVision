@@ -1,8 +1,17 @@
 <launch>
+
+  <!-- Start moveit -->
+  <include file="$(find ref_benchmark_moveit_config)/launch/move_group.launch" />
+  <!-- launch moveit API -->
+  <node name="moveit_api" type="main_node" pkg="moveit_planner" />
+  <!-- Un pause simulation via setup node-->
+  <node name="setup" type="setup_node" pkg="lock_key" />
+  <!-- Start get pose node -->
+  <node name="get_pose" type="pose_node" pkg="moveit_planner" />
   <!-- Start Collision Objects Node -->
   <node name="collision_obj" type="collision_obj_node" pkg="lock_key" />
   <!-- Start Constraints Node -->
   <node name="constraints" type="arm_constraints_node" pkg="lock_key" />
   <!--Start Controller Node -->
-  <node name="controller" type="control_node" pkg="lock_key" />
+  <!-- <node name="controller" type="control_node" pkg="lock_key" /> -->
 </launch>
