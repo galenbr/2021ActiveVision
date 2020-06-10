@@ -30,10 +30,6 @@
   <node name="spawn_padlock_urdf" pkg="gazebo_ros" type="spawn_model"
   	args="-file $(find lock_key)/desc/padlock.urdf -urdf -model padlock -z $(arg table_height) -x $(arg table_center)" />
   
-  <!--TO DO: Check issue with block-->
-  <!-- <node name="spawn_block_urdf" pkg="gazebo_ros" type="spawn_model"
-  	args="-file $(find lock_key)/desc/block.urdf -urdf -model block -z $(arg table_height) -x $(arg table_center)" /> -->
-  
   <node name="spawn_key_urdf" pkg="gazebo_ros" type="spawn_model"
   	args="-file $(find lock_key)/desc/key.urdf -urdf -model key -z $(arg table_height) -x 0.42 -y 0.1" />
 
@@ -43,33 +39,18 @@
   
   <!-- <include file="$(find panda_finger_position_controller)/launch/main.launch" /> -->
   <include file="$(find panda_finger_position_controller)/launch/main.launch" />
+  
   <!-- Start publishing to /tf for rviz -->
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true">
     <remap from="joint_states" to="panda/joint_states" />
   </node>
 
-  <!-- Start moveit -->
-  <include file="$(find ref_benchmark_moveit_config)/launch/move_group.launch" />
-
-  <!--<node name="table_randomizer" pkg="randomizer" type="randomizer_node"
-  	args="$(arg table_height) $(arg table_center) $(arg table_width) $(arg table_length)" /> -->
-
   <!-- Start rviz -->
   <!-- <node name="rviz" type="rviz" pkg="rviz" args="-d $(find lock_key)/config/table_scene.rviz" /> -->
-
-  <!-- <node name="joint_state_desired_publisher" pkg="topic_tools" type="relay" args="joint_states joint_states_desired" /> -->
   
   <!--Start Moveit API Node-->
-  <node name="moveit_api" type="main_node" pkg="moveit_planner" />
+  <!-- <node name="moveit_api" type="main_node" pkg="moveit_planner" /> -->
  
-  <!-- Start Collision Objects Node -->
-  <!-- <node name="collision_obj" type="collision_obj_node" pkg="lock_key" /> -->
-
-  <!--Start Movement Node-->
-  <!-- <node name="movement" type="arm_move_node" pkg="lock_key" /> -->
-  
-  <!--Start Controller Node -->
-  <!-- <node name="controller" type="control_node" pkg="lock_key" /> -->
 
   <!--Start Image Capture Node-->
   <node name="img_capture" type="img_capture_node" pkg="lock_key" />
