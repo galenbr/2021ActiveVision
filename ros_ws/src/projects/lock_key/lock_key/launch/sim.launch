@@ -11,7 +11,7 @@
   <rosparam file="$(find lock_key)/config/panda_control.yaml" command="load" />
   <!-- <rosparam file="$(find ref_benchmark)/config/panda_control.yaml" command="load" /> -->
   
-  <!--Add the YAML to the para, Server-->
+  <!--Add the YAML to the param Server-->
   <rosparam command = "load" file="$(find lock_key)/config/params.yaml" />
   
   <!-- Launch frames for rviz -->
