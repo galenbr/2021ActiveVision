@@ -8,7 +8,7 @@
     <visual>
       <geometry>
 	<box size="0.01 0.01 0.01" />
-	<origin xyz="0 0 -0.5" rpy="0 0 0" />
+	<origin xyz="0 0 0.0" rpy="0 0 0" />
       </geometry>
     </visual>
     <inertial>
@@ -16,13 +16,20 @@
       <inertia ixx="1" iyy="1" izz="1" ixy="0.0" ixz="0.0" iyz="0.0" />
     </inertial>
   </link>
-  <xacro:camera_gazebo_sensor xyz="1 1 0" rpy="0.0 0.0 0.0"
-  			      parent="fixed_camera_link"
+  <link name="link_2"></link>
+
+  <xacro:camera_gazebo_sensor xyz="0 0 0" rpy="0.0 0.0 0.0"
+  			      parent="link_2"
   			      sensor_name="fixed_camera" />
 
   <joint name="fixed_joint" type="fixed">
     <parent link="world" />
     <child link="fixed_camera_link" />
-    <origin xyz="0 0 1.0" rpy="0 0 0" />
+    <origin xyz="-0.1 0 0.15" rpy="0 0 0" />
+  </joint>
+  <joint name="fixed_joint2" type="fixed">
+    <parent link="fixed_camera_link" />
+    <child link="link_2" />
+    <origin xyz="0.05 0 0" rpy="0 0 0" />
   </joint>
 </robot>

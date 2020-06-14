@@ -1,12 +1,17 @@
 <launch>
-  <param name="camera_description" command="$(find xacro)/xacro --inorder $(find ros_pcl_manip)/desc/fixed_camera.xacro" />
+  <param name="robot_description" command="$(find xacro)/xacro --inorder $(find ref_benchmark)/desc/franka_camera.xacro" />
+  <rosparam file="$(find ref_benchmark)/config/panda_control.yaml" command="load" />
+  <rosparam file="$(find ref_benchmark)/config/mugScene.yaml" command="load" />
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch" />
   <node name="map_frame" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 map world 100" />
-  <node name="cam_pub" pkg="robot_state_publisher" type="robot_state_publisher">
-    <remap from="robot_description" to="camera_description" />
+  <node name="rob_pub" pkg="robot_state_publisher" type="robot_state_publisher">
+    <remap from="/joint_states" to="/panda/joint_states" />
   </node>
-  <node name="spawn_camera" pkg="gazebo_ros" type="spawn_model" args="-param camera_description -urdf -model fixed_camera" />
+  <node name="spawn_franka_urdf" pkg="gazebo_ros" type="spawn_model"
+  	args="-param robot_description -urdf -model panda -J panda_joint2 0.0 -J panda_joint6 0.785398 -J panda_joint7 0.785398" />
+  <node name="spawn_mug" pkg="gazebo_ros" type="spawn_model" args="-file $(find ycb_models)/desc/mug.urdf -urdf -model mug" />
 
   <node name="pcl_node" pkg="ros_pcl_manip" type="ros_pcl_manip_node" output="screen"/>
+  <include file="$(find panda_moveit_controller)/launch/main.launch" />
 </launch>
