@@ -70,7 +70,7 @@ double ROS_PCL::getResolution(CloudConstPtr cloud) {
   tree.setInputCloud (cloud);
 
   for (std::size_t i = 0; i < cloud->size (); ++i) {
-    if (! std::isfinite ((*cloud)[i].x))
+    if (!std::isfinite ((*cloud)[i].x))
       continue;
     //Considering the second neighbor since the first is the point itself.
     nres = tree.nearestKSearch (i, 2, indices, sqr_distances);
@@ -98,6 +98,7 @@ CorrespondenceParams ROS_PCL::scaleInvariant(const CorrespondenceParams& p, doub
   return ret;
 }
 NormalCloudPtr ROS_PCL::computeNormals(CloudConstPtr in_cloud) {
+  ROS_INFO("Computing normals");
   pcl::NormalEstimationOMP<PointType, NormalType> norm;
   NormalCloudPtr ret(new NormalCloud);
 
@@ -108,6 +109,7 @@ NormalCloudPtr ROS_PCL::computeNormals(CloudConstPtr in_cloud) {
   return ret;
 }
 CloudPtr ROS_PCL::extractKeypoints(CloudPtr in_cloud, float search) {
+  ROS_INFO_STREAM("Extracting keypoints with search " << search);
   CloudPtr ret(new CloudType());
   pcl::UniformSampling<PointType> us;
 
@@ -118,7 +120,8 @@ CloudPtr ROS_PCL::extractKeypoints(CloudPtr in_cloud, float search) {
 
   return ret;
 }
-DescriptorCloudPtr computeDescriptors(CloudPtr in_cloud, CloudPtr in_keypoints, NormalCloudPtr in_normal, float search) {
+DescriptorCloudPtr ROS_PCL::computeDescriptors(CloudPtr in_cloud, CloudPtr in_keypoints, NormalCloudPtr in_normal, float search) {
+  ROS_INFO_STREAM("Computing descriptors with search " << search);
   DescriptorCloudPtr ret(new DescriptorCloud());
   pcl::SHOTEstimationOMP<PointType, NormalType, DescriptorType> descr_est;
 
@@ -133,6 +136,7 @@ DescriptorCloudPtr computeDescriptors(CloudPtr in_cloud, CloudPtr in_keypoints, 
 }
 pcl::CorrespondencesPtr ROS_PCL::getCorrespondences(DescriptorCloudPtr model_descs,
 						    DescriptorCloudPtr scene_descs) {
+  ROS_INFO_STREAM("Getting correspondences");
   pcl::CorrespondencesPtr ret(new pcl::Correspondences());
   pcl::KdTreeFLANN<DescriptorType> match_search;
 
@@ -185,12 +189,25 @@ std::vector<geometry_msgs::Pose> ROS_PCL::correspondenceGrouping(CloudPtr scene,
   NormalCloudPtr sceneNormals = computeNormals(scene);
 
   // Extract keypoints
+  CloudPtr modelKeypts = extractKeypoints(model, params.model_ss);
+  CloudPtr sceneKeypts = extractKeypoints(scene, params.scene_ss);
+
+  // Compute descritors
+  DescriptorCloudPtr modelDesc = computeDescriptors(model, modelKeypts, modelNormals, params.descr_rad);
+  DescriptorCloudPtr sceneDesc = computeDescriptors(scene, sceneKeypts, sceneNormals, params.descr_rad);
+
+  // Compute correspondences
+  pcl::CorrespondencesPtr modelCorr = getCorrespondences(modelDesc, sceneDesc);
+
+  // // Cluster
+  ret = geometricConsistency(modelKeypts, sceneKeypts, modelCorr, params.cg_size, params.cg_thresh);
 
   return ret;
 }
 
 bool ROS_PCL::downsample_service(ros_pcl_manip::Downsample::Request& req,
 				 ros_pcl_manip::Downsample::Response& res) {
+  ROS_INFO("Received downsample_service");
   CloudPtr tempPtr = from_pc2(req.cloud);
   tempPtr = downsample(tempPtr, req.size);
 
@@ -200,6 +217,7 @@ bool ROS_PCL::downsample_service(ros_pcl_manip::Downsample::Request& req,
 }
 bool ROS_PCL::segment_plane_service(ros_pcl_manip::SegmentPlane::Request& req,
 				    ros_pcl_manip::SegmentPlane::Response& res) {
+  ROS_INFO("Received segment_plane_service");
   CloudPtr negativePtr = from_pc2(req.cloud);
   CloudPtr planePtr= seg_plane(negativePtr, true, req.leaf_size);
 
@@ -210,20 +228,21 @@ bool ROS_PCL::segment_plane_service(ros_pcl_manip::SegmentPlane::Request& req,
 }
 bool ROS_PCL::cor_group_service(ros_pcl_manip::CorrGroup::Request& req,
 				ros_pcl_manip::CorrGroup::Response& res) {
+  ROS_INFO("Received cor_group_service");
   // Conversions
   CloudPtr modelPtr = from_pc2(req.model);
   CloudPtr scenePtr = from_pc2(req.scene);
 
   CorrespondenceParams p;
 
-  correspondenceGrouping(modelPtr, scenePtr, req.invariant, p);
+  std::vector<geometry_msgs::Pose> ret = correspondenceGrouping(modelPtr, scenePtr, req.invariant, p);
 
-  // TODO: Insert poses into res
-
+  res.detectedModels = ret;
   return true;
 }
 bool ROS_PCL::load_service(ros_pcl_manip::LoadFile::Request& req,
 			   ros_pcl_manip::LoadFile::Response& res) {
+  ROS_INFO("Received load_service");
   CloudPtr fileCloud(new CloudType());
 
   if(pcl::io::loadPCDFile<PointType>(req.filepath, *fileCloud) == -1) {
@@ -232,6 +251,21 @@ bool ROS_PCL::load_service(ros_pcl_manip::LoadFile::Request& req,
   }
 
   res.cloud = to_pc2(fileCloud);
+  res.cloud.header.frame_id = "world"; // If no frame given, set to world
+  if(req.frame != "")
+    res.cloud.header.frame_id = req.frame;
+  return true;
+}
+bool ROS_PCL::save_service(ros_pcl_manip::ToFile::Request& req,
+			   ros_pcl_manip::ToFile::Response& res) {
+  ROS_INFO("Received save_service");
+  CloudPtr fileCloud = from_pc2(req.cloud);
+
+  if(pcl::io::savePCDFileASCII(req.filepath, *fileCloud) == -1) {
+    ROS_ERROR_STREAM("Could not save cloud to file " << req.filepath);
+    return false;
+  }
+
   return true;
 }
 
@@ -315,5 +349,8 @@ void ROS_PCL::_setup_services() {
 				     this);
   _load_server = _nh.advertiseService("load_pcd_file",
 				      &ROS_PCL::load_service,
+				      this);
+  _save_server = _nh.advertiseService("save_to_pcd",
+				      &ROS_PCL::save_service,
 				      this);
 }

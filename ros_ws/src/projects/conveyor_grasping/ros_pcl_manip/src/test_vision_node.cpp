@@ -1,10 +1,14 @@
+#include <vector>
+
 #include <ros/ros.h>
+#include <geometry_msgs/Pose.h>
 #include <sensor_msgs/PointCloud2.h>
 
 #include "ros_pcl_manip/Downsample.h"
 #include "ros_pcl_manip/SegmentPlane.h"
 #include "ros_pcl_manip/CorrGroup.h"
 #include "ros_pcl_manip/LoadFile.h"
+#include "ros_pcl_manip/ToFile.h"
 
 sensor_msgs::PointCloud2 img;
 
@@ -16,7 +20,7 @@ int main(int argc, char** argv) {
   ros::init(argc, argv, "test_vision_node");
   ros::NodeHandle nh;
 
-  ros::Subscriber imgSub = nh.subscribe("/fixed_camera/depth/points", 1, img_callback);
+  ros::Subscriber imgSub = nh.subscribe("/panda_camera/depth/points", 1, img_callback);
   while(img.data.size() == 0)
     ros::spinOnce();		// Spin once to get an image
 
@@ -46,6 +50,7 @@ int main(int argc, char** argv) {
   ros::ServiceClient loadClient = nh.serviceClient<ros_pcl_manip::LoadFile>("load_pcd_file");
   ros_pcl_manip::LoadFile fileReq;
   fileReq.request.filepath = "/home/fadi/mer_lab/ros_ws/src/projects/table_rearrange/ycb_models/mesh/mug/mug.pcd";
+  fileReq.request.frame = "map";
   loadClient.call(fileReq);
   ros::Publisher mug_pub = nh.advertise<sensor_msgs::PointCloud2>("mug_pcd", 1);
 
@@ -54,19 +59,25 @@ int main(int argc, char** argv) {
   img = sensor_msgs::PointCloud2();
   while(img.data.size() == 0)
     ros::spinOnce();		// Spin once to get an image
-  ros::ServiceClient corrClient = nh.serviceClient<ros_pcl_manip::CorrGroup>("correspondence_grouping");
-  ros_pcl_manip::CorrGroup corrReq;
-  corrReq.request.model = fileReq.response.cloud;
-  corrReq.request.scene = img;
-  corrReq.request.invariant = true;
-  corrClient.call(corrReq);
+  // ros::ServiceClient corrClient = nh.serviceClient<ros_pcl_manip::CorrGroup>("correspondence_grouping");
+  // ros_pcl_manip::CorrGroup corrReq;
+  // corrReq.request.model = fileReq.response.cloud;
+  // corrReq.request.scene = img;
+  // corrReq.request.invariant = false;
+  // corrClient.call(corrReq);
+  // ROS_INFO_STREAM("Received models: " << corrReq.response.detectedModels.size());
+  ros::ServiceClient toPCDClient = nh.serviceClient<ros_pcl_manip::ToFile>("save_to_pcd");
+  ros_pcl_manip::ToFile toReq;
+  toReq.request.cloud = img;
+  toReq.request.filepath = "/home/fadi/scene.pcd";
+  toPCDClient.call(toReq);
 
   ROS_INFO("Publishing");
   while(ros::ok()) {
     down_pub.publish(dsReq.response.cloud);
     plane_pub.publish(planeReq.response.plane);
     neg_plane_pub.publish(planeReq.response.negativeCloud);
-    mug_pub.publish(fileReq.response.cloud);
+    // mug_pub.publish(fileReq.response.cloud);
     ros::spinOnce();
   }
 

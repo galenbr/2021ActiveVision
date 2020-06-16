@@ -10,6 +10,7 @@
 #include <pcl/correspondence.h>
 
 // SRV includes
+#include <ros_pcl_manip/ToFile.h>
 #include <ros_pcl_manip/LoadFile.h>
 #include <ros_pcl_manip/CorrGroup.h>
 #include <ros_pcl_manip/Downsample.h>
@@ -67,12 +68,15 @@ public:
 			 ros_pcl_manip::CorrGroup::Response& res);
   bool load_service(ros_pcl_manip::LoadFile::Request& req,
 		    ros_pcl_manip::LoadFile::Response& res);
+  bool save_service(ros_pcl_manip::ToFile::Request& req,
+		    ros_pcl_manip::ToFile::Response& res);
 private:
   ros::NodeHandle& _nh;
   ros::ServiceServer _down_server;
   ros::ServiceServer _plane_server;
   ros::ServiceServer _cor_server;
   ros::ServiceServer _load_server;
+  ros::ServiceServer _save_server;
 
   void _setup_services();
 };

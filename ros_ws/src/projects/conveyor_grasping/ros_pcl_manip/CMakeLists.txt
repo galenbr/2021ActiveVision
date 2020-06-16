@@ -27,7 +27,8 @@ add_service_files(
   SegmentPlane.srv
   ESeg.srv
   CorrGroup.srv
-  LoadFile.srv)
+  LoadFile.srv
+  ToFile.srv)
 generate_messages(
   DEPENDENCIES
   std_msgs
