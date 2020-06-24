@@ -7,6 +7,9 @@
     <include>
       <uri>model://ground_plane</uri>
     </include>
+    <physics>
+      <max_step_size>0.0001</max_step_size>
+    </physics>
   </world>
   <!-- <scene>
   <shadows>0</shadows>
