@@ -1,9 +1,7 @@
 <launch>
-
-  <!-- Start moveit -->
-  <include file="$(find ref_benchmark_moveit_config)/launch/move_group.launch" />
+  <!-- <include file="$(find ref_benchmark_moveit_config)/launch/move_group.launch" /> -->
   <!-- launch moveit API -->
-  <node name="moveit_api" type="main_node" pkg="moveit_planner" />
+  <!-- <node name="moveit_api" type="main_node" pkg="moveit_planner" /> -->
   <!-- Un pause simulation via setup node-->
   <node name="setup" type="setup_node" pkg="lock_key" />
   <!-- Start get pose node -->
@@ -13,5 +11,5 @@
   <!-- Start Constraints Node -->
   <node name="constraints" type="arm_constraints_node" pkg="lock_key" />
   <!--Start Controller Node -->
-  <!-- <node name="controller" type="control_node" pkg="lock_key" /> -->
+  <node name="controller" type="control_node" pkg="lock_key" />
 </launch>

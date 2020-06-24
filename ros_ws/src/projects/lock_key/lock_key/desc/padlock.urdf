@@ -25,8 +25,8 @@
       <gazebo reference="padlock">
       <material>Gazebo/Green</material>
       </gazebo>
-  <joint name="table_padlock" type="floating">
-    <origin rpy="0 0 1.57" xyz="-0.1 0 0" />
+  <joint name="table_padlock" type="fixed">
+    <origin rpy="0 0 0" xyz="-0.1 0 0" />
     <parent link="world" />
     <child link="padlock" />
   </joint>

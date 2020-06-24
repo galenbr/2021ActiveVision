@@ -27,8 +27,8 @@
   	args="-param robot_description -urdf -model panda -J panda_joint2 0.0 -J panda_joint6 0.785398 -J panda_joint7 0.785398" />
   <node name="spawn_table_urdf" pkg="gazebo_ros" type="spawn_model"
   	args="-file $(find lock_key)/desc/surface.urdf -urdf -model table_surface" />
-  <node name="spawn_padlock_urdf" pkg="gazebo_ros" type="spawn_model"
-  	args="-file $(find lock_key)/desc/padlock.urdf -urdf -model padlock -z $(arg table_height) -x $(arg table_center)" />
+  <!-- <node name="spawn_padlock_urdf" pkg="gazebo_ros" type="spawn_model" -->
+  	<!-- args="-file $(find lock_key)/desc/padlock.urdf -urdf -model padlock -z $(arg table_height) -x $(arg table_center)" /> -->
   
   <node name="spawn_key_urdf" pkg="gazebo_ros" type="spawn_model"
   	args="-file $(find lock_key)/desc/key.urdf -urdf -model key -z $(arg table_height) -x 0.42 -y 0.1" />
@@ -37,8 +37,8 @@
   <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
 	output="screen" args="joint_state_controller gazebo_ros_control" ns="/panda" />
   
+  <include file="$(find panda_finger_torque_controller)/launch/main.launch" />
   <!-- <include file="$(find panda_finger_position_controller)/launch/main.launch" /> -->
-  <include file="$(find panda_finger_position_controller)/launch/main.launch" />
   
   <!-- Start publishing to /tf for rviz -->
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true">
@@ -50,7 +50,10 @@
   
   <!--Start Moveit API Node-->
   <!-- <node name="moveit_api" type="main_node" pkg="moveit_planner" /> -->
- 
+   <!-- Start moveit -->
+  <include file="$(find ref_benchmark_moveit_config)/launch/move_group.launch" />
+  <!-- launch moveit API -->
+  <node name="moveit_api" type="main_node" pkg="moveit_planner" />
 
   <!--Start Image Capture Node-->
   <node name="img_capture" type="img_capture_node" pkg="lock_key" />
@@ -59,6 +62,6 @@
   <node name="find_key" type="find_key_node" pkg="lock_key" />
 
   <!--Gripper Node-->
-  <!-- <node name="gripper" type="gripper_node" pkg="franka_gripper_gazebo"/> -->
-  <node name="gripper" type = "pos_grasper_node" pkg="franka_pos_grasping_gazebo"/>
+  <node name="gripper" type="gripper_node" pkg="franka_gripper_gazebo"/>
+  <!-- <node name="gripper" type = "pos_grasper_node" pkg="franka_pos_grasping_gazebo"/> -->
 </launch>
