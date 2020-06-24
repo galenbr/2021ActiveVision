@@ -51,6 +51,7 @@ int main(int argc, char **argv){
     moveit_planner::MovePose pose2;
     moveit_planner::MoveCart cart;
     moveit_planner::MoveCart cart2;
+    moveit_planner::MoveCart cart3;
     franka_gripper_gazebo::GripMsg grip;
     franka_pos_grasping_gazebo::GripPos grasp;
     moveit_planner::GetPose curPose;
@@ -71,7 +72,7 @@ int main(int argc, char **argv){
     //Transforming Key position to robot frame
     geometry_msgs::PointStamped keypose;
     listener.transformPoint("panda_link0",keyImg.response.p,keypose);
-    // ROS_INFO_STREAM(keypose);
+    ROS_INFO_STREAM(keypose);
     // // Visualization and Debugging
     // ros::Publisher cloud_pub = n.advertise<sensor_msgs::PointCloud2>("debugPC2", 1);
     // ros::Publisher centroid_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 1);
@@ -106,9 +107,12 @@ int main(int argc, char **argv){
     //     ROS_INFO("KEY Published");
     //     count += 1;
     //  }
+
+    // TO Do : Move this stuff to Pre Grasp Service
     // Opening Gripper
-     grasp.request.finger_pos = 0.04;
-     gripperPosClient.call(grasp);
+    //  grasp.request.finger_pos = 0.04;
+    //  gripperPosClient.call(grasp);
+    
     //Manipulating position so as to create pre-grasp pose
     keypose.point.x -= 0.06;
     keypose.point.z -= 0.006;
@@ -139,25 +143,25 @@ int main(int argc, char **argv){
     // Grasp
     // For the Position Controller
     ROS_INFO("Gripping");
-    grasp.request.finger_pos = 0.0;
-    gripperPosClient.call(grasp);
-    ros::Duration(3).sleep();
+    // grasp.request.finger_pos = 0.0;
+    // gripperPosClient.call(grasp);
+    // ros::Duration(3).sleep();
 
 
-    // // For the force controller
-    // grip.request.force = -0.10;
-    // gripperClient.call(grip);
-    // ROS_INFO("Gripped");
-    // ros::Duration(1).sleep();
-    // grip.request.force = -20.0;
-    // gripperClient.call(grip);
-    // ros::Duration(0.1).sleep();
-    // grip.request.force = -20.0;
-    // gripperClient.call(grip);
-    // ros::Duration(0.1).sleep();
-    // grip.request.force = -50.0;
-    // gripperClient.call(grip);
-    // ros::Duration(0.2).sleep();
+    // For the force controller
+    grip.request.force = -0.10;
+    gripperClient.call(grip);
+    ROS_INFO("Gripped");
+    ros::Duration(1).sleep();
+    grip.request.force = -20.0;
+    gripperClient.call(grip);
+    ros::Duration(0.1).sleep();
+    grip.request.force = -20.0;
+    gripperClient.call(grip);
+    ros::Duration(0.1).sleep();
+    grip.request.force = -50.0;
+    gripperClient.call(grip);
+    ros::Duration(0.2).sleep();
     
     // Move away
     cart2.request.val.push_back(p);
@@ -174,12 +178,24 @@ int main(int argc, char **argv){
     pose2.request.val.position.x = 0.65;
     pose2.request.val.position.y = 0.0;
     pose2.request.val.position.z = 0.45;
-    pose2.request.val.orientation.w = 0.00653015;
-    pose2.request.val.orientation.x = 0.915333;
-    pose2.request.val.orientation.y = 0.402644;
-    pose2.request.val.orientation.z = 0.000463674;
+    pose2.request.val.orientation.w = 0;//.00653015;
+    pose2.request.val.orientation.x = 0;//.915333;
+    pose2.request.val.orientation.y = 1; //.402644;
+    pose2.request.val.orientation.z = 0; //.000463674;
     pose2.request.execute = true;
     movePoseClient2.call(pose2);
+
+    // Move to insert key
+    ros::Duration(1).sleep();
+    p.position = pose2.request.val.position;
+    p.orientation = pose2.request.val.orientation;
+    cart3.request.val.push_back(p);
+    p.position.z -= 0.1;
+    cart3.request.val.push_back(p);
+    cart3.request.execute = true;
+    moveCartClient.call(cart3);
+
+
     ros::spin();
 
     return 0;
