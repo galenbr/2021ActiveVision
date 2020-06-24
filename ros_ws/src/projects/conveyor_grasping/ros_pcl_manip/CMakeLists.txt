@@ -12,13 +12,23 @@ find_package(PCL REQUIRED COMPONENTS
   common
   filters
   sample_consensus
-  segmentation)
+  segmentation
+  search
+  kdtree
+  features
+  recognition
+  console
+  io
+  visualization)
 
 add_service_files(
   FILES
   Downsample.srv
   SegmentPlane.srv
-  ESeg.srv)
+  ESeg.srv
+  CorrGroup.srv
+  LoadFile.srv
+  ToFile.srv)
 generate_messages(
   DEPENDENCIES
   std_msgs
@@ -36,3 +46,6 @@ add_dependencies(ros_pcl_manip_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 add_executable(test_vision_node src/test_vision_node)
 target_link_libraries(test_vision_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 add_dependencies(test_vision_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+
+add_executable(to_pcd_node src/toPCD.cpp)
+target_link_libraries(to_pcd_node ${PCL_LIBRARIES})
