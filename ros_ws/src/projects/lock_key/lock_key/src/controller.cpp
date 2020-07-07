@@ -7,6 +7,7 @@
 #include "franka_gripper_gazebo/GripMsg.h"
 #include "franka_pos_grasping_gazebo/GripPos.h"
 #include "moveit_planner/GetPose.h"
+#include "moveit_planner/MoveJoint.h"
 // Publish Marker
 #include <visualization_msgs/Marker.h>
 // Transform Listener
@@ -18,6 +19,7 @@ void wait_for_service(int32_t timeout){
     ros::service::waitForService("imgCapture", timeout);
     ros::service::waitForService("gripPosServer", timeout);
     ros::service::waitForService("get_pose", timeout);
+    ros::service::waitForService("move_to_joint_space", timeout);
     ROS_INFO("SERVICES READY");
 }
 
@@ -43,6 +45,7 @@ int main(int argc, char **argv){
     ros::ServiceClient gripperClient = n.serviceClient<franka_gripper_gazebo::GripMsg>("gazebo_franka_grip");
     ros::ServiceClient gripperPosClient = n.serviceClient<franka_pos_grasping_gazebo::GripPos>("gripPosServer");
     ros::ServiceClient getPoseClient = n.serviceClient<moveit_planner::GetPose>("get_pose");
+    ros::ServiceClient jointSpaceClient = n.serviceClient<moveit_planner::MoveJoint>("move_to_joint_space");
 
     // Client Objects
     lock_key::imgCapture reqImg;
@@ -55,6 +58,7 @@ int main(int argc, char **argv){
     franka_gripper_gazebo::GripMsg grip;
     franka_pos_grasping_gazebo::GripPos grasp;
     moveit_planner::GetPose curPose;
+    moveit_planner::MoveJoint jpos;
 
     //Testing get pose
     getPoseClient.call(curPose);
@@ -128,7 +132,25 @@ int main(int argc, char **argv){
     pose.request.execute = true;
     grip.request.force = 50.0;
     gripperClient.call(grip);
-    movePoseClient.call(pose);
+    //movePoseClient.call(pose);
+
+    // Here instead of calling movePoseClient as done initially
+    // We are using Move to joint after recording the joint positions for the position
+    // This is done to improve reliability
+
+    jpos.request.execute = true;
+    jpos.request.val.push_back(0.04043039654191989);
+    jpos.request.val.push_back(0.04002915885797289);
+    jpos.request.val.push_back(-0.0784961796789192);
+    jpos.request.val.push_back(-0.7828004714383408);
+    jpos.request.val.push_back(0.6498548492326659);
+    jpos.request.val.push_back(-3.0718068356520174);
+    jpos.request.val.push_back(-2.5636205546227737);
+    jpos.request.val.push_back(2.410427433110934);
+    jpos.request.val.push_back(0.8104317518746145);
+
+    jointSpaceClient.call(jpos);
+
 
     // Move to grasp
     geometry_msgs::Pose p;
