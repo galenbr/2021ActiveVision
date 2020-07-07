@@ -159,7 +159,7 @@ int main(int argc, char **argv){
     grip.request.force = -20.0;
     gripperClient.call(grip);
     ros::Duration(0.1).sleep();
-    grip.request.force = -50.0;
+    grip.request.force = -100.0;
     gripperClient.call(grip);
     ros::Duration(0.2).sleep();
     
