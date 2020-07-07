@@ -1,6 +1,6 @@
 <launch>
   <!-- Arguments -->
-  <arg name="table_height" value="0.28" />
+  <arg name="table_height" value="0.4" />
   <arg name="table_center" value="0.75" />
   
   <!--<arg name="table_width" value="1" />
@@ -31,7 +31,7 @@
   	<!-- args="-file $(find lock_key)/desc/padlock.urdf -urdf -model padlock -z $(arg table_height) -x $(arg table_center)" /> -->
   
   <node name="spawn_key_urdf" pkg="gazebo_ros" type="spawn_model"
-  	args="-file $(find lock_key)/desc/key.urdf -urdf -model key -z $(arg table_height) -x 0.42 -y 0.1" />
+  	args="-file $(find lock_key)/desc/key.urdf -urdf -model key -z $(arg table_height) -x 0.6 -y 0.1" />
 
   <!-- Launch controllers -->
   <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"

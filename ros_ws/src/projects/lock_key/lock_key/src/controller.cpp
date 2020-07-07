@@ -136,7 +136,7 @@ int main(int argc, char **argv){
     pose.request.execute = true;
     grip.request.force = 50.0;
     gripperClient.call(grip);
-    //movePoseClient.call(pose);
+    movePoseClient.call(pose);
 
     // Here instead of calling movePoseClient as done initially
     // We are using Move to joint after recording the joint positions for the position
@@ -146,15 +146,6 @@ int main(int argc, char **argv){
     jpos.request.val.push_back(0.04043039654191989);
     jpos.request.val.push_back(0.04002915885797289);
 
-    // jpos.request.val.push_back(2.0156612095450424);
-    // jpos.request.val.push_back(1.6639027469686383);
-    // jpos.request.val.push_back(-2.1153816991145495);
-    // jpos.request.val.push_back(-2.863880220193969);
-    // jpos.request.val.push_back(2.4433666579966324);
-    // jpos.request.val.push_back(2.2370805736338397);
-    // jpos.request.val.push_back(1.8662840214428833);
-
-
     jpos.request.val.push_back(-0.0784961796789192);
     jpos.request.val.push_back(-0.7828004714383408);
     jpos.request.val.push_back(0.6498548492326659);
@@ -163,14 +154,14 @@ int main(int argc, char **argv){
     jpos.request.val.push_back(2.410427433110934);
     jpos.request.val.push_back(0.8104317518746145);
 
-    jointSpaceClient.call(jpos);
+    //jointSpaceClient.call(jpos);
 
 
     // Move to grasp
     geometry_msgs::Pose p;
     p.position = keypose.point;
     p.orientation = pose.request.val.orientation;
-    p.position.x += 0.04;   
+    p.position.x += 0.06;   
     cart.request.val.push_back(p);
     cart.request.execute = true;
     moveCartClient.call(cart);
@@ -198,7 +189,7 @@ int main(int argc, char **argv){
     grip.request.force = -100.0;
     gripperClient.call(grip);
     ros::Duration(0.2).sleep();
-    
+
     // Move away
     cart2.request.val.push_back(p);
     p.position.x -= 0.04;
