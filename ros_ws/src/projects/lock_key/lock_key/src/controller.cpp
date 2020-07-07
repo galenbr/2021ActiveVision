@@ -8,6 +8,7 @@
 #include "franka_pos_grasping_gazebo/GripPos.h"
 #include "moveit_planner/GetPose.h"
 #include "moveit_planner/MoveJoint.h"
+#include "moveit_planner/SetVelocity.h"
 // Publish Marker
 #include <visualization_msgs/Marker.h>
 // Transform Listener
@@ -20,6 +21,7 @@ void wait_for_service(int32_t timeout){
     ros::service::waitForService("gripPosServer", timeout);
     ros::service::waitForService("get_pose", timeout);
     ros::service::waitForService("move_to_joint_space", timeout);
+    ros::service::waitForService("set_velocity_scaling", timeout);
     ROS_INFO("SERVICES READY");
 }
 
@@ -46,6 +48,7 @@ int main(int argc, char **argv){
     ros::ServiceClient gripperPosClient = n.serviceClient<franka_pos_grasping_gazebo::GripPos>("gripPosServer");
     ros::ServiceClient getPoseClient = n.serviceClient<moveit_planner::GetPose>("get_pose");
     ros::ServiceClient jointSpaceClient = n.serviceClient<moveit_planner::MoveJoint>("move_to_joint_space");
+    ros::ServiceClient velScalingClient = n.serviceClient<moveit_planner::SetVelocity>("set_velocity_scaling");
 
     // Client Objects
     lock_key::imgCapture reqImg;
@@ -59,6 +62,7 @@ int main(int argc, char **argv){
     franka_pos_grasping_gazebo::GripPos grasp;
     moveit_planner::GetPose curPose;
     moveit_planner::MoveJoint jpos;
+    moveit_planner::SetVelocity velscale;
 
     //Testing get pose
     getPoseClient.call(curPose);
@@ -141,6 +145,16 @@ int main(int argc, char **argv){
     jpos.request.execute = true;
     jpos.request.val.push_back(0.04043039654191989);
     jpos.request.val.push_back(0.04002915885797289);
+
+    // jpos.request.val.push_back(2.0156612095450424);
+    // jpos.request.val.push_back(1.6639027469686383);
+    // jpos.request.val.push_back(-2.1153816991145495);
+    // jpos.request.val.push_back(-2.863880220193969);
+    // jpos.request.val.push_back(2.4433666579966324);
+    // jpos.request.val.push_back(2.2370805736338397);
+    // jpos.request.val.push_back(1.8662840214428833);
+
+
     jpos.request.val.push_back(-0.0784961796789192);
     jpos.request.val.push_back(-0.7828004714383408);
     jpos.request.val.push_back(0.6498548492326659);
@@ -197,6 +211,11 @@ int main(int argc, char **argv){
     
     //Move to Lock
     ROS_INFO("Moving to Lock");
+    
+    // reducing velocity
+    velscale.request.velScaling = 0.3;
+    velScalingClient.call(velscale);
+    
     pose2.request.val.position.x = 0.65;
     pose2.request.val.position.y = 0.0;
     pose2.request.val.position.z = 0.45;
