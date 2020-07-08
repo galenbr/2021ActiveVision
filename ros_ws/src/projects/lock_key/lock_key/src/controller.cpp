@@ -146,13 +146,13 @@ int main(int argc, char **argv){
     jpos.request.val.push_back(0.04043039654191989);
     jpos.request.val.push_back(0.04002915885797289);
 
-    jpos.request.val.push_back(-0.0784961796789192);
-    jpos.request.val.push_back(-0.7828004714383408);
-    jpos.request.val.push_back(0.6498548492326659);
-    jpos.request.val.push_back(-3.0718068356520174);
-    jpos.request.val.push_back(-2.5636205546227737);
-    jpos.request.val.push_back(2.410427433110934);
-    jpos.request.val.push_back(0.8104317518746145);
+    jpos.request.val.push_back(1.874648704741471);
+    jpos.request.val.push_back(1.691488029202242);
+    jpos.request.val.push_back(-1.761014720549876);
+    jpos.request.val.push_back(-2.4737772829115077);
+    jpos.request.val.push_back(2.764633621468974);
+    jpos.request.val.push_back(2.5131015865487534);
+    jpos.request.val.push_back(2.7243020563317195);
 
     //jointSpaceClient.call(jpos);
 
@@ -216,6 +216,10 @@ int main(int argc, char **argv){
     pose2.request.val.orientation.z = 0; //.000463674;
     pose2.request.execute = true;
     movePoseClient2.call(pose2);
+
+    // normal velocity
+    velscale.request.velScaling = 1.0;
+    velScalingClient.call(velscale);
 
     // Move to insert key
     ros::Duration(1).sleep();
