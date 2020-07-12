@@ -100,6 +100,14 @@
 <build_export_depend>pluginlib</build_export_depend>
 <exec_depend>pluginlib</exec_depend>
 
+<build_depend>franka_control</build_depend>
+<build_export_depend>franka_control</build_export_depend>
+<exec_depend>franka_control</exec_depend>
+
+<build_depend>moveit</build_depend>
+<build_export_depend>moveit</build_export_depend>
+<exec_depend>moveit</exec_depend>
+
   <!-- The export tag contains other, unspecified, tags -->
   <export>
     <!-- Other tools can request additional information be placed here -->
