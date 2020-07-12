@@ -11,7 +11,7 @@
     <remap from="/joint_states" to="/panda/joint_states" />
   </node>
   <node name="spawn_franka_urdf" pkg="gazebo_ros" type="spawn_model"
-  	args="-param robot_description -urdf -model panda -J panda_joint6 0.785398 -J panda_joint7 0.785398" />
+  	args="-param robot_description -urdf -model panda -J panda_joint4 -1.57 -J panda_joint6 1.57 -J panda_joint7 0.785398" />
   <node name="spawn_mug" pkg="gazebo_ros" type="spawn_model" args="-file $(find ycb_models)/desc/mug.urdf -urdf -model mug -x 0.7" />
 
   <node name="pcl_node" pkg="ros_pcl_manip" type="ros_pcl_manip_node" output="screen" />

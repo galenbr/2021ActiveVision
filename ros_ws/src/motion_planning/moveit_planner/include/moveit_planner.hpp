@@ -15,6 +15,7 @@
 #include <geometry_msgs/PoseStamped.h>
 
 // custom srv includes
+#include "moveit_planner/Inv.h"
 #include "moveit_planner/GetPose.h"
 #include "moveit_planner/MoveQuat.h"
 #include "moveit_planner/MovePose.h"
@@ -28,8 +29,10 @@
 
 // moveit includes
 #include "moveit_msgs/Constraints.h"
+#include "moveit/robot_model/robot_model.h"
 #include "moveit/robot_state/robot_state.h"
 #include "moveit/robot_trajectory/robot_trajectory.h"
+#include "moveit/robot_model_loader/robot_model_loader.h"
 #include "moveit/move_group_interface/move_group_interface.h"
 #include "moveit/planning_scene_interface/planning_scene_interface.h"
 #include "moveit/trajectory_processing/iterative_time_parameterization.h"
@@ -47,9 +50,10 @@ namespace moveit_planner {
     bool getPose(geometry_msgs::Pose& pose);
     bool moveToPose(const geometry_msgs::Pose& p, const bool& exe);
     bool moveToJointSpace(const std::vector<double>& jointPositions, bool exe);
-    bool cartesianMove(const std::vector<geometry_msgs::Pose>& p, const bool& exe);
+    bool cartesianMove(const std::vector<geometry_msgs::Pose>& p, double setTime, const bool& exe);
     bool addCollisionObjects(const std::vector<moveit_msgs::CollisionObject>& collObjs);
     bool setConstraints(const moveit_msgs::Constraints& constraints);
+    bool ik(const geometry_msgs::Pose& pose, std::vector<double>& results);
 
     // Getters/Setters
     std::string getGroup() {return armGroup;};
@@ -67,8 +71,12 @@ namespace moveit_planner {
     moveit::planning_interface::MoveGroupInterface moveGroup;
     moveit::planning_interface::PlanningSceneInterface planningSceneInterface;
     moveit::planning_interface::MoveGroupInterface::Plan curPlan;
+    // Core moveit objects
+    robot_model_loader::RobotModelLoader robotModelLoader; // NOTE: Is constructed from robot_description directly
+    moveit::core::RobotModelPtr robotModel;
     moveit::core::RobotStatePtr curState;
-    const robot_state::JointModelGroup* jointModelGroup;
+    moveit::core::JointModelGroup* jointModelGroup;
+
     std::vector<double> curJointPositions;
     double curScaling;
 
@@ -82,6 +90,7 @@ namespace moveit_planner {
     ros::ServiceServer velocityClient;
     ros::ServiceServer addCollClient;
     ros::ServiceServer setConstClient;
+    ros::ServiceServer invClient;
 
     // Callbacks
     bool getPoseClientCallback(moveit_planner::GetPose::Request& req,
@@ -102,6 +111,8 @@ namespace moveit_planner {
 			      moveit_planner::AddCollision::Response& res);
     bool setConstraintsCallback(moveit_planner::SetConstraints::Request& req,
 			       moveit_planner::SetConstraints::Response& res);
+    bool invClientCallback(moveit_planner::Inv::Request& req,
+			   moveit_planner::Inv::Response& res);
 
     // Misc
     bool checkSuccess();

@@ -8,15 +8,17 @@
 // PCL includes
 #include <pcl/point_types.h>
 #include <pcl/correspondence.h>
+#include <pcl/filters/passthrough.h>
 
 // SRV includes
 #include <ros_pcl_manip/ToFile.h>
 #include <ros_pcl_manip/LoadFile.h>
 #include <ros_pcl_manip/CorrGroup.h>
 #include <ros_pcl_manip/Downsample.h>
+#include <ros_pcl_manip/PassFilter.h>
 #include <ros_pcl_manip/SegmentPlane.h>
 
-typedef pcl::PointXYZ PointType;
+typedef pcl::PointXYZRGB PointType;
 typedef pcl::Normal NormalType;
 typedef pcl::SHOT352 DescriptorType;
 typedef pcl::PointCloud<PointType> CloudType;
@@ -26,6 +28,7 @@ typedef CloudType::Ptr CloudPtr;
 typedef NormalCloud::Ptr NormalCloudPtr;
 typedef DescriptorCloud::Ptr DescriptorCloudPtr;
 typedef CloudType::ConstPtr CloudConstPtr;
+typedef pcl::PassThrough<PointType> PassThroughType;
 
 struct CorrespondenceParams {
   float model_ss{0.01f};
@@ -54,6 +57,8 @@ public:
 							pcl::CorrespondencesPtr msc, float size, float thresh);
   std::vector<geometry_msgs::Pose> correspondenceGrouping(CloudPtr scene, CloudPtr model,
 							  bool cloud_res, CorrespondenceParams params);
+  CloudPtr filter_cloud(CloudPtr in_cloud, std::string field_name,
+			double lower, double upper, bool remove=false);
 
   // Conversions
   CloudPtr from_pc2(const sensor_msgs::PointCloud2& pc2);
@@ -66,6 +71,8 @@ public:
 			     ros_pcl_manip::SegmentPlane::Response& res);
   bool cor_group_service(ros_pcl_manip::CorrGroup::Request& req,
 			 ros_pcl_manip::CorrGroup::Response& res);
+  bool filter_service(ros_pcl_manip::PassFilter::Request& req,
+		      ros_pcl_manip::PassFilter::Response& res);
   bool load_service(ros_pcl_manip::LoadFile::Request& req,
 		    ros_pcl_manip::LoadFile::Response& res);
   bool save_service(ros_pcl_manip::ToFile::Request& req,
@@ -77,6 +84,7 @@ private:
   ros::ServiceServer _cor_server;
   ros::ServiceServer _load_server;
   ros::ServiceServer _save_server;
+  ros::ServiceServer _pass_server;
 
   void _setup_services();
 };

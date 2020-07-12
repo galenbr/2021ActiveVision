@@ -66,10 +66,15 @@ int main(int argc, char** argv) {
   // corrReq.request.invariant = false;
   // corrClient.call(corrReq);
   // ROS_INFO_STREAM("Received models: " << corrReq.response.detectedModels.size());
+  // PARAMETERS:
+  // --scene_ss 0.005 --model_ss 0.001 --cg_thresh 5 --cg_size 0.02 --descr_rad 0.0125 --rf_rad 0.015
   ros::ServiceClient toPCDClient = nh.serviceClient<ros_pcl_manip::ToFile>("save_to_pcd");
   ros_pcl_manip::ToFile toReq;
   toReq.request.cloud = img;
   toReq.request.filepath = "/home/fadi/scene.pcd";
+  toPCDClient.call(toReq);
+  toReq.request.cloud = planeReq.response.negativeCloud;
+  toReq.request.filepath = "/home/fadi/negative.pcd";
   toPCDClient.call(toReq);
 
   ROS_INFO("Publishing");

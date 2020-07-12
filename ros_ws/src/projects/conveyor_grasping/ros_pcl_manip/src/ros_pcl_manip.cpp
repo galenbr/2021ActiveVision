@@ -204,6 +204,23 @@ std::vector<geometry_msgs::Pose> ROS_PCL::correspondenceGrouping(CloudPtr scene,
 
   return ret;
 }
+CloudPtr ROS_PCL::filter_cloud(CloudPtr in_cloud, std::string field_name,
+		      double lower, double upper, bool remove) {
+  CloudPtr filtered_cloud(new CloudType());
+  PassThroughType pass;
+
+  pass.setInputCloud(in_cloud);
+  pass.setFilterFieldName(field_name);
+  pass.setFilterLimits(lower, upper);
+  pass.filter(*filtered_cloud);
+
+  if(remove) {
+    pass.setFilterLimitsNegative(true);
+    pass.filter(*in_cloud);
+  }
+
+  return filtered_cloud;
+}
 
 bool ROS_PCL::downsample_service(ros_pcl_manip::Downsample::Request& req,
 				 ros_pcl_manip::Downsample::Response& res) {
@@ -238,6 +255,18 @@ bool ROS_PCL::cor_group_service(ros_pcl_manip::CorrGroup::Request& req,
   std::vector<geometry_msgs::Pose> ret = correspondenceGrouping(modelPtr, scenePtr, req.invariant, p);
 
   res.detectedModels = ret;
+  return true;
+}
+bool ROS_PCL::filter_service(ros_pcl_manip::PassFilter::Request& req,
+			     ros_pcl_manip::PassFilter::Response& res) {
+  ROS_INFO("Received filter service");
+
+  CloudPtr cloud = from_pc2(req.cloud);
+  CloudPtr ret = filter_cloud(cloud, req.field_name, req.lower, req.upper, true);
+
+  res.filtered = to_pc2(ret);
+  res.negative = to_pc2(cloud);
+
   return true;
 }
 bool ROS_PCL::load_service(ros_pcl_manip::LoadFile::Request& req,
@@ -352,5 +381,8 @@ void ROS_PCL::_setup_services() {
 				      this);
   _save_server = _nh.advertiseService("save_to_pcd",
 				      &ROS_PCL::save_service,
+				      this);
+  _pass_server = _nh.advertiseService("passthrough_filter",
+				      &ROS_PCL::filter_service,
 				      this);
 }

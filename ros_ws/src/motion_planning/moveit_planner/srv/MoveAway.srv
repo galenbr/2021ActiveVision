@@ -3,3 +3,5 @@ float64 distance
 bool execute
 ---
 geometry_msgs/Pose awayPose
+float64 planning_time
+duration arrival_time
