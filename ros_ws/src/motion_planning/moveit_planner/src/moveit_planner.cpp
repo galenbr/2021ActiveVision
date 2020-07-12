@@ -18,9 +18,7 @@ namespace moveit_planner {
 
 	ros::waitForShutdown();
       }
-  MoveitPlanner::~MoveitPlanner() {
-    delete jointModelGroup;
-  }
+  MoveitPlanner::~MoveitPlanner() {}
 
   bool MoveitPlanner::getPose(geometry_msgs::Pose& pose) {
     // TODO: Performance improvements
@@ -55,7 +53,7 @@ namespace moveit_planner {
       ROS_WARN_STREAM("ERROR MOVING TO POSE " << errCode);
     if(success && exe)
       moveGroup.execute(curPlan);
-
+    
     return success;
   }
   bool MoveitPlanner::moveToJointSpace(const std::vector<double>& jointPositions, bool exe) {
@@ -69,30 +67,43 @@ namespace moveit_planner {
 
     return success;
   }
-  bool MoveitPlanner::cartesianMove(const std::vector<geometry_msgs::Pose>& p, const bool& exe) {
+  bool MoveitPlanner::cartesianMove(const std::vector<geometry_msgs::Pose>& p, double setTime, const bool& exe) {
     if(p.size() == 0)
       return true;		// Empty waypoints, nothing to execute
 
+    ROS_INFO_STREAM("Beginning trajectory at " << ros::Time::now().toSec());
     moveit_msgs::RobotTrajectory trajectory;
     moveit::planning_interface::MoveGroupInterface::Plan curPlan;
+    ROS_INFO_STREAM("Created objects at " << ros::Time::now().toSec());
 
-    moveGroup.computeCartesianPath(p, eef_step, jump_threshold, trajectory);
-
-    // Change trajectory speed to match set velocity scaling
-    if(curScaling < 1) {
-      for(int i = 0; i < trajectory.joint_trajectory.points.size(); ++i) {
-	for(int j = 0; j < trajectory.joint_trajectory.points[i].velocities.size(); ++j)
-	  trajectory.joint_trajectory.points[i].velocities[j] *= curScaling;
-	for(int j = 0; j < trajectory.joint_trajectory.points[i].accelerations.size(); ++j)
-	  trajectory.joint_trajectory.points[i].accelerations[j] *= (curScaling*curScaling);
-	trajectory.joint_trajectory.points[i].time_from_start *= 2 - curScaling;
+    moveGroup.computeCartesianPath(p, eef_step, jump_threshold, curPlan.trajectory_);
+    ROS_INFO_STREAM("Computed cartesian path at " << ros::Time::now().toSec());
+    double start = ros::Time::now().toSec();
+    if(setTime != 0) {		// Set the time of arrival
+      ROS_INFO("Scaling plan");
+      double trajTime = curPlan.trajectory_.joint_trajectory.points.back().time_from_start.toSec();
+      double factor = setTime / trajTime; // How much to scale time by
+      // Ex: 0->1s->2s => Cartesian arrives @ 2s
+      //     We want to arrive at 1s
+      //     Multiply by 1/2 -> 0.5:
+      //     0->0.5s->1s => We now arrive at 1
+      //     For velocity/acceleration we need to divide instead (less time, faster speed)
+      for(int i = 0; i < curPlan.trajectory_.joint_trajectory.points.size(); ++i) { // Scale each point
+	curPlan.trajectory_.joint_trajectory.points[i].time_from_start *= factor;
+	for(int j = 0; j < curPlan.trajectory_.joint_trajectory.points[i].velocities.size(); ++j) { // Scale each joint
+	  curPlan.trajectory_.joint_trajectory.points[i].velocities[j] /= factor;
+	  curPlan.trajectory_.joint_trajectory.points[i].accelerations[j] /= factor;
+	}
+	ROS_INFO_STREAM("Point " << i << " starts at " << curPlan.trajectory_.joint_trajectory.points[i].time_from_start);
       }
     }
+    double end = ros::Time::now().toSec();
+    ROS_INFO_STREAM("Calculations took " << end - start);
 
-    curPlan.trajectory_ = trajectory;
-
+    ROS_INFO_STREAM("Executing path at " << ros::Time::now().toSec());
     if(exe)
       moveGroup.execute(curPlan);
+    ROS_INFO_STREAM("Execution done at " << ros::Time::now().toSec());
 
     // TODO: Check how to get success
     return true;
@@ -107,6 +118,15 @@ namespace moveit_planner {
 
     return true;
   }
+  bool MoveitPlanner::ik(const geometry_msgs::Pose& pose, std::vector<double>& results) {
+    double timeout = 0.1;	// Time before quitting (no solution found)
+    int attempts = 2;		// Number of tries
+    bool found = curState->setFromIK(jointModelGroup, pose, attempts, timeout);
+
+    curState->copyJointGroupPositions(jointModelGroup, results);
+
+    return found;
+  }
 
   bool MoveitPlanner::getPoseClientCallback(moveit_planner::GetPose::Request& req,
 					    moveit_planner::GetPose::Response& res) {
@@ -114,7 +134,17 @@ namespace moveit_planner {
   }
   bool MoveitPlanner::poseClientCallback(moveit_planner::MovePose::Request& req,
 					 moveit_planner::MovePose::Response& res) {
-    return moveToPose(req.val, req.execute);
+    bool success = moveToPose(req.val, req.execute);
+
+    // Set timing info
+    res.planning_time = curPlan.planning_time_;
+    res.arrival_time =
+      curPlan.trajectory_
+      .joint_trajectory
+      .points.back()
+      .time_from_start;
+
+    return success;
   }
 
   bool MoveitPlanner::rotClientCallback(moveit_planner::MoveQuat::Request& req,
@@ -134,7 +164,7 @@ namespace moveit_planner {
 
   bool MoveitPlanner::cartesianMoveCallback(moveit_planner::MoveCart::Request& req,
 					    moveit_planner::MoveCart::Response& res) {
-    return cartesianMove(req.val, req.execute);
+    return cartesianMove(req.val, req.time, req.execute);
   }
   bool MoveitPlanner::distanceAwayCallback(moveit_planner::MoveAway::Request& req,
 					   moveit_planner::MoveAway::Response& res) {
@@ -155,8 +185,17 @@ namespace moveit_planner {
     // Setup response
     res.awayPose = targetPose;
 
-    // Send to moveit
-    return moveToPose(targetPose, req.execute);
+    // TODO: Standardise timing info
+    // Timing info & Planning
+    bool success = moveToPose(targetPose, req.execute);
+    res.planning_time = curPlan.planning_time_;
+    res.arrival_time =
+      curPlan.trajectory_
+      .joint_trajectory
+      .points.back()
+      .time_from_start;
+
+    return success;
   }
   bool MoveitPlanner::setVelocityCallback(moveit_planner::SetVelocity::Request& req,
 					  moveit_planner::SetVelocity::Response& res) {
@@ -180,6 +219,10 @@ namespace moveit_planner {
   bool MoveitPlanner::setConstraintsCallback(moveit_planner::SetConstraints::Request& req,
 					     moveit_planner::SetConstraints::Response& res) {
     return setConstraints(req.constraints);
+  }
+  bool MoveitPlanner::invClientCallback(moveit_planner::Inv::Request& req,
+					moveit_planner::Inv::Response& res) {
+    return ik(req.pose, res.joint_vals);
   }
 
   // Private
@@ -213,6 +256,9 @@ namespace moveit_planner {
     setConstClient = n.advertiseService("set_constraints",
 					&MoveitPlanner::setConstraintsCallback,
 					this);
+    invClient = n.advertiseService("inverse_kinematics",
+				   &MoveitPlanner::invClientCallback,
+				   this);
   }
 
   void MoveitPlanner::setupMoveit() {
@@ -222,6 +268,13 @@ namespace moveit_planner {
 
     std::vector<std::string> links = moveGroup.getLinkNames();
     baseLink = links[0];
+
+    // Setup core objects
+    robotModelLoader = robot_model_loader::RobotModelLoader{"robot_description"};
+    robotModel = robotModelLoader.getModel();
+    curState = moveit::core::RobotStatePtr{new moveit::core::RobotState{robotModel}};
+    curState->setToDefaultValues();
+    jointModelGroup = robotModel->getJointModelGroup(armGroup);
   }
 
 

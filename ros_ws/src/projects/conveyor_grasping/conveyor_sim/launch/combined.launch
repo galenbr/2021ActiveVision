@@ -22,7 +22,5 @@
   <include file="$(find conveyor_sim)/launch/spawner.launch" />
   <include file="$(find conveyor_sim)/launch/despawner.launch" />
   <include file="$(find conveyor_sim)/launch/franka.launch" />
-
-  <!-- PCL Node -->
-  <node name="pcl_node" pkg="ros_pcl_manip" type="ros_pcl_manip_node" />
+  <include file="$(find conveyor_sim)/launch/vision_node.launch" />
 </launch>

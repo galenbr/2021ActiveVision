@@ -1,3 +1,4 @@
 geometry_msgs/Pose[] val
+float64 time
 bool execute
 ---

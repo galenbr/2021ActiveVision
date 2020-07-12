@@ -28,11 +28,14 @@ add_service_files(
   ESeg.srv
   CorrGroup.srv
   LoadFile.srv
-  ToFile.srv)
+  ToFile.srv
+  PassFilter.srv)
+
 generate_messages(
   DEPENDENCIES
   std_msgs
   sensor_msgs)
+
 catkin_package(
   INCLUDE_DIRS include)
 
@@ -49,3 +52,6 @@ add_dependencies(test_vision_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
 add_executable(to_pcd_node src/toPCD.cpp)
 target_link_libraries(to_pcd_node ${PCL_LIBRARIES})
+
+add_executable(correspondence_node src/correspondence.cpp)
+target_link_libraries(correspondence_node ${PCL_LIBRARIES})

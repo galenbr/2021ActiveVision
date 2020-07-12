@@ -14,10 +14,12 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   moveit_msgs
   tf
+  trajectory_msgs
 )
 
 add_service_files(
   FILES
+  Inv.srv
   GetTF.srv
   GetPose.srv
   MovePoint.srv
@@ -35,6 +37,7 @@ generate_messages(
   DEPENDENCIES
   geometry_msgs
   moveit_msgs
+  trajectory_msgs
 )
 
 catkin_package(
