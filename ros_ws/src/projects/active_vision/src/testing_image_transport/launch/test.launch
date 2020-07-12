@@ -1,0 +1,11 @@
+<launch>
+  <!-- We resume the logic in empty_world.launch, changing only the name of the world to be launched -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find franka_gazebo)/world/franka.world"/>
+    <!-- more default parameters can be changed here -->
+  </include>
+
+   <!-- Spawn items from the YCB dataset    ======works=====   -->
+<!-- <node name="spawn_bowl_urdf" pkg="gazebo_ros" type="spawn_model" args="-file $(find object_models)/models/urdf/bowl.urdf -urdf -model bowl -x 1 -y 0 -z 1.1" /> -->
+
+</launch>
