@@ -6,6 +6,7 @@ FrankaGripper::FrankaGripper(ros::NodeHandle& nh, std::string f1_topic, std::str
   _grip_server = nh.advertiseService("gazebo_franka_grip", &FrankaGripper::grip, this);
   _finger1_publisher = nh.advertise<std_msgs::Float64>(f1_topic, 1);
   _finger2_publisher = nh.advertise<std_msgs::Float64>(f2_topic, 1);
+  _temp_delayed_motion = nh.subscribe("gazebo_franka_delayed", 1, &FrankaGripper::delayedMotion, this);
 
   ros::spin();
 }
@@ -23,7 +24,20 @@ bool FrankaGripper::grip(franka_gripper_gazebo::GripMsg::Request& req,
   ros::spinOnce();
   ros::spinOnce();
 
-  ros::Duration(0.5).sleep();	// For now just wait for half a second to make sure they arrived
-
   return true;
+}
+
+void FrankaGripper::delayedMotion(const franka_gripper_gazebo::DelayedMotion& msg) {
+  ros::Duration d(msg.delay);
+  d.sleep();
+
+  std_msgs::Float64 joint_msg;
+  joint_msg.data = msg.force;
+
+  // Now output to each joint
+  _finger1_publisher.publish(joint_msg);
+  _finger2_publisher.publish(joint_msg);
+
+  ros::spinOnce();
+  ros::spinOnce();
 }
