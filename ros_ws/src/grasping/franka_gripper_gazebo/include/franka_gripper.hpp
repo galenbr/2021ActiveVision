@@ -3,6 +3,7 @@
 #include <string>
 
 #include <franka_gripper_gazebo/GripMsg.h>
+#include <franka_gripper_gazebo/DelayedMotion.h>
 
 class FrankaGripper {
 public:
@@ -11,6 +12,8 @@ public:
 
   bool grip(franka_gripper_gazebo::GripMsg::Request& req,
 	    franka_gripper_gazebo::GripMsg::Response& res);
+
+  void delayedMotion(const franka_gripper_gazebo::DelayedMotion& msg);
 private:
   ros::NodeHandle& _nh;
   
@@ -18,4 +21,6 @@ private:
   
   ros::Publisher _finger1_publisher;
   ros::Publisher _finger2_publisher;
+
+  ros::Subscriber _temp_delayed_motion;
 };

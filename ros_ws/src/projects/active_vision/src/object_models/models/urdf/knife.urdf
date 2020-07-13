@@ -1,0 +1,24 @@
+<robot name="knife">
+  <link name="knife_link">
+    <inertial>
+      <origin xyz="0 0 0" /> 
+      <mass value="1.0" />
+      <inertia  ixx="100.0" ixy="0.0"  ixz="0.0"  iyy="100.0"  iyz="0.0"  izz="100.0" />
+    </inertial>
+    <visual>
+      <origin rpy="0 -1.57 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://ycb_object_models/models/stl/knife.stl" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 -1.57 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://ycb_object_models/models/stl/knife.stl" />
+      </geometry>
+    </collision>
+  </link>
+  <gazebo reference="knife_link">
+    <material>Gazebo/Red</material>
+  </gazebo>
+</robot>

@@ -1,0 +1,7 @@
+<launch>
+	<rosparam file="$(find franka_gazebo)/config/trajectory_control.yaml" command="load"/>
+
+  <node name="panda_controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
+    output="screen" ns="/panda" args="arm_position_controller"/>
+
+</launch>

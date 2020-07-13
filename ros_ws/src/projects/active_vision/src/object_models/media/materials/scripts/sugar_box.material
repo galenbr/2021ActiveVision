@@ -1,0 +1,13 @@
+material sugar_box{
+    technique
+    {
+        pass
+        {
+            texture_unit
+            {
+                texture texture_map.png
+                scale 1 1
+            }
+        }   
+    }
+}
