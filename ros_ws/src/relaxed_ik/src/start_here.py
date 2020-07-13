@@ -89,7 +89,7 @@ info_file_name = 'franka_info_with_mer_lab.yaml'
 #                'LEFT_WRIST_PITCH', 'LEFT_WRIST_YAW_2'] ]
 #   example 2 shows what this would be for a single end-effector robot, specifically using the UR5 robot
 #   ex2: [ ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint'] ]
-joint_names = [ [ 'panda_joint1', 'panda_joint2', 'panda_joint3', 'panda_joint4', 'panda_joint5', 'panda_joint6', 'panda_joint7', 'panda_joint8', 'panda_hand_joint', 'panda_finger_joint1', 'panda_finger_joint2', 'panda_ee_joint'] ]
+joint_names = [ [ 'panda_joint1', 'panda_joint2', 'panda_joint3', 'panda_joint4', 'panda_joint5', 'panda_joint6', 'panda_joint7', 'panda_joint8', 'panda_hand_joint'] ]
 ######################################################################################################
 
 
@@ -124,7 +124,7 @@ joint_ordering =  [ 'panda_joint1', 'panda_joint2', 'panda_joint3', 'panda_joint
 #   ex1: ee_fixed_joints = ['RIGHT_HAND', 'LEFT_HAND']
 #   For example 2, using the UR5, this is a single chain robot, so it will only have a single end-effector joint
 #   ex2: ee_fixed_joints = ['ee_fixed_joint']
-ee_fixed_joints = [ 'panda_ee_joint' ]
+ee_fixed_joints = [ 'panda_hand_joint' ]
 ######################################################################################################
 
 
@@ -282,7 +282,7 @@ def joint_state_define(x):
 #
 #   Please provide the name of the collision file that you have been filling out in the RelaxedIK/Config directory:
 #   ex: collision_file_name = 'collision.yaml'
-collision_file_name = ''
+collision_file_name = 'collision_example_franka_mer_lab.yaml'
 ###########################################################################################################
 
 
