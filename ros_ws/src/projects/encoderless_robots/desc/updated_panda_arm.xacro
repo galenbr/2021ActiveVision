@@ -307,13 +307,4 @@
     </transmission> 
   </xacro:macro>
 
-  <!-- Gazebo control plugin -->
-  <gazebo>
-    <!-- <plugin name="gazebo_ros_control" filename="libmy_gazebo_ros_control.so"> -->
-      <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
-      <robotNamespace>/panda</robotNamespace>
-      <!-- <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType> -->
-    </plugin>
-  </gazebo>
-
 </robot>

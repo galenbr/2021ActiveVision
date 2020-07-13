@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="green_ball">  
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="camera_on_stand">  
 
   <xacro:macro name="camera_on_stand">
 
@@ -75,7 +75,7 @@
           <visual>
               <origin xyz="0 0 0" rpy="0 0 0"/>
                <geometry>
-                <mesh filename="package://encoderless_robots/meshes/kinect/kinect.dae"/>
+                <mesh filename="package://encoderless_robots/meshes/kinect.dae"/>
               
                 <!-- <mesh scale="0.005 0.005 0.005" filename="package://vision_control/meshes/tripod/tripod.dae"/> -->
                </geometry>
