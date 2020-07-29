@@ -91,7 +91,7 @@ protected:
   std::vector<double> joint_position_command_;
   std::vector<double> last_joint_position_command_;
   std::vector<double> joint_velocity_command_;
-
+  ros::NodeHandle n;
   std::vector<gazebo::physics::JointPtr> sim_joints_;
 
   std::string physics_type_;

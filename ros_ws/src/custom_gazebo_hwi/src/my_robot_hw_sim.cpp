@@ -1,7 +1,7 @@
 #include <custom_gazebo_hwi/my_robot_hw_sim.h>
 #include <urdf/model.h>
 
-
+#include "std_msgs/Float64MultiArray.h"
 namespace
 {
 
@@ -23,6 +23,7 @@ bool MyRobotHWSim::initSim(
   const urdf::Model *const urdf_model,
   std::vector<transmission_interface::TransmissionInfo> transmissions)
 {
+  
   // getJointLimits() searches joint_limit_nh for joint limit parameters. The format of each
   // parameter's name is "joint_limits/<joint name>". An example is "joint_limits/axle_joint".
   const ros::NodeHandle joint_limit_nh(model_nh);
@@ -217,9 +218,20 @@ bool MyRobotHWSim::initSim(
 
   return true;
 }
-
+ros::NodeHandle n;
+ros::Publisher chatter_pub = n.advertise<std_msgs::Float64MultiArray>("chatter", 1000);
+std_msgs::Float64MultiArray msg;
 void MyRobotHWSim::readSim(ros::Time time, ros::Duration period)
 {
+  msg.data.clear();
+  msg.data.push_back(float(joint_effort_command_[0]));
+  msg.data.push_back(float(joint_effort_command_[1]));
+  msg.data.push_back(float(joint_effort_command_[2]));
+  msg.data.push_back(float(joint_effort_command_[3]));
+  msg.data.push_back(float(joint_effort_command_[4]));
+  msg.data.push_back(float(joint_effort_command_[5]));
+  msg.data.push_back(float(joint_effort_command_[6]));
+  chatter_pub.publish(msg);
   for(unsigned int j=0; j < n_dof_; j++)
   {
     // Gazebo has an interesting API...
@@ -244,6 +256,7 @@ void MyRobotHWSim::readSim(ros::Time time, ros::Duration period)
 
 void MyRobotHWSim::writeSim(ros::Time time, ros::Duration period)
 {
+  
   // If the E-stop is active, joints controlled by position commands will maintain their positions.
   if (e_stop_active_)
   {
@@ -273,7 +286,8 @@ void MyRobotHWSim::writeSim(ros::Time time, ros::Duration period)
       case EFFORT:
         {
           const double effort = e_stop_active_ ? 0 : joint_effort_command_[j];
-          ROS_INFO_STREAM("**effort_for_j3**"<<joint_effort_command_[2]);
+          
+          // ROS_INFO_STREAM("**effort_for_j3**"<<joint_effort_command_[2]);
           sim_joints_[j]->SetForce(0, effort);
         }
         break;
