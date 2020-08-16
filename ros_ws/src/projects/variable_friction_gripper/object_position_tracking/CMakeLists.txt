@@ -66,7 +66,6 @@ find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs genmsg geometry_ms
 ## Generate added messages and services with any dependencies listed here
  generate_messages(
    DEPENDENCIES
-   geometry_msgs
    std_msgs
  )
 

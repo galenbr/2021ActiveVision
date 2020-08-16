@@ -102,6 +102,7 @@ typedef pcl::PointXYZ PointT;
 typedef pcl::PointCloud<PointT> PointCloud;
 typedef pcl::PointNormal PointNormalT;
 typedef pcl::PointCloud<PointNormalT> PointCloudWithNormals;
+
 geometry_msgs::Pose pose_to_go;
 geometry_msgs::Pose saved_pose;
 pcl::PointXYZ minPt, maxPt;
