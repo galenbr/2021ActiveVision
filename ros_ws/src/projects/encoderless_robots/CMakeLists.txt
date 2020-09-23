@@ -11,11 +11,8 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
-<<<<<<< HEAD
-=======
   geometry_msgs
   message_generation
->>>>>>> 9ac8874eb3a47224c7fad8041ee0eec38e56a046
 )
 
 add_message_files(
