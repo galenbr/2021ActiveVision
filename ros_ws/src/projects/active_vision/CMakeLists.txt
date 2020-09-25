@@ -2,7 +2,10 @@ cmake_minimum_required(VERSION 3.0.2)
 project(active_vision)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
+find_package(PCL 1.5 REQUIRED)
+find_package(OpenCV REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -11,6 +14,13 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  sensor_msgs
+  pcl_conversions
+  pcl_ros
+  tf
+  cv_bridge
+  image_transport
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -105,7 +115,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES active_vision
-#  CATKIN_DEPENDS roscpp rospy std_msgs
+   CATKIN_DEPENDS roscpp rospy std_msgs sensor_msgs cv_bridge image_transport
 #  DEPENDS system_lib
 )
 
@@ -204,3 +214,6 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+add_executable(testingModel src/testingModel.cpp)
+target_link_libraries(testingModel ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})

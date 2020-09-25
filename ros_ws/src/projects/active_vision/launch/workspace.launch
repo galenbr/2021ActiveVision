@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<launch>
+
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find active_vision)/worlds/environment.world"/>
+    <arg name="paused" value="false"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="gui" value="true"/>
+    <arg name="headless" value="false"/> <!-- Inert - see gazebo_ros_pkgs issue #491 -->
+    <arg name="recording" value="false"/>
+    <arg name="debug" value="false"/>
+  </include>
+
+  <!-- <node name="spawn" pkg="gazebo_ros" type="spawn_model" args="-file $(find pcl_test)/models/Kinect.sdf -sdf -x 1.5 -y 0 -z 0.964 -P .523 -model Kinect"/> -->
+
+</launch>
