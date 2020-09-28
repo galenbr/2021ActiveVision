@@ -113,8 +113,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES active_vision
+   INCLUDE_DIRS include
+   LIBRARIES active_vision
    CATKIN_DEPENDS roscpp rospy std_msgs sensor_msgs cv_bridge image_transport
 #  DEPENDS system_lib
 )
@@ -126,14 +126,16 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+include
   ${catkin_INCLUDE_DIRS}
+  ${OpenCV_LIBRARIES}
 )
 
 ## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/active_vision.cpp
-# )
+add_library(${PROJECT_NAME}
+   src/testingModel.cpp
+)
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -160,7 +162,6 @@ include_directories(
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
-#target_link_libraries(testingModel ${catkin_LIBRARIES})
 
 #############
 ## Install ##
@@ -221,4 +222,5 @@ add_executable(testingModel src/testingModel.cpp)
 target_link_libraries(testingModel ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 add_executable(supervisorNode src/supervisorNode.cpp)
-target_link_libraries(supervisorNode ${catkin_LIBRARIES})
+add_dependencies(supervisorNode active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(supervisorNode active_vision ${catkin_LIBRARIES})
