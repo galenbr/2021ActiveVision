@@ -129,13 +129,18 @@ include_directories(
 include
   ${catkin_INCLUDE_DIRS}
   ${OpenCV_LIBRARIES}
+  # ${PCL_INCLUDE_DIRS}
 )
+
+# add_definitions(${PCL_DEFINITIONS})
+# link_directories(${PCL_LIBRARY_DIRS})
 
 ## Declare a C++ library
 add_library(${PROJECT_NAME}
    src/testingModel.cpp
 )
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -219,7 +224,7 @@ target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 # catkin_add_nosetests(test)
 
 add_executable(testingModel src/testingModel.cpp)
-target_link_libraries(testingModel ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(testingModel ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(supervisorNode src/supervisorNode.cpp)
 add_dependencies(supervisorNode active_vision ${catkin_EXPORTED_TARGETS})
