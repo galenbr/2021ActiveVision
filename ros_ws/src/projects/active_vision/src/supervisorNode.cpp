@@ -27,6 +27,7 @@ int main (int argc, char** argv){
 
  		//Fuse with old data
 		// kinectControl.fuseLastData();
+		// kinectControl.dataExtract();
 
  		//Grasp synthesis
 

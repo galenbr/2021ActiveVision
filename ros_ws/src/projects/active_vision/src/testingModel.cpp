@@ -20,7 +20,15 @@
 #include <pcl/point_types.h>
 #include <pcl/common/transforms.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/filters/extract_indices.h>
 #include <pcl/visualization/cloud_viewer.h>
+#include <pcl/ModelCoefficients.h>
+#include <pcl/sample_consensus/method_types.h>
+#include <pcl/sample_consensus/model_types.h>
+#include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/segmentation/extract_polygonal_prism_data.h>
+#include <pcl/surface/convex_hull.h>
 
 //Gazebo specific includes
 #include <gazebo_msgs/SetModelState.h>
@@ -50,19 +58,39 @@ private:
   ros::Subscriber subKinectPtCld;
   ros::Subscriber subKinectRGB;
   ros::Subscriber subKinectDepth;
-  pcl::VoxelGrid<pcl::PointXYZRGB> voxelGrid;
-  int flag[3] = { };
+  pcl::PassThrough<pcl::PointXYZRGB> pass;         // Passthrough filter
+  pcl::VoxelGrid<pcl::PointXYZRGB> voxelGrid;      // VoxelGrid object
+  pcl::SACSegmentation<pcl::PointXYZRGB> seg;      // Segmentation object
+  pcl::ExtractIndices<pcl::PointXYZRGB> extract;   // Extracting object
+  pcl::ConvexHull<pcl::PointXYZRGB> cvHull;        // Convex hull object
+  pcl::ExtractPolygonalPrismData<pcl::PointXYZRGB> prism;  // Prism object
+  int flag[3] = {};
 
 public:
-  ptCldColor::Ptr ptrPtCldLast{new ptCldColor};                     // Point cloud to store the environment
-  ptCldColor::ConstPtr cPtrPtCldLast{ptrPtCldLast};                 // Constant pointer
   cv_bridge::CvImageConstPtr ptrRgbLast{new cv_bridge::CvImage};    // RGB image from camera
   cv_bridge::CvImageConstPtr ptrDepthLast{new cv_bridge::CvImage};  // Depth map from camera
 
+  ptCldColor::Ptr ptrPtCldLast{new ptCldColor};                     // Point cloud to store the environment
+  ptCldColor::ConstPtr cPtrPtCldLast{ptrPtCldLast};                 // Constant pointer
+
   ptCldColor::Ptr ptrPtCldTemp{new ptCldColor};                     // Point cloud to store temporarily
   ptCldColor::ConstPtr cPtrPtCldTemp{ptrPtCldTemp};                 // Constant pointer
+
   ptCldColor::Ptr ptrPtCldEnv{new ptCldColor};                      // Point cloud to store fused data
   ptCldColor::ConstPtr cPtrPtCldEnv{ptrPtCldEnv};                   // Constant pointer
+
+  ptCldColor::Ptr ptrPtCldTable{new ptCldColor};                    // Point cloud to store table data
+  ptCldColor::ConstPtr cPtrPtCldTable{ptrPtCldTable};               // Constant pointer
+
+  ptCldColor::Ptr ptrPtCldHull{new ptCldColor};                     // Point cloud to store convex hull data
+  ptCldColor::ConstPtr cPtrPtCldHull{ptrPtCldHull};                 // Constant pointer
+
+  ptCldColor::Ptr ptrPtCldObject{new ptCldColor};                   // Point cloud to store object data
+  ptCldColor::ConstPtr cPtrPtCldObject{ptrPtCldObject};             // Constant pointer
+
+  pcl::ModelCoefficients::Ptr tableCoeff{new pcl::ModelCoefficients()};
+  pcl::PointIndices::Ptr tableIndices{new pcl::PointIndices()};
+  pcl::PointIndices::Ptr objectIndices{new pcl::PointIndices()};
 
   std::vector<float> lastKinectPose;
 
@@ -169,6 +197,58 @@ public:
       voxelGrid.setLeafSize(0.005, 0.005, 0.005);
       voxelGrid.filter(*ptrPtCldEnv);
     }
+
+    // Using pass through filter to remove ground plane
+    pass.setInputCloud(cPtrPtCldEnv);
+    pass.setFilterFieldName("z");
+    pass.setFilterLimits(0.2,10);
+    pass.filter(*ptrPtCldEnv);
+  }
+
+  // Extracting the major plane (Table) and object
+  void dataExtract(){
+    // Find the major plane and get its coefficients and indices
+    seg.setInputCloud(cPtrPtCldEnv);
+    seg.setOptimizeCoefficients(true);
+    seg.setModelType(pcl::SACMODEL_PLANE);
+    seg.setMethodType(pcl::SAC_RANSAC);
+    seg.setMaxIterations(1000);
+    seg.setDistanceThreshold(0.01);
+    seg.segment(*tableIndices,*tableCoeff);
+
+    if (tableIndices->indices.size () == 0){
+      std::cerr << "No table found in the environment" << std::endl;
+      return;
+    }
+
+    // Seperating the table and storing its point
+    extract.setInputCloud(cPtrPtCldEnv);
+    extract.setIndices(tableIndices);
+    extract.setNegative(false);
+    extract.filter(*ptrPtCldTable);
+
+    // Using convex hull to get the table boundary which would be like a rectangle
+    cvHull.setInputCloud(cPtrPtCldTable);
+    cvHull.setDimension(2);
+    cvHull.reconstruct(*ptrPtCldHull);
+
+    // Double checking the hull dimensions
+    if (cvHull.getDimension() != 2){
+      std::cerr << "Convex hull dimension != 2" << std::endl;
+      return;
+    }
+
+    // Using polygonal prism and hull the extract object above the table
+    prism.setInputCloud(cPtrPtCldEnv);
+    prism.setInputPlanarHull(cPtrPtCldHull);
+    prism.setHeightLimits(-1.5f, -0.01f);         // Z height (min, max) in m
+    prism.segment(*objectIndices);
+
+    // Using extract to get the point cloud
+    extract.setInputCloud(cPtrPtCldEnv);
+    extract.setNegative(false);
+    extract.setIndices(objectIndices);
+    extract.filter(*ptrPtCldObject);
   }
 };
 
@@ -243,6 +323,32 @@ void testPtCldFuse(environment &av){
   }
 }
 
+// A test function to extract table and object data
+void testDataExtract(environment &av){
+  // Setting up the point cloud visualizer
+  pcl::visualization::PCLVisualizer::Ptr viewer;
+
+  std::vector<float> kinectPose = {0.25,0,1.75,0,0.55,0};
+  av.moveKinect(kinectPose);
+  av.readKinect();
+  av.fuseLastData();
+  av.dataExtract();
+
+  viewer = rgbVis(av.cPtrPtCldTable,1);
+  std::cout << "Showing the table extacted. Close viewer to continue" << std::endl;
+  while (!viewer->wasStopped ()){
+    viewer->spinOnce(100);
+    boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+  }
+
+  viewer = rgbVis(av.cPtrPtCldObject,1);
+  std::cout << "Showing the object extacted. Close viewer to continue" << std::endl;
+  while (!viewer->wasStopped ()){
+    viewer->spinOnce(100);
+    boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+  }
+}
+
 int main (int argc, char** argv){
 
   // Initialize ROS
@@ -255,6 +361,7 @@ int main (int argc, char** argv){
   // testKinectMovement(activeVision);    // Use this to test Kinect movement
   // testKinectRead(activeVision);        // Use this to test data read from Kinect
   testPtCldFuse(activeVision);
+  testDataExtract(activeVision);
 }
 
 /*

@@ -23,7 +23,15 @@
 #include <pcl/point_types.h>
 #include <pcl/common/transforms.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/filters/extract_indices.h>
 #include <pcl/visualization/cloud_viewer.h>
+#include <pcl/ModelCoefficients.h>
+#include <pcl/sample_consensus/method_types.h>
+#include <pcl/sample_consensus/model_types.h>
+#include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/segmentation/extract_polygonal_prism_data.h>
+#include <pcl/surface/convex_hull.h>
 
 //Gazebo specific includes
 #include <gazebo_msgs/SetModelState.h>
@@ -39,19 +47,39 @@ private:
   ros::Subscriber subKinectPtCld;
   ros::Subscriber subKinectRGB;
   ros::Subscriber subKinectDepth;
-  pcl::VoxelGrid<pcl::PointXYZRGB> voxelGrid;
+  pcl::PassThrough<pcl::PointXYZRGB> pass;         // Passthrough filter
+  pcl::VoxelGrid<pcl::PointXYZRGB> voxelGrid;      // VoxelGrid object
+  pcl::SACSegmentation<pcl::PointXYZRGB> seg;      // Segmentation object
+  pcl::ExtractIndices<pcl::PointXYZRGB> extract;   // Extracting object
+  pcl::ConvexHull<pcl::PointXYZRGB> cvHull;        // Convex hull object
+  pcl::ExtractPolygonalPrismData<pcl::PointXYZRGB> prism;  // Prism object
   int flag[3];
 
 public:
-  ptCldColor::Ptr ptrPtCldLast;             // Point cloud to store the environment
-  ptCldColor::ConstPtr cPtrPtCldLast;       // Constant pointer
-  cv_bridge::CvImageConstPtr ptrRgbLast;    // RGB image from camera
-  cv_bridge::CvImageConstPtr ptrDepthLast;  // Depth map from camera
+  cv_bridge::CvImageConstPtr ptrRgbLast{new cv_bridge::CvImage};    // RGB image from camera
+  cv_bridge::CvImageConstPtr ptrDepthLast{new cv_bridge::CvImage};  // Depth map from camera
 
-  ptCldColor::Ptr ptrPtCldTemp;             // Point cloud to store temporarily
-  ptCldColor::ConstPtr cPtrPtCldTemp;       // Constant pointer
-  ptCldColor::Ptr ptrPtCldEnv;              // Point cloud to store fused data
-  ptCldColor::ConstPtr cPtrPtCldEnv;        // Constant pointer
+  ptCldColor::Ptr ptrPtCldLast{new ptCldColor};                     // Point cloud to store the environment
+  ptCldColor::ConstPtr cPtrPtCldLast{ptrPtCldLast};                 // Constant pointer
+
+  ptCldColor::Ptr ptrPtCldTemp{new ptCldColor};                     // Point cloud to store temporarily
+  ptCldColor::ConstPtr cPtrPtCldTemp{ptrPtCldTemp};                 // Constant pointer
+
+  ptCldColor::Ptr ptrPtCldEnv{new ptCldColor};                      // Point cloud to store fused data
+  ptCldColor::ConstPtr cPtrPtCldEnv{ptrPtCldEnv};                   // Constant pointer
+
+  ptCldColor::Ptr ptrPtCldTable{new ptCldColor};                    // Point cloud to store table data
+  ptCldColor::ConstPtr cPtrPtCldTable{ptrPtCldTable};               // Constant pointer
+
+  ptCldColor::Ptr ptrPtCldHull{new ptCldColor};                     // Point cloud to store convex hull data
+  ptCldColor::ConstPtr cPtrPtCldHull{ptrPtCldHull};                 // Constant pointer
+
+  ptCldColor::Ptr ptrPtCldObject{new ptCldColor};                   // Point cloud to store object data
+  ptCldColor::ConstPtr cPtrPtCldObject{ptrPtCldObject};             // Constant pointer
+
+  pcl::ModelCoefficients::Ptr tableCoeff{new pcl::ModelCoefficients()};
+  pcl::PointIndices::Ptr tableIndices{new pcl::PointIndices()};
+  pcl::PointIndices::Ptr objectIndices{new pcl::PointIndices()};
 
   std::vector<float> lastKinectPose;
 
@@ -74,6 +102,9 @@ public:
 
   // Function to Fuse last data with existing data
   void fuseLastData();
+
+  // Extracting the major plane (Table) and object
+  void dataExtract();
 };
 
 // A test function to check if the "moveKinect" function is working
@@ -84,5 +115,8 @@ void testKinectRead(environment &av);
 
 // A test function to check fusing of data
 void testPtCldFuse(environment &av);
+
+// A test function to extract table and object data
+void testDataExtract(environment &av);
 
 #endif
