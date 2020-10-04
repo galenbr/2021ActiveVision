@@ -27,7 +27,17 @@ int main (int argc, char** argv){
 
  		//Fuse with old data
 		// kinectControl.fuseLastData();
+
+		//Extract the object and table
 		// kinectControl.dataExtract();
+
+		//Generate the unexplored point cloud (Only the first time)
+		// if (stepsTaken == 0) {
+		// 	kinectControl.genUnexploredPtCld();
+		// }
+
+		//Update the unexplored point cloud
+		// kinectControl.updateUnexploredPtCld();
 
  		//Grasp synthesis
 

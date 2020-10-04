@@ -22,6 +22,9 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/common/transforms.h>
+#include <pcl/common/common.h>
+#include <pcl/common/generate.h>
+#include <pcl/common/random.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/extract_indices.h>
@@ -39,6 +42,10 @@
 // Typedef for convinience
 typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
 
+void rbgPtCldViewer(pcl::visualization::PCLVisualizer::Ptr viewer, pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr cloud, std::string name,int vp);
+
+Eigen::Affine3f homoMatTranspose(Eigen::Affine3f tf);
+
 // Class to store data of environment and its processing
 class environment{
 private:
@@ -54,6 +61,11 @@ private:
   pcl::ConvexHull<pcl::PointXYZRGB> cvHull;        // Convex hull object
   pcl::ExtractPolygonalPrismData<pcl::PointXYZRGB> prism;  // Prism object
   int flag[3];
+  int scale;
+  Eigen::MatrixXf projectionMat;
+
+  Eigen::Affine3f tfKinOptGaz;     // Transform : Kinect Optical Frame to Kinect Gazebo frame
+  Eigen::Affine3f tfGazWorld;      // Transform : Kinect Gazebo Frame to Gazebo World frame
 
 public:
   cv_bridge::CvImageConstPtr ptrRgbLast{new cv_bridge::CvImage};    // RGB image from camera
@@ -77,11 +89,16 @@ public:
   ptCldColor::Ptr ptrPtCldObject{new ptCldColor};                   // Point cloud to store object data
   ptCldColor::ConstPtr cPtrPtCldObject{ptrPtCldObject};             // Constant pointer
 
+  ptCldColor::Ptr ptrPtCldUnexp{new ptCldColor};                   // Point cloud to store unexplored points data
+  ptCldColor::ConstPtr cPtrPtCldUnexp{ptrPtCldUnexp};              // Constant pointer
+
   pcl::ModelCoefficients::Ptr tableCoeff{new pcl::ModelCoefficients()};
   pcl::PointIndices::Ptr tableIndices{new pcl::PointIndices()};
   pcl::PointIndices::Ptr objectIndices{new pcl::PointIndices()};
 
   std::vector<float> lastKinectPose;
+  std::vector<float> minUnexp;
+  std::vector<float> maxUnexp;
 
   environment(ros::NodeHandle *nh);
 
@@ -105,18 +122,30 @@ public:
 
   // Extracting the major plane (Table) and object
   void dataExtract();
+
+  // Generating unexplored point cloud
+  void genUnexploredPtCld();
+
+  // Updating the unexplored point cloud
+  void updateUnexploredPtCld();
 };
 
 // A test function to check if the "moveKinect" function is working
 void testKinectMovement(environment &av);
 
 // A test function to check if the "readKinect" function is working
-void testKinectRead(environment &av);
+void testKinectRead(environment &av,int flag);
 
 // A test function to check fusing of data
-void testPtCldFuse(environment &av);
+void testPtCldFuse(environment &av, int flag);
 
 // A test function to extract table and object data
-void testDataExtract(environment &av);
+void testDataExtract(environment &av, int flag);
+
+// A test function to generate unexplored point cloud
+void testGenUnexpPtCld(environment &av, int flag);
+
+// A test function to update unexplored point cloud
+void testUpdateUnexpPtCld(environment &av, int flag);
 
 #endif
