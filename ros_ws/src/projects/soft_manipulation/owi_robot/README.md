@@ -12,21 +12,21 @@ This package interfaces with [OWI USB Interface!](https://www.amazon.com/OWI-USB
 
 This service sends a 3 byte command to the OWI USB Interface. To try this out, connect the USB to your computer, turn on the power switch for the USB kit and run the *cmd_robot_node*. To do this run roscore in a terminal.
 
-'''
+```
 roscore
-'''
+```
 
 In a new terminal rosrun the node. **Dont forget to source your ws if you don't have it setup in your bascrc!**
 
-'''
+```
 rosrun cmd_robot_node
-'''
+```
 
 In a new terminal call the service. **Dont forget to source your ws if you don't have it setup in your bascrc!**
 
-'''
+```
 rosservice call cmdOwiServer "Str1:'00' Str2:'00' Str3:'01'"
-'''
+```
 
 This should turn on the LED on the robot. You can set Str3 to '00' to turn off the LED.
 
