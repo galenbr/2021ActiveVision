@@ -2,7 +2,10 @@ cmake_minimum_required(VERSION 3.0.2)
 project(active_vision)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
+find_package(PCL 1.5 REQUIRED)
+find_package(OpenCV REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -11,6 +14,13 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  sensor_msgs
+  pcl_conversions
+  pcl_ros
+  tf
+  cv_bridge
+  image_transport
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -103,9 +113,9 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES active_vision
-#  CATKIN_DEPENDS roscpp rospy std_msgs
+   INCLUDE_DIRS include
+   LIBRARIES active_vision
+   CATKIN_DEPENDS roscpp rospy std_msgs sensor_msgs cv_bridge image_transport
 #  DEPENDS system_lib
 )
 
@@ -116,14 +126,21 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+include
   ${catkin_INCLUDE_DIRS}
+  ${OpenCV_LIBRARIES}
+  # ${PCL_INCLUDE_DIRS}
 )
 
+# add_definitions(${PCL_DEFINITIONS})
+# link_directories(${PCL_LIBRARY_DIRS})
+
 ## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/active_vision.cpp
-# )
+add_library(${PROJECT_NAME}
+   src/testingModel.cpp
+)
+
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -134,6 +151,7 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/active_vision_node.cpp)
+#add_executable(testingModel src/testingModel.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -204,3 +222,10 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+add_executable(testingModel src/testingModel.cpp)
+target_link_libraries(testingModel ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(supervisorNode src/supervisorNode.cpp)
+add_dependencies(supervisorNode active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(supervisorNode active_vision ${catkin_LIBRARIES})
