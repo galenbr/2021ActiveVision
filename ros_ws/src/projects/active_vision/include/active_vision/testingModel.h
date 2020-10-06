@@ -10,6 +10,7 @@
 #include <boost/make_shared.hpp>
 
 #include <ros/ros.h>
+#include <ros/package.h>
 #include <tf/transform_datatypes.h>
 
 // OpenCV specific includes
@@ -19,6 +20,7 @@
 
 // PCL specific includes
 #include <pcl_ros/point_cloud.h>
+#include <pcl/io/ply_io.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/common/transforms.h>
@@ -54,18 +56,23 @@ private:
   ros::Subscriber subKinectPtCld;
   ros::Subscriber subKinectRGB;
   ros::Subscriber subKinectDepth;
+
   pcl::PassThrough<pcl::PointXYZRGB> pass;         // Passthrough filter
   pcl::VoxelGrid<pcl::PointXYZRGB> voxelGrid;      // VoxelGrid object
   pcl::SACSegmentation<pcl::PointXYZRGB> seg;      // Segmentation object
   pcl::ExtractIndices<pcl::PointXYZRGB> extract;   // Extracting object
   pcl::ConvexHull<pcl::PointXYZRGB> cvHull;        // Convex hull object
   pcl::ExtractPolygonalPrismData<pcl::PointXYZRGB> prism;  // Prism object
-  int flag[3];
-  int scale;
-  Eigen::MatrixXf projectionMat;
 
+  Eigen::MatrixXf projectionMat;
   Eigen::Affine3f tfKinOptGaz;     // Transform : Kinect Optical Frame to Kinect Gazebo frame
   Eigen::Affine3f tfGazWorld;      // Transform : Kinect Gazebo Frame to Gazebo World frame
+
+  int flag[3];
+  int scale;
+  float fingerZOffset;
+
+  std::string path;                 // Path the active vision package
 
 public:
   cv_bridge::CvImageConstPtr ptrRgbLast{new cv_bridge::CvImage};    // RGB image from camera
@@ -89,8 +96,20 @@ public:
   ptCldColor::Ptr ptrPtCldObject{new ptCldColor};                   // Point cloud to store object data
   ptCldColor::ConstPtr cPtrPtCldObject{ptrPtCldObject};             // Constant pointer
 
-  ptCldColor::Ptr ptrPtCldUnexp{new ptCldColor};                   // Point cloud to store unexplored points data
-  ptCldColor::ConstPtr cPtrPtCldUnexp{ptrPtCldUnexp};              // Constant pointer
+  ptCldColor::Ptr ptrPtCldUnexp{new ptCldColor};                    // Point cloud to store unexplored points data
+  ptCldColor::ConstPtr cPtrPtCldUnexp{ptrPtCldUnexp};               // Constant pointer
+
+  ptCldColor::Ptr ptrPtCldGripper{new ptCldColor};                  // Point cloud to store gripper (hand+fingers)
+  ptCldColor::ConstPtr cPtrPtCldGripper{ptrPtCldGripper};           // Constant pointer
+
+  ptCldColor::Ptr ptrPtCldGrpHnd{new ptCldColor};                   // Point cloud to store gripper hand
+  ptCldColor::ConstPtr cPtrPtCldGrpHnd{ptrPtCldGrpHnd};             // Constant pointer
+
+  ptCldColor::Ptr ptrPtCldGrpRfgr{new ptCldColor};                  // Point cloud to store gripper right finger
+  ptCldColor::ConstPtr cPtrPtCldGrpRfgr{ptrPtCldGrpRfgr};           // Constant pointer
+
+  ptCldColor::Ptr ptrPtCldGrpLfgr{new ptCldColor};                  // Point cloud to store gripper left finger
+  ptCldColor::ConstPtr cPtrPtCldGrpLfgr{ptrPtCldGrpLfgr};           // Constant pointer
 
   pcl::ModelCoefficients::Ptr tableCoeff{new pcl::ModelCoefficients()};
   pcl::PointIndices::Ptr tableIndices{new pcl::PointIndices()};
@@ -110,6 +129,12 @@ public:
 
   // Callback function to RGB image subscriber
   void cbImgDepth (const sensor_msgs::ImageConstPtr& msg);
+
+  // Load Gripper Hand and Finger file
+  void loadGripper();
+
+  // Update gripper based on finger width
+  void updateGripper(float width);
 
   // Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
   void moveKinect(std::vector<float> pose);
@@ -147,5 +172,8 @@ void testGenUnexpPtCld(environment &av, int flag);
 
 // A test function to update unexplored point cloud
 void testUpdateUnexpPtCld(environment &av, int flag);
+
+// A test function to load and update gripper
+void testGripper(environment &av, int flag, float width);
 
 #endif

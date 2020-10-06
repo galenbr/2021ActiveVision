@@ -7,6 +7,7 @@
 #include <boost/make_shared.hpp>
 
 #include <ros/ros.h>
+#include <ros/package.h>
 #include <tf/transform_datatypes.h>
 
 // OpenCV specific includes
@@ -16,6 +17,7 @@
 
 // PCL specific includes
 #include <pcl_ros/point_cloud.h>
+#include <pcl/io/ply_io.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/common/transforms.h>
@@ -63,18 +65,23 @@ private:
   ros::Subscriber subKinectPtCld;
   ros::Subscriber subKinectRGB;
   ros::Subscriber subKinectDepth;
+
   pcl::PassThrough<pcl::PointXYZRGB> pass;         // Passthrough filter
   pcl::VoxelGrid<pcl::PointXYZRGB> voxelGrid;      // VoxelGrid object
   pcl::SACSegmentation<pcl::PointXYZRGB> seg;      // Segmentation object
   pcl::ExtractIndices<pcl::PointXYZRGB> extract;   // Extracting object
   pcl::ConvexHull<pcl::PointXYZRGB> cvHull;        // Convex hull object
   pcl::ExtractPolygonalPrismData<pcl::PointXYZRGB> prism;  // Prism object
-  int flag[3] = {};
-  int scale = 3.0;
-  Eigen::MatrixXf projectionMat;
 
+  Eigen::MatrixXf projectionMat;
   Eigen::Affine3f tfKinOptGaz;     // Transform : Kinect Optical Frame to Kinect Gazebo frame
   Eigen::Affine3f tfGazWorld;      // Transform : Kinect Gazebo Frame to Gazebo World frame
+
+  int flag[3] = {};
+  int scale;
+  float fingerZOffset;
+
+  std::string path;                 // Path the active vision package
 
 public:
   cv_bridge::CvImageConstPtr ptrRgbLast{new cv_bridge::CvImage};    // RGB image from camera
@@ -98,8 +105,20 @@ public:
   ptCldColor::Ptr ptrPtCldObject{new ptCldColor};                   // Point cloud to store object data
   ptCldColor::ConstPtr cPtrPtCldObject{ptrPtCldObject};             // Constant pointer
 
-  ptCldColor::Ptr ptrPtCldUnexp{new ptCldColor};                   // Point cloud to store unexplored points data
-  ptCldColor::ConstPtr cPtrPtCldUnexp{ptrPtCldUnexp};              // Constant pointer
+  ptCldColor::Ptr ptrPtCldUnexp{new ptCldColor};                    // Point cloud to store unexplored points data
+  ptCldColor::ConstPtr cPtrPtCldUnexp{ptrPtCldUnexp};               // Constant pointer
+
+  ptCldColor::Ptr ptrPtCldGripper{new ptCldColor};                  // Point cloud to store gripper (hand+fingers)
+  ptCldColor::ConstPtr cPtrPtCldGripper{ptrPtCldGripper};           // Constant pointer
+
+  ptCldColor::Ptr ptrPtCldGrpHnd{new ptCldColor};                   // Point cloud to store gripper hand
+  ptCldColor::ConstPtr cPtrPtCldGrpHnd{ptrPtCldGrpHnd};             // Constant pointer
+
+  ptCldColor::Ptr ptrPtCldGrpRfgr{new ptCldColor};                  // Point cloud to store gripper right finger
+  ptCldColor::ConstPtr cPtrPtCldGrpRfgr{ptrPtCldGrpRfgr};           // Constant pointer
+
+  ptCldColor::Ptr ptrPtCldGrpLfgr{new ptCldColor};                  // Point cloud to store gripper left finger
+  ptCldColor::ConstPtr cPtrPtCldGrpLfgr{ptrPtCldGrpLfgr};           // Constant pointer
 
   pcl::ModelCoefficients::Ptr tableCoeff{new pcl::ModelCoefficients()};
   pcl::PointIndices::Ptr tableIndices{new pcl::PointIndices()};
@@ -123,6 +142,15 @@ public:
     projectionMat << 554.254691191187, 0.0, 320.5, -0.0,
                     0.0, 554.254691191187, 240.5, 0.0,
                     0.0, 0.0, 1.0, 0.0;
+
+    // Scale for generating unexplored point cloud
+    scale = 3.0;
+
+    // Gripper finger Z-Axis offset from Gripper hand
+    fingerZOffset = 0.0584;
+
+    // Path to the active_vision package folder
+    path = ros::package::getPath("active_vision");
   }
 
   // Callback function to point cloud subscriber
@@ -147,6 +175,39 @@ public:
       ptrDepthLast = cv_bridge::toCvShare(msg);
       flag[2] = 0;
     }
+  }
+
+  // Load Gripper Hand and Finger file
+  void loadGripper(){
+    std::string pathToHand = path+"/models/gripper/hand.ply";
+    std::string pathToFinger = path+"/models/gripper/finger.ply";
+    // Gripper Hand
+    if (pcl::io::loadPLYFile<pcl::PointXYZRGB>(pathToHand, *ptrPtCldGrpHnd) == -1){
+      PCL_ERROR ("Couldn't read file hand.ply \n");
+    }
+    // Gripper Left Finger
+    if (pcl::io::loadPLYFile<pcl::PointXYZRGB>(pathToFinger, *ptrPtCldGrpLfgr) == -1){
+      PCL_ERROR ("Couldn't read file finger.ply \n");
+    }
+
+    // Gripper Right Finger
+    pcl::transformPointCloud(*ptrPtCldGrpLfgr, *ptrPtCldGrpRfgr, pcl::getTransformation(0,0,0,0,0,M_PI));
+
+    std::cout << "Ignore the PLY reader error on 'face' and 'rgb'." << std::endl;
+  }
+
+  // Update gripper based on finger width
+  void updateGripper(float width){
+    // Adding the gripper hand
+    *ptrPtCldGripper=*ptrPtCldGrpHnd;
+
+    // Translating the left finger and adding
+    pcl::transformPointCloud(*ptrPtCldGrpLfgr, *ptrPtCldTemp, pcl::getTransformation(0,width/2,fingerZOffset,0,0,0));
+    *ptrPtCldGripper += *ptrPtCldTemp;
+
+    // Translating the right finger and adding
+    pcl::transformPointCloud(*ptrPtCldGrpRfgr, *ptrPtCldTemp, pcl::getTransformation(0,-width/2,fingerZOffset,0,0,0));
+    *ptrPtCldGripper += *ptrPtCldTemp;
   }
 
   // Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
@@ -558,6 +619,35 @@ void testUpdateUnexpPtCld(environment &av, int flag){
   std::cout << "*** End ***" << std::endl;
 }
 
+// A test function to load and update gripper
+void testGripper(environment &av, int flag, float width){
+  std::cout << "*** In gripper testing function ***" << std::endl;
+
+  av.loadGripper();
+  av.updateGripper(width);
+
+  if (flag == 1) {
+    // Setting up the point cloud visualizer
+    pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer ("PCL Viewer"));
+    viewer->initCameraParameters();
+    int vp = {};
+    viewer->createViewPort(0.0,0.0,1.0,1.0,vp);
+    viewer->addCoordinateSystem(0.1);
+    viewer->setCameraPosition(0.5,0,0,-1,0,0,0,0,1);
+
+    // Adding the point cloud
+    rbgPtCldViewer(viewer,av.cPtrPtCldGripper,"Gripper",vp);
+
+    std::cout << "Showing the gripper. Close viewer to continue" << std::endl;
+
+    while (!viewer->wasStopped ()){
+      viewer->spinOnce(100);
+      boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+    }
+  }
+  std::cout << "*** End ***" << std::endl;
+}
+
 int main (int argc, char** argv){
 
   // Initialize ROS
@@ -572,7 +662,8 @@ int main (int argc, char** argv){
   // testPtCldFuse(activeVision,1);
   // testDataExtract(activeVision,1);
   // testGenUnexpPtCld(activeVision,1);
-  testUpdateUnexpPtCld(activeVision,1);
+  // testUpdateUnexpPtCld(activeVision,1);
+  testGripper(activeVision,1,0.05);
 }
 
 /*
