@@ -128,6 +128,10 @@ public:
   std::vector<float> minUnexp;
   std::vector<float> maxUnexp;
 
+  //Physical properties of the gripper
+  double gripperWidth = 0.2;
+  double lowerGripperWidth = 0.02;
+
   environment(ros::NodeHandle *nh){
     pubKinectPose = nh->advertise<gazebo_msgs::ModelState> ("/gazebo/set_model_state", 1);
     subKinectPtCld = nh->subscribe ("/camera/depth/points", 1, &environment::cbPtCld, this);

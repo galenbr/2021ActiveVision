@@ -229,3 +229,7 @@ target_link_libraries(testingModel ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL
 add_executable(supervisorNode src/supervisorNode.cpp)
 add_dependencies(supervisorNode active_vision ${catkin_EXPORTED_TARGETS})
 target_link_libraries(supervisorNode active_vision ${catkin_LIBRARIES})
+
+add_executable(graspNode src/graspSynthesis.cpp)
+add_dependencies(graspNode active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(graspNode active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})

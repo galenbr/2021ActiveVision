@@ -119,6 +119,10 @@ public:
   std::vector<float> minUnexp;
   std::vector<float> maxUnexp;
 
+  //Physical properties of the gripper
+  double gripperWidth;
+  double lowerGripperWidth;
+
   environment(ros::NodeHandle *nh);
 
   // Callback function to point cloud subscriber
