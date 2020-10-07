@@ -16,6 +16,7 @@
 #define THRESHOLD 100.0
 
 bool collisionCheck(ptCldColor::ConstPtr unexp_cloud, pcl::PointXYZRGB p1, pcl::Normal p1_normal){
+	return true;/*
 	pcl::CropBox<pcl::PointXYZRGB> cropBoxFilter;
 	cropBoxFilter.setInputCloud(unexp_cloud);
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr hand_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -51,7 +52,7 @@ bool collisionCheck(ptCldColor::ConstPtr unexp_cloud, pcl::PointXYZRGB p1, pcl::
     cropBoxFilter.setRotation(euler);
 	cropBoxFilter.setMin(min_pt);
 	cropBoxFilter.filter(*hand_cloud);
-	return (hand_cloud->size() > 0);
+	return (hand_cloud->size() > 0);*/
 }
 
 double getAngle(pcl::PointXYZRGB p1, pcl::Normal p2, double factor){
@@ -61,7 +62,7 @@ double getAngle(pcl::PointXYZRGB p1, pcl::Normal p2, double factor){
 }
 
 std::tuple<double, pcl::PointXYZRGB, pcl::PointXYZRGB>  bruteForceSearch(ptCldColor::ConstPtr unexp_cloud, ptCldColor obj_cloud, pcl::PointCloud<pcl::Normal> obj_normals, double minDist, double maxDist){
-	double bestQuality = 300;
+	double bestQuality = 0;
 	pcl::PointXYZRGB bestPointA;
 	pcl::PointXYZRGB bestPointB;
 	for (int i = 0; i < obj_cloud.points.size(); ++i){
@@ -86,11 +87,11 @@ std::tuple<double, pcl::PointXYZRGB, pcl::PointXYZRGB>  bruteForceSearch(ptCldCo
 					if(collisionCheck(unexp_cloud, p1, n1)){
 						//Calculate total grasp quality
 						double quality = 300 - (posAngle+negAngle);
-						if(quality < bestQuality){
+						if(quality > bestQuality){
 							bestQuality = quality;
 							bestPointA = p1;
 							bestPointB = p2;
-							//std::cout << p1 << " " << p2 << " "<< posAngle << " " << negAngle << std::endl;
+							std::cout << p1 << " " << p2 << " "<< posAngle << " " << negAngle << std::endl;
 						}
 					}
 				}
@@ -113,15 +114,33 @@ pcl::PointCloud<pcl::Normal>::Ptr calcNormals(ptCldColor::Ptr input){
 }
 
 //Attempt to re-implement 'test_data_testing.cpp's grasp synthesis
-void publishGraspSynthesis(environment &av){
+void publishGraspSynthesis(environment &av, int flag){
 	ptCldColor::ConstPtr unexp_cloud = av.cPtrPtCldUnexp;
 	ptCldColor::Ptr obj_cloud = av.ptrPtCldObject;
+	std::cout << obj_cloud->size() << std::endl;
 	pcl::PointCloud<pcl::Normal>::Ptr obj_normals = calcNormals(obj_cloud);
 	double quality = 300;
 	pcl::PointXYZRGB graspPointA;
 	pcl::PointXYZRGB graspPointB;
 	std::tie(quality, graspPointA, graspPointB) = bruteForceSearch(unexp_cloud, *obj_cloud, *obj_normals, av.lowerGripperWidth, av.gripperWidth);
-	std::cout << "Post Voxel grid size is: " << obj_cloud->size()<< std::endl;
+	//I take a hammer and FIX the code
+	if(1 == flag){
+		const pcl::PointXYZ *pointA = new const pcl::PointXYZ(graspPointA.x, graspPointA.y, graspPointA.z);
+		const pcl::PointXYZ *pointB = new const pcl::PointXYZ(graspPointB.x, graspPointB.y, graspPointB.z);
+		pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer ("PCL Viewer"));
+    	viewer->initCameraParameters();
+    	int vp(0);
+    	viewer->createViewPort(0.0,0.0,1.0,1.0,vp);
+    	viewer->addCoordinateSystem(1.0);
+    	viewer->setCameraPosition(0,0,-1,0,0,1,0,-1,0);
+    	viewer->addSphere(*pointA, .02, 0, 255, 0, "sphere1");
+    	viewer->addSphere(*pointB, .02, 0, 255, 0, "sphere2");
+    	rbgPtCldViewer(viewer,obj_cloud,"Raw Data",vp);
+    	while (!viewer->wasStopped ()){
+      		viewer->spinOnce(100);
+      		boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+    }
+	}
 	std::cout << quality << graspPointA << graspPointB << std::endl;
 }
 
@@ -134,7 +153,10 @@ int main (int argc, char** argv){
   //Set up the point clouds
   //testDataExtract(activeVision,0);
   //testGenUnexpPtCld(activeVision,0);
-  testUpdateUnexpPtCld(activeVision,0);
+  //testUpdateUnexpPtCld(activeVision,0);
+  testPtCldFuse(activeVision,0);
+  //activeVision.dataExtract();
+  testDataExtract(activeVision, 0);
 
-  publishGraspSynthesis(activeVision);
+  publishGraspSynthesis(activeVision,1);
 }
