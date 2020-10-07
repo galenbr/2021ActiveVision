@@ -21,6 +21,7 @@ find_package(Boost REQUIRED COMPONENTS system)
 add_service_files(
    FILES
    writecmd.srv
+   generatecmd.srv
 )
 
 generate_messages(
@@ -31,11 +32,10 @@ generate_messages(
 catkin_package()
 include_directories(include ${catkin_INCLUDE_DIRS})
 
-# add_executable(${PROJECT_NAME}_node src/owi_robot_node.cpp)
-# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-# set_target_properties(${PROJECT_NAME}_node PROPERTIES OUTPUT_NAME node PREFIX "")
-# target_link_libraries(${PROJECT_NAME}_node   ${catkin_LIBRARIES})
-
 add_executable(cmd_robot_node src/cmd_robot_srv.cpp)
 add_dependencies(cmd_robot_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(cmd_robot_node ${catkin_LIBRARIES} usb-1.0)
+
+add_executable(cmd_gen_node src/cmd_gen_srv.cpp)
+add_dependencies(cmd_gen_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(cmd_gen_node ${catkin_LIBRARIES})

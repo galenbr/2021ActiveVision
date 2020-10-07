@@ -3,5 +3,8 @@
         "/home/ajay/kaam/DR/catkin_ws_dr/devel/lib/python2.7/dist-packages",
         "/home/ajay/catkin_ws/devel/lib/python2.7/dist-packages",
         "/opt/ros/melodic/lib/python2.7/dist-packages"
-    ]
+    ],
+    "files.associations": {
+        "bitset": "cpp"
+    }
 }
