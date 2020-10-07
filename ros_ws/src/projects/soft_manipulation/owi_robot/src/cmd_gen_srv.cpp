@@ -31,6 +31,10 @@ bool cmdGenServer_callback(owi_robot::generatecmd::Request &req, owi_robot::gene
     std::string byte1 = std::to_string(((10*a)+b));
     std::cout <<byte1 <<std::endl;
 
+    res.str1 = byte1;
+    res.str2 = "00";
+    res.str3 = "00";
+
 
 
 
