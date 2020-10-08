@@ -37,6 +37,7 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/extract_polygonal_prism_data.h>
 #include <pcl/surface/convex_hull.h>
+#include <pcl/filters/crop_hull.h>
 
 //Gazebo specific includes
 #include <gazebo_msgs/SetModelState.h>
@@ -51,7 +52,7 @@ Eigen::Affine3f homoMatTranspose(Eigen::Affine3f tf);
 // Class to store data of environment and its processing
 class environment{
 private:
-  ros::Rate r{10};
+  ros::Rate r;
   ros::Publisher pubKinectPose;
   ros::Subscriber subKinectPtCld;
   ros::Subscriber subKinectRGB;
@@ -62,6 +63,7 @@ private:
   pcl::SACSegmentation<pcl::PointXYZRGB> seg;      // Segmentation object
   pcl::ExtractIndices<pcl::PointXYZRGB> extract;   // Extracting object
   pcl::ConvexHull<pcl::PointXYZRGB> cvHull;        // Convex hull object
+  pcl::CropHull<pcl::PointXYZRGB> cpHull;          // Crop hull object
   pcl::ExtractPolygonalPrismData<pcl::PointXYZRGB> prism;  // Prism object
 
   Eigen::MatrixXf projectionMat;
@@ -111,9 +113,13 @@ public:
   ptCldColor::Ptr ptrPtCldGrpLfgr{new ptCldColor};                  // Point cloud to store gripper left finger
   ptCldColor::ConstPtr cPtrPtCldGrpLfgr{ptrPtCldGrpLfgr};           // Constant pointer
 
+  ptCldColor::Ptr ptrPtCldCollision{new ptCldColor};                // Point cloud to store collision points
+  ptCldColor::ConstPtr cPtrPtCldCollision{ptrPtCldCollision};       // Constant pointer
+
   pcl::ModelCoefficients::Ptr tableCoeff{new pcl::ModelCoefficients()};
   pcl::PointIndices::Ptr tableIndices{new pcl::PointIndices()};
   pcl::PointIndices::Ptr objectIndices{new pcl::PointIndices()};
+  std::vector<pcl::Vertices> hullVertices;
 
   std::vector<float> lastKinectPose;
   std::vector<float> minUnexp;
@@ -138,7 +144,7 @@ public:
   void loadGripper();
 
   // Update gripper based on finger width
-  void updateGripper(float width);
+  void updateGripper(float width,int choice);
 
   // Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
   void moveKinect(std::vector<float> pose);
@@ -157,6 +163,9 @@ public:
 
   // Updating the unexplored point cloud
   void updateUnexploredPtCld();
+
+  // Collision check for gripper and unexplored point cloud
+  void collisionCheck(float width);
 };
 
 // A test function to check if the "moveKinect" function is working
@@ -179,5 +188,8 @@ void testUpdateUnexpPtCld(environment &av, int flag);
 
 // A test function to load and update gripper
 void testGripper(environment &av, int flag, float width);
+
+// A test function to check the collision check algorithm
+void testCollision(environment &av, int flag, float width);
 
 #endif

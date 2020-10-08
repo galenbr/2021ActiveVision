@@ -34,6 +34,7 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/extract_polygonal_prism_data.h>
 #include <pcl/surface/convex_hull.h>
+#include <pcl/filters/crop_hull.h>
 
 //Gazebo specific includes
 #include <gazebo_msgs/SetModelState.h>
@@ -71,6 +72,7 @@ private:
   pcl::SACSegmentation<pcl::PointXYZRGB> seg;      // Segmentation object
   pcl::ExtractIndices<pcl::PointXYZRGB> extract;   // Extracting object
   pcl::ConvexHull<pcl::PointXYZRGB> cvHull;        // Convex hull object
+  pcl::CropHull<pcl::PointXYZRGB> cpHull;          // Crop hull object
   pcl::ExtractPolygonalPrismData<pcl::PointXYZRGB> prism;  // Prism object
 
   Eigen::MatrixXf projectionMat;
@@ -120,9 +122,13 @@ public:
   ptCldColor::Ptr ptrPtCldGrpLfgr{new ptCldColor};                  // Point cloud to store gripper left finger
   ptCldColor::ConstPtr cPtrPtCldGrpLfgr{ptrPtCldGrpLfgr};           // Constant pointer
 
+  ptCldColor::Ptr ptrPtCldCollision{new ptCldColor};                // Point cloud to store collision points
+  ptCldColor::ConstPtr cPtrPtCldCollision{ptrPtCldCollision};       // Constant pointer
+
   pcl::ModelCoefficients::Ptr tableCoeff{new pcl::ModelCoefficients()};
   pcl::PointIndices::Ptr tableIndices{new pcl::PointIndices()};
   pcl::PointIndices::Ptr objectIndices{new pcl::PointIndices()};
+  std::vector<pcl::Vertices> hullVertices;
 
   std::vector<float> lastKinectPose;
   std::vector<float> minUnexp;
@@ -183,8 +189,8 @@ public:
 
   // Load Gripper Hand and Finger file
   void loadGripper(){
-    std::string pathToHand = path+"/models/gripper/hand.ply";
-    std::string pathToFinger = path+"/models/gripper/finger.ply";
+    std::string pathToHand = path+"/models/gripper/hand1.ply";
+    std::string pathToFinger = path+"/models/gripper/finger1.ply";
     // Gripper Hand
     if (pcl::io::loadPLYFile<pcl::PointXYZRGB>(pathToHand, *ptrPtCldGrpHnd) == -1){
       PCL_ERROR ("Couldn't read file hand.ply \n");
@@ -201,17 +207,33 @@ public:
   }
 
   // Update gripper based on finger width
-  void updateGripper(float width){
-    // Adding the gripper hand
-    *ptrPtCldGripper=*ptrPtCldGrpHnd;
+  // 0 : Hand + Left finger + Right finger
+  // 1 : Hand only
+  // 2 : Left Finger only
+  // 3 : Right FInger only
+  void updateGripper(float width,int choice){
+    if (choice == 0) {
+      // Adding the gripper hand
+      *ptrPtCldGripper=*ptrPtCldGrpHnd;
 
-    // Translating the left finger and adding
-    pcl::transformPointCloud(*ptrPtCldGrpLfgr, *ptrPtCldTemp, pcl::getTransformation(0,width/2,fingerZOffset,0,0,0));
-    *ptrPtCldGripper += *ptrPtCldTemp;
+      // Translating the left finger and adding
+      pcl::transformPointCloud(*ptrPtCldGrpLfgr, *ptrPtCldTemp, pcl::getTransformation(0,width/2,fingerZOffset,0,0,0));
+      *ptrPtCldGripper += *ptrPtCldTemp;
 
-    // Translating the right finger and adding
-    pcl::transformPointCloud(*ptrPtCldGrpRfgr, *ptrPtCldTemp, pcl::getTransformation(0,-width/2,fingerZOffset,0,0,0));
-    *ptrPtCldGripper += *ptrPtCldTemp;
+      // Translating the right finger and adding
+      pcl::transformPointCloud(*ptrPtCldGrpRfgr, *ptrPtCldTemp, pcl::getTransformation(0,-width/2,fingerZOffset,0,0,0));
+      *ptrPtCldGripper += *ptrPtCldTemp;
+    } else if (choice == 1) {
+      *ptrPtCldGripper=*ptrPtCldGrpHnd;
+    } else if (choice == 2){
+      // Translating the left finger and setting
+      pcl::transformPointCloud(*ptrPtCldGrpLfgr, *ptrPtCldTemp, pcl::getTransformation(0,width/2,fingerZOffset,0,0,0));
+      *ptrPtCldGripper = *ptrPtCldTemp;
+    } else if (choice == 3){
+      // Translating the right finger and setting
+      pcl::transformPointCloud(*ptrPtCldGrpRfgr, *ptrPtCldTemp, pcl::getTransformation(0,-width/2,fingerZOffset,0,0,0));
+      *ptrPtCldGripper = *ptrPtCldTemp;
+    }
   }
 
   // Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
@@ -411,6 +433,28 @@ public:
     extract.setIndices(occludedIndices);
     extract.setNegative(false);
     extract.filter(*ptrPtCldUnexp);
+  }
+
+  // Collision check for gripper and unexplored point cloud
+  void collisionCheck(float width){
+    ptrPtCldCollision->clear();             // Reset the collision cloud
+
+    cvHull.setInputCloud(cPtrPtCldGripper);
+    cvHull.setDimension(3);
+
+    cpHull.setInputCloud(ptrPtCldUnexp);
+    cpHull.setHullCloud(ptrPtCldHull);
+    cpHull.setDim(3);
+    cpHull.setCropOutside(true);
+
+    // Get concave hull of the gripper hand, fingers in sequence and check
+    for (int i = 1; i <= 3; i++) {
+      updateGripper(width,i);
+      cvHull.reconstruct(*ptrPtCldHull,hullVertices);
+      cpHull.setHullIndices(hullVertices);
+      cpHull.filter(*ptrPtCldTemp);
+      *ptrPtCldCollision += *ptrPtCldTemp;
+    }
   }
 };
 
@@ -628,7 +672,7 @@ void testGripper(environment &av, int flag, float width){
   std::cout << "*** In gripper testing function ***" << std::endl;
 
   av.loadGripper();
-  av.updateGripper(width);
+  av.updateGripper(width,0);
 
   if (flag == 1) {
     // Setting up the point cloud visualizer
@@ -643,6 +687,59 @@ void testGripper(environment &av, int flag, float width){
     rbgPtCldViewer(viewer,av.cPtrPtCldGripper,"Gripper",vp);
 
     std::cout << "Showing the gripper. Close viewer to continue" << std::endl;
+
+    while (!viewer->wasStopped ()){
+      viewer->spinOnce(100);
+      boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+    }
+  }
+  std::cout << "*** End ***" << std::endl;
+}
+
+// A test function to check the collision check algorithm
+void testCollision(environment &av, int flag, float width){
+  std::cout << "*** In collision testing function ***" << std::endl;
+
+  av.loadGripper();
+
+  // Creating a dummy unexplored point cloud
+  av.ptrPtCldUnexp->clear();
+  pcl::common::CloudGenerator<pcl::PointXYZRGB, pcl::common::UniformGenerator<float>> generator;
+  std::uint32_t seed = static_cast<std::uint32_t> (time (nullptr));
+  pcl::common::UniformGenerator<float>::Parameters x_params(0, 0.03, seed++);
+  generator.setParametersForX(x_params);
+  pcl::common::UniformGenerator<float>::Parameters y_params(-0.15, 0.15, seed++);;
+  generator.setParametersForY(y_params);
+  pcl::common::UniformGenerator<float>::Parameters z_params(-0.15, 0.15, seed++);;
+  generator.setParametersForZ(z_params);
+  int result = generator.fill(5000, 1, *av.ptrPtCldUnexp);
+  // Setting color to blue
+  for (int i = 0; i < av.ptrPtCldUnexp->size(); i++) {
+    av.ptrPtCldUnexp->points[i].b = 200;
+  }
+
+  av.collisionCheck(width);
+
+  // Setting color to red
+  for (int i = 0; i < av.ptrPtCldCollision->size(); i++) {
+    av.ptrPtCldCollision->points[i].b = 0;
+    av.ptrPtCldCollision->points[i].r = 200;
+  }
+
+  if (flag == 1) {
+    // Setting up the point cloud visualizer
+    pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer ("PCL Viewer"));
+    viewer->initCameraParameters();
+    int vp = {};
+    viewer->createViewPort(0.0,0.0,1.0,1.0,vp);
+    // viewer->addCoordinateSystem(1.0);
+    viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
+
+    rbgPtCldViewer(viewer,av.ptrPtCldUnexp,"Unexp",vp);
+    rbgPtCldViewer(viewer,av.ptrPtCldCollision,"Collision",vp);
+    av.updateGripper(width,0);    // Only for visulization purpose
+    rbgPtCldViewer(viewer,av.ptrPtCldGripper,"Gripper",vp);
+    std::cout << "Showing the Gripper(Black), Unexplored(Blue), Collision(Red) points. Close viewer to continue" << std::endl;
 
     while (!viewer->wasStopped ()){
       viewer->spinOnce(100);
@@ -667,7 +764,8 @@ int main (int argc, char** argv){
   // testDataExtract(activeVision,1);
   // testGenUnexpPtCld(activeVision,1);
   // testUpdateUnexpPtCld(activeVision,1);
-  testGripper(activeVision,1,0.05);
+  // testGripper(activeVision,1,0.05);
+  testCollision(activeVision,1,0.05);
 }
 
 /*
