@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <sdf version="1.5">
-  <model name="drill">
+  <model name="drillAV">
     <link name="link">
       <inertial>
         <pose>-0.00637 -0.008 0.13254 0 0 0</pose>
@@ -18,7 +18,7 @@
         <pose>0 0 -0.09 0 0 0</pose>
         <geometry>
           <mesh>
-            <uri>model://drill/meshes/cordless_drill.stl</uri>
+            <uri>model://drillAV/meshes/cordless_drill.stl</uri>
           </mesh>
         </geometry>
         <surface>
@@ -34,7 +34,7 @@
         <pose>0 0 -0.09 0 0 0</pose>
         <geometry>
           <mesh>
-            <uri>model://drill/meshes/cordless_drill.dae</uri>
+            <uri>model://drillAV/meshes/cordless_drill.dae</uri>
           </mesh>
         </geometry>
       </visual>

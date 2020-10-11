@@ -7,6 +7,7 @@
 #include <vector>
 #include <array>
 #include <string>
+#include <fstream>
 #include <boost/make_shared.hpp>
 
 #include <ros/ros.h>
@@ -41,6 +42,8 @@
 
 //Gazebo specific includes
 #include <gazebo_msgs/SetModelState.h>
+#include <gazebo_msgs/SpawnModel.h>
+#include <gazebo_msgs/DeleteModel.h>
 
 // Typedef for convinience
 typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
@@ -52,11 +55,13 @@ Eigen::Affine3f homoMatTranspose(Eigen::Affine3f tf);
 // Class to store data of environment and its processing
 class environment{
 private:
-  ros::Rate r;
+  ros::Rate r{10};
   ros::Publisher pubKinectPose;
   ros::Subscriber subKinectPtCld;
   ros::Subscriber subKinectRGB;
   ros::Subscriber subKinectDepth;
+  ros::ServiceClient gazeboSpawnModel;
+  ros::ServiceClient gazeboDeleteModel;
 
   pcl::PassThrough<pcl::PointXYZRGB> pass;         // Passthrough filter
   pcl::VoxelGrid<pcl::PointXYZRGB> voxelGrid;      // VoxelGrid object
@@ -71,10 +76,12 @@ private:
   Eigen::Affine3f tfGazWorld;      // Transform : Kinect Gazebo Frame to Gazebo World frame
 
   int flag[3];
-  int scale;
-  float fingerZOffset;
+  int scale;                       // Scale value for unexplored point cloud generation
+  float fingerZOffset;             // Z axis offset between gripper hand and finger
 
-  std::string path;                 // Path the active vision package
+  std::string path;                                     // Path the active vision package
+  std::vector<std::vector<std::string>> objectDict;     // List of objects which can be spawned
+  std::vector<float> tableCentre;                       // Co-ordinates of table centre
 
 public:
   cv_bridge::CvImageConstPtr ptrRgbLast{new cv_bridge::CvImage};    // RGB image from camera
@@ -121,9 +128,9 @@ public:
   pcl::PointIndices::Ptr objectIndices{new pcl::PointIndices()};
   std::vector<pcl::Vertices> hullVertices;
 
-  std::vector<float> lastKinectPose;
-  std::vector<float> minUnexp;
-  std::vector<float> maxUnexp;
+  std::vector<float> lastKinectPose;      // Last Kinect pose where it was moved
+  std::vector<float> minUnexp;            // Min x,y,z of unexplored pointcloud generated
+  std::vector<float> maxUnexp;            // Max x,y,z of unexplored pointcloud generated
 
   //Physical properties of the gripper
   double gripperWidth;
@@ -131,65 +138,74 @@ public:
 
   environment(ros::NodeHandle *nh);
 
-  // Callback function to point cloud subscriber
+  // 1: Callback function to point cloud subscriber
   void cbPtCld (const ptCldColor::ConstPtr& msg);
 
-  // Callback function to RGB image subscriber
+  // 2: Callback function to RGB image subscriber
   void cbImgRgb (const sensor_msgs::ImageConstPtr& msg);
 
-  // Callback function to RGB image subscriber
+  // 3: Callback function to RGB image subscriber
   void cbImgDepth (const sensor_msgs::ImageConstPtr& msg);
 
-  // Load Gripper Hand and Finger file
+  // 4: Spawning objects in gazebo on the table centre for a given RPY
+  void spawnObject(int objectID, float R, float P, float Y);
+
+  // 5: Deleting objects in gazebo
+  void deleteObject(int objectID);
+
+  // 6: Load Gripper Hand and Finger file
   void loadGripper();
 
-  // Update gripper based on finger width
+  // 7: Update gripper based on finger width
   void updateGripper(float width,int choice);
 
-  // Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
+  // 8: Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
   void moveKinect(std::vector<float> pose);
 
-  // Function to read the kinect data.
+  // 9: Function to read the kinect data.
   void readKinect();
 
-  // Function to Fuse last data with existing data
+  // 10: Function to Fuse last data with existing data
   void fuseLastData();
 
-  // Extracting the major plane (Table) and object
+  // 11: Extracting the major plane (Table) and object
   void dataExtract();
 
-  // Generating unexplored point cloud
+  // 12: Generating unexplored point cloud
   void genUnexploredPtCld();
 
-  // Updating the unexplored point cloud
+  // 13: Updating the unexplored point cloud
   void updateUnexploredPtCld();
 
-  // Collision check for gripper and unexplored point cloud
+  // 14: Collision check for gripper and unexplored point cloud
   void collisionCheck(float width);
 };
 
-// A test function to check if the "moveKinect" function is working
+// 1: A test function to check if the "moveKinect" function is working
 void testKinectMovement(environment &av);
 
-// A test function to check if the "readKinect" function is working
+// 2: A test function to check if the "readKinect" function is working
 void testKinectRead(environment &av,int flag);
 
-// A test function to check fusing of data
+// 3: A test function to check fusing of data
 void testPtCldFuse(environment &av, int flag);
 
-// A test function to extract table and object data
+// 4: A test function to extract table and object data
 void testDataExtract(environment &av, int flag);
 
-// A test function to generate unexplored point cloud
+// 5: A test function to generate unexplored point cloud
 void testGenUnexpPtCld(environment &av, int flag);
 
-// A test function to update unexplored point cloud
+// 6: A test function to update unexplored point cloud
 void testUpdateUnexpPtCld(environment &av, int flag);
 
-// A test function to load and update gripper
+// 7: A test function to load and update gripper
 void testGripper(environment &av, int flag, float width);
 
-// A test function to check the collision check algorithm
+// 8: A test function to check the collision check algorithm
 void testCollision(environment &av, int flag, float width);
+
+// 9: A test function spawn and delete objects in gazebo
+void testSpawnDeleteObj(environment &av);
 
 #endif

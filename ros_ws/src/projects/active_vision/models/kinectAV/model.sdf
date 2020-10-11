@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <sdf version="1.5">
-  <model name="kinect_active_vision">
+  <model name="kinectAV">
     <pose>0 0 0.036 0 0 0</pose>
     <link name="link">
       <inertial>
@@ -16,7 +16,7 @@
       <visual name="visual">
         <geometry>
           <mesh>
-            <uri>model://kinect_active_vision/meshes/kinect_active_vision.dae</uri>
+            <uri>model://kinectAV/meshes/kinect.dae</uri>
           </mesh>
         </geometry>
       </visual>

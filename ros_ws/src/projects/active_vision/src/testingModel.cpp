@@ -4,6 +4,7 @@
 #include <vector>
 #include <array>
 #include <string>
+#include <fstream>
 #include <boost/make_shared.hpp>
 
 #include <ros/ros.h>
@@ -38,6 +39,8 @@
 
 //Gazebo specific includes
 #include <gazebo_msgs/SetModelState.h>
+#include <gazebo_msgs/SpawnModel.h>
+#include <gazebo_msgs/DeleteModel.h>
 
 // Typedef for convinience
 typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
@@ -66,6 +69,8 @@ private:
   ros::Subscriber subKinectPtCld;
   ros::Subscriber subKinectRGB;
   ros::Subscriber subKinectDepth;
+  ros::ServiceClient gazeboSpawnModel;
+  ros::ServiceClient gazeboDeleteModel;
 
   pcl::PassThrough<pcl::PointXYZRGB> pass;         // Passthrough filter
   pcl::VoxelGrid<pcl::PointXYZRGB> voxelGrid;      // VoxelGrid object
@@ -80,10 +85,12 @@ private:
   Eigen::Affine3f tfGazWorld;      // Transform : Kinect Gazebo Frame to Gazebo World frame
 
   int flag[3] = {};
-  int scale;
-  float fingerZOffset;
+  int scale;                       // Scale value for unexplored point cloud generation
+  float fingerZOffset;             // Z axis offset between gripper hand and finger
 
-  std::string path;                 // Path the active vision package
+  std::string path;                                     // Path the active vision package
+  std::vector<std::vector<std::string>> objectDict;     // List of objects which can be spawned
+  std::vector<float> tableCentre;                       // Co-ordinates of table centre
 
 public:
   cv_bridge::CvImageConstPtr ptrRgbLast{new cv_bridge::CvImage};    // RGB image from camera
@@ -130,19 +137,21 @@ public:
   pcl::PointIndices::Ptr objectIndices{new pcl::PointIndices()};
   std::vector<pcl::Vertices> hullVertices;
 
-  std::vector<float> lastKinectPose;
-  std::vector<float> minUnexp;
-  std::vector<float> maxUnexp;
+  std::vector<float> lastKinectPose;      // Last Kinect pose where it was moved
+  std::vector<float> minUnexp;            // Min x,y,z of unexplored pointcloud generated
+  std::vector<float> maxUnexp;            // Max x,y,z of unexplored pointcloud generated
 
   //Physical properties of the gripper
-  double gripperWidth = 0.2;
-  double lowerGripperWidth = 0.02;
+  double gripperWidth;
+  double lowerGripperWidth;
 
   environment(ros::NodeHandle *nh){
     pubKinectPose = nh->advertise<gazebo_msgs::ModelState> ("/gazebo/set_model_state", 1);
     subKinectPtCld = nh->subscribe ("/camera/depth/points", 1, &environment::cbPtCld, this);
     subKinectRGB = nh->subscribe ("/camera/color/image_raw", 1, &environment::cbImgRgb, this);
     subKinectDepth = nh->subscribe ("/camera/depth/image_raw", 1, &environment::cbImgDepth, this);
+    gazeboSpawnModel = nh->serviceClient< gazebo_msgs::SpawnModel> ("/gazebo/spawn_sdf_model");
+    gazeboDeleteModel = nh->serviceClient< gazebo_msgs::DeleteModel> ("/gazebo/delete_model");
 
     // Transform : Kinect Optical Frame to Kinect Gazebo frame
     tfKinOptGaz = pcl::getTransformation(0,0,0,-M_PI/2,0,-M_PI/2);
@@ -159,11 +168,24 @@ public:
     // Gripper finger Z-Axis offset from Gripper hand
     fingerZOffset = 0.0584;
 
+    // Gripper properties
+    gripperWidth = 0.2;
+    lowerGripperWidth = 0.02;
+
     // Path to the active_vision package folder
     path = ros::package::getPath("active_vision");
+
+    // Dictionary of objects to be spawned
+    objectDict = {{"drillAV","Cordless Drill"},
+                  {"squarePrismAV","Square Prism"},
+                  {"rectPrismAV","Rectangular Prism"},
+                  {"bowlAV","Bowl"}};
+
+    // Table Centre (X,Y,Z);
+    tableCentre = {1.5,0,1};
   }
 
-  // Callback function to point cloud subscriber
+  // 1: Callback function to point cloud subscriber
   void cbPtCld (const ptCldColor::ConstPtr& msg){
     if (flag[0]==1) {
       *ptrPtCldLast = *msg;
@@ -171,7 +193,7 @@ public:
     }
   }
 
-  // Callback function to RGB image subscriber
+  // 2: Callback function to RGB image subscriber
   void cbImgRgb (const sensor_msgs::ImageConstPtr& msg){
     if (flag[1]==1) {
       ptrRgbLast = cv_bridge::toCvShare(msg);
@@ -179,7 +201,7 @@ public:
     }
   }
 
-  // Callback function to RGB image subscriber
+  // 3: Callback function to RGB image subscriber
   void cbImgDepth (const sensor_msgs::ImageConstPtr& msg){
     if (flag[2]==1) {
       ptrDepthLast = cv_bridge::toCvShare(msg);
@@ -187,10 +209,52 @@ public:
     }
   }
 
-  // Load Gripper Hand and Finger file
+  // 4: Spawning objects in gazebo on the table centre for a given RPY
+  void spawnObject(int objectID, float R, float P, float Y){
+    gazebo_msgs::SpawnModel spawnObj;
+    geometry_msgs::Pose pose;
+
+    //Create Matrix3x3 from Euler Angles
+    tf::Matrix3x3 m_rot;
+    m_rot.setEulerYPR(Y, P, R);
+
+    // Convert into quaternion
+    tf::Quaternion quat;
+    m_rot.getRotation(quat);
+
+    pose.position.x = tableCentre[0];
+    pose.position.y = tableCentre[1];
+    pose.position.z = tableCentre[2];
+    pose.orientation.x = quat.x();
+    pose.orientation.y = quat.y();
+    pose.orientation.z = quat.z();
+    pose.orientation.w = quat.w();
+
+    spawnObj.request.model_name = objectDict[objectID][1];
+
+    std::ifstream ifs(path+"/models/"+objectDict[objectID][0]+"/model.sdf");
+    std::string sdfFile( (std::istreambuf_iterator<char>(ifs)),
+                         (std::istreambuf_iterator<char>()));
+    spawnObj.request.model_xml = sdfFile;
+
+    spawnObj.request.reference_frame = "world";
+    spawnObj.request.initial_pose = pose;
+
+    gazeboSpawnModel.call(spawnObj);
+  }
+
+  // 5: Deleting objects in gazebo
+  void deleteObject(int objectID){
+    gazebo_msgs::DeleteModel deleteObj;
+    deleteObj.request.model_name = objectDict[objectID][1];
+
+    gazeboDeleteModel.call(deleteObj);
+  }
+
+  // 6: Load Gripper Hand and Finger file
   void loadGripper(){
-    std::string pathToHand = path+"/models/gripper/hand1.ply";
-    std::string pathToFinger = path+"/models/gripper/finger1.ply";
+    std::string pathToHand = path+"/models/gripperAV/hand1.ply";
+    std::string pathToFinger = path+"/models/gripperAV/finger1.ply";
     // Gripper Hand
     if (pcl::io::loadPLYFile<pcl::PointXYZRGB>(pathToHand, *ptrPtCldGrpHnd) == -1){
       PCL_ERROR ("Couldn't read file hand.ply \n");
@@ -206,11 +270,11 @@ public:
     std::cout << "Ignore the PLY reader error on 'face' and 'rgb'." << std::endl;
   }
 
-  // Update gripper based on finger width
-  // 0 : Hand + Left finger + Right finger
-  // 1 : Hand only
-  // 2 : Left Finger only
-  // 3 : Right FInger only
+  // 7: Update gripper based on finger width
+  // 0 -> Hand + Left finger + Right finger
+  // 1 -> Hand only
+  // 2 -> Left Finger only
+  // 3 -> Right FInger only
   void updateGripper(float width,int choice){
     if (choice == 0) {
       // Adding the gripper hand
@@ -236,7 +300,7 @@ public:
     }
   }
 
-  // Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
+  // 8: Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
   void moveKinect(std::vector<float> pose){
     //Create Matrix3x3 from Euler Angles
     tf::Matrix3x3 rotMat;
@@ -267,7 +331,7 @@ public:
     lastKinectPose = pose;
   }
 
-  // Function to read the kinect data.
+  // 9: Function to read the kinect data.
   void readKinect(){
     flag[0] = 1; flag[1] = 1; flag[2] = 1;
     while (flag[0]==1 || flag[1]==1 || flag[2]==1) {
@@ -276,7 +340,7 @@ public:
     }
   }
 
-  // Function to Fuse last data with existing data
+  // 10: Function to Fuse last data with existing data
   void fuseLastData(){
     // Transform : Kinect Gazebo Frame to Gazebo World frame
     tfGazWorld = pcl::getTransformation(lastKinectPose[0],lastKinectPose[1],lastKinectPose[2],\
@@ -311,7 +375,7 @@ public:
     pass.filter(*ptrPtCldEnv);
   }
 
-  // Extracting the major plane (Table) and object
+  // 11: Extracting the major plane (Table) and object
   void dataExtract(){
     // Find the major plane and get its coefficients and indices
     seg.setInputCloud(cPtrPtCldEnv);
@@ -357,7 +421,7 @@ public:
     extract.filter(*ptrPtCldObject);
   }
 
-  // Generating unexplored point cloud
+  // 12: Generating unexplored point cloud
   void genUnexploredPtCld(){
     // Finding the region covered by the object
     pcl::PointXYZRGB minPt, maxPt;
@@ -400,7 +464,7 @@ public:
     voxelGrid.filter(*ptrPtCldUnexp);
   }
 
-  // Updating the unexplored point cloud
+  // 13: Updating the unexplored point cloud
   void updateUnexploredPtCld(){
     // Transforming the point cloud to Kinect frame from world frame
     Eigen::Affine3f tf = tfGazWorld*tfKinOptGaz;
@@ -435,7 +499,7 @@ public:
     extract.filter(*ptrPtCldUnexp);
   }
 
-  // Collision check for gripper and unexplored point cloud
+  // 14: Collision check for gripper and unexplored point cloud
   void collisionCheck(float width){
     ptrPtCldCollision->clear();             // Reset the collision cloud
 
@@ -458,7 +522,7 @@ public:
   }
 };
 
-// A test function to check if the "moveKinect" function is working
+// 1: A test function to check if the "moveKinect" function is working
 void testKinectMovement(environment &av){
   std::cout << "*** In kinect movement testing function ***" << std::endl;
   int flag = 0;
@@ -480,7 +544,7 @@ void testKinectMovement(environment &av){
   std::cout << "*** End ***" << std::endl;
 }
 
-// A test function to check if the "readKinect" function is working
+// 2: A test function to check if the "readKinect" function is working
 void testKinectRead(environment &av, int flag){
   std::cout << "*** In kinect data read testing function ***" << std::endl;
 
@@ -519,7 +583,7 @@ void testKinectRead(environment &av, int flag){
   std::cout << "*** End ***" << std::endl;
 }
 
-// A test function to check fusing of data
+// 3: A test function to check fusing of data
 void testPtCldFuse(environment &av, int flag){
   std::cout << "*** In point cloud data fusion testing function ***" << std::endl;
   // Setting up the point cloud visualizer
@@ -557,7 +621,7 @@ void testPtCldFuse(environment &av, int flag){
   std::cout << "*** End ***" << std::endl;
 }
 
-// A test function to extract table and object data
+// 4: A test function to extract table and object data
 void testDataExtract(environment &av, int flag){
   std::cout << "*** In table and object extraction testing function ***" << std::endl;
 
@@ -590,7 +654,7 @@ void testDataExtract(environment &av, int flag){
   std::cout << "*** End ***" << std::endl;
 }
 
-// A test function to generate unexplored point cloud
+// 5: A test function to generate unexplored point cloud
 void testGenUnexpPtCld(environment &av, int flag){
   std::cout << "*** In unexplored point cloud generation testing function ***" << std::endl;
 
@@ -622,7 +686,7 @@ void testGenUnexpPtCld(environment &av, int flag){
   std::cout << "*** End ***" << std::endl;
 }
 
-// A test function to update unexplored point cloud
+// 6: A test function to update unexplored point cloud
 void testUpdateUnexpPtCld(environment &av, int flag){
   std::cout << "*** In unexplored point cloud update testing function ***" << std::endl;
 
@@ -667,7 +731,7 @@ void testUpdateUnexpPtCld(environment &av, int flag){
   std::cout << "*** End ***" << std::endl;
 }
 
-// A test function to load and update gripper
+// 7: A test function to load and update gripper
 void testGripper(environment &av, int flag, float width){
   std::cout << "*** In gripper testing function ***" << std::endl;
 
@@ -696,7 +760,7 @@ void testGripper(environment &av, int flag, float width){
   std::cout << "*** End ***" << std::endl;
 }
 
-// A test function to check the collision check algorithm
+// 8: A test function to check the collision check algorithm
 void testCollision(environment &av, int flag, float width){
   std::cout << "*** In collision testing function ***" << std::endl;
 
@@ -749,6 +813,20 @@ void testCollision(environment &av, int flag, float width){
   std::cout << "*** End ***" << std::endl;
 }
 
+// 9: A test function spawn and delete objects in gazebo
+void testSpawnDeleteObj(environment &av){
+  std::cout << "*** In object spawn and delete testing function ***" << std::endl;
+  int flag = 0;
+  for (int i = 0; i < 4; i++) {
+    av.spawnObject(i,0,0,0);
+    std::cout << "Object " << i+1 << " spawned. Enter any key to continue. "; std::cin >> flag;
+    av.deleteObject(i);
+    std::cout << "Object " << i+1 << " deleted." << std::endl;
+    sleep(1);
+  }
+  std::cout << "*** End ***" << std::endl;
+}
+
 int main (int argc, char** argv){
 
   // Initialize ROS
@@ -765,7 +843,8 @@ int main (int argc, char** argv){
   // testGenUnexpPtCld(activeVision,1);
   // testUpdateUnexpPtCld(activeVision,1);
   // testGripper(activeVision,1,0.05);
-  testCollision(activeVision,1,0.05);
+  // testCollision(activeVision,1,0.05);
+  testSpawnDeleteObj(activeVision);
 }
 
 /*

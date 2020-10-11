@@ -10,24 +10,24 @@
     </include>
     <!-- Wooden Table -->
     <include>
-      <uri>model://wooden_table</uri>
+      <uri>model://tableAV</uri>
       <name>Wooden_Table</name>
       <pose>1.5 0 0 0 0 1.57</pose>
       <static>true</static>
     </include>
     <!-- Kinect -->
     <include>
-      <uri>model://kinect_active_vision</uri>
+      <uri>model://kinectAV</uri>
       <name>Kinect</name>
       <pose>0.25 0 1.75 0 0.55 0</pose>
       <static>true</static>
     </include>
     <!-- Cordless Drill -->
-    <include>
-      <uri>model://drill</uri>
+    <!-- <include>
+      <uri>model://drillAV</uri>
       <name>Drill</name>
       <pose>1.5 0 1 0 0 0</pose>
       <static>true</static>
-    </include>
+    </include> -->
   </world>
 </sdf>
