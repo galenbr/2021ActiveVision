@@ -2,7 +2,7 @@
 
 #define TIMEOUT 10
 
-void modifyTargetPosition(std::vector<float> &pos){
+void modifyTargetPosition(std::vector<double> &pos){
 	pos[0]+=0.1;
 	pos[1]+=0.1;
 }
@@ -15,10 +15,10 @@ int main (int argc, char** argv){
 	sleep(1);
 
  	int stepsTaken = 0;
-	std::vector<float> home_position = {0.25, 0.0, 1.75, 0.0, 0.55, 0.0};
- 	std::vector<float> target_position = {0.25, 0.0, 1.75, 0.0, 0.55, 0.0};
+	std::vector<double> home_position = {0.25, 0.0, 1.75, 0.0, 0.55, 0.0};
+ 	std::vector<double> target_position = {0.25, 0.0, 1.75, 0.0, 0.55, 0.0};
 
-	kinectControl.moveKinect(home_position);
+	kinectControl.moveKinectCartesian(home_position);
 
  	while(stepsTaken < TIMEOUT){
 
@@ -51,7 +51,7 @@ int main (int argc, char** argv){
  		modifyTargetPosition(target_position);
 
  		//Move camera
- 		kinectControl.moveKinect(target_position);
+ 		kinectControl.moveKinectCartesian(target_position);
 
  		std::cout << "Spinning... " << stepsTaken << std::endl;
  		stepsTaken++;

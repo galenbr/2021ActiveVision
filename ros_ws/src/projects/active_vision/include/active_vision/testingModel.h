@@ -55,7 +55,7 @@ Eigen::Affine3f homoMatTranspose(Eigen::Affine3f tf);
 // Class to store data of environment and its processing
 class environment{
 private:
-  ros::Rate r{10};
+  ros::Rate r;
   ros::Publisher pubKinectPose;
   ros::Subscriber subKinectPtCld;
   ros::Subscriber subKinectRGB;
@@ -81,7 +81,6 @@ private:
 
   std::string path;                                     // Path the active vision package
   std::vector<std::vector<std::string>> objectDict;     // List of objects which can be spawned
-  std::vector<float> tableCentre;                       // Co-ordinates of table centre
 
 public:
   cv_bridge::CvImageConstPtr ptrRgbLast{new cv_bridge::CvImage};    // RGB image from camera
@@ -128,9 +127,11 @@ public:
   pcl::PointIndices::Ptr objectIndices{new pcl::PointIndices()};
   std::vector<pcl::Vertices> hullVertices;
 
-  std::vector<float> lastKinectPose;      // Last Kinect pose where it was moved
-  std::vector<float> minUnexp;            // Min x,y,z of unexplored pointcloud generated
-  std::vector<float> maxUnexp;            // Max x,y,z of unexplored pointcloud generated
+  std::vector<double> lastKinectPoseCartesian;      // Last Kinect pose where it was moved in cartesian co-ordiantes
+  std::vector<double> lastKinectPoseViewsphere;     // Last Kinect pose where it was moved in viewsphere co-ordinates
+  std::vector<double> minUnexp;                     // Min x,y,z of unexplored pointcloud generated
+  std::vector<double> maxUnexp;                     // Max x,y,z of unexplored pointcloud generated
+  std::vector<double> tableCentre;                  // Co-ordinates of table centre
 
   //Physical properties of the gripper
   double gripperWidth;
@@ -159,8 +160,11 @@ public:
   // 7: Update gripper based on finger width
   void updateGripper(float width,int choice);
 
-  // 8: Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
-  void moveKinect(std::vector<float> pose);
+  // 8A: Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
+  void moveKinectCartesian(std::vector<double> pose);
+
+  // 8B: Funtion to move the Kinect in a viewsphere which has the table cente as its centre
+  void moveKinectViewsphere(std::vector<double> pose);
 
   // 9: Function to read the kinect data.
   void readKinect();
@@ -207,5 +211,8 @@ void testCollision(environment &av, int flag, float width);
 
 // 9: A test function spawn and delete objects in gazebo
 void testSpawnDeleteObj(environment &av);
+
+// 10: A test function to move the kinect in a viewsphere continuously
+void testMoveKinectInViewsphere(environment &av);
 
 #endif

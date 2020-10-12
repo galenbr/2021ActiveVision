@@ -90,7 +90,6 @@ private:
 
   std::string path;                                     // Path the active vision package
   std::vector<std::vector<std::string>> objectDict;     // List of objects which can be spawned
-  std::vector<float> tableCentre;                       // Co-ordinates of table centre
 
 public:
   cv_bridge::CvImageConstPtr ptrRgbLast{new cv_bridge::CvImage};    // RGB image from camera
@@ -137,9 +136,11 @@ public:
   pcl::PointIndices::Ptr objectIndices{new pcl::PointIndices()};
   std::vector<pcl::Vertices> hullVertices;
 
-  std::vector<float> lastKinectPose;      // Last Kinect pose where it was moved
-  std::vector<float> minUnexp;            // Min x,y,z of unexplored pointcloud generated
-  std::vector<float> maxUnexp;            // Max x,y,z of unexplored pointcloud generated
+  std::vector<double> lastKinectPoseCartesian;      // Last Kinect pose where it was moved in cartesian co-ordiantes
+  std::vector<double> lastKinectPoseViewsphere;     // Last Kinect pose where it was moved in viewsphere co-ordinates
+  std::vector<double> minUnexp;                     // Min x,y,z of unexplored pointcloud generated
+  std::vector<double> maxUnexp;                     // Max x,y,z of unexplored pointcloud generated
+  std::vector<double> tableCentre;                  // Co-ordinates of table centre
 
   //Physical properties of the gripper
   double gripperWidth;
@@ -300,8 +301,8 @@ public:
     }
   }
 
-  // 8: Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
-  void moveKinect(std::vector<float> pose){
+  // 8A: Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
+  void moveKinectCartesian(std::vector<double> pose){
     //Create Matrix3x3 from Euler Angles
     tf::Matrix3x3 rotMat;
     rotMat.setEulerYPR(pose[5], pose[4], pose[3]);
@@ -328,7 +329,45 @@ public:
     sleep(1);
 
     // Storing the kinect pose
-    lastKinectPose = pose;
+    lastKinectPoseCartesian = pose;
+  }
+
+  // 8B: Funtion to move the Kinect in a viewsphere which has the table cente as its centre
+  // R (Radius)
+  // Theta (Polar Angle) -> 0 to 2*PI
+  // Phi (Azhimuthal angle) -> 0 to PI/2
+  void moveKinectViewsphere(std::vector<double> pose){
+    //Create Matrix3x3 from Euler Angles
+    tf::Matrix3x3 rotMat;
+    rotMat.setEulerYPR(M_PI+pose[1], M_PI/2-pose[2], 0);
+
+    // Convert into quaternion
+    tf::Quaternion quat;
+    rotMat.getRotation(quat);
+
+    // Converting it to the required gazebo format
+    gazebo_msgs::ModelState ModelState;
+    ModelState.model_name = "Kinect";           // This should be the name of kinect in gazebo
+    ModelState.reference_frame = "world";
+    ModelState.pose.position.x = tableCentre[0]+pose[0]*sin(pose[2])*cos(pose[1]);
+    ModelState.pose.position.y = tableCentre[1]+pose[0]*sin(pose[2])*sin(pose[1]);
+    ModelState.pose.position.z = tableCentre[2]+pose[0]*cos(pose[2]);
+    ModelState.pose.orientation.x = quat.x();
+    ModelState.pose.orientation.y = quat.y();
+    ModelState.pose.orientation.z = quat.z();
+    ModelState.pose.orientation.w = quat.w();
+
+    // Publishing it to gazebo
+    pubKinectPose.publish(ModelState);
+    ros::spinOnce();
+    sleep(1);
+
+    // Storing the kinect pose
+    lastKinectPoseViewsphere = pose;
+    lastKinectPoseCartesian = {ModelState.pose.position.x,
+                               ModelState.pose.position.y,
+                               ModelState.pose.position.z,
+                               0,M_PI/2-pose[2],M_PI+pose[1]};
   }
 
   // 9: Function to read the kinect data.
@@ -343,8 +382,8 @@ public:
   // 10: Function to Fuse last data with existing data
   void fuseLastData(){
     // Transform : Kinect Gazebo Frame to Gazebo World frame
-    tfGazWorld = pcl::getTransformation(lastKinectPose[0],lastKinectPose[1],lastKinectPose[2],\
-                                        lastKinectPose[3],lastKinectPose[4],lastKinectPose[5]);
+    tfGazWorld = pcl::getTransformation(lastKinectPoseCartesian[0],lastKinectPoseCartesian[1],lastKinectPoseCartesian[2],\
+                                        lastKinectPoseCartesian[3],lastKinectPoseCartesian[4],lastKinectPoseCartesian[5]);
 
     // Apply transformation
     Eigen::Affine3f tf = tfGazWorld * tfKinOptGaz;
@@ -522,31 +561,49 @@ public:
   }
 };
 
-// 1: A test function to check if the "moveKinect" function is working
+// 1: A test function to check if the "moveKinect" functions are working
 void testKinectMovement(environment &av){
   std::cout << "*** In kinect movement testing function ***" << std::endl;
   int flag = 0;
   do {
-    std::vector<float> pose(6);
-    std::cout << "Enter kinect pose data" << std::endl;
-    std::cout << "X : ";      std::cin >> pose[0];
-    std::cout << "Y : ";      std::cin >> pose[1];
-    std::cout << "Z : ";      std::cin >> pose[2];
-    std::cout << "Roll : ";   std::cin >> pose[3];
-    std::cout << "Pitch : ";  std::cin >> pose[4];
-    std::cout << "Yaw : ";    std::cin >> pose[5];
+    std::cout << "Enter your choice 1:Cartesian, 2:Viewsphere, 0:Exit : "; std::cin >> flag;
+    if (flag == 1) {
+      std::vector<double> pose(6);
+      std::cout << "Enter kinect pose data" << std::endl;
+      std::cout << "X : ";      std::cin >> pose[0];
+      std::cout << "Y : ";      std::cin >> pose[1];
+      std::cout << "Z : ";      std::cin >> pose[2];
+      std::cout << "Roll : ";   std::cin >> pose[3];
+      std::cout << "Pitch : ";  std::cin >> pose[4];
+      std::cout << "Yaw : ";    std::cin >> pose[5];
 
-    av.moveKinect(pose);
-    std::cout << "Kinect moved" << std::endl;
-    sleep(1);  // Wait for 1sec
-    std::cout << "Do you want to continue (1/0) : "; std::cin >> flag;
-  } while(flag == 1);
+      av.moveKinectCartesian(pose);
+      std::cout << "Kinect moved" << std::endl;
+      sleep(1);  // Wait for 1sec
+
+    } else if(flag == 2){
+      std::vector<double> pose(3);
+      std::cout << "Enter viewsphere co-ordinates with centre at (" <<
+                    av.tableCentre[0] << "," <<
+                    av.tableCentre[1] << "," <<
+                    av.tableCentre[2] << ")" << std::endl;
+      std::cout << "R (Radius) : ";                         std::cin >> pose[0];
+      std::cout << "Theta (Polar Angle) (0->2*PI) : ";      std::cin >> pose[1];
+      std::cout << "Phi (Azhimuthal Angle) (0->PI/2): ";    std::cin >> pose[2];
+
+      av.moveKinectViewsphere(pose);
+      std::cout << "Kinect moved" << std::endl;
+      sleep(1);  // Wait for 1sec
+    }
+  } while(flag != 0);
   std::cout << "*** End ***" << std::endl;
 }
 
 // 2: A test function to check if the "readKinect" function is working
 void testKinectRead(environment &av, int flag){
   std::cout << "*** In kinect data read testing function ***" << std::endl;
+
+  av.spawnObject(0,0,0,0);
 
   int row; int col;
   std::cout << "Enter pixel value to print data for" << std::endl;
@@ -586,6 +643,8 @@ void testKinectRead(environment &av, int flag){
 // 3: A test function to check fusing of data
 void testPtCldFuse(environment &av, int flag){
   std::cout << "*** In point cloud data fusion testing function ***" << std::endl;
+  av.spawnObject(0,0,0,0);
+
   // Setting up the point cloud visualizer
   pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer ("PCL Viewer"));
   viewer->initCameraParameters();
@@ -598,13 +657,13 @@ void testPtCldFuse(environment &av, int flag){
   viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
 
   // 4 kinect position to capture and fuse
-  std::vector<std::vector<float>> kinectPoses = {{0.25,0,1.75,0,0.55,0},
-                                                 {1.5,-1.25,1.75,0,0.55,1.57},
-                                                 {2.75,0,1.75,0,0.55,3.14},
-                                                 {1.5,1.25,1.75,0,0.55,-1.57}};
+  std::vector<std::vector<double>> kinectPoses = {{1.4,-M_PI,M_PI/3},
+                                                  {1.4,-M_PI/2,M_PI/3},
+                                                  {1.4,0,M_PI/3},
+                                                  {1.4,M_PI/2,M_PI/3}};
 
   for (int i = 0; i < 4; i++) {
-    av.moveKinect(kinectPoses[i]);
+    av.moveKinectViewsphere(kinectPoses[i]);
     av.readKinect();
     av.fuseLastData();
     if (flag == 1){
@@ -625,8 +684,10 @@ void testPtCldFuse(environment &av, int flag){
 void testDataExtract(environment &av, int flag){
   std::cout << "*** In table and object extraction testing function ***" << std::endl;
 
-  std::vector<float> kinectPose = {0.25,0,1.75,0,0.55,0};
-  av.moveKinect(kinectPose);
+  av.spawnObject(0,0,0,0);
+
+  std::vector<double> kinectPose = {1.4,-M_PI,M_PI/3};
+  av.moveKinectViewsphere(kinectPose);
   av.readKinect();
   av.fuseLastData();
   av.dataExtract();
@@ -658,8 +719,10 @@ void testDataExtract(environment &av, int flag){
 void testGenUnexpPtCld(environment &av, int flag){
   std::cout << "*** In unexplored point cloud generation testing function ***" << std::endl;
 
-  std::vector<float> kinectPose = {0.25,0,1.75,0,0.55,0};
-  av.moveKinect(kinectPose);
+  av.spawnObject(0,0,0,0);
+
+  std::vector<double> kinectPose = {1.4,-M_PI,M_PI/3};
+  av.moveKinectViewsphere(kinectPose);
   av.readKinect();
   av.fuseLastData();
   av.dataExtract();
@@ -690,6 +753,8 @@ void testGenUnexpPtCld(environment &av, int flag){
 void testUpdateUnexpPtCld(environment &av, int flag){
   std::cout << "*** In unexplored point cloud update testing function ***" << std::endl;
 
+  av.spawnObject(0,0,0,0);
+
   // Setting up the point cloud visualizer
   pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer ("PCL Viewer"));
   viewer->initCameraParameters();
@@ -702,13 +767,13 @@ void testUpdateUnexpPtCld(environment &av, int flag){
   viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
 
   // 4 kinect position to capture and fuse
-  std::vector<std::vector<float>> kinectPoses = {{0.25,0,1.75,0,0.55,0},
-                                                 {1.5,-1.25,1.75,0,0.55,1.57},
-                                                 {2.75,0,1.75,0,0.55,3.14},
-                                                 {1.5,1.25,1.75,0,0.55,-1.57}};
+  std::vector<std::vector<double>> kinectPoses = {{1.4,-M_PI,M_PI/3},
+                                                  {1.4,-M_PI/2,M_PI/3},
+                                                  {1.4,0,M_PI/3},
+                                                  {1.4,M_PI/2,M_PI/3}};
 
    for (int i = 0; i < 4; i++) {
-     av.moveKinect(kinectPoses[i]);
+     av.moveKinectViewsphere(kinectPoses[i]);
      av.readKinect();
      av.fuseLastData();
      av.dataExtract();
@@ -827,6 +892,20 @@ void testSpawnDeleteObj(environment &av){
   std::cout << "*** End ***" << std::endl;
 }
 
+// 10: A test function to move the kinect in a viewsphere continuously
+void testMoveKinectInViewsphere(environment &av){
+  std::cout << "*** In Kinect move in viewsphere testing function ***" << std::endl;
+  for (double i = M_PI/2; i > 0;) {
+    for (double j = 0; j < 2*M_PI;) {
+      av.moveKinectViewsphere({1.4,j,i});
+      j += 2*M_PI/10;
+    }
+    std::cout << (int)((M_PI/2-i)/(M_PI/2/10)+1)<< " out of 10 completed." << std::endl;
+    i -= M_PI/2/10;
+  }
+  std::cout << "*** End ***" << std::endl;
+}
+
 int main (int argc, char** argv){
 
   // Initialize ROS
@@ -844,7 +923,9 @@ int main (int argc, char** argv){
   // testUpdateUnexpPtCld(activeVision,1);
   // testGripper(activeVision,1,0.05);
   // testCollision(activeVision,1,0.05);
-  testSpawnDeleteObj(activeVision);
+  // testSpawnDeleteObj(activeVision);
+  testMoveKinectInViewsphere(activeVision);
+
 }
 
 /*
