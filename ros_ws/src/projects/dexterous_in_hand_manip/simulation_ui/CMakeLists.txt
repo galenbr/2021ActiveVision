@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
 	rospy
 	std_msgs
 	message_generation
+	gripper_controls
 )
 
 add_message_files(DIRECTORY msg

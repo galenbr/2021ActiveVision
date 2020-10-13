@@ -15,6 +15,7 @@ add_compile_options(-std=c++11)
  add_service_files(
    FILES
    PoseChange.srv
+   MoveStraight.srv
 )
 
  generate_messages(

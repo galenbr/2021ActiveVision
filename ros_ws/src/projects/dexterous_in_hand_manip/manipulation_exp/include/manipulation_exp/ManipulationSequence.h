@@ -14,8 +14,8 @@ private:
   bool initialize_arm();
   bool approach_object();
   bool grasp_object();
-  bool move_up();
-  bool move_down();
+  bool move_up(float val);
+  bool move_down(float val);
   bool decrease_friction();
   bool increase_friction();
   bool slide_left_down();

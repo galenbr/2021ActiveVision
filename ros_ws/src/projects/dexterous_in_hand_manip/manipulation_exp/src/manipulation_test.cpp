@@ -2,6 +2,7 @@
 #include "gripper_controls/PositionCommand.h"
 #include <ros/ros.h>
 #include "arm_controls/PoseChange.h"
+#include "arm_controls/MoveStraight.h"
 #include <std_srvs/Empty.h>
 
 int main(int argc, char **argv){
@@ -29,9 +30,9 @@ int main(int argc, char **argv){
   ros::service::waitForService("rest_pose");
   ros::ServiceClient client_rest_pose = n.serviceClient<arm_controls::PoseChange>("rest_pose");
   ros::service::waitForService("move_up");
-  ros::ServiceClient client_move_up = n.serviceClient<arm_controls::PoseChange>("move_up");
+  ros::ServiceClient client_move_up = n.serviceClient<arm_controls::MoveStraight>("move_up");
   ros::service::waitForService("move_down");
-  ros::ServiceClient client_move_down = n.serviceClient<arm_controls::PoseChange>("move_down");
+  ros::ServiceClient client_move_down = n.serviceClient<arm_controls::MoveStraight>("move_down");
   ros::service::waitForService("/gazebo/reset_world");
   ros::ServiceClient client_world_reset = n.serviceClient<std_srvs::Empty>("/gazebo/reset_world");
 

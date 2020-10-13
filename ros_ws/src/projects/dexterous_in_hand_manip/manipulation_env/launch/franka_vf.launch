@@ -30,7 +30,7 @@
 
   <!-- spawn object -->
   <node name="spawn_object" pkg="gazebo_ros" type="spawn_model"
-  	args="-file $(find manipulation_env)/desc/long_block.urdf -urdf -model object -z $(arg table_height) -x $(arg table_center)" />
+  	args="-file $(find manipulation_env)/desc/rectangular_prism.urdf -urdf -model object -z $(arg table_height) -x $(arg table_center)" />
 
   <!-- launch franka controllers -->
   <include file="$(find panda_moveit_controller)/launch/main.launch"/>

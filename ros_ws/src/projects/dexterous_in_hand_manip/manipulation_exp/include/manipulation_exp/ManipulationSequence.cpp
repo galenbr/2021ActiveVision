@@ -2,6 +2,7 @@
 #include <std_srvs/Empty.h>
 #include <gripper_controls/Holdcommand.h>
 #include <arm_controls/PoseChange.h>
+#include <arm_controls/MoveStraight.h>
 #include <gripper_controls/SetFriction.h>
 #include <gripper_controls/PositionCommand.h>
 #include "ros/ros.h"
@@ -68,20 +69,20 @@ bool ManipulationSequence::grasp_object(){
   return 1;
 }
 
-bool ManipulationSequence::move_up(){
+bool ManipulationSequence::move_up(float val){
   ros::service::waitForService("move_up");
-  ros::ServiceClient client = n_.serviceClient<arm_controls::PoseChange>("move_up");
-  arm_controls::PoseChange srv;
-  srv.request.execute = true;
+  ros::ServiceClient client = n_.serviceClient<arm_controls::MoveStraight>("move_up");
+  arm_controls::MoveStraight srv;
+  srv.request.val = val;
   client.call(srv);
   return 1;
 }
 
-bool ManipulationSequence::move_down(){
+bool ManipulationSequence::move_down(float val){
   ros::service::waitForService("move_down");
-  ros::ServiceClient client = n_.serviceClient<arm_controls::PoseChange>("move_down");
-  arm_controls::PoseChange srv;
-  srv.request.execute = true;
+  ros::ServiceClient client = n_.serviceClient<arm_controls::MoveStraight>("move_down");
+  arm_controls::MoveStraight srv;
+  srv.request.val = val;
   client.call(srv);
   return 1;
 }
@@ -193,7 +194,7 @@ bool ManipulationSequence::object_grasp(manipulation_exp::Sequence::Request &req
 
 bool ManipulationSequence::gravity_exploit(manipulation_exp::Sequence::Request &req, manipulation_exp::Sequence::Response &res){
   bool up, low_friction, high_friction;
-  up = move_up();
+  up = move_up(0.01);
   low_friction = decrease_friction();
   high_friction = increase_friction();
   return 1;
@@ -202,7 +203,7 @@ bool ManipulationSequence::gravity_exploit(manipulation_exp::Sequence::Request &
 bool ManipulationSequence::prehensile_pushing(manipulation_exp::Sequence::Request &req, manipulation_exp::Sequence::Response &res){
   bool low_friction, down, high_friction, up;
   low_friction = decrease_friction();
-  down = move_down();
+  down = move_down(0.01);
   high_friction = increase_friction();
   // up = move_up();
   return 1;

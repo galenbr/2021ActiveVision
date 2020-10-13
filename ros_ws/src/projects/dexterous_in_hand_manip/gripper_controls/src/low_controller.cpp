@@ -69,10 +69,10 @@ public:
     ros::NodeHandle n;
     float high_friction{0};
     float low_friction{0};
-    low_friction = low_fLim;
-    high_friction = high_fLim;
-    // n.getParam("/low_level/high_friction", high_friction);
-    // n.getParam("/low_level/low_friction", low_friction);
+    // low_friction = low_fLim;
+    // high_friction = high_fLim;
+    n.getParam("/low_level/high_friction", high_friction);
+    n.getParam("/low_level/low_friction", low_friction);
     // set predefined friction value depending on request --> high or low
     if (req.finger==0){
       if (req.high_friction)

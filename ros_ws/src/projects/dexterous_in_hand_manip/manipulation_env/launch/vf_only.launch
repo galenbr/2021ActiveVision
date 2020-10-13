@@ -18,7 +18,7 @@
 
   <!-- spawn robot -->
   <node name="spawn_vf_hand" pkg="gazebo_ros" type="spawn_model"
-  	args="-param robot_description -urdf -model vf_hand -x 0.48 -y 0 -z 0.48 -P 1.5708" />
+  	args="-param robot_description -urdf -model vf_hand -x 0.48 -y 0 -z 0.48 -P 1.5708 -J J1 0.2 -J J2 0.2" />
 
   <!-- spawn table -->
   <node name="spawn_table_urdf" pkg="gazebo_ros" type="spawn_model"
