@@ -25,9 +25,12 @@
 #include <pcl/common/common.h>
 #include <pcl/common/generate.h>
 #include <pcl/common/random.h>
+#include <pcl/common/distances.h>
+#include <pcl/common/centroid.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/extract_indices.h>
+#include <pcl/filters/crop_hull.h>
 #include <pcl/visualization/cloud_viewer.h>
 #include <pcl/ModelCoefficients.h>
 #include <pcl/sample_consensus/method_types.h>
@@ -35,7 +38,7 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/extract_polygonal_prism_data.h>
 #include <pcl/surface/convex_hull.h>
-#include <pcl/filters/crop_hull.h>
+#include <pcl/features/normal_3d.h>
 
 //Gazebo specific includes
 #include <gazebo_msgs/SetModelState.h>
@@ -44,15 +47,39 @@
 
 // Typedef for convinience
 typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
+typedef pcl::PointCloud<pcl::Normal> ptCldNormal;
+typedef pcl::visualization::PCLVisualizer ptCldVis;
+
+// Structure to store one grasp related data
+struct graspPoint{
+  float quality;
+  float gripperWidth;
+  pcl::PointXYZRGB p1;
+  pcl::PointXYZRGB p2;
+};
+
+bool compareGrasp(graspPoint A, graspPoint B){
+  return(A.quality > B.quality);
+}
 
 // Fuction to view a rgb point cloud
-void rbgPtCldViewer(pcl::visualization::PCLVisualizer::Ptr viewer, pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr cloud, std::string name,int vp){
+void rbgVis(ptCldVis::Ptr viewer, ptCldColor::ConstPtr cloud, std::string name,int vp){
   viewer->setBackgroundColor(0.5,0.5,0.5,vp);
   pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGB> rgb(cloud);
   viewer->addPointCloud<pcl::PointXYZRGB>(cloud,rgb,name,vp);
   viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE,3,name,vp);
 }
 
+// Fuction to view a rgb point cloud with normals
+void rbgNormalVis(ptCldVis::Ptr viewer, ptCldColor::ConstPtr cloud, ptCldNormal::ConstPtr normal, std::string name,int vp){
+  viewer->setBackgroundColor(0.5,0.5,0.5,vp);
+  pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGB> rgb(cloud);
+  viewer->addPointCloud<pcl::PointXYZRGB>(cloud,rgb,name,vp);
+  viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE,3,name,vp);
+  viewer->addPointCloudNormals<pcl::PointXYZRGB, pcl::Normal>(cloud,normal,5,0.01,name+"_normal",vp);
+}
+
+// Funstion to transpose a homogenous matrix
 Eigen::Affine3f homoMatTranspose(Eigen::Affine3f tf){
   Eigen::Affine3f tfTranspose;
   tfTranspose.setIdentity();
@@ -78,11 +105,14 @@ private:
   pcl::ExtractIndices<pcl::PointXYZRGB> extract;   // Extracting object
   pcl::ConvexHull<pcl::PointXYZRGB> cvHull;        // Convex hull object
   pcl::CropHull<pcl::PointXYZRGB> cpHull;          // Crop hull object
-  pcl::ExtractPolygonalPrismData<pcl::PointXYZRGB> prism;  // Prism object
+  pcl::ExtractPolygonalPrismData<pcl::PointXYZRGB> prism;   // Prism object
+  pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;  // Normal Estimation
+  pcl::search::Search<pcl::PointXYZRGB>::Ptr KdTree{new pcl::search::KdTree<pcl::PointXYZRGB>};  // Used in normal estimation
 
   Eigen::MatrixXf projectionMat;
   Eigen::Affine3f tfKinOptGaz;     // Transform : Kinect Optical Frame to Kinect Gazebo frame
   Eigen::Affine3f tfGazWorld;      // Transform : Kinect Gazebo Frame to Gazebo World frame
+  Eigen::Vector4f objCentroid;
 
   int flag[3] = {};
   int scale;                       // Scale value for unexplored point cloud generation
@@ -131,6 +161,9 @@ public:
   ptCldColor::Ptr ptrPtCldCollision{new ptCldColor};                // Point cloud to store collision points
   ptCldColor::ConstPtr cPtrPtCldCollision{ptrPtCldCollision};       // Constant pointer
 
+  ptCldNormal::Ptr ptrObjNormal{new ptCldNormal};                   // Point cloud to store object normals
+  ptCldNormal::ConstPtr cPtrObjNormal{ptrObjNormal};                // Constant pointer
+
   pcl::ModelCoefficients::Ptr tableCoeff{new pcl::ModelCoefficients()};
   pcl::PointIndices::Ptr tableIndices{new pcl::PointIndices()};
   pcl::PointIndices::Ptr objectIndices{new pcl::PointIndices()};
@@ -142,9 +175,10 @@ public:
   std::vector<double> maxUnexp;                     // Max x,y,z of unexplored pointcloud generated
   std::vector<double> tableCentre;                  // Co-ordinates of table centre
 
-  //Physical properties of the gripper
-  double gripperWidth;
-  double lowerGripperWidth;
+  double maxGripperWidth;                           // Max gripper width
+  double minGripperWidth;                           // Min gripper width
+  double minGraspQuality;
+  std::vector<graspPoint> graspsPossible;           // List of possible grasps
 
   environment(ros::NodeHandle *nh){
     pubKinectPose = nh->advertise<gazebo_msgs::ModelState> ("/gazebo/set_model_state", 1);
@@ -170,8 +204,9 @@ public:
     fingerZOffset = 0.0584;
 
     // Gripper properties
-    gripperWidth = 0.2;
-    lowerGripperWidth = 0.02;
+    minGripperWidth = 0.005;
+    maxGripperWidth = 0.075;    // Actual is 8 cm
+    minGraspQuality = 150;
 
     // Path to the active_vision package folder
     path = ros::package::getPath("active_vision");
@@ -414,7 +449,7 @@ public:
     pass.filter(*ptrPtCldEnv);
   }
 
-  // 11: Extracting the major plane (Table) and object
+  // 11: Extracting the major plane (Table) and object and generating object normals
   void dataExtract(){
     // Find the major plane and get its coefficients and indices
     seg.setInputCloud(cPtrPtCldEnv);
@@ -450,7 +485,7 @@ public:
     // Using polygonal prism and hull the extract object above the table
     prism.setInputCloud(cPtrPtCldEnv);
     prism.setInputPlanarHull(cPtrPtCldHull);
-    prism.setHeightLimits(-1.5f, -0.01f);         // Z height (min, max) in m
+    prism.setHeightLimits(-1.5f,-0.01f);         // Z height (min, max) in m
     prism.segment(*objectIndices);
 
     // Using extract to get the point cloud
@@ -458,6 +493,14 @@ public:
     extract.setNegative(false);
     extract.setIndices(objectIndices);
     extract.filter(*ptrPtCldObject);
+
+    // Generating the normals for the object point cloud
+    // compute3DCentroid(*ptrPtCldObject,objCentroid);
+    ne.setInputCloud(cPtrPtCldObject);
+    ne.setSearchMethod(KdTree);
+    // ne.setViewPoint(objCentroid[0],objCentroid[1],objCentroid[2]);
+    ne.setKSearch(10);
+    ne.compute(*ptrObjNormal);
   }
 
   // 12: Generating unexplored point cloud
@@ -559,6 +602,49 @@ public:
       *ptrPtCldCollision += *ptrPtCldTemp;
     }
   }
+
+  // 15: Finding pairs of grasp points from object point cloud
+  void graspsynthesis(){
+    graspsPossible.clear();   // Clear the vector
+    graspPoint graspTemp;
+    Eigen::Vector3f vectA, vectB;
+    double A,B;
+
+    for (int i = 0; i < ptrPtCldObject->size(); i++){
+      for (int j = i+1; j < ptrPtCldObject->size(); j++){
+        graspTemp.p1 = ptrPtCldObject->points[i];
+        graspTemp.p2 = ptrPtCldObject->points[j];
+
+        // Vector connecting the two grasp points and its distance
+        vectA = graspTemp.p1.getVector3fMap() - graspTemp.p2.getVector3fMap();
+        vectB = graspTemp.p2.getVector3fMap() - graspTemp.p1.getVector3fMap();
+        graspTemp.gripperWidth = vectA.norm();
+
+        // If grasp width is greater than the limit then skip the rest
+        if (graspTemp.gripperWidth > maxGripperWidth){
+          continue;
+        }
+
+        // Using normals to find the angle
+        A = std::min(pcl::getAngle3D(vectA,ptrObjNormal->points[i].getNormalVector3fMap()),
+                     pcl::getAngle3D(vectA,ptrObjNormal->points[j].getNormalVector3fMap()))*180/M_PI;
+        B = std::min(pcl::getAngle3D(vectB,ptrObjNormal->points[i].getNormalVector3fMap()),
+                     pcl::getAngle3D(vectB,ptrObjNormal->points[j].getNormalVector3fMap()))*180/M_PI;
+
+        graspTemp.quality = 180 - ( A + B );
+
+        // If grasp quality is less than the min requirement then skip the rest
+        if (graspTemp.quality < minGraspQuality){
+          continue;
+        }
+
+        // Push this into the vector
+        graspsPossible.push_back(graspTemp);
+      }
+    }
+    std::sort(graspsPossible.begin(),graspsPossible.end(),compareGrasp);
+  }
+
 };
 
 // 1: A test function to check if the "moveKinect" functions are working
@@ -618,7 +704,7 @@ void testKinectRead(environment &av, int flag){
 
   if (flag==1) {
     // Setting up the point cloud visualizer
-    pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer ("PCL Viewer"));
+    ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
     viewer->initCameraParameters();
     int vp(0);
     viewer->createViewPort(0.0,0.0,1.0,1.0,vp);
@@ -626,7 +712,7 @@ void testKinectRead(environment &av, int flag){
     viewer->setCameraPosition(0,0,-1,0,0,1,0,-1,0);
 
     // Adding the point cloud
-    rbgPtCldViewer(viewer,av.cPtrPtCldLast,"Raw Data",vp);
+    rbgVis(viewer,av.cPtrPtCldLast,"Raw Data",vp);
 
     std::cout << "Close windows to continue" << std::endl;
     while (!viewer->wasStopped ()){
@@ -646,7 +732,7 @@ void testPtCldFuse(environment &av, int flag){
   av.spawnObject(0,0,0,0);
 
   // Setting up the point cloud visualizer
-  pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer ("PCL Viewer"));
+  ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
   viewer->initCameraParameters();
   int vp[4] = {};
   viewer->createViewPort(0.0,0.5,0.5,1.0,vp[0]);
@@ -667,7 +753,7 @@ void testPtCldFuse(environment &av, int flag){
     av.readKinect();
     av.fuseLastData();
     if (flag == 1){
-      rbgPtCldViewer(viewer,av.cPtrPtCldEnv,"Fuse "+std::to_string(i),vp[i]);
+      rbgVis(viewer,av.cPtrPtCldEnv,"Fuse "+std::to_string(i),vp[i]);
     }
   }
   if (flag == 1){
@@ -694,7 +780,7 @@ void testDataExtract(environment &av, int flag){
 
   if(flag==1){
     // Setting up the point cloud visualizer
-    pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer ("PCL Viewer"));
+    ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
     viewer->initCameraParameters();
     int vp[2] = {};
     viewer->createViewPort(0.0,0.0,0.5,1.0,vp[0]);
@@ -703,8 +789,8 @@ void testDataExtract(environment &av, int flag){
     viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
 
     // ADding the point clouds
-    rbgPtCldViewer(viewer,av.cPtrPtCldTable,"Table",vp[0]);
-    rbgPtCldViewer(viewer,av.cPtrPtCldObject,"Object",vp[1]);
+    rbgVis(viewer,av.cPtrPtCldTable,"Table",vp[0]);
+    rbgNormalVis(viewer,av.cPtrPtCldObject,av.cPtrObjNormal,"Object",vp[1]);
     std::cout << "Showing the table and object extacted. Close viewer to continue" << std::endl;
 
     while (!viewer->wasStopped ()){
@@ -730,7 +816,7 @@ void testGenUnexpPtCld(environment &av, int flag){
 
   if(flag==1){
     // Setting up the point cloud visualizer
-    pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer ("PCL Viewer"));
+    ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
     viewer->initCameraParameters();
     int vp(0);
     viewer->createViewPort(0.0,0.0,1.0,1.0,vp);
@@ -738,8 +824,8 @@ void testGenUnexpPtCld(environment &av, int flag){
     viewer->setCameraPosition(2,1,3,-1,-1,-1,-1,-1,1);
 
     // Adding the point clouds
-    rbgPtCldViewer(viewer,av.cPtrPtCldObject,"Object",vp);
-    rbgPtCldViewer(viewer,av.cPtrPtCldUnexp,"Unexplored pointcloud",vp);
+    rbgVis(viewer,av.cPtrPtCldObject,"Object",vp);
+    rbgVis(viewer,av.cPtrPtCldUnexp,"Unexplored pointcloud",vp);
     std::cout << "Showing the object extacted and unexplored point cloud generated. Close viewer to continue" << std::endl;
     while (!viewer->wasStopped()){
       viewer->spinOnce(100);
@@ -756,7 +842,7 @@ void testUpdateUnexpPtCld(environment &av, int flag){
   av.spawnObject(0,0,0,0);
 
   // Setting up the point cloud visualizer
-  pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer ("PCL Viewer"));
+  ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
   viewer->initCameraParameters();
   int vp[4] = {};
   viewer->createViewPort(0.0,0.5,0.5,1.0,vp[0]);
@@ -782,8 +868,8 @@ void testUpdateUnexpPtCld(environment &av, int flag){
      }
      av.updateUnexploredPtCld();
      if (flag == 1){
-       // rbgPtCldViewer(viewer,av.cPtrPtCldEnv,"Env "+std::to_string(i),vp[i]);
-       rbgPtCldViewer(viewer,av.ptrPtCldUnexp,"Unexp "+std::to_string(i),vp[i]);
+       // rbgVis(viewer,av.cPtrPtCldEnv,"Env "+std::to_string(i),vp[i]);
+       rbgVis(viewer,av.ptrPtCldUnexp,"Unexp "+std::to_string(i),vp[i]);
      }
    }
    if (flag == 1){
@@ -805,7 +891,7 @@ void testGripper(environment &av, int flag, float width){
 
   if (flag == 1) {
     // Setting up the point cloud visualizer
-    pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer ("PCL Viewer"));
+    ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
     viewer->initCameraParameters();
     int vp = {};
     viewer->createViewPort(0.0,0.0,1.0,1.0,vp);
@@ -813,7 +899,7 @@ void testGripper(environment &av, int flag, float width){
     viewer->setCameraPosition(0.5,0,0,-1,0,0,0,0,1);
 
     // Adding the point cloud
-    rbgPtCldViewer(viewer,av.cPtrPtCldGripper,"Gripper",vp);
+    rbgVis(viewer,av.cPtrPtCldGripper,"Gripper",vp);
 
     std::cout << "Showing the gripper. Close viewer to continue" << std::endl;
 
@@ -857,17 +943,17 @@ void testCollision(environment &av, int flag, float width){
 
   if (flag == 1) {
     // Setting up the point cloud visualizer
-    pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer ("PCL Viewer"));
+    ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
     viewer->initCameraParameters();
     int vp = {};
     viewer->createViewPort(0.0,0.0,1.0,1.0,vp);
     // viewer->addCoordinateSystem(1.0);
     viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
 
-    rbgPtCldViewer(viewer,av.ptrPtCldUnexp,"Unexp",vp);
-    rbgPtCldViewer(viewer,av.ptrPtCldCollision,"Collision",vp);
+    rbgVis(viewer,av.ptrPtCldUnexp,"Unexp",vp);
+    rbgVis(viewer,av.ptrPtCldCollision,"Collision",vp);
     av.updateGripper(width,0);    // Only for visulization purpose
-    rbgPtCldViewer(viewer,av.ptrPtCldGripper,"Gripper",vp);
+    rbgVis(viewer,av.ptrPtCldGripper,"Gripper",vp);
     std::cout << "Showing the Gripper(Black), Unexplored(Blue), Collision(Red) points. Close viewer to continue" << std::endl;
 
     while (!viewer->wasStopped ()){
@@ -906,6 +992,60 @@ void testMoveKinectInViewsphere(environment &av){
   std::cout << "*** End ***" << std::endl;
 }
 
+// 11: Grasp synthesis test function
+void testGraspsynthesis(environment &av, int flag){
+  std::cout << "*** In grasp synthesis testing function ***" << std::endl;
+  std::cout << "Min grasp quality threshold is " << av.minGraspQuality << std::endl;
+
+  av.spawnObject(0,0,0,0);
+
+  std::vector<double> kinectPose = {1.4,-M_PI,M_PI/3};
+  av.moveKinectViewsphere(kinectPose);
+  av.readKinect();
+  av.fuseLastData();
+  av.dataExtract();
+  av.graspsynthesis();
+
+  std::cout << "No. of grasp pairs found : " << av.graspsPossible.size() << std::endl;
+  if (av.graspsPossible.size() > 5){
+    std::cout << "Top 5 grasp pairs are : " << std::endl;
+    for (int i = 0; i < 5; i++){
+      std::cout << i + 1 << " " <<
+                   av.graspsPossible[i].p1 << " " <<
+                   av.graspsPossible[i].p2 << " " <<
+                   av.graspsPossible[i].quality << " " <<
+                   av.graspsPossible[i].gripperWidth << std::endl;
+    }
+  }
+
+
+  if(flag==1){
+    // Setting up the point cloud visualizer
+    ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
+    viewer->initCameraParameters();
+    int vp(0);
+    viewer->createViewPort(0.0,0.0,1.0,1.0,vp);
+    viewer->addCoordinateSystem(1.0);
+    viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
+
+    // Adding the point clouds
+    rbgVis(viewer,av.cPtrPtCldObject,"Object",vp);
+    if (av.graspsPossible.size() > 3){
+      for (int i = 0; i < 3; i++){
+        viewer->addSphere<pcl::PointXYZRGB>(av.graspsPossible[i].p1,0.0050,0.0,0.0,(i+1.0)/3.0,"GP_"+std::to_string(i)+"_A",vp);
+        viewer->addSphere<pcl::PointXYZRGB>(av.graspsPossible[i].p2,0.0050,0.0,0.0,(i+1.0)/3.0,"GP_"+std::to_string(i)+"_B",vp);
+      }
+    }
+    std::cout << "Showing the object and top 2 grasp pairs. Close viewer to continue" << std::endl;
+    while (!viewer->wasStopped()){
+      viewer->spinOnce(100);
+      boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+    }
+  }
+
+  std::cout << "*** End ***" << std::endl;
+}
+
 int main (int argc, char** argv){
 
   // Initialize ROS
@@ -924,7 +1064,10 @@ int main (int argc, char** argv){
   // testGripper(activeVision,1,0.05);
   // testCollision(activeVision,1,0.05);
   // testSpawnDeleteObj(activeVision);
-  testMoveKinectInViewsphere(activeVision);
+  // testMoveKinectInViewsphere(activeVision);
+
+  testPtCldFuse(activeVision,0);
+  testGraspsynthesis(activeVision,1);
 
 }
 

@@ -28,9 +28,12 @@
 #include <pcl/common/common.h>
 #include <pcl/common/generate.h>
 #include <pcl/common/random.h>
+#include <pcl/common/distances.h>
+#include <pcl/common/centroid.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/extract_indices.h>
+#include <pcl/filters/crop_hull.h>
 #include <pcl/visualization/cloud_viewer.h>
 #include <pcl/ModelCoefficients.h>
 #include <pcl/sample_consensus/method_types.h>
@@ -38,7 +41,7 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/extract_polygonal_prism_data.h>
 #include <pcl/surface/convex_hull.h>
-#include <pcl/filters/crop_hull.h>
+#include <pcl/features/normal_3d.h>
 
 //Gazebo specific includes
 #include <gazebo_msgs/SetModelState.h>
@@ -47,8 +50,22 @@
 
 // Typedef for convinience
 typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
+typedef pcl::PointCloud<pcl::Normal> ptCldNormal;
+typedef pcl::visualization::PCLVisualizer ptCldVis;
 
-void rbgPtCldViewer(pcl::visualization::PCLVisualizer::Ptr viewer, pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr cloud, std::string name,int vp);
+// Structure to store one grasp related data
+struct graspPoint{
+  float quality;
+  float gripperWidth;
+  pcl::PointXYZRGB p1;
+  pcl::PointXYZRGB p2;
+};
+
+bool compareGrasp(graspPoint A, graspPoint B);
+
+void rbgVis(ptCldVis::Ptr viewer, ptCldColor::ConstPtr cloud, std::string name,int vp);
+
+void rbgNormalVis(ptCldVis::Ptr viewer, ptCldColor::ConstPtr cloud, ptCldNormal::ConstPtr normal, std::string name,int vp);
 
 Eigen::Affine3f homoMatTranspose(Eigen::Affine3f tf);
 
@@ -69,11 +86,14 @@ private:
   pcl::ExtractIndices<pcl::PointXYZRGB> extract;   // Extracting object
   pcl::ConvexHull<pcl::PointXYZRGB> cvHull;        // Convex hull object
   pcl::CropHull<pcl::PointXYZRGB> cpHull;          // Crop hull object
-  pcl::ExtractPolygonalPrismData<pcl::PointXYZRGB> prism;  // Prism object
+  pcl::ExtractPolygonalPrismData<pcl::PointXYZRGB> prism;   // Prism object
+  pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;  // Normal Estimation
+  pcl::search::Search<pcl::PointXYZRGB>::Ptr KdTree{new pcl::search::KdTree<pcl::PointXYZRGB>};  // Used in normal estimation
 
   Eigen::MatrixXf projectionMat;
   Eigen::Affine3f tfKinOptGaz;     // Transform : Kinect Optical Frame to Kinect Gazebo frame
   Eigen::Affine3f tfGazWorld;      // Transform : Kinect Gazebo Frame to Gazebo World frame
+  Eigen::Vector4f objCentroid;
 
   int flag[3];
   int scale;                       // Scale value for unexplored point cloud generation
@@ -122,6 +142,9 @@ public:
   ptCldColor::Ptr ptrPtCldCollision{new ptCldColor};                // Point cloud to store collision points
   ptCldColor::ConstPtr cPtrPtCldCollision{ptrPtCldCollision};       // Constant pointer
 
+  ptCldNormal::Ptr ptrObjNormal{new ptCldNormal};                   // Point cloud to store object normals
+  ptCldNormal::ConstPtr cPtrObjNormal{ptrObjNormal};                // Constant pointer
+
   pcl::ModelCoefficients::Ptr tableCoeff{new pcl::ModelCoefficients()};
   pcl::PointIndices::Ptr tableIndices{new pcl::PointIndices()};
   pcl::PointIndices::Ptr objectIndices{new pcl::PointIndices()};
@@ -133,9 +156,10 @@ public:
   std::vector<double> maxUnexp;                     // Max x,y,z of unexplored pointcloud generated
   std::vector<double> tableCentre;                  // Co-ordinates of table centre
 
-  //Physical properties of the gripper
-  double gripperWidth;
-  double lowerGripperWidth;
+  double maxGripperWidth;                           // Max gripper width
+  double minGripperWidth;                           // Min gripper width
+  double minGraspQuality;
+  std::vector<graspPoint> graspsPossible;           // List of possible grasps
 
   environment(ros::NodeHandle *nh);
 
@@ -183,6 +207,9 @@ public:
 
   // 14: Collision check for gripper and unexplored point cloud
   void collisionCheck(float width);
+
+  // 15: Finding pairs of grasp points from object point cloud
+  void graspsynthesis();
 };
 
 // 1: A test function to check if the "moveKinect" function is working
@@ -214,5 +241,8 @@ void testSpawnDeleteObj(environment &av);
 
 // 10: A test function to move the kinect in a viewsphere continuously
 void testMoveKinectInViewsphere(environment &av);
+
+// 11: Grasp synthesis test function
+void testGraspsynthesis(environment &av, int flag);
 
 #endif

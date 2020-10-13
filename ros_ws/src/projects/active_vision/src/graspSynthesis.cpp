@@ -22,8 +22,8 @@ bool collisionCheck(ptCldColor::ConstPtr unexp_cloud, pcl::PointXYZRGB p1, pcl::
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr hand_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
 	//Taken directly from 2018 code- TODO: Update
  	float newPt1x = float(p1.x + 0.015*p1_normal.normal_x);
- 	float newPt1y = float(p1.y + 0.015*p1_normal.normal_y); 
- 	float newPt1z = float(p1.z + 0.015*p1_normal.normal_z); 
+ 	float newPt1y = float(p1.y + 0.015*p1_normal.normal_y);
+ 	float newPt1z = float(p1.z + 0.015*p1_normal.normal_z);
 	Eigen::Vector3f v_camera, v_point, axis;
   	Eigen::Vector3f v_point_norm, v_camera_norm;
   	v_camera << 1, 0, 0;
@@ -34,7 +34,7 @@ bool collisionCheck(ptCldColor::ConstPtr unexp_cloud, pcl::PointXYZRGB p1, pcl::
   	axis = v_camera_norm.cross(v_point_norm);  // get axis with cross product between two vectors
   	axis << axis[0]/axis.norm(),axis[1]/axis.norm(),axis[2]/axis.norm();
   	if(v_point.norm() == 0){
-      return false;    
+      return false;
     } else {
       angle = acos(v_point.dot(v_camera) / (v_point.norm() * v_camera.norm())); // "division by zero tackled"
     }
@@ -95,7 +95,7 @@ std::tuple<double, pcl::PointXYZRGB, pcl::PointXYZRGB>  bruteForceSearch(ptCldCo
 						}
 					}
 				}
-			} 
+			}
 		}
 	}
 	//std::cout << bestQuality << bestPointA << bestPointB << std::endl;
@@ -122,7 +122,7 @@ void publishGraspSynthesis(environment &av, int flag){
 	double quality = 300;
 	pcl::PointXYZRGB graspPointA;
 	pcl::PointXYZRGB graspPointB;
-	std::tie(quality, graspPointA, graspPointB) = bruteForceSearch(unexp_cloud, *obj_cloud, *obj_normals, av.lowerGripperWidth, av.gripperWidth);
+	std::tie(quality, graspPointA, graspPointB) = bruteForceSearch(unexp_cloud, *obj_cloud, *obj_normals, av.minGripperWidth, av.maxGripperWidth);
 	//I take a hammer and FIX the code
 	if(1 == flag){
 		const pcl::PointXYZ *pointA = new const pcl::PointXYZ(graspPointA.x, graspPointA.y, graspPointA.z);
@@ -135,7 +135,7 @@ void publishGraspSynthesis(environment &av, int flag){
     	viewer->setCameraPosition(0,0,-1,0,0,1,0,-1,0);
     	viewer->addSphere(*pointA, .02, 0, 255, 0, "sphere1");
     	viewer->addSphere(*pointB, .02, 0, 255, 0, "sphere2");
-    	rbgPtCldViewer(viewer,obj_cloud,"Raw Data",vp);
+    	rbgVis(viewer,obj_cloud,"Raw Data",vp);
     	while (!viewer->wasStopped ()){
       		viewer->spinOnce(100);
       		boost::this_thread::sleep (boost::posix_time::microseconds(100000));
