@@ -52,10 +52,12 @@ typedef pcl::visualization::PCLVisualizer ptCldVis;
 
 // Structure to store one grasp related data
 struct graspPoint{
-  float quality;
-  float gripperWidth;
+  float quality{0};
+  float gripperWidth{0.05};
   pcl::PointXYZRGB p1;
   pcl::PointXYZRGB p2;
+  std::vector<float> pose{0,0,0,0,0,0};    // Note: This is not the final gripper pose
+  float addnlPitch{0};
 };
 
 bool compareGrasp(graspPoint A, graspPoint B){
@@ -107,11 +109,11 @@ private:
   pcl::CropHull<pcl::PointXYZRGB> cpHull;          // Crop hull object
   pcl::ExtractPolygonalPrismData<pcl::PointXYZRGB> prism;   // Prism object
   pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;  // Normal Estimation
-  pcl::search::Search<pcl::PointXYZRGB>::Ptr KdTree{new pcl::search::KdTree<pcl::PointXYZRGB>};  // Used in normal estimation
 
   Eigen::MatrixXf projectionMat;
   Eigen::Affine3f tfKinOptGaz;     // Transform : Kinect Optical Frame to Kinect Gazebo frame
   Eigen::Affine3f tfGazWorld;      // Transform : Kinect Gazebo Frame to Gazebo World frame
+  Eigen::Affine3f tfGripper;       // Transform : For gripper based on grasp points found
   Eigen::Vector4f objCentroid;
 
   int flag[3] = {};
@@ -179,6 +181,7 @@ public:
   double minGripperWidth;                           // Min gripper width
   double minGraspQuality;
   std::vector<graspPoint> graspsPossible;           // List of possible grasps
+  int selectedGrasp;                                // Selected grasp
 
   environment(ros::NodeHandle *nh){
     pubKinectPose = nh->advertise<gazebo_msgs::ModelState> ("/gazebo/set_model_state", 1);
@@ -207,6 +210,7 @@ public:
     minGripperWidth = 0.005;
     maxGripperWidth = 0.075;    // Actual is 8 cm
     minGraspQuality = 150;
+    selectedGrasp = -1;
 
     // Path to the active_vision package folder
     path = ros::package::getPath("active_vision");
@@ -306,34 +310,47 @@ public:
     std::cout << "Ignore the PLY reader error on 'face' and 'rgb'." << std::endl;
   }
 
-  // 7: Update gripper based on finger width
+  // 7: Update gripper
   // 0 -> Hand + Left finger + Right finger
   // 1 -> Hand only
   // 2 -> Left Finger only
   // 3 -> Right FInger only
-  void updateGripper(float width,int choice){
+  void updateGripper(int index ,int choice){
     if (choice == 0) {
       // Adding the gripper hand
       *ptrPtCldGripper=*ptrPtCldGrpHnd;
 
       // Translating the left finger and adding
-      pcl::transformPointCloud(*ptrPtCldGrpLfgr, *ptrPtCldTemp, pcl::getTransformation(0,width/2,fingerZOffset,0,0,0));
+      pcl::transformPointCloud(*ptrPtCldGrpLfgr, *ptrPtCldTemp,
+                              pcl::getTransformation(0,graspsPossible[index].gripperWidth/2,fingerZOffset,0,0,0));
       *ptrPtCldGripper += *ptrPtCldTemp;
 
       // Translating the right finger and adding
-      pcl::transformPointCloud(*ptrPtCldGrpRfgr, *ptrPtCldTemp, pcl::getTransformation(0,-width/2,fingerZOffset,0,0,0));
+      pcl::transformPointCloud(*ptrPtCldGrpRfgr, *ptrPtCldTemp,
+                              pcl::getTransformation(0,-graspsPossible[index].gripperWidth/2,fingerZOffset,0,0,0));
       *ptrPtCldGripper += *ptrPtCldTemp;
     } else if (choice == 1) {
-      *ptrPtCldGripper=*ptrPtCldGrpHnd;
+      *ptrPtCldGripper = *ptrPtCldGrpHnd;
     } else if (choice == 2){
       // Translating the left finger and setting
-      pcl::transformPointCloud(*ptrPtCldGrpLfgr, *ptrPtCldTemp, pcl::getTransformation(0,width/2,fingerZOffset,0,0,0));
+      pcl::transformPointCloud(*ptrPtCldGrpLfgr, *ptrPtCldTemp,
+                               pcl::getTransformation(0,graspsPossible[index].gripperWidth/2,fingerZOffset,0,0,0));
       *ptrPtCldGripper = *ptrPtCldTemp;
     } else if (choice == 3){
       // Translating the right finger and setting
-      pcl::transformPointCloud(*ptrPtCldGrpRfgr, *ptrPtCldTemp, pcl::getTransformation(0,-width/2,fingerZOffset,0,0,0));
+      pcl::transformPointCloud(*ptrPtCldGrpRfgr, *ptrPtCldTemp,
+                               pcl::getTransformation(0,-graspsPossible[index].gripperWidth/2,fingerZOffset,0,0,0));
       *ptrPtCldGripper = *ptrPtCldTemp;
     }
+
+    tfGripper = pcl::getTransformation(graspsPossible[index].pose[0],graspsPossible[index].pose[1],
+                                       graspsPossible[index].pose[2],graspsPossible[index].pose[3],
+                                       graspsPossible[index].pose[4],graspsPossible[index].pose[5])*
+                pcl::getTransformation(0,0,0,0,graspsPossible[index].addnlPitch,0)*
+                pcl::getTransformation(0,0,-0.0447-fingerZOffset,0,0,0);
+    pcl::transformPointCloud(*ptrPtCldGripper, *ptrPtCldGripper, tfGripper);
+
+    ptrPtCldTemp->clear();
   }
 
   // 8A: Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
@@ -416,6 +433,7 @@ public:
 
   // 10: Function to Fuse last data with existing data
   void fuseLastData(){
+    ptrPtCldTemp->clear();
     // Transform : Kinect Gazebo Frame to Gazebo World frame
     tfGazWorld = pcl::getTransformation(lastKinectPoseCartesian[0],lastKinectPoseCartesian[1],lastKinectPoseCartesian[2],\
                                         lastKinectPoseCartesian[3],lastKinectPoseCartesian[4],lastKinectPoseCartesian[5]);
@@ -447,9 +465,11 @@ public:
     pass.setFilterFieldName("z");
     pass.setFilterLimits(0.2,10);
     pass.filter(*ptrPtCldEnv);
+
+    ptrPtCldTemp->clear();
   }
 
-  // 11: Extracting the major plane (Table) and object and generating object normals
+  // 11: Extracting the major plane (Table) and object
   void dataExtract(){
     // Find the major plane and get its coefficients and indices
     seg.setInputCloud(cPtrPtCldEnv);
@@ -493,14 +513,6 @@ public:
     extract.setNegative(false);
     extract.setIndices(objectIndices);
     extract.filter(*ptrPtCldObject);
-
-    // Generating the normals for the object point cloud
-    // compute3DCentroid(*ptrPtCldObject,objCentroid);
-    ne.setInputCloud(cPtrPtCldObject);
-    ne.setSearchMethod(KdTree);
-    // ne.setViewPoint(objCentroid[0],objCentroid[1],objCentroid[2]);
-    ne.setKSearch(10);
-    ne.compute(*ptrObjNormal);
   }
 
   // 12: Generating unexplored point cloud
@@ -579,33 +591,22 @@ public:
     extract.setIndices(occludedIndices);
     extract.setNegative(false);
     extract.filter(*ptrPtCldUnexp);
+
+    ptrPtCldTemp->clear();
   }
 
-  // 14: Collision check for gripper and unexplored point cloud
-  void collisionCheck(float width){
-    ptrPtCldCollision->clear();             // Reset the collision cloud
-
-    cvHull.setInputCloud(cPtrPtCldGripper);
-    cvHull.setDimension(3);
-
-    cpHull.setInputCloud(ptrPtCldUnexp);
-    cpHull.setHullCloud(ptrPtCldHull);
-    cpHull.setDim(3);
-    cpHull.setCropOutside(true);
-
-    // Get concave hull of the gripper hand, fingers in sequence and check
-    for (int i = 1; i <= 3; i++) {
-      updateGripper(width,i);
-      cvHull.reconstruct(*ptrPtCldHull,hullVertices);
-      cpHull.setHullIndices(hullVertices);
-      cpHull.filter(*ptrPtCldTemp);
-      *ptrPtCldCollision += *ptrPtCldTemp;
-    }
-  }
-
-  // 15: Finding pairs of grasp points from object point cloud
+  // 14: Finding normals and pairs of grasp points from object point cloud
   void graspsynthesis(){
+    // Generating the normals for the object point cloud
+    pcl::search::Search<pcl::PointXYZRGB>::Ptr KdTree{new pcl::search::KdTree<pcl::PointXYZRGB>};
+    ne.setInputCloud(cPtrPtCldObject);
+    ne.setSearchMethod(KdTree);
+    ne.setKSearch(10);
+    ne.compute(*ptrObjNormal);
+
     graspsPossible.clear();   // Clear the vector
+    selectedGrasp = -1;
+
     graspPoint graspTemp;
     Eigen::Vector3f vectA, vectB;
     double A,B;
@@ -618,7 +619,7 @@ public:
         // Vector connecting the two grasp points and its distance
         vectA = graspTemp.p1.getVector3fMap() - graspTemp.p2.getVector3fMap();
         vectB = graspTemp.p2.getVector3fMap() - graspTemp.p1.getVector3fMap();
-        graspTemp.gripperWidth = vectA.norm();
+        graspTemp.gripperWidth = vectA.norm()+0.005; // Giving a 5mm tolerance
 
         // If grasp width is greater than the limit then skip the rest
         if (graspTemp.gripperWidth > maxGripperWidth){
@@ -645,9 +646,90 @@ public:
     std::sort(graspsPossible.begin(),graspsPossible.end(),compareGrasp);
   }
 
+  // 15: Given a grasp point pair find the gripper orientation
+  void findGripperPose(int index){
+
+    Eigen::Vector3f xAxis,yAxis,zAxis;
+    Eigen::Vector3f xyPlane(0,0,1);
+
+    yAxis = graspsPossible[index].p1.getVector3fMap() - graspsPossible[index].p2.getVector3fMap(); yAxis.normalize();
+    zAxis = yAxis.cross(xyPlane);
+    xAxis = yAxis.cross(zAxis);
+
+    tf::Matrix3x3 rotMat;
+    double Roll,Pitch,Yaw;
+    rotMat.setValue(xAxis[0],yAxis[0],zAxis[0],
+                    xAxis[1],yAxis[1],zAxis[1],
+                    xAxis[2],yAxis[2],zAxis[2]);
+    rotMat.getRPY(Roll,Pitch,Yaw);
+
+    std::vector<float> pose = {0,0,0,0,0,0};
+    pose[0] = (graspsPossible[index].p1.x + graspsPossible[index].p2.x)/2;
+    pose[1] = (graspsPossible[index].p1.y + graspsPossible[index].p2.y)/2;
+    pose[2] = (graspsPossible[index].p1.z + graspsPossible[index].p2.z)/2;
+    pose[3] = Roll; pose[4] = Pitch; pose[5] = Yaw;
+
+    graspsPossible[index].pose = pose;
+  }
+
+  // 16: Collision check for gripper and unexplored point cloud
+  void collisionCheck(){
+
+    cvHull.setInputCloud(cPtrPtCldGripper);
+    cvHull.setDimension(3);
+
+    cpHull.setInputCloud(ptrPtCldUnexp);
+    cpHull.setHullCloud(ptrPtCldHull);
+    cpHull.setDim(3);
+    cpHull.setCropOutside(true);
+
+    bool stop = false;
+    int nOrientations = 8;
+    // Loop through all the possible grasps available
+    for(int i = 0; (i < graspsPossible.size()) && (stop == false); i++){
+      findGripperPose(i);
+      // Check for each orientation
+      for(int j = 0; (j < nOrientations) && (stop == false); j++){
+        graspsPossible[i].addnlPitch = j*(2*M_PI)/nOrientations;
+        // Get concave hull of the gripper fingers and hand in sequence and check
+        for(int k = 3; k >= 1; k--){
+          ptrPtCldCollision->clear();    // Reset the collision cloud
+          updateGripper(i,k);
+          cvHull.reconstruct(*ptrPtCldHull,hullVertices);
+          cpHull.setHullIndices(hullVertices);
+          cpHull.filter(*ptrPtCldCollision);
+          // std::cout << i << " Orientation " << j << " " << "Object " << k << " Ptcld size " << ptrPtCldCollision->size() << std::endl;
+          // If collision detected then exit this loop and check next orientation
+          if(ptrPtCldCollision->size() > 0){
+            break;
+          }
+        }
+        // If this doesn't have collision, this grasp is OK. So exit the loop. No more orientation or grasp check required
+        if(ptrPtCldCollision->size() == 0){
+          selectedGrasp = i;
+          // std::cout << "Setting selected grasp to " << selectedGrasp << std::endl;
+          stop = true;
+        }
+      }
+    }
+  }
 };
 
-// 1: A test function to check if the "moveKinect" functions are working
+// 1: A test function spawn and delete objects in gazebo
+void testSpawnDeleteObj(environment &av){
+  std::cout << "*** In object spawn and delete testing function ***" << std::endl;
+  int flag = 0;
+  for (int i = 0; i < 4; i++) {
+    av.spawnObject(i,0,0,0);
+    std::cout << "Object " << i+1 << " spawned. Enter any key to continue. "; std::cin >> flag;
+    av.deleteObject(i);
+    std::cout << "Object " << i+1 << " deleted." << std::endl;
+    sleep(1);
+  }
+  std::cout << "*** End ***" << std::endl;
+}
+
+// 2A: A test function to check if the "moveKinect" functions are working
 void testKinectMovement(environment &av){
   std::cout << "*** In kinect movement testing function ***" << std::endl;
   int flag = 0;
@@ -685,10 +767,23 @@ void testKinectMovement(environment &av){
   std::cout << "*** End ***" << std::endl;
 }
 
-// 2: A test function to check if the "readKinect" function is working
+// 2B: A test function to move the kinect in a viewsphere continuously
+void testMoveKinectInViewsphere(environment &av){
+  std::cout << "*** In Kinect move in viewsphere testing function ***" << std::endl;
+  for (double i = M_PI/2; i > 0;) {
+    for (double j = 0; j < 2*M_PI;) {
+      av.moveKinectViewsphere({1.4,j,i});
+      j += 2*M_PI/10;
+    }
+    std::cout << (int)((M_PI/2-i)/(M_PI/2/10)+1)<< " out of 10 completed." << std::endl;
+    i -= M_PI/2/10;
+  }
+  std::cout << "*** End ***" << std::endl;
+}
+
+// 3: A test function to check if the "readKinect" function is working
 void testKinectRead(environment &av, int flag){
   std::cout << "*** In kinect data read testing function ***" << std::endl;
-
   av.spawnObject(0,0,0,0);
 
   int row; int col;
@@ -723,10 +818,11 @@ void testKinectRead(environment &av, int flag){
     cv::imshow("Depth Feed", av.ptrDepthLast->image);
     cv::waitKey(0);
   }
+  av.deleteObject(0);
   std::cout << "*** End ***" << std::endl;
 }
 
-// 3: A test function to check fusing of data
+// 4: A test function to check fusing of data
 void testPtCldFuse(environment &av, int flag){
   std::cout << "*** In point cloud data fusion testing function ***" << std::endl;
   av.spawnObject(0,0,0,0);
@@ -763,13 +859,13 @@ void testPtCldFuse(environment &av, int flag){
       boost::this_thread::sleep (boost::posix_time::microseconds(100000));
     }
   }
+  av.deleteObject(0);
   std::cout << "*** End ***" << std::endl;
 }
 
-// 4: A test function to extract table and object data
+// 5: A test function to extract table and object data
 void testDataExtract(environment &av, int flag){
   std::cout << "*** In table and object extraction testing function ***" << std::endl;
-
   av.spawnObject(0,0,0,0);
 
   std::vector<double> kinectPose = {1.4,-M_PI,M_PI/3};
@@ -790,7 +886,7 @@ void testDataExtract(environment &av, int flag){
 
     // ADding the point clouds
     rbgVis(viewer,av.cPtrPtCldTable,"Table",vp[0]);
-    rbgNormalVis(viewer,av.cPtrPtCldObject,av.cPtrObjNormal,"Object",vp[1]);
+    rbgVis(viewer,av.cPtrPtCldObject,"Object",vp[1]);
     std::cout << "Showing the table and object extacted. Close viewer to continue" << std::endl;
 
     while (!viewer->wasStopped ()){
@@ -798,13 +894,13 @@ void testDataExtract(environment &av, int flag){
       boost::this_thread::sleep (boost::posix_time::microseconds(100000));
     }
   }
+  av.deleteObject(0);
   std::cout << "*** End ***" << std::endl;
 }
 
-// 5: A test function to generate unexplored point cloud
+// 6: A test function to generate unexplored point cloud
 void testGenUnexpPtCld(environment &av, int flag){
   std::cout << "*** In unexplored point cloud generation testing function ***" << std::endl;
-
   av.spawnObject(0,0,0,0);
 
   std::vector<double> kinectPose = {1.4,-M_PI,M_PI/3};
@@ -832,13 +928,13 @@ void testGenUnexpPtCld(environment &av, int flag){
       boost::this_thread::sleep (boost::posix_time::microseconds(100000));
     }
   }
+  av.deleteObject(0);
   std::cout << "*** End ***" << std::endl;
 }
 
-// 6: A test function to update unexplored point cloud
+// 7: A test function to update unexplored point cloud
 void testUpdateUnexpPtCld(environment &av, int flag){
   std::cout << "*** In unexplored point cloud update testing function ***" << std::endl;
-
   av.spawnObject(0,0,0,0);
 
   // Setting up the point cloud visualizer
@@ -858,36 +954,40 @@ void testUpdateUnexpPtCld(environment &av, int flag){
                                                   {1.4,0,M_PI/3},
                                                   {1.4,M_PI/2,M_PI/3}};
 
-   for (int i = 0; i < 4; i++) {
-     av.moveKinectViewsphere(kinectPoses[i]);
-     av.readKinect();
-     av.fuseLastData();
-     av.dataExtract();
-     if (i==0){
-       av.genUnexploredPtCld();
-     }
-     av.updateUnexploredPtCld();
-     if (flag == 1){
-       // rbgVis(viewer,av.cPtrPtCldEnv,"Env "+std::to_string(i),vp[i]);
-       rbgVis(viewer,av.ptrPtCldUnexp,"Unexp "+std::to_string(i),vp[i]);
-     }
-   }
-   if (flag == 1){
-     std::cout << "Close viewer to continue." << std::endl;
-     while (!viewer->wasStopped ()){
-       viewer->spinOnce(100);
-       boost::this_thread::sleep (boost::posix_time::microseconds(100000));
-     }
-   }
+  for (int i = 0; i < 4; i++) {
+    av.moveKinectViewsphere(kinectPoses[i]);
+    av.readKinect();
+    av.fuseLastData();
+    av.dataExtract();
+    if (i==0){
+      av.genUnexploredPtCld();
+    }
+    av.updateUnexploredPtCld();
+    if (flag == 1){
+      // rbgVis(viewer,av.cPtrPtCldEnv,"Env "+std::to_string(i),vp[i]);
+      rbgVis(viewer,av.ptrPtCldUnexp,"Unexp "+std::to_string(i),vp[i]);
+    }
+  }
+  if (flag == 1){
+    std::cout << "Close viewer to continue." << std::endl;
+    while (!viewer->wasStopped ()){
+      viewer->spinOnce(100);
+      boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+    }
+  }
+  av.deleteObject(0);
   std::cout << "*** End ***" << std::endl;
 }
 
-// 7: A test function to load and update gripper
+// 8: A test function to load and update gripper
 void testGripper(environment &av, int flag, float width){
   std::cout << "*** In gripper testing function ***" << std::endl;
 
+  graspPoint graspTemp; // Creating a dummy grasp
+  av.graspsPossible.push_back(graspTemp);
+
   av.loadGripper();
-  av.updateGripper(width,0);
+  av.updateGripper(0,0);
 
   if (flag == 1) {
     // Setting up the point cloud visualizer
@@ -911,9 +1011,72 @@ void testGripper(environment &av, int flag, float width){
   std::cout << "*** End ***" << std::endl;
 }
 
-// 8: A test function to check the collision check algorithm
-void testCollision(environment &av, int flag, float width){
-  std::cout << "*** In collision testing function ***" << std::endl;
+// 9: Grasp synthesis test function
+void testGraspsynthesis(environment &av, int flag){
+  std::cout << "*** In grasp synthesis testing function ***" << std::endl;
+  av.spawnObject(0,0,0,0);
+
+  // 4 kinect position
+  std::vector<std::vector<double>> kinectPoses = {{1.4,-M_PI,M_PI/3},
+                                                  {1.4,-M_PI/2,M_PI/3},
+                                                  {1.4,0,M_PI/3},
+                                                  {1.4,M_PI/2,M_PI/3}};
+
+  for (int i = 0; i < 4; i++) {
+    av.moveKinectViewsphere(kinectPoses[i]);
+    av.readKinect();
+    av.fuseLastData();
+    av.dataExtract();
+  }
+
+  std::cout << "Min grasp quality threshold is " << av.minGraspQuality << std::endl;
+  av.graspsynthesis();
+
+  std::cout << "No. of grasp pairs found : " << av.graspsPossible.size() << std::endl;
+  if (av.graspsPossible.size() > 5){
+    std::cout << "Top 5 grasp pairs are : " << std::endl;
+    for (int i = 0; i < 5; i++){
+      std::cout << i + 1 << " " <<
+                   av.graspsPossible[i].p1 << " " <<
+                   av.graspsPossible[i].p2 << " " <<
+                   av.graspsPossible[i].quality << " " <<
+                   av.graspsPossible[i].gripperWidth << std::endl;
+    }
+  }
+
+  if(flag==1){
+    // Setting up the point cloud visualizer
+    ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
+    viewer->initCameraParameters();
+    int vp(0);
+    viewer->createViewPort(0.0,0.0,1.0,1.0,vp);
+    viewer->addCoordinateSystem(1.0);
+    viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
+
+    // Adding the point clouds
+    rbgVis(viewer,av.cPtrPtCldEnv,"Environment",vp);
+    if (av.graspsPossible.size() > 3){
+      for (int i = 0; i < 3; i++){
+        viewer->addSphere<pcl::PointXYZRGB>(av.graspsPossible[i].p1,0.0050,0.0,0.0,(i+1.0)/3.0,"GP_"+std::to_string(i)+"_A",vp);
+        viewer->addSphere<pcl::PointXYZRGB>(av.graspsPossible[i].p2,0.0050,0.0,0.0,(i+1.0)/3.0,"GP_"+std::to_string(i)+"_B",vp);
+      }
+    }
+    std::cout << "Showing the object and top 3 grasp pairs. Close viewer to continue" << std::endl;
+    while (!viewer->wasStopped()){
+      viewer->spinOnce(100);
+      boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+    }
+  }
+  av.deleteObject(0);
+  std::cout << "*** End ***" << std::endl;
+}
+
+// 10A: A test function to check the collision check algorithm with dummy data
+void testCollisionDummy(environment &av, bool result, int flag){
+  std::cout << "*** In dummy collision testing function ***" << std::endl;
+
+  graspPoint graspTemp; // Creating a dummy grasp
+  av.graspsPossible.push_back(graspTemp);
 
   av.loadGripper();
 
@@ -923,17 +1086,26 @@ void testCollision(environment &av, int flag, float width){
   std::uint32_t seed = static_cast<std::uint32_t> (time (nullptr));
   pcl::common::UniformGenerator<float>::Parameters x_params(0, 0.03, seed++);
   generator.setParametersForX(x_params);
-  pcl::common::UniformGenerator<float>::Parameters y_params(-0.15, 0.15, seed++);;
+  pcl::common::UniformGenerator<float>::Parameters y_params(-0.15, 0.15, seed++);
   generator.setParametersForY(y_params);
-  pcl::common::UniformGenerator<float>::Parameters z_params(-0.15, 0.15, seed++);;
-  generator.setParametersForZ(z_params);
-  int result = generator.fill(5000, 1, *av.ptrPtCldUnexp);
+  if(result == true){
+    pcl::common::UniformGenerator<float>::Parameters z_params(-0.15, -0.01, seed++);
+    generator.setParametersForZ(z_params);
+  }else{
+    pcl::common::UniformGenerator<float>::Parameters z_params(-0.15, 0.15, seed++);
+    generator.setParametersForZ(z_params);
+  }
+
+  int dummy = generator.fill(5000, 1, *av.ptrPtCldUnexp);
   // Setting color to blue
   for (int i = 0; i < av.ptrPtCldUnexp->size(); i++) {
     av.ptrPtCldUnexp->points[i].b = 200;
   }
 
-  av.collisionCheck(width);
+  av.collisionCheck();
+  if (av.selectedGrasp == -1) {
+    std::cout << "No grasp orientation for the grasp points found. Showing the last tested grasp." << std::endl;
+  }
 
   // Setting color to red
   for (int i = 0; i < av.ptrPtCldCollision->size(); i++) {
@@ -952,7 +1124,7 @@ void testCollision(environment &av, int flag, float width){
 
     rbgVis(viewer,av.ptrPtCldUnexp,"Unexp",vp);
     rbgVis(viewer,av.ptrPtCldCollision,"Collision",vp);
-    av.updateGripper(width,0);    // Only for visulization purpose
+    av.updateGripper(0,0);    // Only for visulization purpose
     rbgVis(viewer,av.ptrPtCldGripper,"Gripper",vp);
     std::cout << "Showing the Gripper(Black), Unexplored(Blue), Collision(Red) points. Close viewer to continue" << std::endl;
 
@@ -964,85 +1136,58 @@ void testCollision(environment &av, int flag, float width){
   std::cout << "*** End ***" << std::endl;
 }
 
-// 9: A test function spawn and delete objects in gazebo
-void testSpawnDeleteObj(environment &av){
-  std::cout << "*** In object spawn and delete testing function ***" << std::endl;
-  int flag = 0;
-  for (int i = 0; i < 4; i++) {
-    av.spawnObject(i,0,0,0);
-    std::cout << "Object " << i+1 << " spawned. Enter any key to continue. "; std::cin >> flag;
-    av.deleteObject(i);
-    std::cout << "Object " << i+1 << " deleted." << std::endl;
-    sleep(1);
-  }
-  std::cout << "*** End ***" << std::endl;
-}
-
-// 10: A test function to move the kinect in a viewsphere continuously
-void testMoveKinectInViewsphere(environment &av){
-  std::cout << "*** In Kinect move in viewsphere testing function ***" << std::endl;
-  for (double i = M_PI/2; i > 0;) {
-    for (double j = 0; j < 2*M_PI;) {
-      av.moveKinectViewsphere({1.4,j,i});
-      j += 2*M_PI/10;
-    }
-    std::cout << (int)((M_PI/2-i)/(M_PI/2/10)+1)<< " out of 10 completed." << std::endl;
-    i -= M_PI/2/10;
-  }
-  std::cout << "*** End ***" << std::endl;
-}
-
-// 11: Grasp synthesis test function
-void testGraspsynthesis(environment &av, int flag){
-  std::cout << "*** In grasp synthesis testing function ***" << std::endl;
-  std::cout << "Min grasp quality threshold is " << av.minGraspQuality << std::endl;
-
+// 10B: A test function to check the collision check algorithm with object and grasp points
+void testCollision(environment &av, int flag){
+  std::cout << "*** In collision testing function ***" << std::endl;
   av.spawnObject(0,0,0,0);
+  av.loadGripper();
 
-  std::vector<double> kinectPose = {1.4,-M_PI,M_PI/3};
-  av.moveKinectViewsphere(kinectPose);
-  av.readKinect();
-  av.fuseLastData();
-  av.dataExtract();
-  av.graspsynthesis();
+  // 4 kinect poses
+  std::vector<std::vector<double>> kinectPoses = {{1.4,-M_PI,M_PI/3},
+                                                  {1.4,-M_PI/2,M_PI/3},
+                                                  {1.4,0,M_PI/3},
+                                                  {1.4,M_PI/2,M_PI/3}};
 
-  std::cout << "No. of grasp pairs found : " << av.graspsPossible.size() << std::endl;
-  if (av.graspsPossible.size() > 5){
-    std::cout << "Top 5 grasp pairs are : " << std::endl;
-    for (int i = 0; i < 5; i++){
-      std::cout << i + 1 << " " <<
-                   av.graspsPossible[i].p1 << " " <<
-                   av.graspsPossible[i].p2 << " " <<
-                   av.graspsPossible[i].quality << " " <<
-                   av.graspsPossible[i].gripperWidth << std::endl;
+  for (int i = 0; i < 4; i++) {
+    av.moveKinectViewsphere(kinectPoses[i]);
+    av.readKinect();
+    av.fuseLastData();
+    av.dataExtract();
+    if (i==0){
+      av.genUnexploredPtCld();
     }
+    av.updateUnexploredPtCld();
   }
 
+  std::cout << "Min grasp quality threshold is " << av.minGraspQuality << std::endl;
+  av.graspsynthesis();
+  std::cout << "Grasp synthesis complete." << std::endl;
 
-  if(flag==1){
-    // Setting up the point cloud visualizer
-    ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
-    viewer->initCameraParameters();
-    int vp(0);
-    viewer->createViewPort(0.0,0.0,1.0,1.0,vp);
-    viewer->addCoordinateSystem(1.0);
-    viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
+  av.collisionCheck();
+  if(av.selectedGrasp == -1){
+    std::cout << "No grasp orientation for the grasp points found." << std::endl;
+  }else{
+    if (flag == 1) {
+      // Setting up the point cloud visualizer
+      ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
+      viewer->initCameraParameters();
+      int vp = {};
+      viewer->createViewPort(0.0,0.0,1.0,1.0,vp);
+      viewer->addCoordinateSystem(1.0);
+      viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
 
-    // Adding the point clouds
-    rbgVis(viewer,av.cPtrPtCldObject,"Object",vp);
-    if (av.graspsPossible.size() > 3){
-      for (int i = 0; i < 3; i++){
-        viewer->addSphere<pcl::PointXYZRGB>(av.graspsPossible[i].p1,0.0050,0.0,0.0,(i+1.0)/3.0,"GP_"+std::to_string(i)+"_A",vp);
-        viewer->addSphere<pcl::PointXYZRGB>(av.graspsPossible[i].p2,0.0050,0.0,0.0,(i+1.0)/3.0,"GP_"+std::to_string(i)+"_B",vp);
+      rbgVis(viewer,av.cPtrPtCldEnv,"Environment",vp);
+      av.updateGripper(av.selectedGrasp,0);    // Only for visulization purpose
+      rbgVis(viewer,av.ptrPtCldGripper,"Gripper",vp);
+      std::cout << "Showing the object and selected gripper position. Close viewer to continue" << std::endl;
+
+      while (!viewer->wasStopped ()){
+        viewer->spinOnce(100);
+        boost::this_thread::sleep (boost::posix_time::microseconds(100000));
       }
     }
-    std::cout << "Showing the object and top 2 grasp pairs. Close viewer to continue" << std::endl;
-    while (!viewer->wasStopped()){
-      viewer->spinOnce(100);
-      boost::this_thread::sleep (boost::posix_time::microseconds(100000));
-    }
   }
-
+  av.deleteObject(0);
   std::cout << "*** End ***" << std::endl;
 }
 
@@ -1055,20 +1200,58 @@ int main (int argc, char** argv){
   environment activeVision(&nh);
   sleep(1); // Delay to ensure all publishers and subscribers are connected
 
-  // testKinectMovement(activeVision);
-  // testKinectRead(activeVision,1);
-  // testPtCldFuse(activeVision,1);
-  // testDataExtract(activeVision,1);
-  // testGenUnexpPtCld(activeVision,1);
-  // testUpdateUnexpPtCld(activeVision,1);
-  // testGripper(activeVision,1,0.05);
-  // testCollision(activeVision,1,0.05);
-  // testSpawnDeleteObj(activeVision);
-  // testMoveKinectInViewsphere(activeVision);
-
-  testPtCldFuse(activeVision,0);
-  testGraspsynthesis(activeVision,1);
-
+  int choice;
+  std::cout << "Available choices for test functions : " << std::endl;
+  std::cout << "1  : Spawn and delete 4 four objects on the table." << std::endl;
+  std::cout << "2  : Load and view the gripper model." << std::endl;
+  std::cout << "3  : Move the kinect to a custom position." << std::endl;
+  std::cout << "4  : Continuously move the kinect in a viewsphere with centre on the table." << std::endl;
+  std::cout << "5  : Read and view the data from kinect." << std::endl;
+  std::cout << "6  : Read and fuse the data from 4 different viewpoints." << std::endl;
+  std::cout << "7  : Extract the table and object from point cloud." << std::endl;
+  std::cout << "8  : Generate the initial unexplored pointcloud based on the object." << std::endl;
+  std::cout << "9  : Update the unexplored pointcloud based on 4 different viewpoints." << std::endl;
+  std::cout << "10 : Grasp synthesis after fusing 4 viewpoints." << std::endl;
+  std::cout << "11 : Selecting a grasp after collision check after grasp synthesis." << std::endl;
+  std::cout << "Enter your choice : "; cin >> choice;
+  switch(choice){
+    case 1:
+      testSpawnDeleteObj(activeVision);
+      break;
+    case 2:
+      testGripper(activeVision,1,0.05);
+      break;
+    case 3:
+      testKinectMovement(activeVision);
+      break;
+    case 4:
+      testMoveKinectInViewsphere(activeVision);
+      break;
+    case 5:
+      testKinectRead(activeVision,1);
+      break;
+    case 6:
+      testPtCldFuse(activeVision,1);
+      break;
+    case 7:
+      testDataExtract(activeVision,1);
+      break;
+    case 8:
+      testGenUnexpPtCld(activeVision,1);
+      break;
+    case 9:
+      testUpdateUnexpPtCld(activeVision,1);
+      break;
+    case 10:
+      testGraspsynthesis(activeVision,1);
+      break;
+    case 11:
+      testCollision(activeVision,1);
+      break;
+    default:
+      std::cout << "Invalid choice." << std::endl;
+  }
+  // testCollisionDummy(activeVision,false,1);
 }
 
 /*

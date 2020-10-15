@@ -59,6 +59,8 @@ struct graspPoint{
   float gripperWidth;
   pcl::PointXYZRGB p1;
   pcl::PointXYZRGB p2;
+  std::vector<float> pose;    // Note: This is not the final gripper pose
+  float addnlPitch;
 };
 
 bool compareGrasp(graspPoint A, graspPoint B);
@@ -88,11 +90,11 @@ private:
   pcl::CropHull<pcl::PointXYZRGB> cpHull;          // Crop hull object
   pcl::ExtractPolygonalPrismData<pcl::PointXYZRGB> prism;   // Prism object
   pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;  // Normal Estimation
-  pcl::search::Search<pcl::PointXYZRGB>::Ptr KdTree{new pcl::search::KdTree<pcl::PointXYZRGB>};  // Used in normal estimation
 
   Eigen::MatrixXf projectionMat;
   Eigen::Affine3f tfKinOptGaz;     // Transform : Kinect Optical Frame to Kinect Gazebo frame
   Eigen::Affine3f tfGazWorld;      // Transform : Kinect Gazebo Frame to Gazebo World frame
+  Eigen::Affine3f tfGripper;       // Transform : For gripper based on grasp points found
   Eigen::Vector4f objCentroid;
 
   int flag[3];
@@ -160,6 +162,7 @@ public:
   double minGripperWidth;                           // Min gripper width
   double minGraspQuality;
   std::vector<graspPoint> graspsPossible;           // List of possible grasps
+  int selectedGrasp;
 
   environment(ros::NodeHandle *nh);
 
@@ -181,8 +184,8 @@ public:
   // 6: Load Gripper Hand and Finger file
   void loadGripper();
 
-  // 7: Update gripper based on finger width
-  void updateGripper(float width,int choice);
+  // 7: Update gripper
+  void updateGripper(int index ,int choice);
 
   // 8A: Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
   void moveKinectCartesian(std::vector<double> pose);
@@ -205,44 +208,47 @@ public:
   // 13: Updating the unexplored point cloud
   void updateUnexploredPtCld();
 
-  // 14: Collision check for gripper and unexplored point cloud
-  void collisionCheck(float width);
-
-  // 15: Finding pairs of grasp points from object point cloud
+  // 14: Finding pairs of grasp points from object point cloud
   void graspsynthesis();
+
+  // 15: Given a grasp point pair find the gripper orientation
+  void findGripperPose(int index);
+
+  // 16: Collision check for gripper and unexplored point cloud
+  void collisionCheck();
 };
 
-// 1: A test function to check if the "moveKinect" function is working
-void testKinectMovement(environment &av);
-
-// 2: A test function to check if the "readKinect" function is working
-void testKinectRead(environment &av,int flag);
-
-// 3: A test function to check fusing of data
-void testPtCldFuse(environment &av, int flag);
-
-// 4: A test function to extract table and object data
-void testDataExtract(environment &av, int flag);
-
-// 5: A test function to generate unexplored point cloud
-void testGenUnexpPtCld(environment &av, int flag);
-
-// 6: A test function to update unexplored point cloud
-void testUpdateUnexpPtCld(environment &av, int flag);
-
-// 7: A test function to load and update gripper
-void testGripper(environment &av, int flag, float width);
-
-// 8: A test function to check the collision check algorithm
-void testCollision(environment &av, int flag, float width);
-
-// 9: A test function spawn and delete objects in gazebo
-void testSpawnDeleteObj(environment &av);
-
-// 10: A test function to move the kinect in a viewsphere continuously
-void testMoveKinectInViewsphere(environment &av);
-
-// 11: Grasp synthesis test function
-void testGraspsynthesis(environment &av, int flag);
+// // 1: A test function to check if the "moveKinect" function is working
+// void testKinectMovement(environment &av);
+//
+// // 2: A test function to check if the "readKinect" function is working
+// void testKinectRead(environment &av,int flag);
+//
+// // 3: A test function to check fusing of data
+// void testPtCldFuse(environment &av, int flag);
+//
+// // 4: A test function to extract table and object data
+// void testDataExtract(environment &av, int flag);
+//
+// // 5: A test function to generate unexplored point cloud
+// void testGenUnexpPtCld(environment &av, int flag);
+//
+// // 6: A test function to update unexplored point cloud
+// void testUpdateUnexpPtCld(environment &av, int flag);
+//
+// // 7: A test function to load and update gripper
+// void testGripper(environment &av, int flag, float width);
+//
+// // 8: A test function to check the collision check algorithm
+// void testCollision(environment &av, int flag, float width);
+//
+// // 9: A test function spawn and delete objects in gazebo
+// void testSpawnDeleteObj(environment &av);
+//
+// // 10: A test function to move the kinect in a viewsphere continuously
+// void testMoveKinectInViewsphere(environment &av);
+//
+// // 11: Grasp synthesis test function
+// void testGraspsynthesis(environment &av, int flag);
 
 #endif
