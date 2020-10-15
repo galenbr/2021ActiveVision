@@ -312,7 +312,7 @@ def slide_left_finger_down(p):
         modes = [3, 0]          # Set modes - Left -> Position, Right -> Torque (3 -> Position, 0 -> Torque)
         set_modes = set_actuator_modes(2, modes)
         # send_pos = command_position(0, p)
-        send_torque = command_torque(1, 0.12)
+        send_torque = command_torque(1, 0.10)
         time.sleep(0.5)
         set_friction_l = set_friction_right(1)
         set_friction_r = set_friction_left(0)
@@ -323,7 +323,7 @@ def slide_left_finger_down(p):
 
     for t1 in np.arange(theta[0], p, angle_diff):
         send_pos = command_position(0, t1)
-        send_torque = command_torque(1, 0.12)
+        send_torque = command_torque(1, 0.10)
         time.sleep(sleep_time)
 
 def slide_left_finger_up(p):
@@ -336,7 +336,7 @@ def slide_left_finger_up(p):
         set_modes = set_actuator_modes(2, modes)
         time.sleep(0.5)
         # send_pos = command_position(0, p)
-        send_torque = command_torque(1, 0.12)
+        send_torque = command_torque(1, 0.10)
         set_friction_l = set_friction_right(1)
         set_friction_r = set_friction_left(0)
         time.sleep(1)
@@ -346,7 +346,7 @@ def slide_left_finger_up(p):
     theta = read_pos()
     for t2 in np.arange(theta[1], p, angle_diff):
         send_pos = command_position(1, t2)
-        send_torque = command_torque(0, 0.12)
+        send_torque = command_torque(0, 0.10)
         time.sleep(sleep_time)
 
 def slide_right_finger_down(p):
@@ -359,7 +359,7 @@ def slide_right_finger_down(p):
         # set_modes = set_actuator_modes(2, modes)
         # send_pos = command_position(0, p)
 
-        send_torque = command_torque(1, 0.12)
+        send_torque = command_torque(1, 0.10)
         time.sleep(0.5)
         set_friction_l = set_friction_right(0)
         set_friction_r = set_friction_left(1)
@@ -370,7 +370,7 @@ def slide_right_finger_down(p):
     theta = read_pos()
     for t2 in np.arange(theta[1], p, angle_diff):
         send_pos = command_position(1, t2)
-        send_torque = command_torque(0, 0.12)
+        send_torque = command_torque(0, 0.10)
         time.sleep(sleep_time)
 
 def slide_right_finger_up(p):
@@ -382,7 +382,7 @@ def slide_right_finger_up(p):
         modes = [3, 0]
         set_modes = set_actuator_modes(2, modes)
         # send_pos = command_position(0, p)
-        send_torque = command_torque(1, 0.12)
+        send_torque = command_torque(1, 0.10)
         time.sleep(0.5)
         set_friction_l = set_friction_right(0)
         set_friction_r = set_friction_left(1)
@@ -392,7 +392,7 @@ def slide_right_finger_up(p):
     theta = read_pos()
     for t1 in np.arange(theta[0], p, angle_diff):
         send_pos = command_position(0, t1)
-        send_torque = command_torque(1, 0.12)
+        send_torque = command_torque(1, 0.10)
         time.sleep(sleep_time)
 
 def rotate_object_clockwise(p):

@@ -1,0 +1,24 @@
+init_pose: {
+  x_pos: 0.55,
+  y_pos: 0.0,
+  z_pos: 0.5,
+  x_orn: 0.0,
+  y_orn: 0.7071068,
+  z_orn: 0.0,
+  w_orn: 0.7071068
+}
+
+table_pose: {
+  x_pos: 0.8,
+  y_pos: 1,
+  z_pos: 0.2,
+  x_orn: 0.0,
+  y_orn: 0.0,
+  z_orn: 0.0,
+  w_orn: 1.0
+}
+table_dims: {
+  x: 0.3,
+  y: 0.5,
+  z: 0.2
+}

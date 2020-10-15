@@ -2,8 +2,9 @@
 <launch>
 
   <!-- table parameters - used for object positioning -->
-  <arg name="table_height" value="0.45" />
-  <arg name="table_center" value="0.62" />
+  <arg name="floor_height" value="0.026" />
+  <arg name="table_height" value="0.425" />
+  <arg name="table_center" value="0.7" />
   <arg name="table_width" value="1" />
   <arg name="table_length" value="0.6" />
 
@@ -22,11 +23,13 @@
 
   <!-- spawn robot -->
   <node name="spawn_franka_vf" pkg="gazebo_ros" type="spawn_model"
-  	args="-param robot_description -urdf -model franka_vf -J panda_joint6 0.785398 -J panda_joint7 0.785398" />
+  	args="-param robot_description -urdf -model franka_vf -z $(arg floor_height) -J panda_joint6 0.785398 -J panda_joint7 0.785398" />
 
   <!-- spawn table -->
+  <node name="spawn_floor_urdf" pkg="gazebo_ros" type="spawn_model"
+  	args="-file $(find manipulation_env)/desc/floor_table.urdf -urdf -model floor_table" />
   <node name="spawn_table_urdf" pkg="gazebo_ros" type="spawn_model"
-  	args="-file $(find manipulation_env)/desc/table_surface.urdf -urdf -model table_surface" />
+  	args="-file $(find manipulation_env)/desc/table_box.urdf -urdf -model table_surface" />
 
   <!-- spawn object -->
   <node name="spawn_object" pkg="gazebo_ros" type="spawn_model"
