@@ -129,57 +129,49 @@ public:
   /* cv_bridge::CvImageConstPtr ptrRgbLast{new cv_bridge::CvImage};    // RGB image from camera
   cv_bridge::CvImageConstPtr ptrDepthLast{new cv_bridge::CvImage};  // Depth map from camera */
 
-  ptCldColor::Ptr ptrPtCldLast{new ptCldColor};                     // Point cloud to store the environment
-  ptCldColor::ConstPtr cPtrPtCldLast{ptrPtCldLast};                 // Constant pointer
+  // PtCld: Last recorded viewpoint
+  ptCldColor::Ptr ptrPtCldLast{new ptCldColor};      ptCldColor::ConstPtr cPtrPtCldLast{ptrPtCldLast};
 
-  ptCldColor::Ptr ptrPtCldTemp{new ptCldColor};                     // Point cloud to store temporarily
-  ptCldColor::ConstPtr cPtrPtCldTemp{ptrPtCldTemp};                 // Constant pointer
+  // PtCld: Environment after fusing multiple view points, extracted table, object and its normal
+  ptCldColor::Ptr ptrPtCldEnv{new ptCldColor};       ptCldColor::ConstPtr cPtrPtCldEnv{ptrPtCldEnv};
+  ptCldColor::Ptr ptrPtCldTable{new ptCldColor};     ptCldColor::ConstPtr cPtrPtCldTable{ptrPtCldTable};
+  ptCldColor::Ptr ptrPtCldObject{new ptCldColor};    ptCldColor::ConstPtr cPtrPtCldObject{ptrPtCldObject};
+  ptCldNormal::Ptr ptrObjNormal{new ptCldNormal};    ptCldNormal::ConstPtr cPtrObjNormal{ptrObjNormal};
 
-  ptCldColor::Ptr ptrPtCldEnv{new ptCldColor};                      // Point cloud to store fused data
-  ptCldColor::ConstPtr cPtrPtCldEnv{ptrPtCldEnv};                   // Constant pointer
+  // PtCld: Sorting the convex hull generated
+  ptCldColor::Ptr ptrPtCldHull{new ptCldColor};      ptCldColor::ConstPtr cPtrPtCldHull{ptrPtCldHull};
 
-  ptCldColor::Ptr ptrPtCldTable{new ptCldColor};                    // Point cloud to store table data
-  ptCldColor::ConstPtr cPtrPtCldTable{ptrPtCldTable};               // Constant pointer
+  // PtCld: Unexplored point cloud, point clould used for collision check (unexplored + table)
+  ptCldColor::Ptr ptrPtCldUnexp{new ptCldColor};     ptCldColor::ConstPtr cPtrPtCldUnexp{ptrPtCldUnexp};
+  ptCldColor::Ptr ptrPtCldCollCheck{new ptCldColor}; ptCldColor::ConstPtr cPtrPtCldCollCheck{ptrPtCldCollCheck};
 
-  ptCldColor::Ptr ptrPtCldHull{new ptCldColor};                     // Point cloud to store convex hull data
-  ptCldColor::ConstPtr cPtrPtCldHull{ptrPtCldHull};                 // Constant pointer
+  // PtCld: Gripper related
+  ptCldColor::Ptr ptrPtCldGrpHnd{new ptCldColor};    ptCldColor::ConstPtr cPtrPtCldGrpHnd{ptrPtCldGrpHnd};
+  ptCldColor::Ptr ptrPtCldGrpRfgr{new ptCldColor};   ptCldColor::ConstPtr cPtrPtCldGrpRfgr{ptrPtCldGrpRfgr};
+  ptCldColor::Ptr ptrPtCldGrpLfgr{new ptCldColor};   ptCldColor::ConstPtr cPtrPtCldGrpLfgr{ptrPtCldGrpLfgr};
+  ptCldColor::Ptr ptrPtCldGripper{new ptCldColor};   ptCldColor::ConstPtr cPtrPtCldGripper{ptrPtCldGripper};
 
-  ptCldColor::Ptr ptrPtCldObject{new ptCldColor};                   // Point cloud to store object data
-  ptCldColor::ConstPtr cPtrPtCldObject{ptrPtCldObject};             // Constant pointer
+  // PtCld: Points colliding with gripper
+  ptCldColor::Ptr ptrPtCldCollided{new ptCldColor};  ptCldColor::ConstPtr cPtrPtCldCollided{ptrPtCldCollided};
 
-  ptCldColor::Ptr ptrPtCldUnexp{new ptCldColor};                    // Point cloud to store unexplored points data
-  ptCldColor::ConstPtr cPtrPtCldUnexp{ptrPtCldUnexp};               // Constant pointer
+  // PtCld: Temporary variable
+  ptCldColor::Ptr ptrPtCldTemp{new ptCldColor};      ptCldColor::ConstPtr cPtrPtCldTemp{ptrPtCldTemp};
 
-  ptCldColor::Ptr ptrPtCldGripper{new ptCldColor};                  // Point cloud to store gripper (hand+fingers)
-  ptCldColor::ConstPtr cPtrPtCldGripper{ptrPtCldGripper};           // Constant pointer
-
-  ptCldColor::Ptr ptrPtCldGrpHnd{new ptCldColor};                   // Point cloud to store gripper hand
-  ptCldColor::ConstPtr cPtrPtCldGrpHnd{ptrPtCldGrpHnd};             // Constant pointer
-
-  ptCldColor::Ptr ptrPtCldGrpRfgr{new ptCldColor};                  // Point cloud to store gripper right finger
-  ptCldColor::ConstPtr cPtrPtCldGrpRfgr{ptrPtCldGrpRfgr};           // Constant pointer
-
-  ptCldColor::Ptr ptrPtCldGrpLfgr{new ptCldColor};                  // Point cloud to store gripper left finger
-  ptCldColor::ConstPtr cPtrPtCldGrpLfgr{ptrPtCldGrpLfgr};           // Constant pointer
-
-  ptCldColor::Ptr ptrPtCldCollision{new ptCldColor};                // Point cloud to store collision points
-  ptCldColor::ConstPtr cPtrPtCldCollision{ptrPtCldCollision};       // Constant pointer
-
-  ptCldNormal::Ptr ptrObjNormal{new ptCldNormal};                   // Point cloud to store object normals
-  ptCldNormal::ConstPtr cPtrObjNormal{ptrObjNormal};                // Constant pointer
-
+  // Variables used in table and object extraction
   pcl::ModelCoefficients::Ptr tableCoeff{new pcl::ModelCoefficients()};
   pcl::PointIndices::Ptr tableIndices{new pcl::PointIndices()};
   pcl::PointIndices::Ptr objectIndices{new pcl::PointIndices()};
 
-  std::vector<pcl::Vertices> hullVertices;
+  std::vector<pcl::Vertices> hullVertices;          // Used in convex hull during collision check
   std::vector<double> lastKinectPoseCartesian;      // Last Kinect pose where it was moved in cartesian co-ordiantes
   std::vector<double> lastKinectPoseViewsphere;     // Last Kinect pose where it was moved in viewsphere co-ordinates
   std::vector<double> minUnexp;                     // Min x,y,z of unexplored pointcloud generated
   std::vector<double> maxUnexp;                     // Max x,y,z of unexplored pointcloud generated
   std::vector<graspPoint> graspsPossible;           // List of possible grasps
+  pcl::PointXYZRGB minPtObj, maxPtObj;              // Min and Max x,y,z co-ordinates of the object
 
-  double voxelGridSize = 0.01;                      // Voxel Grid size
+  double voxelGridSize{0.005};                      // Voxel Grid size for environment
+  double voxelGridSizeUnexp{0.01};                  // Voxel Grid size for unexplored point cloud
   std::vector<double> tableCentre{1.5,0,1};         // Co-ordinates of table centre
   int scale{3};                                     // Scale value for unexplored point cloud generation
   double maxGripperWidth{0.075};                    // Gripper max width (Actual is 8 cm)
@@ -272,6 +264,8 @@ public:
     spawnObj.request.initial_pose = pose;
 
     gazeboSpawnModel.call(spawnObj);
+
+    boost::this_thread::sleep(boost::posix_time::milliseconds(1500));
   }
 
   // 3: Deleting objects in gazebo
@@ -369,7 +363,7 @@ public:
     // Publishing it to gazebo
     pubKinectPose.publish(ModelState);
     ros::spinOnce();
-    boost::this_thread::sleep(boost::posix_time::milliseconds(200));
+    boost::this_thread::sleep(boost::posix_time::milliseconds(250));
 
     // Storing the kinect pose
     lastKinectPoseCartesian = pose;
@@ -403,7 +397,7 @@ public:
     // Publishing it to gazebo
     pubKinectPose.publish(ModelState);
     ros::spinOnce();
-    boost::this_thread::sleep(boost::posix_time::milliseconds(200));
+    boost::this_thread::sleep(boost::posix_time::milliseconds(250));
 
     // Storing the kinect pose
     lastKinectPoseViewsphere = pose;
@@ -453,8 +447,7 @@ public:
 
     // Using pass through filter to remove ground plane
     pass.setInputCloud(cPtrPtCldEnv);
-    pass.setFilterFieldName("z");
-    pass.setFilterLimits(0.2,10);
+    pass.setFilterFieldName("z"); pass.setFilterLimits(0.2,10);
     pass.filter(*ptrPtCldEnv);
 
     ptrPtCldTemp->clear();
@@ -496,7 +489,11 @@ public:
     // Using polygonal prism and hull the extract object above the table
     prism.setInputCloud(cPtrPtCldEnv);
     prism.setInputPlanarHull(cPtrPtCldHull);
-    prism.setHeightLimits(-1.5f,-0.01f);         // Z height (min, max) in m
+    if (tableCoeff->values[3] < 0) {
+      prism.setHeightLimits(-1.5f,-0.005f-voxelGridSize);         // Z height (min, max) in m
+    }else{
+      prism.setHeightLimits(0.005f+voxelGridSize,1.5f);           // Z height (min, max) in m
+    }
     prism.segment(*objectIndices);
 
     // Using extract to get the point cloud
@@ -504,13 +501,13 @@ public:
     extract.setNegative(false);
     extract.setIndices(objectIndices);
     extract.filter(*ptrPtCldObject);
+
+    // Getting the min and max co-ordinates of the object
+    pcl::getMinMax3D(*ptrPtCldObject, minPtObj, maxPtObj);
   }
 
   // 10: Generating unexplored point cloud
   void genUnexploredPtCld(){
-    // Finding the region covered by the object
-    pcl::PointXYZRGB minPt, maxPt;
-    pcl::getMinMax3D(*ptrPtCldObject, minPt, maxPt);
     if (ptrPtCldUnexp->width != 0){
       std::cerr << "Unexplored point cloud already created. Not creating new one." << std::endl;
       return;
@@ -518,14 +515,14 @@ public:
 
     // Setting the min and max limits based on the object dimension and scale.
     // Note: Z scale is only used on +z axis
-    minUnexp.push_back(minPt.x-(scale-1)*(maxPt.x-minPt.x)/2);
-    minUnexp.push_back(minPt.y-(scale-1)*(maxPt.y-minPt.y)/2);
-    minUnexp.push_back(minPt.z);
-    maxUnexp.push_back(maxPt.x+(scale-1)*(maxPt.x-minPt.x)/2);
-    maxUnexp.push_back(maxPt.y+(scale-1)*(maxPt.y-minPt.y)/2);
-    maxUnexp.push_back(maxPt.z+(scale-1)*(maxPt.z-minPt.z)/2);
+    minUnexp.push_back(minPtObj.x-(scale-1)*(maxPtObj.x-minPtObj.x)/2);
+    minUnexp.push_back(minPtObj.y-(scale-1)*(maxPtObj.y-minPtObj.y)/2);
+    minUnexp.push_back(minPtObj.z);
+    maxUnexp.push_back(maxPtObj.x+(scale-1)*(maxPtObj.x-minPtObj.x)/2);
+    maxUnexp.push_back(maxPtObj.y+(scale-1)*(maxPtObj.y-minPtObj.y)/2);
+    maxUnexp.push_back(maxPtObj.z+(scale-1)*(maxPtObj.z-minPtObj.z)/2);
 
-    // Considering a a point for every 1 cm and then downsampling it to 3 cm
+    // Considering a point for every 1 cm and then downsampling it to 1 cm
     float nPts = (maxUnexp[0]-minUnexp[0])*(maxUnexp[1]-minUnexp[1])*(maxUnexp[2]-minUnexp[2])*1000000;
     // std::cout << minUnexp[0] << " " << minUnexp[1] << " " << minUnexp[2] << std::endl;
     // std::cout << maxUnexp[0] << " " << maxUnexp[1] << " " << maxUnexp[2] << std::endl;
@@ -545,7 +542,7 @@ public:
     }
 
     voxelGrid.setInputCloud(cPtrPtCldUnexp);
-    voxelGrid.setLeafSize(0.01, 0.01, 0.01);
+    voxelGrid.setLeafSize(voxelGridSizeUnexp, voxelGridSizeUnexp, voxelGridSizeUnexp);
     voxelGrid.filter(*ptrPtCldUnexp);
   }
 
@@ -583,6 +580,21 @@ public:
     extract.setNegative(false);
     extract.filter(*ptrPtCldUnexp);
 
+    // Downsampling table before adding to collision check cloud
+    ptrPtCldTemp->clear();
+    ptrPtCldCollCheck->clear();
+    voxelGrid.setInputCloud(cPtrPtCldTable);
+    voxelGrid.setLeafSize(voxelGridSizeUnexp, voxelGridSizeUnexp, voxelGridSizeUnexp);
+    voxelGrid.filter(*ptrPtCldTemp);
+
+    // Using pass through filter to use only the table around the object, to speed up the collision check
+    pass.setInputCloud(cPtrPtCldTemp);
+    pass.setFilterFieldName("x"); pass.setFilterLimits(minPtObj.x-0.1,maxPtObj.x+0.1);
+    pass.filter(*ptrPtCldTemp);
+    pass.setFilterFieldName("y"); pass.setFilterLimits(minPtObj.y-0.1,maxPtObj.y+0.1);
+    pass.filter(*ptrPtCldTemp);
+
+    *ptrPtCldCollCheck = *ptrPtCldUnexp + *ptrPtCldTemp;
     ptrPtCldTemp->clear();
   }
 
@@ -610,7 +622,7 @@ public:
         // Vector connecting the two grasp points and its distance
         vectA = graspTemp.p1.getVector3fMap() - graspTemp.p2.getVector3fMap();
         vectB = graspTemp.p2.getVector3fMap() - graspTemp.p1.getVector3fMap();
-        graspTemp.gripperWidth = vectA.norm()+0.005; // Giving a 5mm tolerance
+        graspTemp.gripperWidth = vectA.norm() + voxelGridSize; // Giving a tolerance based on voxel grid size
 
         // If grasp width is greater than the limit then skip the rest
         if (graspTemp.gripperWidth > maxGripperWidth){
@@ -669,7 +681,7 @@ public:
     cvHull.setInputCloud(cPtrPtCldGripper);
     cvHull.setDimension(3);
 
-    cpHull.setInputCloud(ptrPtCldUnexp);
+    cpHull.setInputCloud(ptrPtCldCollCheck);
     cpHull.setHullCloud(ptrPtCldHull);
     cpHull.setDim(3);
     cpHull.setCropOutside(true);
@@ -684,19 +696,19 @@ public:
         graspsPossible[i].addnlPitch = j*(2*M_PI)/nOrientations;
         // Get concave hull of the gripper fingers and hand in sequence and check
         for(int k = 3; k >= 1; k--){
-          ptrPtCldCollision->clear();    // Reset the collision cloud
+          ptrPtCldCollided->clear();    // Reset the collision cloud
           updateGripper(i,k);
           cvHull.reconstruct(*ptrPtCldHull,hullVertices);
           cpHull.setHullIndices(hullVertices);
-          cpHull.filter(*ptrPtCldCollision);
-          // std::cout << i << " Orientation " << j << " " << "Object " << k << " Ptcld size " << ptrPtCldCollision->size() << std::endl;
+          cpHull.filter(*ptrPtCldCollided);
+          // std::cout << i << " Orientation " << j << " " << "Object " << k << " Ptcld size " << ptrPtCldCollided->size() << std::endl;
           // If collision detected then exit this loop and check next orientation
-          if(ptrPtCldCollision->size() > 0){
+          if(ptrPtCldCollided->size() > 0){
             break;
           }
         }
         // If this doesn't have collision, this grasp is OK. So exit the loop. No more orientation or grasp check required
-        if(ptrPtCldCollision->size() == 0){
+        if(ptrPtCldCollided->size() == 0){
           selectedGrasp = i;
           // std::cout << "Setting selected grasp to " << selectedGrasp << std::endl;
           stop = true;
@@ -1072,7 +1084,7 @@ void testCollisionDummy(environment &av, bool result, int flag){
   av.loadGripper();
 
   // Creating a dummy unexplored point cloud
-  av.ptrPtCldUnexp->clear();
+  av.ptrPtCldCollCheck->clear();
   pcl::common::CloudGenerator<pcl::PointXYZRGB, pcl::common::UniformGenerator<float>> generator;
   std::uint32_t seed = static_cast<std::uint32_t> (time (nullptr));
   pcl::common::UniformGenerator<float>::Parameters x_params(0, 0.03, seed++);
@@ -1087,10 +1099,10 @@ void testCollisionDummy(environment &av, bool result, int flag){
     generator.setParametersForZ(z_params);
   }
 
-  int dummy = generator.fill(5000, 1, *av.ptrPtCldUnexp);
+  int dummy = generator.fill(5000, 1, *av.ptrPtCldCollCheck);
   // Setting color to blue
-  for (int i = 0; i < av.ptrPtCldUnexp->size(); i++) {
-    av.ptrPtCldUnexp->points[i].b = 200;
+  for (int i = 0; i < av.ptrPtCldCollCheck->size(); i++) {
+    av.ptrPtCldCollCheck->points[i].b = 200;
   }
 
   av.collisionCheck();
@@ -1099,9 +1111,9 @@ void testCollisionDummy(environment &av, bool result, int flag){
   }
 
   // Setting color to red
-  for (int i = 0; i < av.ptrPtCldCollision->size(); i++) {
-    av.ptrPtCldCollision->points[i].b = 0;
-    av.ptrPtCldCollision->points[i].r = 200;
+  for (int i = 0; i < av.ptrPtCldCollided->size(); i++) {
+    av.ptrPtCldCollided->points[i].b = 0;
+    av.ptrPtCldCollided->points[i].r = 200;
   }
 
   if (flag == 1) {
@@ -1113,8 +1125,8 @@ void testCollisionDummy(environment &av, bool result, int flag){
     // viewer->addCoordinateSystem(1.0);
     viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
 
-    rbgVis(viewer,av.ptrPtCldUnexp,"Unexp",vp);
-    rbgVis(viewer,av.ptrPtCldCollision,"Collision",vp);
+    rbgVis(viewer,av.ptrPtCldCollCheck,"Collision Check",vp);
+    rbgVis(viewer,av.ptrPtCldCollided,"Collision",vp);
     av.updateGripper(0,0);    // Only for visulization purpose
     rbgVis(viewer,av.ptrPtCldGripper,"Gripper",vp);
     std::cout << "Showing the Gripper(Black), Unexplored(Blue), Collision(Red) points. Close viewer to continue" << std::endl;
@@ -1134,7 +1146,6 @@ void testCollision(environment &av, int objID, int flag){
   double elapsed[4];
 
   av.spawnObject(objID,0,0,0);
-  boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
   av.loadGripper();
 
   // 4 kinect poses
@@ -1159,6 +1170,8 @@ void testCollision(environment &av, int objID, int flag){
   end[1] = std::chrono::high_resolution_clock::now();
 
   std::cout << "Number of points in object point cloud : " << av.ptrPtCldObject->points.size() << std::endl;
+  // std::cout << "Number of points in unexplored cloud : " << av.ptrPtCldUnexp->points.size() << std::endl;
+  std::cout << "Number of points in collision check cloud : " << av.ptrPtCldCollCheck->points.size() << std::endl;
   start[2] = std::chrono::high_resolution_clock::now();
   av.graspsynthesis();
   end[2] = std::chrono::high_resolution_clock::now();
@@ -1166,6 +1179,7 @@ void testCollision(environment &av, int objID, int flag){
   start[3] = std::chrono::high_resolution_clock::now();
   av.collisionCheck();
   end[3] = std::chrono::high_resolution_clock::now();
+  std::cout << "Selected Grasp ID : " << av.selectedGrasp << std::endl;
 
   end[0] = std::chrono::high_resolution_clock::now();
 
@@ -1174,37 +1188,52 @@ void testCollision(environment &av, int objID, int flag){
   elapsed[2] = (std::chrono::duration_cast<std::chrono::milliseconds>(end[2] - start[2])).count();
   elapsed[3] = (std::chrono::duration_cast<std::chrono::milliseconds>(end[3] - start[3])).count();
 
-  std::cout << "Printing out the timings for each section (sec) :" << std::endl;
+  std::cout << std::endl << "Printing out the timings for each section (sec) :" << std::endl;
   std::cout << "Overall Timing = " << elapsed[0]/1000 << std::endl;
   std::cout << "(Move Kinect + Read Kinect +" << std::endl <<
                "Fuse Data + Data Extract +" << std::endl <<
                "Update Enexp PtCld) x 4 = " << elapsed[1]/1000 << std::endl;
   std::cout << "Grasp Synthesis = " << elapsed[2]/1000 << std::endl;
-  std::cout << "Collision Check = " << elapsed[3]/1000 << std::endl;
+  std::cout << "Collision Check = " << elapsed[3]/1000 << std::endl << std::endl;
 
-  if(av.selectedGrasp == -1){
-    std::cout << "No grasp orientation for the grasp points found." << std::endl;
-  }else{
-    if (flag == 1) {
-      // Setting up the point cloud visualizer
-      ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
-      viewer->initCameraParameters();
-      int vp = {};
-      viewer->createViewPort(0.0,0.0,1.0,1.0,vp);
-      viewer->addCoordinateSystem(1.0);
-      viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
+  if (flag == 1) {
+    // Setting up the point cloud visualizer
+    ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
+    viewer->initCameraParameters();
+    int vp = {};
+    viewer->createViewPort(0.0,0.0,1.0,1.0,vp);
+    viewer->addCoordinateSystem(1.0);
+    viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
 
-      rbgVis(viewer,av.cPtrPtCldEnv,"Environment",vp);
+    for (int i = 0; i < av.ptrPtCldObject->size(); i++) {
+      av.ptrPtCldObject->points[i].r = 0;
+      av.ptrPtCldObject->points[i].b = 200;
+      av.ptrPtCldObject->points[i].g = 0;
+    }
+    rbgVis(viewer,av.ptrPtCldObject,"Object",vp);
+
+    for (int i = 0; i < av.ptrPtCldCollCheck->size(); i++) {
+      av.ptrPtCldCollCheck->points[i].r = 200;
+      av.ptrPtCldCollCheck->points[i].b = 0;
+      av.ptrPtCldCollCheck->points[i].g = 0;
+    }
+    rbgVis(viewer,av.ptrPtCldCollCheck,"Collision",vp);
+
+    if(av.selectedGrasp == -1){
+      std::cout << "No grasp orientation for the grasp points found." << std::endl;
+      std::cout << "Showing the object (blue), collision check points (red). Close viewer to continue" << std::endl;
+    }else{
       av.updateGripper(av.selectedGrasp,0);    // Only for visulization purpose
       rbgVis(viewer,av.ptrPtCldGripper,"Gripper",vp);
-      std::cout << "Showing the object and selected gripper position. Close viewer to continue" << std::endl;
+      std::cout << "Showing the object (blue), collision check points (red), selected gripper position (black). Close viewer to continue" << std::endl;
+    }
 
-      while (!viewer->wasStopped ()){
-        viewer->spinOnce(100);
-        boost::this_thread::sleep (boost::posix_time::microseconds(100000));
-      }
+    while (!viewer->wasStopped ()){
+      viewer->spinOnce(100);
+      boost::this_thread::sleep (boost::posix_time::microseconds(100000));
     }
   }
+
   av.deleteObject(objID);
   std::cout << "*** End ***" << std::endl;
 }
@@ -1271,6 +1300,9 @@ int main (int argc, char** argv){
       std::cout << "3: Rectangular Prism" << std::endl;
       std::cout << "4: Bowl" << std::endl;
       std::cout << "Enter your choice : "; std::cin>>objID;
+      std::cout << "Enter your voxel grid size (0.005 to 0.01) : "; std::cin >> activeVision.voxelGridSize;
+      activeVision.voxelGridSize = std::max(activeVision.voxelGridSize,0.005);
+      activeVision.voxelGridSize = std::min(activeVision.voxelGridSize,0.01);
       testCollision(activeVision,objID-1,1);
       break;
     default:
