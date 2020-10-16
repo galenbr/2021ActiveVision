@@ -5,6 +5,7 @@
 #include <array>
 #include <string>
 #include <fstream>
+#include <chrono>
 #include <boost/make_shared.hpp>
 
 #include <ros/ros.h>
@@ -12,9 +13,10 @@
 #include <tf/transform_datatypes.h>
 
 // OpenCV specific includes
-#include <image_transport/image_transport.h>
-#include <opencv2/highgui/highgui.hpp>
-#include <cv_bridge/cv_bridge.h>
+// NOT USED (JUST FOR REFERENCE) (Update in CMAKELISTS.txt and PACKAGE.XML to use it)
+// #include <image_transport/image_transport.h>
+// #include <opencv2/highgui/highgui.hpp>
+// #include <cv_bridge/cv_bridge.h>
 
 // PCL specific includes
 #include <pcl_ros/point_cloud.h>
@@ -93,13 +95,14 @@ Eigen::Affine3f homoMatTranspose(Eigen::Affine3f tf){
 // Class to store data of environment and its processing
 class environment{
 private:
-  ros::Rate r{10};
-  ros::Publisher pubKinectPose;
-  ros::Subscriber subKinectPtCld;
-  ros::Subscriber subKinectRGB;
-  ros::Subscriber subKinectDepth;
-  ros::ServiceClient gazeboSpawnModel;
-  ros::ServiceClient gazeboDeleteModel;
+  ros::Rate r{10};                      // ROS sleep rate
+  ros::Publisher pubKinectPose;         // Publisher : Kinect pose
+  ros::Subscriber subKinectPtCld;       // Subscriber : Kinect pointcloud
+  // NOT USED (JUST FOR REFERENCE)
+  /*ros::Subscriber subKinectRGB;       // Subscriber : Kinect RGB
+  ros::Subscriber subKinectDepth;       // Subscriber : Kinect DepthMap */
+  ros::ServiceClient gazeboSpawnModel;  // Service : Spawn Model
+  ros::ServiceClient gazeboDeleteModel; // Service : Delete Model
 
   pcl::PassThrough<pcl::PointXYZRGB> pass;         // Passthrough filter
   pcl::VoxelGrid<pcl::PointXYZRGB> voxelGrid;      // VoxelGrid object
@@ -110,22 +113,21 @@ private:
   pcl::ExtractPolygonalPrismData<pcl::PointXYZRGB> prism;   // Prism object
   pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;  // Normal Estimation
 
-  Eigen::MatrixXf projectionMat;
+  Eigen::MatrixXf projectionMat;   // Camera projection matrix
   Eigen::Affine3f tfKinOptGaz;     // Transform : Kinect Optical Frame to Kinect Gazebo frame
   Eigen::Affine3f tfGazWorld;      // Transform : Kinect Gazebo Frame to Gazebo World frame
   Eigen::Affine3f tfGripper;       // Transform : For gripper based on grasp points found
-  Eigen::Vector4f objCentroid;
 
-  int flag[3] = {};
-  int scale;                       // Scale value for unexplored point cloud generation
-  float fingerZOffset;             // Z axis offset between gripper hand and finger
+  int readFlag[3]={};              // Flag used to read data from kinect only when needed
+  float fingerZOffset{0.0584};     // Z axis offset between gripper hand and finger
 
   std::string path;                                     // Path the active vision package
   std::vector<std::vector<std::string>> objectDict;     // List of objects which can be spawned
 
 public:
-  cv_bridge::CvImageConstPtr ptrRgbLast{new cv_bridge::CvImage};    // RGB image from camera
-  cv_bridge::CvImageConstPtr ptrDepthLast{new cv_bridge::CvImage};  // Depth map from camera
+  // NOT USED (JUST FOR REFERENCE)
+  /* cv_bridge::CvImageConstPtr ptrRgbLast{new cv_bridge::CvImage};    // RGB image from camera
+  cv_bridge::CvImageConstPtr ptrDepthLast{new cv_bridge::CvImage};  // Depth map from camera */
 
   ptCldColor::Ptr ptrPtCldLast{new ptCldColor};                     // Point cloud to store the environment
   ptCldColor::ConstPtr cPtrPtCldLast{ptrPtCldLast};                 // Constant pointer
@@ -169,25 +171,28 @@ public:
   pcl::ModelCoefficients::Ptr tableCoeff{new pcl::ModelCoefficients()};
   pcl::PointIndices::Ptr tableIndices{new pcl::PointIndices()};
   pcl::PointIndices::Ptr objectIndices{new pcl::PointIndices()};
-  std::vector<pcl::Vertices> hullVertices;
 
+  std::vector<pcl::Vertices> hullVertices;
   std::vector<double> lastKinectPoseCartesian;      // Last Kinect pose where it was moved in cartesian co-ordiantes
   std::vector<double> lastKinectPoseViewsphere;     // Last Kinect pose where it was moved in viewsphere co-ordinates
   std::vector<double> minUnexp;                     // Min x,y,z of unexplored pointcloud generated
   std::vector<double> maxUnexp;                     // Max x,y,z of unexplored pointcloud generated
-  std::vector<double> tableCentre;                  // Co-ordinates of table centre
-
-  double maxGripperWidth;                           // Max gripper width
-  double minGripperWidth;                           // Min gripper width
-  double minGraspQuality;
   std::vector<graspPoint> graspsPossible;           // List of possible grasps
-  int selectedGrasp;                                // Selected grasp
+
+  double voxelGridSize = 0.01;                      // Voxel Grid size
+  std::vector<double> tableCentre{1.5,0,1};         // Co-ordinates of table centre
+  int scale{3};                                     // Scale value for unexplored point cloud generation
+  double maxGripperWidth{0.075};                    // Gripper max width (Actual is 8 cm)
+  double minGraspQuality{150};                      // Min grasp quality threshold
+  int selectedGrasp{-1};                            // Index of the selected grasp
 
   environment(ros::NodeHandle *nh){
+
     pubKinectPose = nh->advertise<gazebo_msgs::ModelState> ("/gazebo/set_model_state", 1);
     subKinectPtCld = nh->subscribe ("/camera/depth/points", 1, &environment::cbPtCld, this);
-    subKinectRGB = nh->subscribe ("/camera/color/image_raw", 1, &environment::cbImgRgb, this);
-    subKinectDepth = nh->subscribe ("/camera/depth/image_raw", 1, &environment::cbImgDepth, this);
+    // NOT USED (JUST FOR REFERENCE)
+    /*subKinectRGB = nh->subscribe ("/camera/color/image_raw", 1, &environment::cbImgRgb, this);
+    subKinectDepth = nh->subscribe ("/camera/depth/image_raw", 1, &environment::cbImgDepth, this);*/
     gazeboSpawnModel = nh->serviceClient< gazebo_msgs::SpawnModel> ("/gazebo/spawn_sdf_model");
     gazeboDeleteModel = nh->serviceClient< gazebo_msgs::DeleteModel> ("/gazebo/delete_model");
 
@@ -197,20 +202,8 @@ public:
     // Camera projection matrix
     projectionMat.resize(3,4);
     projectionMat << 554.254691191187, 0.0, 320.5, -0.0,
-                    0.0, 554.254691191187, 240.5, 0.0,
-                    0.0, 0.0, 1.0, 0.0;
-
-    // Scale for generating unexplored point cloud
-    scale = 3.0;
-
-    // Gripper finger Z-Axis offset from Gripper hand
-    fingerZOffset = 0.0584;
-
-    // Gripper properties
-    minGripperWidth = 0.005;
-    maxGripperWidth = 0.075;    // Actual is 8 cm
-    minGraspQuality = 150;
-    selectedGrasp = -1;
+                     0.0, 554.254691191187, 240.5, 0.0,
+                     0.0, 0.0, 1.0, 0.0;
 
     // Path to the active_vision package folder
     path = ros::package::getPath("active_vision");
@@ -220,36 +213,34 @@ public:
                   {"squarePrismAV","Square Prism"},
                   {"rectPrismAV","Rectangular Prism"},
                   {"bowlAV","Bowl"}};
-
-    // Table Centre (X,Y,Z);
-    tableCentre = {1.5,0,1};
   }
 
-  // 1: Callback function to point cloud subscriber
+  // 1A: Callback function to point cloud subscriber
   void cbPtCld (const ptCldColor::ConstPtr& msg){
-    if (flag[0]==1) {
+    if (readFlag[0]==1) {
       *ptrPtCldLast = *msg;
-      flag[0] = 0;
+      readFlag[0] = 0;
     }
   }
 
-  // 2: Callback function to RGB image subscriber
+  // NOT USED (JUST FOR REFERENCE)
+  /*// 1B: Callback function to RGB image subscriber
   void cbImgRgb (const sensor_msgs::ImageConstPtr& msg){
-    if (flag[1]==1) {
+    if (readFlag[1]==1) {
       ptrRgbLast = cv_bridge::toCvShare(msg);
-      flag[1] = 0;
+      readFlag[1] = 0;
     }
   }
 
-  // 3: Callback function to RGB image subscriber
+  // 1C: Callback function to RGB image subscriber
   void cbImgDepth (const sensor_msgs::ImageConstPtr& msg){
-    if (flag[2]==1) {
+    if (readFlag[2]==1) {
       ptrDepthLast = cv_bridge::toCvShare(msg);
-      flag[2] = 0;
+      readFlag[2] = 0;
     }
-  }
+  }*/
 
-  // 4: Spawning objects in gazebo on the table centre for a given RPY
+  // 2: Spawning objects in gazebo on the table centre for a given RPY
   void spawnObject(int objectID, float R, float P, float Y){
     gazebo_msgs::SpawnModel spawnObj;
     geometry_msgs::Pose pose;
@@ -283,7 +274,7 @@ public:
     gazeboSpawnModel.call(spawnObj);
   }
 
-  // 5: Deleting objects in gazebo
+  // 3: Deleting objects in gazebo
   void deleteObject(int objectID){
     gazebo_msgs::DeleteModel deleteObj;
     deleteObj.request.model_name = objectDict[objectID][1];
@@ -291,7 +282,7 @@ public:
     gazeboDeleteModel.call(deleteObj);
   }
 
-  // 6: Load Gripper Hand and Finger file
+  // 4: Load Gripper Hand and Finger file
   void loadGripper(){
     std::string pathToHand = path+"/models/gripperAV/hand1.ply";
     std::string pathToFinger = path+"/models/gripperAV/finger1.ply";
@@ -310,7 +301,7 @@ public:
     std::cout << "Ignore the PLY reader error on 'face' and 'rgb'." << std::endl;
   }
 
-  // 7: Update gripper
+  // 5: Update gripper
   // 0 -> Hand + Left finger + Right finger
   // 1 -> Hand only
   // 2 -> Left Finger only
@@ -353,7 +344,7 @@ public:
     ptrPtCldTemp->clear();
   }
 
-  // 8A: Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
+  // 6A: Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
   void moveKinectCartesian(std::vector<double> pose){
     //Create Matrix3x3 from Euler Angles
     tf::Matrix3x3 rotMat;
@@ -378,13 +369,13 @@ public:
     // Publishing it to gazebo
     pubKinectPose.publish(ModelState);
     ros::spinOnce();
-    sleep(1);
+    boost::this_thread::sleep(boost::posix_time::milliseconds(200));
 
     // Storing the kinect pose
     lastKinectPoseCartesian = pose;
   }
 
-  // 8B: Funtion to move the Kinect in a viewsphere which has the table cente as its centre
+  // 6B: Funtion to move the Kinect in a viewsphere which has the table cente as its centre
   // R (Radius)
   // Theta (Polar Angle) -> 0 to 2*PI
   // Phi (Azhimuthal angle) -> 0 to PI/2
@@ -412,7 +403,7 @@ public:
     // Publishing it to gazebo
     pubKinectPose.publish(ModelState);
     ros::spinOnce();
-    sleep(1);
+    boost::this_thread::sleep(boost::posix_time::milliseconds(200));
 
     // Storing the kinect pose
     lastKinectPoseViewsphere = pose;
@@ -422,16 +413,16 @@ public:
                                0,M_PI/2-pose[2],M_PI+pose[1]};
   }
 
-  // 9: Function to read the kinect data.
+  // 7: Function to read the kinect data.
   void readKinect(){
-    flag[0] = 1; flag[1] = 1; flag[2] = 1;
-    while (flag[0]==1 || flag[1]==1 || flag[2]==1) {
+    readFlag[0] = 1; // readFlag[1] = 1; readFlag[2] = 1;
+    while (readFlag[0]==1 || readFlag[1]==1 || readFlag[2]==1) {
       ros::spinOnce();
       r.sleep();
     }
   }
 
-  // 10: Function to Fuse last data with existing data
+  // 8: Function to Fuse last data with existing data
   void fuseLastData(){
     ptrPtCldTemp->clear();
     // Transform : Kinect Gazebo Frame to Gazebo World frame
@@ -444,7 +435,7 @@ public:
 
     // Downsample using voxel grid
     voxelGrid.setInputCloud(cPtrPtCldTemp);
-    voxelGrid.setLeafSize(0.005, 0.005, 0.005);
+    voxelGrid.setLeafSize(voxelGridSize, voxelGridSize, voxelGridSize);
     voxelGrid.filter(*ptrPtCldTemp);
 
     // Use registration to further align the point pointclouds
@@ -456,7 +447,7 @@ public:
     }else{
       *ptrPtCldEnv += *ptrPtCldTemp;
       voxelGrid.setInputCloud(cPtrPtCldEnv);
-      voxelGrid.setLeafSize(0.005, 0.005, 0.005);
+      voxelGrid.setLeafSize(voxelGridSize, voxelGridSize, voxelGridSize);
       voxelGrid.filter(*ptrPtCldEnv);
     }
 
@@ -469,7 +460,7 @@ public:
     ptrPtCldTemp->clear();
   }
 
-  // 11: Extracting the major plane (Table) and object
+  // 9: Extracting the major plane (Table) and object
   void dataExtract(){
     // Find the major plane and get its coefficients and indices
     seg.setInputCloud(cPtrPtCldEnv);
@@ -515,7 +506,7 @@ public:
     extract.filter(*ptrPtCldObject);
   }
 
-  // 12: Generating unexplored point cloud
+  // 10: Generating unexplored point cloud
   void genUnexploredPtCld(){
     // Finding the region covered by the object
     pcl::PointXYZRGB minPt, maxPt;
@@ -558,7 +549,7 @@ public:
     voxelGrid.filter(*ptrPtCldUnexp);
   }
 
-  // 13: Updating the unexplored point cloud
+  // 11: Updating the unexplored point cloud
   void updateUnexploredPtCld(){
     // Transforming the point cloud to Kinect frame from world frame
     Eigen::Affine3f tf = tfGazWorld*tfKinOptGaz;
@@ -595,7 +586,7 @@ public:
     ptrPtCldTemp->clear();
   }
 
-  // 14: Finding normals and pairs of grasp points from object point cloud
+  // 12: Finding normals and pairs of grasp points from object point cloud
   void graspsynthesis(){
     // Generating the normals for the object point cloud
     pcl::search::Search<pcl::PointXYZRGB>::Ptr KdTree{new pcl::search::KdTree<pcl::PointXYZRGB>};
@@ -646,7 +637,7 @@ public:
     std::sort(graspsPossible.begin(),graspsPossible.end(),compareGrasp);
   }
 
-  // 15: Given a grasp point pair find the gripper orientation
+  // 13: Given a grasp point pair find the gripper orientation
   void findGripperPose(int index){
 
     Eigen::Vector3f xAxis,yAxis,zAxis;
@@ -672,7 +663,7 @@ public:
     graspsPossible[index].pose = pose;
   }
 
-  // 16: Collision check for gripper and unexplored point cloud
+  // 14: Collision check for gripper and unexplored point cloud
   void collisionCheck(){
 
     cvHull.setInputCloud(cPtrPtCldGripper);
@@ -724,7 +715,7 @@ void testSpawnDeleteObj(environment &av){
     std::cout << "Object " << i+1 << " spawned. Enter any key to continue. "; std::cin >> flag;
     av.deleteObject(i);
     std::cout << "Object " << i+1 << " deleted." << std::endl;
-    sleep(1);
+    boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
   }
   std::cout << "*** End ***" << std::endl;
 }
@@ -747,7 +738,6 @@ void testKinectMovement(environment &av){
 
       av.moveKinectCartesian(pose);
       std::cout << "Kinect moved" << std::endl;
-      sleep(1);  // Wait for 1sec
 
     } else if(flag == 2){
       std::vector<double> pose(3);
@@ -761,7 +751,6 @@ void testKinectMovement(environment &av){
 
       av.moveKinectViewsphere(pose);
       std::cout << "Kinect moved" << std::endl;
-      sleep(1);  // Wait for 1sec
     }
   } while(flag != 0);
   std::cout << "*** End ***" << std::endl;
@@ -794,8 +783,9 @@ void testKinectRead(environment &av, int flag){
 
   std::cout << "Printing values for pixel ( " << row << " , " << col << " )"<< std::endl;
   std::cout << "PCD (XYZRGB) : " << av.ptrPtCldLast->points.at(row*(av.ptrPtCldLast->width)+col) << std::endl;
-  std::cout << "Color (BGR) : " << av.ptrRgbLast->image.at<cv::Vec3b>(row,col) << std::endl;
-  std::cout << "Depth (Z) : " << av.ptrDepthLast->image.at<float>(row,col) << std::endl;
+  // NOT USED (JUST FOR REFERENCE)
+  /*std::cout << "Color (BGR) : " << av.ptrRgbLast->image.at<cv::Vec3b>(row,col) << std::endl;
+  std::cout << "Depth (Z) : " << av.ptrDepthLast->image.at<float>(row,col) << std::endl;*/
 
   if (flag==1) {
     // Setting up the point cloud visualizer
@@ -809,14 +799,15 @@ void testKinectRead(environment &av, int flag){
     // Adding the point cloud
     rbgVis(viewer,av.cPtrPtCldLast,"Raw Data",vp);
 
-    std::cout << "Close windows to continue" << std::endl;
+    std::cout << "Close window to continue." << std::endl;
     while (!viewer->wasStopped ()){
       viewer->spinOnce(100);
       boost::this_thread::sleep (boost::posix_time::microseconds(100000));
     }
-    cv::imshow("Color Feed", av.ptrRgbLast->image);
+    // NOT USED (JUST FOR REFERENCE)
+    /*cv::imshow("Color Feed", av.ptrRgbLast->image);
     cv::imshow("Depth Feed", av.ptrDepthLast->image);
-    cv::waitKey(0);
+    cv::waitKey(0);*/
   }
   av.deleteObject(0);
   std::cout << "*** End ***" << std::endl;
@@ -1137,9 +1128,13 @@ void testCollisionDummy(environment &av, bool result, int flag){
 }
 
 // 10B: A test function to check the collision check algorithm with object and grasp points
-void testCollision(environment &av, int flag){
+void testCollision(environment &av, int objID, int flag){
   std::cout << "*** In collision testing function ***" << std::endl;
-  av.spawnObject(0,0,0,0);
+  std::chrono::high_resolution_clock::time_point start[4], end[4];
+  double elapsed[4];
+
+  av.spawnObject(objID,0,0,0);
+  boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
   av.loadGripper();
 
   // 4 kinect poses
@@ -1148,7 +1143,10 @@ void testCollision(environment &av, int flag){
                                                   {1.4,0,M_PI/3},
                                                   {1.4,M_PI/2,M_PI/3}};
 
-  for (int i = 0; i < 4; i++) {
+  start[0] = std::chrono::high_resolution_clock::now();
+
+  start[1] = std::chrono::high_resolution_clock::now();
+  for (int i = 0; i < 4; i++){
     av.moveKinectViewsphere(kinectPoses[i]);
     av.readKinect();
     av.fuseLastData();
@@ -1158,12 +1156,32 @@ void testCollision(environment &av, int flag){
     }
     av.updateUnexploredPtCld();
   }
+  end[1] = std::chrono::high_resolution_clock::now();
 
-  std::cout << "Min grasp quality threshold is " << av.minGraspQuality << std::endl;
+  std::cout << "Number of points in object point cloud : " << av.ptrPtCldObject->points.size() << std::endl;
+  start[2] = std::chrono::high_resolution_clock::now();
   av.graspsynthesis();
-  std::cout << "Grasp synthesis complete." << std::endl;
+  end[2] = std::chrono::high_resolution_clock::now();
 
+  start[3] = std::chrono::high_resolution_clock::now();
   av.collisionCheck();
+  end[3] = std::chrono::high_resolution_clock::now();
+
+  end[0] = std::chrono::high_resolution_clock::now();
+
+  elapsed[0] = (std::chrono::duration_cast<std::chrono::milliseconds>(end[0] - start[0])).count();
+  elapsed[1] = (std::chrono::duration_cast<std::chrono::milliseconds>(end[1] - start[1])).count();
+  elapsed[2] = (std::chrono::duration_cast<std::chrono::milliseconds>(end[2] - start[2])).count();
+  elapsed[3] = (std::chrono::duration_cast<std::chrono::milliseconds>(end[3] - start[3])).count();
+
+  std::cout << "Printing out the timings for each section (sec) :" << std::endl;
+  std::cout << "Overall Timing = " << elapsed[0]/1000 << std::endl;
+  std::cout << "(Move Kinect + Read Kinect +" << std::endl <<
+               "Fuse Data + Data Extract +" << std::endl <<
+               "Update Enexp PtCld) x 4 = " << elapsed[1]/1000 << std::endl;
+  std::cout << "Grasp Synthesis = " << elapsed[2]/1000 << std::endl;
+  std::cout << "Collision Check = " << elapsed[3]/1000 << std::endl;
+
   if(av.selectedGrasp == -1){
     std::cout << "No grasp orientation for the grasp points found." << std::endl;
   }else{
@@ -1187,7 +1205,7 @@ void testCollision(environment &av, int flag){
       }
     }
   }
-  av.deleteObject(0);
+  av.deleteObject(objID);
   std::cout << "*** End ***" << std::endl;
 }
 
@@ -1198,9 +1216,10 @@ int main (int argc, char** argv){
   ros::NodeHandle nh;
 
   environment activeVision(&nh);
-  sleep(1); // Delay to ensure all publishers and subscribers are connected
+  // Delay to ensure all publishers and subscribers are connected
+  boost::this_thread::sleep(boost::posix_time::milliseconds(500));
 
-  int choice;
+  int choice, objID;
   std::cout << "Available choices for test functions : " << std::endl;
   std::cout << "1  : Spawn and delete 4 four objects on the table." << std::endl;
   std::cout << "2  : Load and view the gripper model." << std::endl;
@@ -1212,7 +1231,7 @@ int main (int argc, char** argv){
   std::cout << "8  : Generate the initial unexplored pointcloud based on the object." << std::endl;
   std::cout << "9  : Update the unexplored pointcloud based on 4 different viewpoints." << std::endl;
   std::cout << "10 : Grasp synthesis after fusing 4 viewpoints." << std::endl;
-  std::cout << "11 : Selecting a grasp after collision check after grasp synthesis." << std::endl;
+  std::cout << "11 : Selecting a grasp after grasp synthesis and collision check for a object." << std::endl;
   std::cout << "Enter your choice : "; cin >> choice;
   switch(choice){
     case 1:
@@ -1246,7 +1265,13 @@ int main (int argc, char** argv){
       testGraspsynthesis(activeVision,1);
       break;
     case 11:
-      testCollision(activeVision,1);
+      std::cout << "Objects available :" << std::endl;
+      std::cout << "1: Drill" << std::endl;
+      std::cout << "2: Square Prism" << std::endl;
+      std::cout << "3: Rectangular Prism" << std::endl;
+      std::cout << "4: Bowl" << std::endl;
+      std::cout << "Enter your choice : "; std::cin>>objID;
+      testCollision(activeVision,objID-1,1);
       break;
     default:
       std::cout << "Invalid choice." << std::endl;
