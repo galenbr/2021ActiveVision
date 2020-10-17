@@ -122,7 +122,6 @@ private:
   float fingerZOffset{0.0584};     // Z axis offset between gripper hand and finger
 
   std::string path;                                     // Path the active vision package
-  std::vector<std::vector<std::string>> objectDict;     // List of objects which can be spawned
 
 public:
   // NOT USED (JUST FOR REFERENCE)
@@ -170,8 +169,9 @@ public:
   std::vector<graspPoint> graspsPossible;           // List of possible grasps
   pcl::PointXYZRGB minPtObj, maxPtObj;              // Min and Max x,y,z co-ordinates of the object
 
-  double voxelGridSize{0.005};                      // Voxel Grid size for environment
-  double voxelGridSizeUnexp{0.01};                  // Voxel Grid size for unexplored point cloud
+  std::vector<std::vector<std::string>> objectDict; // List of objects which can be spawned
+  double voxelGridSize{0.01};                       // Voxel Grid size for environment
+  double voxelGridSizeUnexp{0.02};                  // Voxel Grid size for unexplored point cloud
   std::vector<double> tableCentre{1.5,0,1};         // Co-ordinates of table centre
   int scale{3};                                     // Scale value for unexplored point cloud generation
   double maxGripperWidth{0.075};                    // Gripper max width (Actual is 8 cm)
@@ -204,7 +204,9 @@ public:
     objectDict = {{"drillAV","Cordless Drill"},
                   {"squarePrismAV","Square Prism"},
                   {"rectPrismAV","Rectangular Prism"},
-                  {"bowlAV","Bowl"}};
+                  {"bowlAV","Bowl"},
+                  {"bowl2AV","Bowl2"},
+                  {"cupAV","Cup"}};
   }
 
   // 1A: Callback function to point cloud subscriber
@@ -278,8 +280,8 @@ public:
 
   // 4: Load Gripper Hand and Finger file
   void loadGripper(){
-    std::string pathToHand = path+"/models/gripperAV/hand1.ply";
-    std::string pathToFinger = path+"/models/gripperAV/finger1.ply";
+    std::string pathToHand = path+"/models/gripperAV/hand.ply";
+    std::string pathToFinger = path+"/models/gripperAV/finger.ply";
     // Gripper Hand
     if (pcl::io::loadPLYFile<pcl::PointXYZRGB>(pathToHand, *ptrPtCldGrpHnd) == -1){
       PCL_ERROR ("Couldn't read file hand.ply \n");
@@ -522,7 +524,7 @@ public:
     maxUnexp.push_back(maxPtObj.y+(scale-1)*(maxPtObj.y-minPtObj.y)/2);
     maxUnexp.push_back(maxPtObj.z+(scale-1)*(maxPtObj.z-minPtObj.z)/2);
 
-    // Considering a point for every 1 cm and then downsampling it to 1 cm
+    // Considering a point for every 1 cm and then downsampling it
     float nPts = (maxUnexp[0]-minUnexp[0])*(maxUnexp[1]-minUnexp[1])*(maxUnexp[2]-minUnexp[2])*1000000;
     // std::cout << minUnexp[0] << " " << minUnexp[1] << " " << minUnexp[2] << std::endl;
     // std::cout << maxUnexp[0] << " " << maxUnexp[1] << " " << maxUnexp[2] << std::endl;
@@ -614,7 +616,7 @@ public:
     Eigen::Vector3f vectA, vectB;
     double A,B;
 
-    for (int i = 0; i < ptrPtCldObject->size(); i++){
+    for (int i = 0; i < ptrPtCldObject->size()-1; i++){
       for (int j = i+1; j < ptrPtCldObject->size(); j++){
         graspTemp.p1 = ptrPtCldObject->points[i];
         graspTemp.p2 = ptrPtCldObject->points[j];
@@ -647,6 +649,36 @@ public:
       }
     }
     std::sort(graspsPossible.begin(),graspsPossible.end(),compareGrasp);
+
+    // For thin objects grasp pair would not be feasible, so each point is considered as a grasp pair
+    // Adding these grasps in the end
+    Eigen::Vector3f xyPlaneA(0,0,1);
+    Eigen::Vector3f xyPlaneB(0,0,-1);
+    for(int i = 0; i < ptrPtCldObject->size(); i++){
+
+      A = std::min(pcl::getAngle3D(xyPlaneA,ptrObjNormal->points[i].getNormalVector3fMap()),
+                   pcl::getAngle3D(xyPlaneB,ptrObjNormal->points[i].getNormalVector3fMap()))*180/M_PI;
+
+      // If the point is too close to table and its normal vector is along z axis this skip it
+      if (A > 45 && ptrPtCldObject->points[i].z < tableCentre[2]+0.02){
+        continue;
+      }
+      graspTemp.p1 = ptrPtCldObject->points[i];
+      // Translating it along the +ve normal vector
+      graspTemp.p1.x += (voxelGridSize)/2*ptrObjNormal->points[i].normal_x;
+      graspTemp.p1.y += (voxelGridSize)/2*ptrObjNormal->points[i].normal_y;
+      graspTemp.p1.z += (voxelGridSize)/2*ptrObjNormal->points[i].normal_z;
+
+      graspTemp.p2 = ptrPtCldObject->points[i];
+      // Translating it along the -ve normal vector
+      graspTemp.p2.x -= (voxelGridSize)/2*ptrObjNormal->points[i].normal_x;
+      graspTemp.p2.y -= (voxelGridSize)/2*ptrObjNormal->points[i].normal_y;
+      graspTemp.p2.z -= (voxelGridSize)/2*ptrObjNormal->points[i].normal_z;
+
+      graspTemp.gripperWidth = voxelGridSize;
+      graspTemp.quality = 180;
+      graspsPossible.push_back(graspTemp);
+    }
   }
 
   // 13: Given a grasp point pair find the gripper orientation
@@ -722,7 +754,7 @@ public:
 void testSpawnDeleteObj(environment &av){
   std::cout << "*** In object spawn and delete testing function ***" << std::endl;
   int flag = 0;
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < av.objectDict.size(); i++) {
     av.spawnObject(i,0,0,0);
     std::cout << "Object " << i+1 << " spawned. Enter any key to continue. "; std::cin >> flag;
     av.deleteObject(i);
@@ -1175,6 +1207,7 @@ void testCollision(environment &av, int objID, int flag){
   start[2] = std::chrono::high_resolution_clock::now();
   av.graspsynthesis();
   end[2] = std::chrono::high_resolution_clock::now();
+  std::cout << "Number of grasps found : " << av.graspsPossible.size() << std::endl;
 
   start[3] = std::chrono::high_resolution_clock::now();
   av.collisionCheck();
@@ -1200,31 +1233,34 @@ void testCollision(environment &av, int objID, int flag){
     // Setting up the point cloud visualizer
     ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
     viewer->initCameraParameters();
-    int vp = {};
-    viewer->createViewPort(0.0,0.0,1.0,1.0,vp);
+    int vp[2] = {};
+    viewer->createViewPort(0.0,0.0,0.5,1.0,vp[0]);
+    viewer->createViewPort(0.5,0.0,1.0,1.0,vp[1]);
     viewer->addCoordinateSystem(1.0);
     viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
+
+    rbgVis(viewer,av.ptrPtCldEnv,"Environment",vp[0]);
 
     for (int i = 0; i < av.ptrPtCldObject->size(); i++) {
       av.ptrPtCldObject->points[i].r = 0;
       av.ptrPtCldObject->points[i].b = 200;
       av.ptrPtCldObject->points[i].g = 0;
     }
-    rbgVis(viewer,av.ptrPtCldObject,"Object",vp);
+    rbgVis(viewer,av.ptrPtCldObject,"Object",vp[1]);
 
     for (int i = 0; i < av.ptrPtCldCollCheck->size(); i++) {
       av.ptrPtCldCollCheck->points[i].r = 200;
       av.ptrPtCldCollCheck->points[i].b = 0;
       av.ptrPtCldCollCheck->points[i].g = 0;
     }
-    rbgVis(viewer,av.ptrPtCldCollCheck,"Collision",vp);
+    rbgVis(viewer,av.ptrPtCldCollCheck,"Collision",vp[1]);
 
     if(av.selectedGrasp == -1){
       std::cout << "No grasp orientation for the grasp points found." << std::endl;
       std::cout << "Showing the object (blue), collision check points (red). Close viewer to continue" << std::endl;
     }else{
       av.updateGripper(av.selectedGrasp,0);    // Only for visulization purpose
-      rbgVis(viewer,av.ptrPtCldGripper,"Gripper",vp);
+      rbgVis(viewer,av.ptrPtCldGripper,"Gripper",vp[1]);
       std::cout << "Showing the object (blue), collision check points (red), selected gripper position (black). Close viewer to continue" << std::endl;
     }
 
@@ -1250,7 +1286,7 @@ int main (int argc, char** argv){
 
   int choice, objID;
   std::cout << "Available choices for test functions : " << std::endl;
-  std::cout << "1  : Spawn and delete 4 four objects on the table." << std::endl;
+  std::cout << "1  : Spawn and delete 6 objects on the table." << std::endl;
   std::cout << "2  : Load and view the gripper model." << std::endl;
   std::cout << "3  : Move the kinect to a custom position." << std::endl;
   std::cout << "4  : Continuously move the kinect in a viewsphere with centre on the table." << std::endl;
@@ -1299,6 +1335,8 @@ int main (int argc, char** argv){
       std::cout << "2: Square Prism" << std::endl;
       std::cout << "3: Rectangular Prism" << std::endl;
       std::cout << "4: Bowl" << std::endl;
+      std::cout << "5: Big Bowl" << std::endl;
+      std::cout << "6: Cup" << std::endl;
       std::cout << "Enter your choice : "; std::cin>>objID;
       std::cout << "Enter your voxel grid size (0.005 to 0.01) : "; std::cin >> activeVision.voxelGridSize;
       activeVision.voxelGridSize = std::max(activeVision.voxelGridSize,0.005);
@@ -1316,4 +1354,5 @@ Notes:
 -> POint cloud XYZRGB data type : std::vector< pcl::PointXYZRGB, Eigen::aligned_allocator<pcl::PointXYZRGB> >
 -> 640 elements in rach row of the matrix.
 -> Transformation of KinectOpticalFrame wrt KinectGazeboFrame (RPY) - (-90 0 -90)
+-> Working combo : Voxel Obj 0.01, Unexp voxel 0.02
 */

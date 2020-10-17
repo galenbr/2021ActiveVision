@@ -102,64 +102,56 @@ private:
   float fingerZOffset;             // Z axis offset between gripper hand and finger
 
   std::string path;                                     // Path the active vision package
-  std::vector<std::vector<std::string>> objectDict;     // List of objects which can be spawned
 
 public:
   // NOT USED (JUST FOR REFERENCE)
   /* cv_bridge::CvImageConstPtr ptrRgbLast{new cv_bridge::CvImage};    // RGB image from camera
   cv_bridge::CvImageConstPtr ptrDepthLast{new cv_bridge::CvImage};  // Depth map from camera */
 
-  ptCldColor::Ptr ptrPtCldLast{new ptCldColor};                     // Point cloud to store the environment
-  ptCldColor::ConstPtr cPtrPtCldLast{ptrPtCldLast};                 // Constant pointer
+  // PtCld: Last recorded viewpoint
+  ptCldColor::Ptr ptrPtCldLast{new ptCldColor};      ptCldColor::ConstPtr cPtrPtCldLast{ptrPtCldLast};
 
-  ptCldColor::Ptr ptrPtCldTemp{new ptCldColor};                     // Point cloud to store temporarily
-  ptCldColor::ConstPtr cPtrPtCldTemp{ptrPtCldTemp};                 // Constant pointer
+  // PtCld: Environment after fusing multiple view points, extracted table, object and its normal
+  ptCldColor::Ptr ptrPtCldEnv{new ptCldColor};       ptCldColor::ConstPtr cPtrPtCldEnv{ptrPtCldEnv};
+  ptCldColor::Ptr ptrPtCldTable{new ptCldColor};     ptCldColor::ConstPtr cPtrPtCldTable{ptrPtCldTable};
+  ptCldColor::Ptr ptrPtCldObject{new ptCldColor};    ptCldColor::ConstPtr cPtrPtCldObject{ptrPtCldObject};
+  ptCldNormal::Ptr ptrObjNormal{new ptCldNormal};    ptCldNormal::ConstPtr cPtrObjNormal{ptrObjNormal};
 
-  ptCldColor::Ptr ptrPtCldEnv{new ptCldColor};                      // Point cloud to store fused data
-  ptCldColor::ConstPtr cPtrPtCldEnv{ptrPtCldEnv};                   // Constant pointer
+  // PtCld: Sorting the convex hull generated
+  ptCldColor::Ptr ptrPtCldHull{new ptCldColor};      ptCldColor::ConstPtr cPtrPtCldHull{ptrPtCldHull};
 
-  ptCldColor::Ptr ptrPtCldTable{new ptCldColor};                    // Point cloud to store table data
-  ptCldColor::ConstPtr cPtrPtCldTable{ptrPtCldTable};               // Constant pointer
+  // PtCld: Unexplored point cloud, point clould used for collision check (unexplored + table)
+  ptCldColor::Ptr ptrPtCldUnexp{new ptCldColor};     ptCldColor::ConstPtr cPtrPtCldUnexp{ptrPtCldUnexp};
+  ptCldColor::Ptr ptrPtCldCollCheck{new ptCldColor}; ptCldColor::ConstPtr cPtrPtCldCollCheck{ptrPtCldCollCheck};
 
-  ptCldColor::Ptr ptrPtCldHull{new ptCldColor};                     // Point cloud to store convex hull data
-  ptCldColor::ConstPtr cPtrPtCldHull{ptrPtCldHull};                 // Constant pointer
+  // PtCld: Gripper related
+  ptCldColor::Ptr ptrPtCldGrpHnd{new ptCldColor};    ptCldColor::ConstPtr cPtrPtCldGrpHnd{ptrPtCldGrpHnd};
+  ptCldColor::Ptr ptrPtCldGrpRfgr{new ptCldColor};   ptCldColor::ConstPtr cPtrPtCldGrpRfgr{ptrPtCldGrpRfgr};
+  ptCldColor::Ptr ptrPtCldGrpLfgr{new ptCldColor};   ptCldColor::ConstPtr cPtrPtCldGrpLfgr{ptrPtCldGrpLfgr};
+  ptCldColor::Ptr ptrPtCldGripper{new ptCldColor};   ptCldColor::ConstPtr cPtrPtCldGripper{ptrPtCldGripper};
 
-  ptCldColor::Ptr ptrPtCldObject{new ptCldColor};                   // Point cloud to store object data
-  ptCldColor::ConstPtr cPtrPtCldObject{ptrPtCldObject};             // Constant pointer
+  // PtCld: Points colliding with gripper
+  ptCldColor::Ptr ptrPtCldCollided{new ptCldColor};  ptCldColor::ConstPtr cPtrPtCldCollided{ptrPtCldCollided};
 
-  ptCldColor::Ptr ptrPtCldUnexp{new ptCldColor};                    // Point cloud to store unexplored points data
-  ptCldColor::ConstPtr cPtrPtCldUnexp{ptrPtCldUnexp};               // Constant pointer
+  // PtCld: Temporary variable
+  ptCldColor::Ptr ptrPtCldTemp{new ptCldColor};      ptCldColor::ConstPtr cPtrPtCldTemp{ptrPtCldTemp};
 
-  ptCldColor::Ptr ptrPtCldGripper{new ptCldColor};                  // Point cloud to store gripper (hand+fingers)
-  ptCldColor::ConstPtr cPtrPtCldGripper{ptrPtCldGripper};           // Constant pointer
-
-  ptCldColor::Ptr ptrPtCldGrpHnd{new ptCldColor};                   // Point cloud to store gripper hand
-  ptCldColor::ConstPtr cPtrPtCldGrpHnd{ptrPtCldGrpHnd};             // Constant pointer
-
-  ptCldColor::Ptr ptrPtCldGrpRfgr{new ptCldColor};                  // Point cloud to store gripper right finger
-  ptCldColor::ConstPtr cPtrPtCldGrpRfgr{ptrPtCldGrpRfgr};           // Constant pointer
-
-  ptCldColor::Ptr ptrPtCldGrpLfgr{new ptCldColor};                  // Point cloud to store gripper left finger
-  ptCldColor::ConstPtr cPtrPtCldGrpLfgr{ptrPtCldGrpLfgr};           // Constant pointer
-
-  ptCldColor::Ptr ptrPtCldCollision{new ptCldColor};                // Point cloud to store collision points
-  ptCldColor::ConstPtr cPtrPtCldCollision{ptrPtCldCollision};       // Constant pointer
-
-  ptCldNormal::Ptr ptrObjNormal{new ptCldNormal};                   // Point cloud to store object normals
-  ptCldNormal::ConstPtr cPtrObjNormal{ptrObjNormal};                // Constant pointer
-
+  // Variables used in table and object extraction
   pcl::ModelCoefficients::Ptr tableCoeff{new pcl::ModelCoefficients()};
   pcl::PointIndices::Ptr tableIndices{new pcl::PointIndices()};
   pcl::PointIndices::Ptr objectIndices{new pcl::PointIndices()};
 
-  std::vector<pcl::Vertices> hullVertices;
+  std::vector<pcl::Vertices> hullVertices;          // Used in convex hull during collision check
   std::vector<double> lastKinectPoseCartesian;      // Last Kinect pose where it was moved in cartesian co-ordiantes
   std::vector<double> lastKinectPoseViewsphere;     // Last Kinect pose where it was moved in viewsphere co-ordinates
   std::vector<double> minUnexp;                     // Min x,y,z of unexplored pointcloud generated
   std::vector<double> maxUnexp;                     // Max x,y,z of unexplored pointcloud generated
   std::vector<graspPoint> graspsPossible;           // List of possible grasps
+  pcl::PointXYZRGB minPtObj, maxPtObj;              // Min and Max x,y,z co-ordinates of the object
 
-  double voxelGridSize;                             // Voxel Grid size
+  std::vector<std::vector<std::string>> objectDict; // List of objects which can be spawned
+  double voxelGridSize;                             // Voxel Grid size for environment
+  double voxelGridSizeUnexp;                        // Voxel Grid size for unexplored point cloud
   std::vector<double> tableCentre;                  // Co-ordinates of table centre
   int scale;                                        // Scale value for unexplored point cloud generation
   double maxGripperWidth;                           // Gripper max width (Actual is 8 cm)
