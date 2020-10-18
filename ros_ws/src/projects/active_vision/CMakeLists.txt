@@ -137,6 +137,8 @@ include
 
 ## Declare a C++ library
 add_library(${PROJECT_NAME}
+   src/dataHandling.cpp
+   src/helperFunctions.cpp
    src/testingModel.cpp
 )
 
@@ -146,7 +148,7 @@ target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-# add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
@@ -224,14 +226,12 @@ target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
+#add_executable(helperFunctions src/helperFunctions.cpp)
+
 add_executable(testingModel src/testingModel.cpp)
-target_link_libraries(testingModel ${catkin_LIBRARIES} ${PCL_LIBRARIES})
-# target_link_libraries(testingModel ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
+add_dependencies(testingModel active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(testingModel active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(supervisorNode src/supervisorNode.cpp)
 add_dependencies(supervisorNode active_vision ${catkin_EXPORTED_TARGETS})
 target_link_libraries(supervisorNode active_vision ${catkin_LIBRARIES})
-
-# add_executable(graspNode src/graspSynthesis.cpp)
-# add_dependencies(graspNode active_vision ${catkin_EXPORTED_TARGETS})
-# target_link_libraries(graspNode active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})

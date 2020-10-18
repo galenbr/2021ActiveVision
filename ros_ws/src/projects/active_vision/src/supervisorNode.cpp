@@ -1,6 +1,8 @@
 #include "active_vision/testingModel.h"
+#include "active_vision/dataHandling.h"
 
 #define TIMEOUT 10
+#define MIN_ANGLE 20
 
 void modifyTargetPosition(std::vector<double> &pos){
 	pos[0]+=0.1;
@@ -14,11 +16,23 @@ int main (int argc, char** argv){
  	environment kinectControl(&nh);
 	sleep(1);
 
- 	int stepsTaken = 0;
-	std::vector<double> home_position = {0.25, 0.0, 1.75, 0.0, 0.55, 0.0};
- 	std::vector<double> target_position = {0.25, 0.0, 1.75, 0.0, 0.55, 0.0};
+ 	//int stepsTaken = 0;
+	//std::vector<double> home_position = {0.25, 0.0, 1.75, 0.0, 0.55, 0.0};
+ 	//std::vector<double> target_position = {0.25, 0.0, 1.75, 0.0, 0.55, 0.0};
 
-	kinectControl.moveKinectCartesian(home_position);
+ 	test();
+
+	//kinectControl.moveKinectCartesian(home_position);
+	for (int polarAngle = 0; polarAngle < 360; polarAngle+=MIN_ANGLE){
+		for (int azimuthalAngle = 0; azimuthalAngle < 90; azimuthalAngle+=MIN_ANGLE){
+				//kinectControl.moveKinectViewsphere()
+				std::cout << "Angles: " << polarAngle << azimuthalAngle << std::endl;
+			//Move kinect to position
+			//Check grasp
+			//If bad, algorithm.
+		}
+	}
+	/*
 
  	while(stepsTaken < TIMEOUT){
 
@@ -56,5 +70,5 @@ int main (int argc, char** argv){
  		std::cout << "Spinning... " << stepsTaken << std::endl;
  		stepsTaken++;
  		sleep(1);
- 	}
+ 	}*/
  }
