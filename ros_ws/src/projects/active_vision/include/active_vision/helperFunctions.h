@@ -1,3 +1,6 @@
+#ifndef HELPER_FUNCTIONS
+#define HELPER_FUNCTIONS
+
 #include <iostream>
 #include <math.h>
 #include <stdlib.h>
@@ -51,3 +54,5 @@
 typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
 
 ptCldColor::Ptr fuseData(std::vector<double> lastKinectPoseCartesian, Eigen::Affine3f tfKinOptGaz, ptCldColor::Ptr ptrPtCldInput, ptCldColor::Ptr ptrPtCldOutput, double voxelGridSize = 0.01);
+
+#endif
