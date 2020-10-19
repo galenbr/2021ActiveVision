@@ -75,4 +75,6 @@ ptCldColor::Ptr fuseData(std::vector<double> lastKinectPoseCartesian, Eigen::Aff
 
 std::vector<graspPoint> graspsynthesis(ptCldColor::Ptr ptrPtCldObject, std::vector<double> tableCentre, double minGraspQuality, double maxGripperWidth, double voxelGridSize = 0.01);
 
+std::vector<float> genGripperPose(std::vector<graspPoint> graspsPossible, int index);
+
 #endif

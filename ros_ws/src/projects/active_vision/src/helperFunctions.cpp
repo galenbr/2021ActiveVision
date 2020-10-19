@@ -248,3 +248,28 @@ std::vector<graspPoint> graspsynthesis(ptCldColor::Ptr ptrPtCldObject, std::vect
     }
     return graspsPossible;
 }
+
+//13 For determining a specific gripper pose
+std::vector<float> genGripperPose(std::vector<graspPoint> graspsPossible, int index){
+    Eigen::Vector3f xAxis,yAxis,zAxis;
+    Eigen::Vector3f xyPlane(0,0,1);
+
+    yAxis = graspsPossible[index].p1.getVector3fMap() - graspsPossible[index].p2.getVector3fMap(); yAxis.normalize();
+    zAxis = yAxis.cross(xyPlane);
+    xAxis = yAxis.cross(zAxis);
+
+    tf::Matrix3x3 rotMat;
+    double Roll,Pitch,Yaw;
+    rotMat.setValue(xAxis[0],yAxis[0],zAxis[0],
+                    xAxis[1],yAxis[1],zAxis[1],
+                    xAxis[2],yAxis[2],zAxis[2]);
+    rotMat.getRPY(Roll,Pitch,Yaw);
+
+    std::vector<float> pose = {0,0,0,0,0,0};
+    pose[0] = (graspsPossible[index].p1.x + graspsPossible[index].p2.x)/2;
+    pose[1] = (graspsPossible[index].p1.y + graspsPossible[index].p2.y)/2;
+    pose[2] = (graspsPossible[index].p1.z + graspsPossible[index].p2.z)/2;
+    pose[3] = Roll; pose[4] = Pitch; pose[5] = Yaw;
+
+    return pose;
+}
