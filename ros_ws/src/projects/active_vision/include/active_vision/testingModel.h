@@ -3,23 +3,6 @@
 
 #include "active_vision/helperFunctions.h"
 
-// Typedef for convinience
-//typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
-typedef pcl::PointCloud<pcl::Normal> ptCldNormal;
-typedef pcl::visualization::PCLVisualizer ptCldVis;
-
-// Structure to store one grasp related data
-struct graspPoint{
-  float quality;
-  float gripperWidth;
-  pcl::PointXYZRGB p1;
-  pcl::PointXYZRGB p2;
-  std::vector<float> pose;    // Note: This is not the final gripper pose
-  float addnlPitch;
-};
-
-bool compareGrasp(graspPoint A, graspPoint B);
-
 void rbgVis(ptCldVis::Ptr viewer, ptCldColor::ConstPtr cloud, std::string name,int vp);
 
 void rbgNormalVis(ptCldVis::Ptr viewer, ptCldColor::ConstPtr cloud, ptCldNormal::ConstPtr normal, std::string name,int vp);
@@ -143,6 +126,7 @@ public:
 
   // 9: Extracting the major plane (Table) and object
   void dataExtract();
+  void dataExtract(ptCldColor::ConstPtr cPtrTotalPtCloud, ptCldColor::Ptr ptrExtracted);
 
   // 10: Generating unexplored point cloud
   void genUnexploredPtCld();
@@ -151,7 +135,8 @@ public:
   void updateUnexploredPtCld();
 
   // 12: Finding pairs of grasp points from object point cloud
-  void graspsynthesis();
+  void graspSynthesis();
+  void graspSynthesis(ptCldColor::Ptr object);
 
   // 13: Given a grasp point pair find the gripper orientation
   void findGripperPose(int index);

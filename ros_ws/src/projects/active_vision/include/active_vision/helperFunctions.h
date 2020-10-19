@@ -52,7 +52,27 @@
 #include <tuple>
 
 typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
+typedef pcl::PointCloud<pcl::Normal> ptCldNormal;
+typedef pcl::visualization::PCLVisualizer ptCldVis;
+
+// Structure to store one grasp related data
+struct graspPoint{
+  float quality;
+  float gripperWidth;
+  pcl::PointXYZRGB p1;
+  pcl::PointXYZRGB p2;
+  std::vector<float> pose;    // Note: This is not the final gripper pose
+  float addnlPitch;
+};
+
+bool compareGrasp(graspPoint A, graspPoint B);
+
+gazebo_msgs::ModelState kinectCartesianModel(std::vector<double> pose);
+
+gazebo_msgs::ModelState kinectViewSphereModel(std::vector<double> pose, std::vector<double> tableCentre);
 
 ptCldColor::Ptr fuseData(std::vector<double> lastKinectPoseCartesian, Eigen::Affine3f tfKinOptGaz, ptCldColor::Ptr ptrPtCldInput, ptCldColor::Ptr ptrPtCldOutput, double voxelGridSize = 0.01);
+
+std::vector<graspPoint> graspsynthesis(ptCldColor::Ptr ptrPtCldObject, std::vector<double> tableCentre, double minGraspQuality, double maxGripperWidth, double voxelGridSize = 0.01);
 
 #endif
