@@ -67,11 +67,19 @@ struct graspPoint{
 
 bool compareGrasp(graspPoint A, graspPoint B);
 
+Eigen::Affine3f homoMatTranspose(Eigen::Affine3f tf);
+
+Eigen::Affine3f transformGazWorld(std::vector<double> lastKinectPoseCartesian);
+
 gazebo_msgs::ModelState kinectCartesianModel(std::vector<double> pose);
 
 gazebo_msgs::ModelState kinectViewSphereModel(std::vector<double> pose, std::vector<double> tableCentre);
 
-ptCldColor::Ptr fuseData(std::vector<double> lastKinectPoseCartesian, Eigen::Affine3f tfKinOptGaz, ptCldColor::Ptr ptrPtCldInput, ptCldColor::Ptr ptrPtCldOutput, double voxelGridSize = 0.01);
+void fuseData(Eigen::Affine3f tfGazWorld, Eigen::Affine3f tfKinOptGaz, ptCldColor::Ptr ptrPtCldInput, ptCldColor::Ptr ptrPtCldOld, ptCldColor::Ptr ptrPtCldOutput, double voxelGridSize = 0.01);
+
+void extractObj(ptCldColor::ConstPtr cPtrTotalPtCloud, ptCldColor::Ptr ptrExtracted, ptCldColor::Ptr tableOutput, ptCldColor::Ptr hullOutput, pcl::PointXYZRGB *minPtObj, pcl::PointXYZRGB *maxPtObj, double voxelGridSize = 0.01);
+
+void updateunexploredPtCld(Eigen::Affine3f tfGazWorld, Eigen::Affine3f tfKinOptGaz, Eigen::MatrixXf projectionMat, ptCldColor::Ptr ptrPtCldUnexp, ptCldColor::Ptr ptrPtCldLast, ptCldColor::ConstPtr cPtrPtCldTable, pcl::PointXYZRGB minPtObj, pcl::PointXYZRGB maxPtObj, ptCldColor::Ptr unexpOutput, ptCldColor::Ptr collisionOutput, double voxelGridSizeUnexp = 0.02);
 
 std::vector<graspPoint> graspsynthesis(ptCldColor::Ptr ptrPtCldObject, std::vector<double> tableCentre, double minGraspQuality, double maxGripperWidth, double voxelGridSize = 0.01);
 

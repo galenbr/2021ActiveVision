@@ -7,8 +7,6 @@ void rbgVis(ptCldVis::Ptr viewer, ptCldColor::ConstPtr cloud, std::string name,i
 
 void rbgNormalVis(ptCldVis::Ptr viewer, ptCldColor::ConstPtr cloud, ptCldNormal::ConstPtr normal, std::string name,int vp);
 
-Eigen::Affine3f homoMatTranspose(Eigen::Affine3f tf);
-
 // Class to store data of environment and its processing
 class environment{
 private:
@@ -31,9 +29,6 @@ private:
   pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;  // Normal Estimation
 
   Eigen::MatrixXf projectionMat;   // Camera projection matrix
-  Eigen::Affine3f tfKinOptGaz;     // Transform : Kinect Optical Frame to Kinect Gazebo frame
-  Eigen::Affine3f tfGazWorld;      // Transform : Kinect Gazebo Frame to Gazebo World frame
-  Eigen::Affine3f tfGripper;       // Transform : For gripper based on grasp points found
 
   int readFlag[3];                 // Flag used to read data from kinect only when needed
   float fingerZOffset;             // Z axis offset between gripper hand and finger
@@ -44,6 +39,10 @@ public:
   // NOT USED (JUST FOR REFERENCE)
   /* cv_bridge::CvImageConstPtr ptrRgbLast{new cv_bridge::CvImage};    // RGB image from camera
   cv_bridge::CvImageConstPtr ptrDepthLast{new cv_bridge::CvImage};  // Depth map from camera */
+
+  Eigen::Affine3f tfKinOptGaz;     // Transform : Kinect Optical Frame to Kinect Gazebo frame
+  Eigen::Affine3f tfGazWorld;      // Transform : Kinect Gazebo Frame to Gazebo World frame
+  Eigen::Affine3f tfGripper;       // Transform : For gripper based on grasp points found
 
   // PtCld: Last recorded viewpoint
   ptCldColor::Ptr ptrPtCldLast{new ptCldColor};      ptCldColor::ConstPtr cPtrPtCldLast{ptrPtCldLast};
@@ -111,6 +110,7 @@ public:
 
   // 5: Update gripper
   void updateGripper(int index ,int choice);
+  void updateGripper(int index ,int choice, std::vector<graspPoint> *graspsP);
 
   // 6A: Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
   void moveKinectCartesian(std::vector<double> pose);
@@ -122,11 +122,12 @@ public:
   void readKinect();
 
   // 8: Function to Fuse last data with existing data
-  void fuseLastData();
+  void fuseLastData(void);
+  void fuseLastData(ptCldColor::Ptr retEnv);
 
   // 9: Extracting the major plane (Table) and object
-  void dataExtract();
-  void dataExtract(ptCldColor::ConstPtr cPtrTotalPtCloud, ptCldColor::Ptr ptrExtracted);
+  void dataExtract(void);
+  void dataExtract(ptCldColor::ConstPtr cEnv, ptCldColor::Ptr target);
 
   // 10: Generating unexplored point cloud
   void genUnexploredPtCld();
@@ -135,7 +136,7 @@ public:
   void updateUnexploredPtCld();
 
   // 12: Finding pairs of grasp points from object point cloud
-  void graspSynthesis();
+  void graspSynthesis(void);
   void graspSynthesis(ptCldColor::Ptr object);
 
   // 13: Given a grasp point pair find the gripper orientation
