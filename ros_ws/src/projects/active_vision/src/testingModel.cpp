@@ -386,7 +386,7 @@ public:
   // 12b: Reset selected grasp and synthesize all possible grasps for a provided object
   void graspSynthesis(ptCldColor::Ptr object){
     selectedGrasp = -1;
-    graspsPossible = graspsynthesis(object, tableCentre, minGraspQuality, maxGripperWidth, voxelGridSize);
+    graspsynthesis(graspsPossible, object, tableCentre, minGraspQuality, maxGripperWidth, voxelGridSize);
   }
 
   // 13: Given a grasp point pair find the gripper orientation

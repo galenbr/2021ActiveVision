@@ -295,7 +295,7 @@ void updateunexploredPtCld(Eigen::Affine3f tfGazWorld, Eigen::Affine3f tfKinOptG
 }
 
 // 12: Finding normals and pairs of grasp points from object point cloud
-std::vector<graspPoint> graspsynthesis(ptCldColor::Ptr ptrPtCldObject, std::vector<double> tableCentre, double minGraspQuality, double maxGripperWidth, double voxelGridSize){
+void graspsynthesis(std::vector<graspPoint> &graspsPossible, ptCldColor::Ptr ptrPtCldObject, std::vector<double> tableCentre, double minGraspQuality, double maxGripperWidth, double voxelGridSize){
     // Generating the normals for the object point cloud
     pcl::search::Search<pcl::PointXYZRGB>::Ptr KdTree{new pcl::search::KdTree<pcl::PointXYZRGB>};
     ptCldColor::ConstPtr cPtrPtCldObject(ptrPtCldObject);
@@ -306,7 +306,7 @@ std::vector<graspPoint> graspsynthesis(ptCldColor::Ptr ptrPtCldObject, std::vect
     ne.setKSearch(10);
     ne.compute(*ptrObjNormal);
 
-    std::vector<graspPoint> graspsPossible;   // Clear the vector
+    graspsPossible.clear();   // Clear the vector
 
     graspPoint graspTemp;
     Eigen::Vector3f vectA, vectB;
@@ -375,7 +375,6 @@ std::vector<graspPoint> graspsynthesis(ptCldColor::Ptr ptrPtCldObject, std::vect
       graspTemp.quality = 180;
       graspsPossible.push_back(graspTemp);
     }
-    return graspsPossible;
 }
 
 //13 For determining a specific gripper pose

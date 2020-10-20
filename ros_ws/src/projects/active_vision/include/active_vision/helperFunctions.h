@@ -81,7 +81,7 @@ void extractObj(ptCldColor::ConstPtr cPtrTotalPtCloud, ptCldColor::Ptr ptrExtrac
 
 void updateunexploredPtCld(Eigen::Affine3f tfGazWorld, Eigen::Affine3f tfKinOptGaz, Eigen::MatrixXf projectionMat, ptCldColor::Ptr ptrPtCldUnexp, ptCldColor::Ptr ptrPtCldLast, ptCldColor::ConstPtr cPtrPtCldTable, pcl::PointXYZRGB minPtObj, pcl::PointXYZRGB maxPtObj, ptCldColor::Ptr unexpOutput, ptCldColor::Ptr collisionOutput, double voxelGridSizeUnexp = 0.02);
 
-std::vector<graspPoint> graspsynthesis(ptCldColor::Ptr ptrPtCldObject, std::vector<double> tableCentre, double minGraspQuality, double maxGripperWidth, double voxelGridSize = 0.01);
+void graspsynthesis(std::vector<graspPoint> &graspsPossible, ptCldColor::Ptr ptrPtCldObject, std::vector<double> tableCentre, double minGraspQuality, double maxGripperWidth, double voxelGridSize = 0.01);
 
 std::vector<float> genGripperPose(std::vector<graspPoint> graspsPossible, int index);
 
