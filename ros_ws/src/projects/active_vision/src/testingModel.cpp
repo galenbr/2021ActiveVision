@@ -4,6 +4,7 @@
 void rbgVis(ptCldVis::Ptr viewer, ptCldColor::ConstPtr cloud, std::string name,int vp){
   viewer->setBackgroundColor(0.5,0.5,0.5,vp);
   pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGB> rgb(cloud);
+  viewer->removePointCloud(name,vp);
   viewer->addPointCloud<pcl::PointXYZRGB>(cloud,rgb,name,vp);
   viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE,3,name,vp);
 }
@@ -15,15 +16,6 @@ void rbgNormalVis(ptCldVis::Ptr viewer, ptCldColor::ConstPtr cloud, ptCldNormal:
   viewer->addPointCloud<pcl::PointXYZRGB>(cloud,rgb,name,vp);
   viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE,3,name,vp);
   viewer->addPointCloudNormals<pcl::PointXYZRGB, pcl::Normal>(cloud,normal,5,0.01,name+"_normal",vp);
-}
-
-// Funstion to transpose a homogenous matrix
-Eigen::Affine3f homoMatTranspose(Eigen::Affine3f tf){
-  Eigen::Affine3f tfTranspose;
-  tfTranspose.setIdentity();
-  tfTranspose.matrix().block<3,3>(0,0) = tf.rotation().transpose();
-  tfTranspose.matrix().block<3,1>(0,3) = -1*tf.rotation().transpose()*tf.translation();
-  return(tfTranspose);
 }
 
 // Class to store data of environment and its processing
@@ -48,9 +40,6 @@ private:
   pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;  // Normal Estimation
 
   Eigen::MatrixXf projectionMat;   // Camera projection matrix
-  Eigen::Affine3f tfKinOptGaz;     // Transform : Kinect Optical Frame to Kinect Gazebo frame
-  Eigen::Affine3f tfGazWorld;      // Transform : Kinect Gazebo Frame to Gazebo World frame
-  Eigen::Affine3f tfGripper;       // Transform : For gripper based on grasp points found
 
   int readFlag[3]={};              // Flag used to read data from kinect only when needed
   float fingerZOffset{0.0584};     // Z axis offset between gripper hand and finger
@@ -61,6 +50,9 @@ public:
   // NOT USED (JUST FOR REFERENCE)
   /* cv_bridge::CvImageConstPtr ptrRgbLast{new cv_bridge::CvImage};    // RGB image from camera
   cv_bridge::CvImageConstPtr ptrDepthLast{new cv_bridge::CvImage};  // Depth map from camera */
+  Eigen::Affine3f tfKinOptGaz;     // Transform : Kinect Optical Frame to Kinect Gazebo frame
+  Eigen::Affine3f tfGazWorld;      // Transform : Kinect Gazebo Frame to Gazebo World frame
+  Eigen::Affine3f tfGripper;       // Transform : For gripper based on grasp points found
 
   // PtCld: Last recorded viewpoint
   ptCldColor::Ptr ptrPtCldLast{new ptCldColor};      ptCldColor::ConstPtr cPtrPtCldLast{ptrPtCldLast};
@@ -236,38 +228,42 @@ public:
   // 1 -> Hand only
   // 2 -> Left Finger only
   // 3 -> Right FInger only
-  void updateGripper(int index ,int choice){
+  void updateGripper(int index, int choice){
+    updateGripper(index, choice, &graspsPossible);
+  }
+
+  void updateGripper(int index ,int choice, std::vector<graspPoint> *graspsP){
     if (choice == 0) {
       // Adding the gripper hand
       *ptrPtCldGripper=*ptrPtCldGrpHnd;
 
       // Translating the left finger and adding
       pcl::transformPointCloud(*ptrPtCldGrpLfgr, *ptrPtCldTemp,
-                              pcl::getTransformation(0,graspsPossible[index].gripperWidth/2,fingerZOffset,0,0,0));
+                              pcl::getTransformation(0,(*graspsP)[index].gripperWidth/2,fingerZOffset,0,0,0));
       *ptrPtCldGripper += *ptrPtCldTemp;
 
       // Translating the right finger and adding
       pcl::transformPointCloud(*ptrPtCldGrpRfgr, *ptrPtCldTemp,
-                              pcl::getTransformation(0,-graspsPossible[index].gripperWidth/2,fingerZOffset,0,0,0));
+                              pcl::getTransformation(0,-(*graspsP)[index].gripperWidth/2,fingerZOffset,0,0,0));
       *ptrPtCldGripper += *ptrPtCldTemp;
     } else if (choice == 1) {
       *ptrPtCldGripper = *ptrPtCldGrpHnd;
     } else if (choice == 2){
       // Translating the left finger and setting
       pcl::transformPointCloud(*ptrPtCldGrpLfgr, *ptrPtCldTemp,
-                               pcl::getTransformation(0,graspsPossible[index].gripperWidth/2,fingerZOffset,0,0,0));
+                               pcl::getTransformation(0,(*graspsP)[index].gripperWidth/2,fingerZOffset,0,0,0));
       *ptrPtCldGripper = *ptrPtCldTemp;
     } else if (choice == 3){
       // Translating the right finger and setting
       pcl::transformPointCloud(*ptrPtCldGrpRfgr, *ptrPtCldTemp,
-                               pcl::getTransformation(0,-graspsPossible[index].gripperWidth/2,fingerZOffset,0,0,0));
+                               pcl::getTransformation(0,-(*graspsP)[index].gripperWidth/2,fingerZOffset,0,0,0));
       *ptrPtCldGripper = *ptrPtCldTemp;
     }
 
-    tfGripper = pcl::getTransformation(graspsPossible[index].pose[0],graspsPossible[index].pose[1],
-                                       graspsPossible[index].pose[2],graspsPossible[index].pose[3],
-                                       graspsPossible[index].pose[4],graspsPossible[index].pose[5])*
-                pcl::getTransformation(0,0,0,0,graspsPossible[index].addnlPitch,0)*
+    tfGripper = pcl::getTransformation((*graspsP)[index].pose[0],(*graspsP)[index].pose[1],
+                                       (*graspsP)[index].pose[2],(*graspsP)[index].pose[3],
+                                       (*graspsP)[index].pose[4],(*graspsP)[index].pose[5])*
+                pcl::getTransformation(0,0,0,0,(*graspsP)[index].addnlPitch,0)*
                 pcl::getTransformation(0,0,-0.0447-fingerZOffset,0,0,0);
     pcl::transformPointCloud(*ptrPtCldGripper, *ptrPtCldGripper, tfGripper);
 
@@ -318,67 +314,22 @@ public:
   }
 
   // 8: Function to Fuse last data with existing data
-  void fuseLastData(){
-    //To demonstrate how the pointer works- if you remove the last line, the ptrPtCldEnv doesn't change.
-    ptCldColor::Ptr newEnv = fuseData(lastKinectPoseCartesian, tfKinOptGaz, ptrPtCldLast, ptrPtCldEnv, voxelGridSize);
-    *ptrPtCldEnv = *newEnv;
+  void fuseLastData(void){
+    fuseLastData(ptrPtCldEnv);
+  }
+
+  void fuseLastData(ptCldColor::Ptr retEnv){
+    tfGazWorld = transformGazWorld(lastKinectPoseCartesian);
+    fuseData(tfGazWorld, tfKinOptGaz, ptrPtCldLast, ptrPtCldEnv, retEnv, voxelGridSize);
   }
 
   // 9: Extracting the major plane (Table) and object
-  void dataExtract(){
+  void dataExtract(void){
     dataExtract(cPtrPtCldEnv, ptrPtCldObject);
   }
 
-  void dataExtract(ptCldColor::ConstPtr cPtrTotalPtCloud, ptCldColor::Ptr ptrExtracted){
-    // Find the major plane and get its coefficients and indices
-    seg.setInputCloud(cPtrTotalPtCloud);
-    seg.setOptimizeCoefficients(true);
-    seg.setModelType(pcl::SACMODEL_PLANE);
-    seg.setMethodType(pcl::SAC_RANSAC);
-    seg.setMaxIterations(1000);
-    seg.setDistanceThreshold(0.01);
-    seg.segment(*tableIndices,*tableCoeff);
-
-    if (tableIndices->indices.size () == 0){
-      std::cerr << "No table found in the environment" << std::endl;
-      return;
-    }
-
-    // Seperating the table and storing its point
-    extract.setInputCloud(cPtrTotalPtCloud);
-    extract.setIndices(tableIndices);
-    extract.setNegative(false);
-    extract.filter(*ptrPtCldTable);
-
-    // Using convex hull to get the table boundary which would be like a rectangle
-    cvHull.setInputCloud(cPtrPtCldTable);
-    cvHull.setDimension(2);
-    cvHull.reconstruct(*ptrPtCldHull);
-
-    // Double checking the hull dimensions
-    if (cvHull.getDimension() != 2){
-      std::cerr << "Convex hull dimension != 2" << std::endl;
-      return;
-    }
-
-    // Using polygonal prism and hull the extract object above the table
-    prism.setInputCloud(cPtrTotalPtCloud);
-    prism.setInputPlanarHull(cPtrPtCldHull);
-    if (tableCoeff->values[3] < 0) {
-      prism.setHeightLimits(-1.5f,-0.005f-voxelGridSize);         // Z height (min, max) in m
-    }else{
-      prism.setHeightLimits(0.005f+voxelGridSize,1.5f);           // Z height (min, max) in m
-    }
-    prism.segment(*objectIndices);
-
-    // Using extract to get the point cloud
-    extract.setInputCloud(cPtrTotalPtCloud);
-    extract.setNegative(false);
-    extract.setIndices(objectIndices);
-    extract.filter(*ptrExtracted);
-
-    // Getting the min and max co-ordinates of the object
-    pcl::getMinMax3D(*ptrExtracted, minPtObj, maxPtObj);
+  void dataExtract(ptCldColor::ConstPtr cEnv, ptCldColor::Ptr target){
+    extractObj(cEnv, target, ptrPtCldTemp, ptrPtCldHull, &minPtObj, &maxPtObj, voxelGridSize);
   }
 
   // 10: Generating unexplored point cloud
@@ -424,59 +375,12 @@ public:
   // 11: Updating the unexplored point cloud
   void updateUnexploredPtCld(){
     // Transforming the point cloud to Kinect frame from world frame
-    Eigen::Affine3f tf = tfGazWorld*tfKinOptGaz;
-    Eigen::Affine3f tfTranspose = homoMatTranspose(tf);
-    pcl::transformPointCloud(*ptrPtCldUnexp, *ptrPtCldTemp, tfTranspose);
-
-    Eigen::Vector4f ptTemp;
-    Eigen::Vector3f proj;
-    pcl::PointIndices::Ptr occludedIndices(new pcl::PointIndices());
-    int projIndex;
-
-    // Looping through all the points and finding occluded ones.
-    // Using the camera projection matrix to project 3D point to camera plane
-    for (int i = 0; i < ptrPtCldTemp->width; i++){
-      ptTemp = ptrPtCldTemp->points[i].getVector4fMap();
-      proj = projectionMat*ptTemp;
-      proj = proj/proj[2];
-      proj[0] = round(proj[0])-1;
-      proj[1] = round(proj[1])-1;
-      projIndex = proj[1]*(ptrPtCldLast->width)+proj[0];
-      // If the z value of unexplored pt is greater than the corresponding
-      // projected point in Kinect Raw data then that point is occluded.
-      if (ptrPtCldLast->points[projIndex].z <= ptTemp[2]){
-        occludedIndices->indices.push_back(i);
-      }
-    }
-
-    // Only keeping the occluded points
-    extract.setInputCloud(cPtrPtCldUnexp);
-    extract.setIndices(occludedIndices);
-    extract.setNegative(false);
-    extract.filter(*ptrPtCldUnexp);
-
-    // Downsampling table before adding to collision check cloud
-    ptrPtCldTemp->clear();
-    ptrPtCldCollCheck->clear();
-    voxelGrid.setInputCloud(cPtrPtCldTable);
-    voxelGrid.setLeafSize(voxelGridSizeUnexp, voxelGridSizeUnexp, voxelGridSizeUnexp);
-    voxelGrid.filter(*ptrPtCldTemp);
-
-    // Using pass through filter to use only the table around the object, to speed up the collision check
-    pass.setInputCloud(cPtrPtCldTemp);
-    pass.setFilterFieldName("x"); pass.setFilterLimits(minPtObj.x-0.1,maxPtObj.x+0.1);
-    pass.filter(*ptrPtCldTemp);
-    pass.setFilterFieldName("y"); pass.setFilterLimits(minPtObj.y-0.1,maxPtObj.y+0.1);
-    pass.filter(*ptrPtCldTemp);
-
-    *ptrPtCldCollCheck = *ptrPtCldUnexp + *ptrPtCldTemp;
-    ptrPtCldTemp->clear();
+    updateunexploredPtCld(tfGazWorld, tfKinOptGaz, projectionMat, ptrPtCldUnexp,  ptrPtCldLast, cPtrPtCldTable, minPtObj, maxPtObj, ptrPtCldUnexp, ptrPtCldCollCheck, voxelGridSizeUnexp);
   }
 
   // 12: Reset selected grasp and synthesize all possible grasps for the current ptCldObject
-  void graspSynthesis(){
-    selectedGrasp = -1;
-    graspsPossible = graspsynthesis(ptrPtCldObject, tableCentre, minGraspQuality, maxGripperWidth, voxelGridSize);
+  void graspSynthesis(void){
+    graspSynthesis(ptrPtCldObject);
   }
 
   // 12b: Reset selected grasp and synthesize all possible grasps for a provided object
@@ -487,28 +391,7 @@ public:
 
   // 13: Given a grasp point pair find the gripper orientation
   void findGripperPose(int index){
-
-    Eigen::Vector3f xAxis,yAxis,zAxis;
-    Eigen::Vector3f xyPlane(0,0,1);
-
-    yAxis = graspsPossible[index].p1.getVector3fMap() - graspsPossible[index].p2.getVector3fMap(); yAxis.normalize();
-    zAxis = yAxis.cross(xyPlane);
-    xAxis = yAxis.cross(zAxis);
-
-    tf::Matrix3x3 rotMat;
-    double Roll,Pitch,Yaw;
-    rotMat.setValue(xAxis[0],yAxis[0],zAxis[0],
-                    xAxis[1],yAxis[1],zAxis[1],
-                    xAxis[2],yAxis[2],zAxis[2]);
-    rotMat.getRPY(Roll,Pitch,Yaw);
-
-    std::vector<float> pose = {0,0,0,0,0,0};
-    pose[0] = (graspsPossible[index].p1.x + graspsPossible[index].p2.x)/2;
-    pose[1] = (graspsPossible[index].p1.y + graspsPossible[index].p2.y)/2;
-    pose[2] = (graspsPossible[index].p1.z + graspsPossible[index].p2.z)/2;
-    pose[3] = Roll; pose[4] = Pitch; pose[5] = Yaw;
-
-    graspsPossible[index].pose = pose;
+    graspsPossible[index].pose = genGripperPose(graspsPossible, index);
   }
 
   // 14: Collision check for gripper and unexplored point cloud
@@ -862,9 +745,13 @@ void testGraspsynthesis(environment &av, int flag){
                                                   {1.4,M_PI/2,M_PI/3}};
 
   for (int i = 0; i < 4; i++) {
+    std::cout << "t1" << std::endl;
     av.moveKinectViewsphere(kinectPoses[i]);
+    std::cout << "t2" << std::endl;
     av.readKinect();
+    std::cout << "t3" << std::endl;
     av.fuseLastData();
+    std::cout << "t4" << std::endl;
     av.dataExtract();
   }
 
