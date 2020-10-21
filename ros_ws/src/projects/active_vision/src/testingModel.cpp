@@ -329,7 +329,7 @@ public:
   }
 
   void dataExtract(ptCldColor::ConstPtr cEnv, ptCldColor::Ptr target){
-    extractObj(cEnv, target, ptrPtCldTemp, ptrPtCldHull, &minPtObj, &maxPtObj, voxelGridSize);
+    extractObj(cEnv, target, ptrPtCldTable, ptrPtCldHull, &minPtObj, &maxPtObj, voxelGridSize);
   }
 
   // 10: Generating unexplored point cloud
