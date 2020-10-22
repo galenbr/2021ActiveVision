@@ -93,6 +93,8 @@ public:
   double maxGripperWidth;                           // Gripper max width (Actual is 8 cm)
   double minGraspQuality;                           // Min grasp quality threshold
   int selectedGrasp;                                // Index of the selected grasp
+  int gridDim;                                      // Grid dimension for state vector
+  std::vector<float> stateVec;                      // State Vector
 
   environment(ros::NodeHandle *nh);
 

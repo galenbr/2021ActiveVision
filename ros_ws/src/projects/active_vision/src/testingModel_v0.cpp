@@ -92,6 +92,37 @@ Eigen::Affine3f homoMatTranspose(Eigen::Affine3f tf){
   return(tfTranspose);
 }
 
+// Function to print the state vector
+void printStateVector(std::vector<float> &stateVec, int dim){
+  std::string red = "\x1b[31m";
+  std::string green = "\x1b[32m";
+  std::string off = "\x1b[0m";
+  if (stateVec.size() < 2*dim*dim+2){
+    std::cout << "Invalid State Vector" << std::endl;
+    return;
+  }
+  std::cout << "\t Object\t\t\t\tUnexplored" << std::endl;
+  for(int i = 0; i < dim; i++){
+    // Object State Vector
+    for(int j = 0; j < dim; j++){
+      if (stateVec[i*dim+j] != 0) std::cout << red;
+      std::cout << std::fixed << std::setprecision(2) << stateVec[i*dim+j] << " ";
+      if (stateVec[i*dim+j] != 0) std::cout << off;
+    }
+    std::cout << "\t";
+    // unexplored State Vector
+    for(int j = 0; j < dim; j++) {
+      if (stateVec[dim*dim+i*dim+j] != 0) std::cout << red;
+      std::cout << std::fixed << std::setprecision(2) << stateVec[dim*dim+i*dim+j] << " ";
+      if (stateVec[dim*dim+i*dim+j] != 0) std::cout << off;
+    }
+    std::cout << endl;
+  }
+  // Kinect Position
+  std::cout << "Polar Angle : " << stateVec[2*dim*dim]*180/M_PI
+            << ", Azhimuthal Angle : " << stateVec[2*dim*dim+1]*180/M_PI << std::endl << std::endl;
+}
+
 // Class to store data of environment and its processing
 class environment{
 private:
@@ -177,6 +208,8 @@ public:
   double maxGripperWidth{0.075};                    // Gripper max width (Actual is 8 cm)
   double minGraspQuality{150};                      // Min grasp quality threshold
   int selectedGrasp{-1};                            // Index of the selected grasp
+  int gridDim{5};                                   // Grid dimension for state vector
+  std::vector<float> stateVec;                      // State Vector
 
   environment(ros::NodeHandle *nh){
 
@@ -516,13 +549,14 @@ public:
     }
 
     // Setting the min and max limits based on the object dimension and scale.
+    // Min of 0.25m on each side
     // Note: Z scale is only used on +z axis
-    minUnexp.push_back(minPtObj.x-(scale-1)*(maxPtObj.x-minPtObj.x)/2);
-    minUnexp.push_back(minPtObj.y-(scale-1)*(maxPtObj.y-minPtObj.y)/2);
+    minUnexp.push_back(minPtObj.x-std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.25f));
+    minUnexp.push_back(minPtObj.y-std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.25f));
     minUnexp.push_back(minPtObj.z);
-    maxUnexp.push_back(maxPtObj.x+(scale-1)*(maxPtObj.x-minPtObj.x)/2);
-    maxUnexp.push_back(maxPtObj.y+(scale-1)*(maxPtObj.y-minPtObj.y)/2);
-    maxUnexp.push_back(maxPtObj.z+(scale-1)*(maxPtObj.z-minPtObj.z)/2);
+    maxUnexp.push_back(maxPtObj.x+std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.25f));
+    maxUnexp.push_back(maxPtObj.y+std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.25f));
+    maxUnexp.push_back(maxPtObj.z+std::max((scale-1)*(maxPtObj.z-minPtObj.z)/2,0.25f));
 
     // Considering a point for every 1 cm and then downsampling it
     float nPts = (maxUnexp[0]-minUnexp[0])*(maxUnexp[1]-minUnexp[1])*(maxUnexp[2]-minUnexp[2])*1000000;
@@ -581,6 +615,12 @@ public:
     extract.setIndices(occludedIndices);
     extract.setNegative(false);
     extract.filter(*ptrPtCldUnexp);
+
+    if(minUnexp[0] > minPtObj.x || minUnexp[1] > minPtObj.y ||
+       maxUnexp[0] < maxPtObj.x || maxUnexp[1] < maxPtObj.y || maxUnexp[2] < maxPtObj.z){
+      std::cout << "WARNING : Unexplored point cloud initially generated smaller than the object. " <<
+                   "Increase unexplored point cloud size for better accuracy during collision check." << std::endl;
+    }
 
     // Downsampling table before adding to collision check cloud
     ptrPtCldTemp->clear();
@@ -845,6 +885,70 @@ public:
       }
     }
   }
+
+  // 16: Creating the State vector
+  void createStateVector(){
+    Eigen::Vector3f pt;
+    float gridSize[2]={};
+    int gridLoc[2]={};
+
+    float stateObj[gridDim][gridDim] = {};
+    gridSize[0] = (maxPtObj.x-minPtObj.x)/gridDim;
+    gridSize[1] = (maxPtObj.y-minPtObj.y)/gridDim;
+    for (int i = 0; i < ptrPtCldObject->size(); i++){
+      pt = ptrPtCldObject->points[i].getVector3fMap();
+      pt[0] = pt[0]-minPtObj.x; pt[1] = pt[1]-minPtObj.y; pt[2] = pt[2]-minPtObj.z;
+
+      gridLoc[0] = (int)(pt[0]/gridSize[0]);
+      gridLoc[0] = std::min(gridLoc[0],gridDim-1);        // Ensuring that the grid loc for the extreme point is inside the grid
+      gridLoc[0] = (gridDim-1)-gridLoc[0];                // Reversing so that the array and grid indices match
+      gridLoc[1] = (int)(pt[1]/gridSize[1]);
+      gridLoc[1] = std::min(gridLoc[1],gridDim-1);        // Ensuring that the grid loc for the extreme point is inside the grid
+
+      stateObj[gridLoc[0]][gridLoc[1]] = std::max(stateObj[gridLoc[0]][gridLoc[1]],pt[2]);
+    }
+
+    float scale = 3;
+    pcl::PointXYZRGB minPtUnexp, maxPtUnexp;
+    minPtUnexp.x = minPtObj.x - (scale-1)*(maxPtObj.x-minPtObj.x)/2;
+    minPtUnexp.y = minPtObj.y - (scale-1)*(maxPtObj.y-minPtObj.y)/2;
+    minPtUnexp.z = minPtObj.z;
+    maxPtUnexp.x = maxPtObj.x + (scale-1)*(maxPtObj.x-minPtObj.x)/2;
+    maxPtUnexp.y = maxPtObj.y + (scale-1)*(maxPtObj.y-minPtObj.y)/2;
+    maxPtUnexp.z = maxPtObj.z + (scale-1)*(maxPtObj.z-minPtObj.z)/2;
+
+    float stateUnexp[gridDim][gridDim] = {};
+    gridSize[0] = (maxPtUnexp.x-minPtUnexp.x)/gridDim;
+    gridSize[1] = (maxPtUnexp.y-minPtUnexp.y)/gridDim;
+    for (int i = 0; i < ptrPtCldUnexp->size(); i++){
+      pt = ptrPtCldUnexp->points[i].getVector3fMap();
+      pt[0] = pt[0]-minPtUnexp.x; pt[1] = pt[1]-minPtUnexp.y; pt[2] = pt[2]-minPtUnexp.z;
+
+      gridLoc[0] = (int)(pt[0]/gridSize[0]);
+      gridLoc[0] = std::min(gridLoc[0],gridDim-1);        // Ensuring that the grid loc for the extreme point is inside the grid
+      gridLoc[0] = (gridDim-1)-gridLoc[0];                // Reversing so that the array and grid indices match
+      gridLoc[1] = (int)(pt[1]/gridSize[1]);
+      gridLoc[1] = std::min(gridLoc[1],gridDim-1);        // Ensuring that the grid loc for the extreme point is inside the grid
+
+      stateUnexp[gridLoc[0]][gridLoc[1]] = std::max(stateUnexp[gridLoc[0]][gridLoc[1]],pt[2]);
+    }
+
+    // Storing both in the state vector
+    stateVec.clear();
+    for(int i = 0; i < gridDim; i++){
+      for(int j = 0; j < gridDim; j++){
+        stateVec.push_back(stateObj[i][j]);
+      }
+    }
+    for(int i = 0; i < gridDim; i++){
+      for(int j = 0; j < gridDim; j++){
+        stateVec.push_back(stateUnexp[i][j]);
+      }
+    }
+    // Adding kinect position
+    stateVec.push_back(lastKinectPoseViewsphere[1]);
+    stateVec.push_back(lastKinectPoseViewsphere[2]);
+  }
 };
 
 // 1: A test function spawn and delete objects in gazebo
@@ -912,9 +1016,9 @@ void testMoveKinectInViewsphere(environment &av){
 }
 
 // 3: A test function to check if the "readKinect" function is working
-void testKinectRead(environment &av, int flag){
+void testKinectRead(environment &av, int objID, int flag){
   std::cout << "*** In kinect data read testing function ***" << std::endl;
-  av.spawnObject(0,0,0,0);
+  av.spawnObject(objID,0,0,0);
 
   int row; int col;
   std::cout << "Enter pixel value to print data for" << std::endl;
@@ -950,14 +1054,14 @@ void testKinectRead(environment &av, int flag){
     cv::imshow("Depth Feed", av.ptrDepthLast->image);
     cv::waitKey(0);*/
   }
-  av.deleteObject(0);
+  av.deleteObject(objID);
   std::cout << "*** End ***" << std::endl;
 }
 
 // 4: A test function to check fusing of data
-void testPtCldFuse(environment &av, int flag){
+void testPtCldFuse(environment &av, int objID, int flag){
   std::cout << "*** In point cloud data fusion testing function ***" << std::endl;
-  av.spawnObject(0,0,0,0);
+  av.spawnObject(objID,0,0,0);
 
   // Setting up the point cloud visualizer
   ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
@@ -991,14 +1095,14 @@ void testPtCldFuse(environment &av, int flag){
       boost::this_thread::sleep (boost::posix_time::microseconds(100000));
     }
   }
-  av.deleteObject(0);
+  av.deleteObject(objID);
   std::cout << "*** End ***" << std::endl;
 }
 
 // 5: A test function to extract table and object data
-void testDataExtract(environment &av, int flag){
+void testDataExtract(environment &av, int objID, int flag){
   std::cout << "*** In table and object extraction testing function ***" << std::endl;
-  av.spawnObject(0,0,0,0);
+  av.spawnObject(objID,0,0,0);
 
   std::vector<double> kinectPose = {1.4,-M_PI,M_PI/3};
   av.moveKinectViewsphere(kinectPose);
@@ -1026,14 +1130,14 @@ void testDataExtract(environment &av, int flag){
       boost::this_thread::sleep (boost::posix_time::microseconds(100000));
     }
   }
-  av.deleteObject(0);
+  av.deleteObject(objID);
   std::cout << "*** End ***" << std::endl;
 }
 
 // 6: A test function to generate unexplored point cloud
-void testGenUnexpPtCld(environment &av, int flag){
+void testGenUnexpPtCld(environment &av, int objID, int flag){
   std::cout << "*** In unexplored point cloud generation testing function ***" << std::endl;
-  av.spawnObject(0,0,0,0);
+  av.spawnObject(objID,0,0,0);
 
   std::vector<double> kinectPose = {1.4,-M_PI,M_PI/3};
   av.moveKinectViewsphere(kinectPose);
@@ -1060,14 +1164,14 @@ void testGenUnexpPtCld(environment &av, int flag){
       boost::this_thread::sleep (boost::posix_time::microseconds(100000));
     }
   }
-  av.deleteObject(0);
+  av.deleteObject(objID);
   std::cout << "*** End ***" << std::endl;
 }
 
 // 7: A test function to update unexplored point cloud
-void testUpdateUnexpPtCld(environment &av, int flag){
+void testUpdateUnexpPtCld(environment &av, int objID, int flag){
   std::cout << "*** In unexplored point cloud update testing function ***" << std::endl;
-  av.spawnObject(0,0,0,0);
+  av.spawnObject(objID,0,0,0);
 
   // Setting up the point cloud visualizer
   ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
@@ -1107,7 +1211,7 @@ void testUpdateUnexpPtCld(environment &av, int flag){
       boost::this_thread::sleep (boost::posix_time::microseconds(100000));
     }
   }
-  av.deleteObject(0);
+  av.deleteObject(objID);
   std::cout << "*** End ***" << std::endl;
 }
 
@@ -1144,9 +1248,9 @@ void testGripper(environment &av, int flag, float width){
 }
 
 // 9: Grasp synthesis test function
-void testGraspsynthesis(environment &av, int flag){
+void testGraspsynthesis(environment &av, int objID, int flag){
   std::cout << "*** In grasp synthesis testing function ***" << std::endl;
-  av.spawnObject(0,0,0,0);
+  av.spawnObject(objID,0,0,0);
 
   // 4 kinect position
   std::vector<std::vector<double>> kinectPoses = {{1.4,-M_PI,M_PI/3},
@@ -1199,7 +1303,7 @@ void testGraspsynthesis(environment &av, int flag){
       boost::this_thread::sleep (boost::posix_time::microseconds(100000));
     }
   }
-  av.deleteObject(0);
+  av.deleteObject(objID);
   std::cout << "*** End ***" << std::endl;
 }
 
@@ -1274,7 +1378,7 @@ void testComplete1(environment &av, int objID, int flag){
   std::chrono::high_resolution_clock::time_point start[4], end[4];
   double elapsed[4];
 
-  av.spawnObject(objID,0,0,0);
+  av.spawnObject(objID,0,0,M_PI);
   av.loadGripper();
 
   // 4 kinect poses
@@ -1378,7 +1482,7 @@ void testComplete2(environment &av, int objID, int flag){
   std::chrono::high_resolution_clock::time_point start[4], end[4];
   double elapsed[4];
 
-  av.spawnObject(objID,0,0,0);
+  av.spawnObject(objID,0,0,M_PI);
   av.loadGripper();
 
   // 4 kinect poses
@@ -1470,6 +1574,56 @@ void testComplete2(environment &av, int objID, int flag){
   std::cout << "*** End ***" << std::endl;
 }
 
+// 11: A test function to check the state vector
+void testStateVector(environment &av, int objID, int flag){
+  std::cout << "*** In state vector testing function ***" << std::endl;
+  av.spawnObject(objID,0,0,M_PI);
+
+  // Setting up the point cloud visualizer
+  ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
+  viewer->initCameraParameters();
+  int vp[4] = {};
+  viewer->createViewPort(0.0,0.5,0.5,1.0,vp[0]);
+  viewer->createViewPort(0.5,0.5,1.0,1.0,vp[1]);
+  viewer->createViewPort(0.0,0.0,0.5,0.5,vp[2]);
+  viewer->createViewPort(0.5,0.0,1.0,0.5,vp[3]);
+  viewer->addCoordinateSystem(1.0);
+  viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
+
+  // 4 kinect position to capture and fuse
+  std::vector<std::vector<double>> kinectPoses = {{1.4,-M_PI,M_PI/3},
+                                                  {1.4,-M_PI/2,M_PI/3},
+                                                  {1.4,0,M_PI/3},
+                                                  {1.4,M_PI/2,M_PI/3}};
+
+  for (int i = 0; i < 4; i++) {
+    av.moveKinectViewsphere(kinectPoses[i]);
+    av.readKinect();
+    av.fuseLastData();
+    av.dataExtract();
+    if (i==0){
+      av.genUnexploredPtCld();
+    }
+    av.updateUnexploredPtCld();
+    av.createStateVector();
+    std::cout << "State vector after viewpoint " + std::to_string(i+1) + " :" << std::endl;
+    printStateVector(av.stateVec,av.gridDim);
+    if (flag == 1){
+      rbgVis(viewer,av.cPtrPtCldEnv,"Env "+std::to_string(i),vp[i]);
+      rbgVis(viewer,av.ptrPtCldUnexp,"Unexp "+std::to_string(i),vp[i]);
+    }
+  }
+  if (flag == 1){
+    std::cout << "Close viewer to continue." << std::endl;
+    while (!viewer->wasStopped ()){
+      viewer->spinOnce(100);
+      boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+    }
+  }
+  av.deleteObject(objID);
+  std::cout << "*** End ***" << std::endl;
+}
+
 int main (int argc, char** argv){
 
   // Initialize ROS
@@ -1493,7 +1647,23 @@ int main (int argc, char** argv){
   std::cout << "9  : Update the unexplored pointcloud based on 4 different viewpoints." << std::endl;
   std::cout << "10 : Grasp synthesis after fusing 4 viewpoints." << std::endl;
   std::cout << "11 : Selecting a grasp after grasp synthesis and collision check for a object." << std::endl;
+  std::cout << "12 : State vector generation." << std::endl;
   std::cout << "Enter your choice : "; cin >> choice;
+
+  if (choice >= 5) {
+    std::cout << "Objects available :" << std::endl;
+    std::cout << "1: Drill" << std::endl;
+    std::cout << "2: Square Prism" << std::endl;
+    std::cout << "3: Rectangular Prism" << std::endl;
+    std::cout << "4: Bowl" << std::endl;
+    std::cout << "5: Big Bowl" << std::endl;
+    std::cout << "6: Cup" << std::endl;
+    std::cout << "Enter your choice : "; std::cin>>objID;
+    std::cout << "Enter your voxel grid size (0.005 to 0.01) : "; std::cin >> activeVision.voxelGridSize;
+    activeVision.voxelGridSize = std::max(activeVision.voxelGridSize,0.005);
+    activeVision.voxelGridSize = std::min(activeVision.voxelGridSize,0.01);
+  }
+
   switch(choice){
     case 1:
       testSpawnDeleteObj(activeVision);
@@ -1508,36 +1678,28 @@ int main (int argc, char** argv){
       testMoveKinectInViewsphere(activeVision);
       break;
     case 5:
-      testKinectRead(activeVision,1);
+      testKinectRead(activeVision,objID-1,1);
       break;
     case 6:
-      testPtCldFuse(activeVision,1);
+      testPtCldFuse(activeVision,objID-1,1);
       break;
     case 7:
-      testDataExtract(activeVision,1);
+      testDataExtract(activeVision,objID-1,1);
       break;
     case 8:
-      testGenUnexpPtCld(activeVision,1);
+      testGenUnexpPtCld(activeVision,objID-1,1);
       break;
     case 9:
-      testUpdateUnexpPtCld(activeVision,1);
+      testUpdateUnexpPtCld(activeVision,objID-1,1);
       break;
     case 10:
-      testGraspsynthesis(activeVision,1);
+      testGraspsynthesis(activeVision,objID-1,1);
       break;
     case 11:
-      std::cout << "Objects available :" << std::endl;
-      std::cout << "1: Drill" << std::endl;
-      std::cout << "2: Square Prism" << std::endl;
-      std::cout << "3: Rectangular Prism" << std::endl;
-      std::cout << "4: Bowl" << std::endl;
-      std::cout << "5: Big Bowl" << std::endl;
-      std::cout << "6: Cup" << std::endl;
-      std::cout << "Enter your choice : "; std::cin>>objID;
-      std::cout << "Enter your voxel grid size (0.005 to 0.01) : "; std::cin >> activeVision.voxelGridSize;
-      activeVision.voxelGridSize = std::max(activeVision.voxelGridSize,0.005);
-      activeVision.voxelGridSize = std::min(activeVision.voxelGridSize,0.01);
-      testComplete2(activeVision,objID-1,1);
+      testComplete1(activeVision,objID-1,1);
+      break;
+    case 12:
+      testStateVector(activeVision,objID-1,1);
       break;
     default:
       std::cout << "Invalid choice." << std::endl;

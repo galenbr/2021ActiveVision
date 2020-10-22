@@ -103,6 +103,8 @@ public:
   double maxGripperWidth{0.075};                    // Gripper max width (Actual is 8 cm)
   double minGraspQuality{150};                      // Min grasp quality threshold
   int selectedGrasp{-1};                            // Index of the selected grasp
+  int gridDim{5};                                   // Grid dimension for state vector
+  std::vector<float> stateVec;                      // State Vector
 
   environment(ros::NodeHandle *nh){
 
@@ -273,7 +275,7 @@ public:
   // 6A: Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
   void moveKinectCartesian(std::vector<double> pose){
     gazebo_msgs::ModelState ModelState = kinectCartesianModel(pose);
-    
+
     // Publishing it to gazebo
     pubKinectPose.publish(ModelState);
     ros::spinOnce();
@@ -340,13 +342,14 @@ public:
     }
 
     // Setting the min and max limits based on the object dimension and scale.
+    // Min of 0.25m on each side
     // Note: Z scale is only used on +z axis
-    minUnexp.push_back(minPtObj.x-(scale-1)*(maxPtObj.x-minPtObj.x)/2);
-    minUnexp.push_back(minPtObj.y-(scale-1)*(maxPtObj.y-minPtObj.y)/2);
+    minUnexp.push_back(minPtObj.x-std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.25f));
+    minUnexp.push_back(minPtObj.y-std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.25f));
     minUnexp.push_back(minPtObj.z);
-    maxUnexp.push_back(maxPtObj.x+(scale-1)*(maxPtObj.x-minPtObj.x)/2);
-    maxUnexp.push_back(maxPtObj.y+(scale-1)*(maxPtObj.y-minPtObj.y)/2);
-    maxUnexp.push_back(maxPtObj.z+(scale-1)*(maxPtObj.z-minPtObj.z)/2);
+    maxUnexp.push_back(maxPtObj.x+std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.25f));
+    maxUnexp.push_back(maxPtObj.y+std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.25f));
+    maxUnexp.push_back(maxPtObj.z+std::max((scale-1)*(maxPtObj.z-minPtObj.z)/2,0.25f));
 
     // Considering a point for every 1 cm and then downsampling it
     float nPts = (maxUnexp[0]-minUnexp[0])*(maxUnexp[1]-minUnexp[1])*(maxUnexp[2]-minUnexp[2])*1000000;
@@ -435,6 +438,8 @@ public:
       }
     }
   }
+
+  // State vector function to be added from testingModel_v0
 };
 
 // 1: A test function spawn and delete objects in gazebo

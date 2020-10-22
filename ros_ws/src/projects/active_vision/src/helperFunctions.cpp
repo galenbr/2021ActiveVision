@@ -80,6 +80,37 @@ Eigen::Affine3f transformGazWorld(std::vector<double> lastKinectPoseCartesian){
     return pcl::getTransformation(lastKinectPoseCartesian[0],lastKinectPoseCartesian[1],lastKinectPoseCartesian[2],lastKinectPoseCartesian[3],lastKinectPoseCartesian[4],lastKinectPoseCartesian[5]);
 }
 
+// Function to print the state vector
+void printStateVector(std::vector<float> &stateVec, int dim){
+  std::string red = "\x1b[31m";
+  std::string green = "\x1b[32m";
+  std::string off = "\x1b[0m";
+  if (stateVec.size() < 2*dim*dim+2){
+    std::cout << "Invalid State Vector" << std::endl;
+    return;
+  }
+  std::cout << "\t Object\t\t\t\tUnexplored" << std::endl;
+  for(int i = 0; i < dim; i++){
+    // Object State Vector
+    for(int j = 0; j < dim; j++){
+      if (stateVec[i*dim+j] != 0) std::cout << red;
+      std::cout << std::fixed << std::setprecision(2) << stateVec[i*dim+j] << " ";
+      if (stateVec[i*dim+j] != 0) std::cout << off;
+    }
+    std::cout << "\t";
+    // unexplored State Vector
+    for(int j = 0; j < dim; j++) {
+      if (stateVec[dim*dim+i*dim+j] != 0) std::cout << red;
+      std::cout << std::fixed << std::setprecision(2) << stateVec[dim*dim+i*dim+j] << " ";
+      if (stateVec[dim*dim+i*dim+j] != 0) std::cout << off;
+    }
+    std::cout << endl;
+  }
+  // Kinect Position
+  std::cout << "Polar Angle : " << stateVec[2*dim*dim]*180/M_PI
+            << ", Azhimuthal Angle : " << stateVec[2*dim*dim+1]*180/M_PI << std::endl << std::endl;
+}
+
 // 6A: Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
 gazebo_msgs::ModelState kinectCartesianModel(std::vector<double> pose){
     //Create Matrix3x3 from Euler Angles
@@ -245,16 +276,16 @@ void updateunexploredPtCld(Eigen::Affine3f tfGazWorld, Eigen::Affine3f tfKinOptG
     ptCldColor::ConstPtr cPtrPtCldTemp(ptrPtCldTemp);
     ptCldColor::ConstPtr cPtrPtCldUnexp(ptrPtCldUnexp);
     // Transforming the point cloud to Kinect frame from world frame
-    
+
     Eigen::Affine3f tf = tfGazWorld*tfKinOptGaz;
     Eigen::Affine3f tfTranspose = homoMatTranspose(tf);
     pcl::transformPointCloud(*ptrPtCldUnexp, *ptrPtCldTemp, tfTranspose);
-    
+
     Eigen::Vector4f ptTemp;
     Eigen::Vector3f proj;
     pcl::PointIndices::Ptr occludedIndices(new pcl::PointIndices());
     int projIndex;
-    
+
     // Looping through all the points and finding occluded ones.
     // Using the camera projection matrix to project 3D point to camera plane
     for (int i = 0; i < ptrPtCldTemp->width; i++){
@@ -276,6 +307,14 @@ void updateunexploredPtCld(Eigen::Affine3f tfGazWorld, Eigen::Affine3f tfKinOptG
     extract.setIndices(occludedIndices);
     extract.setNegative(false);
     extract.filter(*unexpOutput);
+
+    // @Galen : minUnexp and maxUnexp are also required as arguments to this function.
+    //          Add that and then uncomment the following
+    /*if(minUnexp[0] > minPtObj.x || minUnexp[1] > minPtObj.y ||
+       maxUnexp[0] < maxPtObj.x || maxUnexp[1] < maxPtObj.y || maxUnexp[2] < maxPtObj.z){
+      std::cout << "WARNING : Unexplored point cloud initially generated smaller than the object. " <<
+                   "Increase unexplored point cloud size for better accuracy during collision check." << std::endl;
+    }*/
 
     // Downsampling table before adding to collision check cloud
     ptrPtCldTemp->clear();

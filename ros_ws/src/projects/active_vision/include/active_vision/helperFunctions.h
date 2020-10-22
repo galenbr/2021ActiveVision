@@ -71,6 +71,8 @@ Eigen::Affine3f homoMatTranspose(Eigen::Affine3f tf);
 
 Eigen::Affine3f transformGazWorld(std::vector<double> lastKinectPoseCartesian);
 
+void printStateVector(std::vector<float> &stateVec, int dim);
+
 gazebo_msgs::ModelState kinectCartesianModel(std::vector<double> pose);
 
 gazebo_msgs::ModelState kinectViewSphereModel(std::vector<double> pose, std::vector<double> tableCentre);
