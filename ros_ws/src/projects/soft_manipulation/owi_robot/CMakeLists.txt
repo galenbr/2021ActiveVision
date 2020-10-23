@@ -39,3 +39,7 @@ target_link_libraries(cmd_robot_node ${catkin_LIBRARIES} usb-1.0)
 add_executable(cmd_gen_node src/cmd_gen_srv.cpp)
 add_dependencies(cmd_gen_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(cmd_gen_node ${catkin_LIBRARIES})
+
+add_executable(owi_control_node src/main.cpp)
+add_dependencies(owi_control_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(owi_control_node ${catkin_LIBRARIES})
