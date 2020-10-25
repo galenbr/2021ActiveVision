@@ -138,8 +138,7 @@ include
 ## Declare a C++ library
 add_library(${PROJECT_NAME}
    src/dataHandling.cpp
-   src/helperFunctions.cpp
-   src/testingModel.cpp
+   src/testingModel_v1.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${PCL_LIBRARIES})
@@ -227,14 +226,6 @@ add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EX
 # catkin_add_nosetests(test)
 
 #add_executable(helperFunctions src/helperFunctions.cpp)
-
-# add_executable(testingModel src/testingModel.cpp)
-# add_dependencies(testingModel active_vision ${catkin_EXPORTED_TARGETS})
-# target_link_libraries(testingModel active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
-
-# add_executable(testingModel_v0 src/testingModel_v0.cpp)
-# add_dependencies(testingModel_v0 active_vision ${catkin_EXPORTED_TARGETS})
-# target_link_libraries(testingModel_v0 active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(testingModel_v1 src/testingModel_v1.cpp)
 add_dependencies(testingModel_v1 active_vision ${catkin_EXPORTED_TARGETS})

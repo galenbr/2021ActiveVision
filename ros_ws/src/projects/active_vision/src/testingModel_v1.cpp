@@ -1012,6 +1012,28 @@ public:
   }
 };
 
+void initialPass(environment &av, std::vector<double> kinectPose){
+  av.moveKinectViewsphere(kinectPose);
+  av.readKinect();
+  av.fuseLastData();
+  av.dataExtract();
+  av.genUnexploredPtCld();
+  av.updateUnexploredPtCld();
+  av.graspsynthesis();
+  av.collisionCheck();
+}
+
+void singlePass(environment &av, std::vector<double> kinectPose){
+  av.moveKinectViewsphere(kinectPose);
+  av.readKinect();
+  av.fuseLastData();
+  av.dataExtract();
+  av.genUnexploredPtCld();
+  av.updateUnexploredPtCld();
+  av.graspsynthesis();
+  av.collisionCheck();
+}
+
 // 1: A test function spawn and delete objects in gazebo
 void testSpawnDeleteObj(environment &av){
   std::cout << "*** In object spawn and delete testing function ***" << std::endl;
@@ -1712,7 +1734,7 @@ void testSaveRollback(environment &av, int objID, int flag){
   }
 
   for(int i = 0; i < 8; i++){
-
+    av.reset();
     av.rollbackConfiguration(0);
 
     kinectPose = av.lastKinectPoseViewsphere;
