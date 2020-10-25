@@ -5,6 +5,8 @@
 #define MIN_ANGLE 20
 #define MIN_ANGLE_RAD MIN_ANGLE*(M_PI/180.0)
 
+bool visualize = false;
+
 void modifyTargetPosition(std::vector<double> &pos){
 	pos[0]+=0.1;
 	pos[1]+=0.1;
@@ -63,6 +65,7 @@ int main (int argc, char** argv){
 	sleep(1);
 
  	kinectControl.spawnObject(0,0,0,0);
+	kinectControl.loadGripper();
 
  	ptCldVis::Ptr viewer = initRGBViewer();
 
@@ -70,32 +73,56 @@ int main (int argc, char** argv){
 
 	for (int polarAngle = 0; polarAngle < 360; polarAngle+=MIN_ANGLE){
 		for (int azimuthalAngle = 10; azimuthalAngle < 90; azimuthalAngle+=MIN_ANGLE){
+				std::cout << "Polar Angle : " << polarAngle << " Azhimuthal Angle : " << azimuthalAngle << std::endl;
 				//Move kinect to position
 				targetPose = {1.4, polarAngle*(M_PI/180.0), azimuthalAngle*(M_PI/180.0)};
+
 				kinectControl.reset();
-				initialPass(kinectControl, targetPose);
-				/*
-				if(0 == polarAngle and 10 == azimuthalAngle){
-					initialPass(kinectControl, targetPose);
-				} else {
-					singlePass(kinectControl, targetPose);
-				}*/
-				std::cout << "Min grasp quality threshold is " << kinectControl.minGraspQuality << " Grasps found: " << kinectControl.graspsPossible.size() << std::endl;
-    			rbgVis(viewer,kinectControl.ptrPtCldObject,"Raw Data",0);
-    			if (kinectControl.graspsPossible.size() > 0){
-      				for (int i = 0; i < std::min(3, (int)kinectControl.graspsPossible.size()); i++){
-      					viewer->removeShape("GP_"+std::to_string(i)+"_A",0);
-      					viewer->removeShape("GP_"+std::to_string(i)+"_B",0);
-        				viewer->addSphere<pcl::PointXYZRGB>(kinectControl.graspsPossible[i].p1,0.0050,0.0,0.0,(i+1.0)/3.0,"GP_"+std::to_string(i)+"_A",0);
-        				viewer->addSphere<pcl::PointXYZRGB>(kinectControl.graspsPossible[i].p2,0.0050,0.0,0.0,(i+1.0)/3.0,"GP_"+std::to_string(i)+"_B",0);
-      				}
-    			}
-    		viewer->spinOnce(100);
-    		viewer->removePointCloud("Raw Data",0);
-			sleep(1);
+				singlePass(kinectControl, targetPose, true);	// Initial Pass
+
+				// if(0 == polarAngle and 10 == azimuthalAngle){
+				// 	kinectControl.reset();
+				// 	singlePass(kinectControl, targetPose, true); // Initial Pass
+				// } else {
+				// 	singlePass(kinectControl, targetPose, false);
+				// }
+
+				if(kinectControl.selectedGrasp != -1){
+					std::cout << "Selected Grasp ID : " << kinectControl.selectedGrasp << std::endl;
+					std::cout << "Selected Grasp Quality : " << kinectControl.graspsPossible[kinectControl.selectedGrasp].quality << std::endl;
+				}else{
+					std::cout << "No grasp found." << std::endl;
+				}
+
+				// Visualization Section Start
+				if (visualize == true){
+					for (int i = 0; i < kinectControl.ptrPtCldObject->size(); i++) {
+						kinectControl.ptrPtCldObject->points[i].r = 0;
+						kinectControl.ptrPtCldObject->points[i].b = 200;
+						kinectControl.ptrPtCldObject->points[i].g = 0;
+					}
+					rbgVis(viewer,kinectControl.ptrPtCldObject,"Object",0);
+
+					for (int i = 0; i < kinectControl.ptrPtCldUnexp->size(); i++) {
+						kinectControl.ptrPtCldUnexp->points[i].r = 200;
+						kinectControl.ptrPtCldUnexp->points[i].b = 0;
+						kinectControl.ptrPtCldUnexp->points[i].g = 0;
+					}
+					rbgVis(viewer,kinectControl.ptrPtCldUnexp,"Unexplored",0);
+
+					if(kinectControl.selectedGrasp != -1){
+						kinectControl.updateGripper(kinectControl.selectedGrasp,0);    // Only for visulization purpose
+						rbgVis(viewer,kinectControl.ptrPtCldGripper,"Gripper",0);
+					}
+					viewer->spinOnce(100);
+					viewer->removeAllPointClouds(0);
+					sleep(2);
+				}
+				// Visualization Section End
 		}
 	}
-    //kinectControl.deleteObject(0);
+
+  kinectControl.deleteObject(0);
 	/*
 
  	while(stepsTaken < TIMEOUT){

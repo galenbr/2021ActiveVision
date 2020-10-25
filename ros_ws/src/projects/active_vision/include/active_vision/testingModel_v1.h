@@ -233,8 +233,7 @@ public:
   // 16: Creating the State vector
   void createStateVector();
 };
-void initialPass(environment &av, std::vector<double> kinectPose);
 
-void singlePass(environment &av, std::vector<double> kinectPose);
+void singlePass(environment &av, std::vector<double> kinectPose, bool initial);
 
 #endif

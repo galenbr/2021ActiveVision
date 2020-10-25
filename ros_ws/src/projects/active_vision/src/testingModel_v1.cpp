@@ -1012,23 +1012,14 @@ public:
   }
 };
 
-void initialPass(environment &av, std::vector<double> kinectPose){
+void singlePass(environment &av, std::vector<double> kinectPose, bool initial){
   av.moveKinectViewsphere(kinectPose);
   av.readKinect();
   av.fuseLastData();
   av.dataExtract();
-  av.genUnexploredPtCld();
-  av.updateUnexploredPtCld();
-  av.graspsynthesis();
-  av.collisionCheck();
-}
-
-void singlePass(environment &av, std::vector<double> kinectPose){
-  av.moveKinectViewsphere(kinectPose);
-  av.readKinect();
-  av.fuseLastData();
-  av.dataExtract();
-  av.genUnexploredPtCld();
+  if (initial == true){
+    av.genUnexploredPtCld();
+  }
   av.updateUnexploredPtCld();
   av.graspsynthesis();
   av.collisionCheck();
