@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
 roscpp
 rospy
 std_msgs
+geometry_msgs
 message_generation
 lusb
 )
@@ -27,6 +28,7 @@ add_service_files(
 generate_messages(
    DEPENDENCIES
    std_msgs
+   geometry_msgs
 )
 
 catkin_package()
