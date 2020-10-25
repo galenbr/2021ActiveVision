@@ -368,8 +368,8 @@ void graspsynthesis(std::vector<graspPoint> &graspsPossible, ptCldColor::Ptr ptr
 
         // Using normals to find the angle
         A = std::min(pcl::getAngle3D(vectA,ptrObjNormal->points[i].getNormalVector3fMap()),
-                     pcl::getAngle3D(vectA,ptrObjNormal->points[j].getNormalVector3fMap()))*180/M_PI;
-        B = std::min(pcl::getAngle3D(vectB,ptrObjNormal->points[i].getNormalVector3fMap()),
+                     pcl::getAngle3D(vectB,ptrObjNormal->points[i].getNormalVector3fMap()))*180/M_PI;
+        B = std::min(pcl::getAngle3D(vectA,ptrObjNormal->points[j].getNormalVector3fMap()),
                      pcl::getAngle3D(vectB,ptrObjNormal->points[j].getNormalVector3fMap()))*180/M_PI;
 
         graspTemp.quality = 180 - ( A + B );
