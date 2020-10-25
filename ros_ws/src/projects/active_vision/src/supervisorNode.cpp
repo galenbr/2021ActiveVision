@@ -78,15 +78,7 @@ int main (int argc, char** argv){
 				targetPose = {1.4, polarAngle*(M_PI/180.0), azimuthalAngle*(M_PI/180.0)};
 
 				kinectControl.reset();
-				singlePass(kinectControl, targetPose, true);	// Initial Pass
-
-				// if(0 == polarAngle and 10 == azimuthalAngle){
-				// 	kinectControl.reset();
-				// 	singlePass(kinectControl, targetPose, true); // Initial Pass
-				// } else {
-				// 	singlePass(kinectControl, targetPose, false);
-				// }
-
+				singlePass(kinectControl, targetPose, true);
 				if(kinectControl.selectedGrasp != -1){
 					std::cout << "Selected Grasp ID : " << kinectControl.selectedGrasp << std::endl;
 					std::cout << "Selected Grasp Quality : " << kinectControl.graspsPossible[kinectControl.selectedGrasp].quality << std::endl;
