@@ -272,14 +272,15 @@ public:
   }
 
   // Store the configuration
-  void saveConfiguration(std::string name){
+  int saveConfiguration(std::string name){
     stateConfig configTemp;
     configTemp.env = *ptrPtCldEnv;
     configTemp.unexp = *ptrPtCldUnexp;
     configTemp.kinectPose = lastKinectPoseViewsphere;
     configTemp.description = name;
     configurations.push_back(configTemp);
-    std::cout << "State saved : " << name << std::endl;
+    //std::cout << "State saved : " << name << std::endl;
+    return configurations.size()-1;
   }
 
   // Rollback to a configuration
@@ -287,7 +288,7 @@ public:
     *ptrPtCldEnv = configurations[index].env;
     *ptrPtCldUnexp = configurations[index].unexp;
     lastKinectPoseViewsphere = configurations[index].kinectPose;
-    std::cout << "Rolled back to state : " << configurations[index].description << std::endl;
+    //std::cout << "Rolled back to state : " << configurations[index].description << std::endl;
   }
 
   // 1A: Callback function to point cloud subscriber
@@ -511,7 +512,7 @@ public:
   // 7: Function to read the kinect data.
   void readKinect(){
     readFlag[0] = 1; // readFlag[1] = 1; readFlag[2] = 1;
-    while (readFlag[0]==1 || readFlag[1]==1 || readFlag[2]==1) {
+    while (readFlag[0]==1) {
       ros::spinOnce();
       r.sleep();
     }

@@ -233,4 +233,4 @@ target_link_libraries(testingModel_v1 active_vision ${catkin_LIBRARIES} ${PCL_LI
 
 add_executable(supervisorNode src/supervisorNode.cpp)
 add_dependencies(supervisorNode active_vision ${catkin_EXPORTED_TARGETS})
-target_link_libraries(supervisorNode active_vision ${catkin_LIBRARIES})
+target_link_libraries(supervisorNode active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})

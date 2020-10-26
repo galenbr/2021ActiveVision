@@ -8,8 +8,6 @@
 #include <tuple>
 #include <boost/make_shared.hpp>
 
-typedef std::vector< std::tuple<int, int> > angle_path_vector;
-
 void test(){
 	std::cout << "Testing" << std::endl;
 }
@@ -21,6 +19,21 @@ struct RouteData {
 	bool goodInitialGrasp;
 	float graspQuality;
 	int stepNumber;
-	angle_path_vector stepVector;
+	std::vector<std::vector<double>> stepVector;
 	std::string filepath;
+};
+
+void printRouteData(RouteData &in){
+	std::cout << in.objType << std::endl;
+	printf("(%1.2f, %1.2f, %1.2f)\n", in.objPose[0], in.objPose[1], in.objPose[2]);
+	printf("(%1.2f, %1.2f, %1.2f)\n", in.kinectPose[0], in.kinectPose[1], in.kinectPose[2]);
+	printf("%1.2f\n", in.graspQuality);
+	printf("Steps taken = %d\n", in.stepNumber);
+	if(in.stepVector.size() > 1){
+		printf("Step Path:\n");
+		for(int i=0; i < in.stepVector.size(); i++){
+			printf("(%1.2f, %1.2f, %1.2f)->", in.stepVector[i][0], in.stepVector[i][1], in.stepVector[i][2]);
+		}
+		printf("\n");
+	}
 };
