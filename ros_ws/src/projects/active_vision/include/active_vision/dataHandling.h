@@ -11,8 +11,6 @@
 #include <tuple>
 #include <boost/make_shared.hpp>
 
-typedef std::vector< std::tuple<int, int> > angle_path_vector;
-
 void test();
 
 struct RouteData {
@@ -22,8 +20,10 @@ struct RouteData {
   bool goodInitialGrasp;
   float graspQuality;
   int stepNumber;
-  angle_path_vector stepVector;
+  std::vector<std::vector<double>> stepVector;
   std::string filepath;
 };
+
+void printRouteData(RouteData &in);
 
 #endif

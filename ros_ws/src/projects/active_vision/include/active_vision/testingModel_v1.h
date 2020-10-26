@@ -174,7 +174,7 @@ public:
   void reset();
 
   // Store the configuration
-  void saveConfiguration(std::string name);
+  int saveConfiguration(std::string name);
 
   // Rollback to a configuration
   void rollbackConfiguration(int index);
