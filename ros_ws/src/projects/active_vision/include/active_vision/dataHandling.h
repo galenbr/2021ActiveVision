@@ -10,6 +10,8 @@
 #include <fstream>
 #include <tuple>
 #include <boost/make_shared.hpp>
+#include <sstream>
+
 
 void test();
 
@@ -20,10 +22,12 @@ struct RouteData {
   bool goodInitialGrasp;
   float graspQuality;
   int stepNumber;
-  std::vector<std::vector<double>> stepVector;
   std::string filepath;
+  std::vector<std::vector<double>> stepVector;
 };
 
 void printRouteData(RouteData &in);
+
+void saveData(RouteData &in, std::fstream &saveTo);
 
 #endif
