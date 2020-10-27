@@ -1666,6 +1666,7 @@ void testStateVector(environment &av, int objID, int flag){
 // 12: A test function to check the state vector
 void testSaveRollback(environment &av, int objID, int flag){
   std::cout << "*** In save and rollback testing function ***" << std::endl;
+  av.reset();
   av.spawnObject(objID,0,0,0);
   av.loadGripper();
 
@@ -1726,7 +1727,6 @@ void testSaveRollback(environment &av, int objID, int flag){
   }
 
   for(int i = 0; i < 8; i++){
-    av.reset();
     av.rollbackConfiguration(0);
 
     kinectPose = av.lastKinectPoseViewsphere;
