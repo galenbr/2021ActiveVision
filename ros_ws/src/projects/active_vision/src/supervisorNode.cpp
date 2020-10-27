@@ -7,6 +7,8 @@
 
 bool visualize = true;
 
+std::map<int, std::string> objLookup{{0, "Drill"}, {1, "Square Prism"}, {2, "Rectangular Prism"}, {3, "Bowl"}, {4, "Big Bowl"}, {5, "Cup"}};
+
 void modifyTargetPosition(std::vector<double> &pos){
 	pos[0]+=0.1;
 	pos[1]+=0.1;
@@ -118,18 +120,35 @@ std::vector<std::vector<double>> exploreChildPoses(environment &kinectControl, s
 	return {{-1}};
 }
 
-int main (int argc, char** argv){
-	ros::init (argc, argv, "Supervisor_Node");
- 	ros::NodeHandle nh;
- 	std::string name("Drill");
+void displayData(environment &kinectControl, int object){
+	kinectControl.spawnObject(object, 0, 0, 0);
+	ptCldVis::Ptr viewer = initRGBViewer();
+	std::vector<std::vector<double>> kinectPoses = {{1.4,-M_PI,M_PI/3},
+                                                  {1.4,-M_PI/2,M_PI/3},
+                                                  {1.4,0,M_PI/3},
+                                                  {1.4,M_PI/2,M_PI/3}};
 
- 	environment kinectControl(&nh);
+  	for (int i = 0; i < 4; i++) {
+    	kinectControl.moveKinectViewsphere(kinectPoses[i]);
+    	kinectControl.readKinect();
+    	kinectControl.fuseLastData();
+    	kinectControl.dataExtract();
+  	}
+
+  	rbgVis(viewer,kinectControl.cPtrPtCldEnv,"Environment",0);
+
+	kinectControl.deleteObject(object);
+}
+
+void generateData(environment &kinectControl, int object, char* saveLocation){
+	fstream fout;
+ 	fout.open(saveLocation, ios::out | ios::app);
+
  	RouteData currentRoute;
- 	currentRoute.objType= name;
+ 	currentRoute.objType= objLookup[object];
  	currentRoute.objPose={0,0,0};
-	sleep(1);
 
- 	kinectControl.spawnObject(0,0,0,0);
+ 	kinectControl.spawnObject(object,0,0,0);
 	kinectControl.loadGripper();
 
 	ptCldVis::Ptr viewer;
@@ -156,6 +175,8 @@ int main (int argc, char** argv){
 				} else {
 					currentRoute.goodInitialGrasp = true;
 				}
+				currentRoute.graspQuality = kinectControl.graspsPossible[0].quality;
+				saveData(currentRoute, fout);
 				if(currentRoute.stepNumber != 2){
 					printRouteData(currentRoute);
 				}
@@ -164,6 +185,18 @@ int main (int argc, char** argv){
 	}
 
   	kinectControl.deleteObject(0);
+  	fout.close();
+}
+
+int main (int argc, char** argv){
+	ros::init (argc, argv, "Supervisor_Node");
+ 	ros::NodeHandle nh;
+
+ 	environment kinectControl(&nh);
+	sleep(1);
+	
+	generateData(kinectControl, 0, "./drillData.csv");
+ 	
 	/*
 
  	while(stepsTaken < TIMEOUT){

@@ -34,3 +34,7 @@ ros_ws/.vscode
 !.vscode/extensions.json
 *.code-workspace
 .history/
+
+#active vision data
+
+ros_ws/src/projects/active_vision/data/*

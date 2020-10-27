@@ -7,6 +7,7 @@
 #include <fstream>
 #include <tuple>
 #include <boost/make_shared.hpp>
+#include <sstream>
 
 void test(){
 	std::cout << "Testing" << std::endl;
@@ -19,8 +20,8 @@ struct RouteData {
 	bool goodInitialGrasp;
 	float graspQuality;
 	int stepNumber;
-	std::vector<std::vector<double>> stepVector;
 	std::string filepath;
+	std::vector<std::vector<double>> stepVector;
 };
 
 void printRouteData(RouteData &in){
@@ -35,5 +36,24 @@ void printRouteData(RouteData &in){
 			printf("(%1.2f, %1.2f, %1.2f)->", in.stepVector[i][0], in.stepVector[i][1], in.stepVector[i][2]);
 		}
 		printf("\n");
+	}
+};
+
+void saveData(RouteData &in, std::fstream &saveTo){
+	saveTo  << in.objType << ", "
+			<< in.objPose[0] << ", " << in.objPose[1] << ", " << in.objPose[2] << ", "
+			<< in.kinectPose[0] << ", " << in.kinectPose[1] << ", " << in.kinectPose[2] << ", "
+			<< in.goodInitialGrasp << ", "
+			<< in.graspQuality << ", "
+			<< in.stepNumber << ", "
+			<< in.filepath << ", ";
+	std::vector<double> cVector;
+	for(int i=0; i < in.stepVector.size(); i++){
+		saveTo << in.stepVector[i][0] << ", " << in.stepVector[i][1] << ", " << in.stepVector[i][2];
+		if(i+1 < in.stepVector.size()){
+			saveTo << ", ";
+		} else {
+			saveTo << "\n";
+		}
 	}
 };
