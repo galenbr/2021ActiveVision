@@ -58,8 +58,10 @@ struct graspPoint{
   pcl::PointXYZRGB p2;
   std::vector<float> pose;    // Note: This is not the final gripper pose
   float addnlPitch;
+  graspPoint();
 };
 
+// Function to compare grasp point for sorting
 bool compareGrasp(graspPoint A, graspPoint B);
 
 // Structure to store state for rollback
@@ -91,7 +93,7 @@ void printStateVector(std::vector<float> &stateVec, int dim);
 // Class to store data of environment and its processing
 class environment{
 private:
-  ros::Rate r;                      // ROS sleep rate
+  ros::Rate r{10};                      // ROS sleep rate
   ros::Publisher pubKinectPose;         // Publisher : Kinect pose
   ros::Subscriber subKinectPtCld;       // Subscriber : Kinect pointcloud
   ros::ServiceClient gazeboSpawnModel;  // Service : Spawn Model
@@ -239,6 +241,7 @@ public:
   void createStateVector();
 };
 
+// Function to do a single pass
 void singlePass(environment &av, std::vector<double> kinectPose, bool initial);
 
 #endif
