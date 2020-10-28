@@ -8,10 +8,16 @@
 #include <array>
 #include <string>
 #include <fstream>
+#include <time.h>
 #include <tuple>
 #include <boost/make_shared.hpp>
 #include <sstream>
 
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_types.h>
+
+// Typedef for convinience
+typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
 
 void test();
 
@@ -29,5 +35,9 @@ struct RouteData {
 void printRouteData(RouteData &in);
 
 void saveData(RouteData &in, std::fstream &saveTo);
+
+std::string getCurTime();
+
+void savePointCloud(ptCldColor::Ptr cloud, std::string prefix, int type);
 
 #endif

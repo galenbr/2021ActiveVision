@@ -1,4 +1,5 @@
 #include <active_vision/testingModel_v1.h>
+#include "active_vision/dataHandling.h"
 
 // Struct graspPoint constructor
 graspPoint::graspPoint(){
@@ -885,8 +886,9 @@ void singlePass(environment &av, std::vector<double> kinectPose, bool initial){
     av.genUnexploredPtCld();
   }
   av.updateUnexploredPtCld();
-  av.graspsynthesis();
-  av.collisionCheck();
+  av.graspAndCollisionCheck();
+  // av.graspsynthesis();
+  // av.collisionCheck();
 }
 
 // ******************** SET OF FUNCTIONS FOR TESTING ********************
@@ -1654,6 +1656,39 @@ void testSaveRollback(environment &av, int objID, int flag){
   std::cout << "*** End ***" << std::endl;
 }
 
+// 13: A test function to test saving pointcloud
+void testSavePointCloud(environment &av, int objID){
+  std::cout << "*** In point cloud save testing function ***" << std::endl;
+  std::string time;
+  ptCldColor::Ptr ptrPtCldTemp{new ptCldColor};
+
+  av.spawnObject(objID,0,0,0);
+  av.loadGripper();
+
+  // 4 kinect poses
+  std::vector<std::vector<double>> kinectPoses = {{1.4,-M_PI,M_PI/3},
+                                                  {1.4,-M_PI/2,M_PI/3},
+                                                  {1.4,0,M_PI/3},
+                                                  {1.4,M_PI/2,M_PI/3}};
+
+  for(int i = 0; i < 4; i++){
+    singlePass(av, kinectPoses[i], i==0);
+    time = getCurTime();
+    savePointCloud(av.ptrPtCldObject,time,1);
+    savePointCloud(av.ptrPtCldUnexp,time,2);
+    if(av.selectedGrasp!=-1){
+      av.updateGripper(av.selectedGrasp,0);
+      *ptrPtCldTemp = *av.ptrPtCldEnv + *av.ptrPtCldGripper;
+      savePointCloud(ptrPtCldTemp,time,3);
+      ptrPtCldTemp->clear();
+    }else{
+      savePointCloud(av.ptrPtCldEnv,time,3);
+    }
+  }
+
+  std::cout << "*** END ***" << std::endl;
+}
+
 int main (int argc, char** argv){
 
   // Initialize ROS
@@ -1679,9 +1714,10 @@ int main (int argc, char** argv){
   std::cout << "11 : Selecting a grasp after grasp synthesis and collision check for a object." << std::endl;
   std::cout << "12 : State vector generation." << std::endl;
   std::cout << "13 : Store and rollback configurations." << std::endl;
+  std::cout << "14 : Save point clouds." << std::endl;
   std::cout << "Enter your choice : "; cin >> choice;
 
-  if (choice >= 5 && choice <= 13) {
+  if (choice >= 5 && choice <= 14) {
     std::cout << "Objects available :" << std::endl;
     std::cout << "1: Drill" << std::endl;
     std::cout << "2: Square Prism" << std::endl;
@@ -1746,6 +1782,9 @@ int main (int argc, char** argv){
       break;
     case 13:
       testSaveRollback(activeVision,objID-1,1);
+      break;
+    case 14:
+      testSavePointCloud(activeVision,objID-1);
       break;
     default:
       std::cout << "Invalid choice." << std::endl;

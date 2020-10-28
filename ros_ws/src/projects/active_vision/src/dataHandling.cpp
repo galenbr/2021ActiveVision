@@ -1,28 +1,8 @@
-#include <iostream>
-#include <math.h>
-#include <stdlib.h>
-#include <vector>
-#include <array>
-#include <string>
-#include <fstream>
-#include <tuple>
-#include <boost/make_shared.hpp>
-#include <sstream>
+#include "active_vision/dataHandling.h"
 
 void test(){
 	std::cout << "Testing" << std::endl;
 }
-
-struct RouteData {
-	std::string objType;
-	std::vector<double> objPose;
-	std::vector<double> kinectPose;
-	bool goodInitialGrasp;
-	float graspQuality;
-	int stepNumber;
-	std::string filepath;
-	std::vector<std::vector<double>> stepVector;
-};
 
 void printRouteData(RouteData &in){
 	std::cout << in.objType << std::endl;
@@ -37,7 +17,7 @@ void printRouteData(RouteData &in){
 		}
 		printf("\n");
 	}
-};
+}
 
 void saveData(RouteData &in, std::fstream &saveTo){
 	saveTo  << in.objType << ", "
@@ -56,4 +36,32 @@ void saveData(RouteData &in, std::fstream &saveTo){
 			saveTo << "\n";
 		}
 	}
-};
+}
+
+std::string getCurTime(){
+	time_t now = time(0);
+	tm *ltm = localtime(&now);
+	char temp[50];
+	sprintf(temp, "%04d_%02d_%02d_%02d%02d%02d", 1900 + ltm->tm_year,1 + ltm->tm_mon,ltm->tm_mday,ltm->tm_hour,ltm->tm_min,ltm->tm_sec);
+	std::string name = temp;
+	return(name);
+}
+
+// Type 1 : Object, 2 : Unexplored, 3 : Result
+// Ensure there is a folder called "DataRecAV" in Home folder
+void savePointCloud(ptCldColor::Ptr cloud, std::string prefix, int type){
+	std::string path = "./DataRecAV/";
+	std::string name;
+	switch(type){
+		case 1:
+		  name = path + prefix + "_object.pcd";	break;
+		case 2:
+			name = path + prefix + "_unexp.pcd";	break;
+		case 3:
+			name = path + prefix + "_result.pcd";	break;
+		default:
+			std::cout << "Error saving point cloud." << std::endl;
+			return;
+	}
+	pcl::io::savePCDFileASCII(name,*cloud);
+}
