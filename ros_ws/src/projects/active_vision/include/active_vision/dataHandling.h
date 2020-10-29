@@ -22,28 +22,31 @@ typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
 
 void test();
 
-// To Be Added: Direction, 3 point clouds (Obj, unexp, Env+Gripper)
+// To Be Added: Direction
 // Not Needed: kinectPose
 struct RouteData {
+  ptCldColor::Ptr obj{new ptCldColor};
+  ptCldColor::Ptr unexp{new ptCldColor};
+  ptCldColor::Ptr env{new ptCldColor};
   std::string objType;
   std::vector<double> objPose;
   std::vector<double> kinectPose;
   bool goodInitialGrasp;
   float graspQuality;
   int stepNumber;
-  std::string filepath;
+  std::string filename;
   std::vector<std::vector<double>> stepVector;
 };
 
 void printRouteData(RouteData &in);
 
-void saveData(RouteData &in, std::fstream &saveTo);
+void saveData(RouteData &in, std::fstream &saveTo, std::string &dir);
 
 std::string getCurTime();
 
-void savePointCloud(ptCldColor::Ptr cloud, std::string prefix, int type);
+void savePointCloud(ptCldColor::Ptr cloud, std::string dir, std::string prefix, int type);
 
-void readPointCloud(ptCldColor::Ptr cloud, std::string prefix, int type);
+void readPointCloud(ptCldColor::Ptr cloud, std::string dir, std::string prefix, int type);
 
 std::vector<std::vector<std::string>> readCSV(std::string filename);
 

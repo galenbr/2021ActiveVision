@@ -76,12 +76,12 @@ int main(int argc, char** argv){
   while(::ok){
     if (pathColID <= data[i].size()){
       if(type==2){
-        readPointCloud(ptrPtCldTemp,data[i][pathColID-1],1);
+        readPointCloud(ptrPtCldTemp,directory,data[i][pathColID-1],1);
         rbgVis(viewer,ptrPtCldTemp,"Obj",vp[0]);
-        readPointCloud(ptrPtCldTemp,data[i][pathColID-1],2);
+        readPointCloud(ptrPtCldTemp,directory,data[i][pathColID-1],2);
         rbgVis(viewer,ptrPtCldTemp,"Unexp",vp[1]);
       }
-      readPointCloud(ptrPtCldTemp,data[i][pathColID-1],3);
+      readPointCloud(ptrPtCldTemp,directory,data[i][pathColID-1],3);
       rbgVis(viewer,ptrPtCldTemp,"Env",vp[2]);
       viewer->addText("Data No : "+std::to_string(i+1),5,5,20,1,0,0,"Text",vp[2]);
 
@@ -90,7 +90,6 @@ int main(int argc, char** argv){
         pose[0] = std::atof(data[i][j-1].c_str());
         pose[1] = std::atof(data[i][j-1+1].c_str());
         pose[2] = std::atof(data[i][j-1+2].c_str());
-
         a1.x = table.x+pose[0]*sin(pose[2])*cos(pose[1]);
         a1.y = table.y+pose[0]*sin(pose[2])*sin(pose[1]);
         a1.z = table.z+pose[0]*cos(pose[2]);
@@ -98,12 +97,33 @@ int main(int argc, char** argv){
         pose[0] = std::atof(data[i][j-1+3].c_str());
         pose[1] = std::atof(data[i][j-1+4].c_str());
         pose[2] = std::atof(data[i][j-1+5].c_str());
-
         a2.x = table.x+pose[0]*sin(pose[2])*cos(pose[1]);
         a2.y = table.y+pose[0]*sin(pose[2])*sin(pose[1]);
         a2.z = table.z+pose[0]*cos(pose[2]);
 
-        viewer->addArrow(a1,a2,0,1,0,false,std::to_string(j),vp[2]);
+        viewer->addArrow(a2,a1,0,1,0,false,std::to_string(j),vp[2]);
+      }
+
+      if(nSteps == 1){
+        pose[0] = std::atof(data[i][stepColID-1].c_str());
+        pose[1] = std::atof(data[i][stepColID-1+1].c_str());
+        pose[2] = std::atof(data[i][stepColID-1+2].c_str());
+        a1.x = table.x+pose[0]*sin(pose[2])*cos(pose[1]);
+        a1.y = table.y+pose[0]*sin(pose[2])*sin(pose[1]);
+        a1.z = table.z+pose[0]*cos(pose[2]);
+
+        viewer->addSphere(a1,0.03,0,1,0,"Cam",vp[2]);
+      }
+
+      int vCtr = 0;
+      for (int polarAngle = 0; polarAngle < 360; polarAngle+=20){
+        for (int azimuthalAngle = 10; azimuthalAngle < 90; azimuthalAngle+=20){
+          a1.x = table.x+pose[0]*sin(azimuthalAngle*(M_PI/180.0))*cos(polarAngle*(M_PI/180.0));
+          a1.y = table.y+pose[0]*sin(azimuthalAngle*(M_PI/180.0))*sin(polarAngle*(M_PI/180.0));
+          a1.z = table.z+pose[0]*cos(azimuthalAngle*(M_PI/180.0));
+          vCtr++;
+          viewer->addSphere(a1,0.02,0,0,1,"Sph_"+std::to_string(vCtr),vp[2]);
+        }
       }
       viewer->addSphere(table,pose[0],0,0,1,"Viewsphere",vp[2]);
       viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_REPRESENTATION,pcl::visualization::PCL_VISUALIZER_REPRESENTATION_WIREFRAME,"Viewsphere");

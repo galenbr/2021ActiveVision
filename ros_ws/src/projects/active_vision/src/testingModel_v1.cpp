@@ -1659,6 +1659,7 @@ void testSaveRollback(environment &av, int objID, int flag){
 // 13: A function to test saving pointcloud
 void testSavePCD(environment &av, int objID){
   std::cout << "*** In point cloud save testing function ***" << std::endl;
+  std::string dir = "./DataRecAV/";
   std::string time;
   ptCldColor::Ptr ptrPtCldTemp{new ptCldColor};
 
@@ -1674,15 +1675,15 @@ void testSavePCD(environment &av, int objID){
   for(int i = 0; i < 4; i++){
     singlePass(av, kinectPoses[i], i==0);
     time = getCurTime();
-    savePointCloud(av.ptrPtCldObject,time,1);
-    savePointCloud(av.ptrPtCldUnexp,time,2);
+    savePointCloud(av.ptrPtCldObject,dir,time,1);
+    savePointCloud(av.ptrPtCldUnexp,dir,time,2);
     if(av.selectedGrasp!=-1){
       av.updateGripper(av.selectedGrasp,0);
       *ptrPtCldTemp = *av.ptrPtCldEnv + *av.ptrPtCldGripper;
-      savePointCloud(ptrPtCldTemp,time,3);
+      savePointCloud(ptrPtCldTemp,dir,time,3);
       ptrPtCldTemp->clear();
     }else{
-      savePointCloud(av.ptrPtCldEnv,time,3);
+      savePointCloud(av.ptrPtCldEnv,dir,time,3);
     }
   }
 
@@ -1710,6 +1711,7 @@ void testReadCSV(std::string filename, int colID){
 // 15: A function to test reading PCD based on CSV file data
 void testReadPCD(std::string filename){
   std::cout << "*** In PCD read testing function ***" << std::endl;
+  std::string dir = "./DataRecAV/";
   int colID = 11;
   ptCldColor::Ptr ptrPtCldTemp{new ptCldColor};
   std::vector<std::vector<std::string>> data;
@@ -1727,11 +1729,11 @@ void testReadPCD(std::string filename){
   std::cout << "Viewing first 4 data recerded." << std::endl;
   for(int i = 0; i < 4; i++){
     if (colID <= data[i].size()){
-      readPointCloud(ptrPtCldTemp,data[i][colID-1],1);
+      readPointCloud(ptrPtCldTemp,dir,data[i][colID-1],1);
       rbgVis(viewer,ptrPtCldTemp,"Obj",vp[0]);
-      readPointCloud(ptrPtCldTemp,data[i][colID-1],2);
+      readPointCloud(ptrPtCldTemp,dir,data[i][colID-1],2);
       rbgVis(viewer,ptrPtCldTemp,"Unexp",vp[1]);
-      readPointCloud(ptrPtCldTemp,data[i][colID-1],3);
+      readPointCloud(ptrPtCldTemp,dir,data[i][colID-1],3);
       rbgVis(viewer,ptrPtCldTemp,"Env",vp[2]);
 
       std::cout << "Close viewer to view next." << std::endl;

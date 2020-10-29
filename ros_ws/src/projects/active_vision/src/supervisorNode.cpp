@@ -140,9 +140,9 @@ void displayData(environment &kinectControl, int object){
 	kinectControl.deleteObject(object);
 }
 
-void generateData(environment &kinectControl, int object, char* saveLocation){
+void generateData(environment &kinectControl, int object, std::string dir, std::string saveLocation){
 	fstream fout;
- 	fout.open(saveLocation, ios::out | ios::app);
+ 	fout.open(dir+saveLocation, ios::out | ios::app);
 
  	RouteData currentRoute;
  	currentRoute.objType= objLookup[object];
@@ -165,10 +165,12 @@ void generateData(environment &kinectControl, int object, char* saveLocation){
 				finished = false;
 				//Move kinect to position
 				targetPose = {1.4, polarAngle*(M_PI/180.0), azimuthalAngle*(M_PI/180.0)};
-				currentRoute.kinectPose=targetPose;
+				currentRoute.kinectPose = targetPose;
 				currentRoute.stepNumber = 1;
 				currentRoute.stepVector = {targetPose};
 				finished = singleExploration(kinectControl, targetPose, viewer, true);
+				*currentRoute.obj = *kinectControl.ptrPtCldObject;
+				*currentRoute.unexp = *kinectControl.ptrPtCldUnexp;
 				if(!finished){
 					currentRoute.goodInitialGrasp = false;
 					currentRoute.stepVector = exploreChildPoses(kinectControl, targetPose, viewer, pow(8,3));
@@ -176,17 +178,19 @@ void generateData(environment &kinectControl, int object, char* saveLocation){
 				} else {
 					currentRoute.goodInitialGrasp = true;
 				}
-				currentRoute.graspQuality = kinectControl.graspsPossible[0].quality;
-				saveData(currentRoute, fout);
-				if(currentRoute.stepNumber != 2){
-					printRouteData(currentRoute);
-				}
+				currentRoute.graspQuality = kinectControl.graspsPossible[kinectControl.selectedGrasp].quality;
+				kinectControl.updateGripper(kinectControl.selectedGrasp,0);
+				*currentRoute.env = *kinectControl.ptrPtCldEnv + *kinectControl.ptrPtCldGripper;
+				currentRoute.filename = getCurTime();
+				saveData(currentRoute, fout, dir);
+				// if(currentRoute.stepNumber != 1){
+				// 	printRouteData(currentRoute);
+				// }
 				kinectControl.reset();
 		}
 	}
-
-  	kinectControl.deleteObject(0);
-  	fout.close();
+	kinectControl.deleteObject(object);
+	fout.close();
 }
 
 int main (int argc, char** argv){
@@ -196,5 +200,12 @@ int main (int argc, char** argv){
  	environment kinectControl(&nh);
 	sleep(1);
 
-	generateData(kinectControl, 0, "./drillData.csv");
+	std::string dir = "./DataRecAV/";
+	std::string time = getCurTime();
+	std::string csvName = "_dataRec.csv";
+	std::cout << "Start Time : " << getCurTime() << std::endl;
+	generateData(kinectControl, 0, dir, time+csvName);	kinectControl.reset();
+	std::cout << "End Time : " << getCurTime() << std::endl;
+	generateData(kinectControl, 4, dir, time+csvName);  kinectControl.reset();
+	std::cout << "End Time : " << getCurTime() << std::endl;
  }

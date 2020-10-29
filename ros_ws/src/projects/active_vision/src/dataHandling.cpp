@@ -19,23 +19,26 @@ void printRouteData(RouteData &in){
 	}
 }
 
-void saveData(RouteData &in, std::fstream &saveTo){
-	saveTo  << in.objType << ", "
-			<< in.objPose[0] << ", " << in.objPose[1] << ", " << in.objPose[2] << ", "
-			<< in.kinectPose[0] << ", " << in.kinectPose[1] << ", " << in.kinectPose[2] << ", "
-			<< in.goodInitialGrasp << ", "
-			<< in.graspQuality << ", "
-			<< in.stepNumber << ", "
-			<< in.filepath << ", ";
-	std::vector<double> cVector;
+void saveData(RouteData &in, std::fstream &saveTo, std::string &dir){
+	saveTo  << in.objType << ","
+			<< in.objPose[0] << "," << in.objPose[1] << "," << in.objPose[2] << ","
+			<< in.kinectPose[0] << "," << in.kinectPose[1] << "," << in.kinectPose[2] << ","
+			<< in.goodInitialGrasp << ","
+			<< in.graspQuality << ","
+			<< in.stepNumber << ","
+			<< in.filename << ",";
+	// std::vector<double> cVector;
 	for(int i=0; i < in.stepVector.size(); i++){
-		saveTo << in.stepVector[i][0] << ", " << in.stepVector[i][1] << ", " << in.stepVector[i][2];
+		saveTo << in.stepVector[i][0] << "," << in.stepVector[i][1] << "," << in.stepVector[i][2];
 		if(i+1 < in.stepVector.size()){
-			saveTo << ", ";
+			saveTo << ",";
 		} else {
 			saveTo << "\n";
 		}
 	}
+	savePointCloud(in.obj,dir,in.filename,1);
+	savePointCloud(in.unexp,dir,in.filename,2);
+	savePointCloud(in.env,dir,in.filename,3);
 }
 
 std::string getCurTime(){
@@ -48,17 +51,16 @@ std::string getCurTime(){
 }
 
 // Type 1 : Object, 2 : Unexplored, 3 : Result
-// Ensure there is a folder called "DataRecAV" in Home folder
-void savePointCloud(ptCldColor::Ptr cloud, std::string prefix, int type){
-	std::string path = "./DataRecAV/";
+void savePointCloud(ptCldColor::Ptr cloud, std::string dir, std::string prefix, int type){
+
 	std::string name;
 	switch(type){
 		case 1:
-		  name = path + prefix + "_object.pcd";	break;
+		  name = dir + prefix + "_object.pcd";	break;
 		case 2:
-			name = path + prefix + "_unexp.pcd";	break;
+			name = dir + prefix + "_unexp.pcd";	break;
 		case 3:
-			name = path + prefix + "_result.pcd";	break;
+			name = dir + prefix + "_result.pcd";	break;
 		default:
 			std::cout << "Error saving point cloud." << std::endl;
 			return;
@@ -67,17 +69,16 @@ void savePointCloud(ptCldColor::Ptr cloud, std::string prefix, int type){
 }
 
 // Type 1 : Object, 2 : Unexplored, 3 : Result
-// Ensure there is a folder called "DataRecAV" in Home folder
-void readPointCloud(ptCldColor::Ptr cloud, std::string prefix, int type){
-	std::string path = "./DataRecAV/";
+void readPointCloud(ptCldColor::Ptr cloud, std::string dir, std::string prefix, int type){
+
 	std::string name;
 	switch(type){
 		case 1:
-		  name = path + prefix + "_object.pcd";	break;
+		  name = dir + prefix + "_object.pcd";	break;
 		case 2:
-			name = path + prefix + "_unexp.pcd";	break;
+			name = dir + prefix + "_unexp.pcd";	break;
 		case 3:
-			name = path + prefix + "_result.pcd";	break;
+			name = dir + prefix + "_result.pcd";	break;
 		default:
 			std::cout << "Error saving point cloud." << std::endl;
 			return;
