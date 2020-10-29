@@ -5,7 +5,7 @@
 #define MIN_ANGLE 20
 #define MIN_ANGLE_RAD MIN_ANGLE*(M_PI/180.0)
 
-bool visualize = true;
+bool visualize = false;
 
 std::map<int, std::string> objLookup{{0, "Drill"}, {1, "Square Prism"}, {2, "Rectangular Prism"}, {3, "Bowl"}, {4, "Big Bowl"}, {5, "Cup"}};
 
@@ -160,6 +160,7 @@ void generateData(environment &kinectControl, int object, char* saveLocation){
  	bool finished = false;
 
 	for (int polarAngle = 0; polarAngle < 360; polarAngle+=MIN_ANGLE){
+		std::cout << "***" << polarAngle << "***" << std::endl;
 		for (int azimuthalAngle = 10; azimuthalAngle < 90; azimuthalAngle+=MIN_ANGLE){
 				finished = false;
 				//Move kinect to position
@@ -194,46 +195,6 @@ int main (int argc, char** argv){
 
  	environment kinectControl(&nh);
 	sleep(1);
-	
+
 	generateData(kinectControl, 0, "./drillData.csv");
- 	
-	/*
-
- 	while(stepsTaken < TIMEOUT){
-
- 		//Get new data
- 		// kinectControl.readKinect();
-
- 		//Fuse with old data
-		// kinectControl.fuseLastData();
-
-		//Extract the object and table
-		// kinectControl.dataExtract();
-
-		//Generate the unexplored point cloud (Only the first time)
-		// if (stepsTaken == 0) {
-		// 	kinectControl.genUnexploredPtCld();
-		// }
-
-		//Update the unexplored point cloud
-		// kinectControl.updateUnexploredPtCld();
-
- 		//Grasp synthesis
-
- 		//Grasp checking
-
- 			//Exit if grasp good/timeout exceeded
-
- 		//Build model
-
- 		//Get instruction from optimization policy
- 		modifyTargetPosition(target_position);
-
- 		//Move camera
- 		kinectControl.moveKinectCartesian(target_position);
-
- 		std::cout << "Spinning... " << stepsTaken << std::endl;
- 		stepsTaken++;
- 		sleep(1);
- 	}*/
  }

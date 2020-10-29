@@ -65,3 +65,48 @@ void savePointCloud(ptCldColor::Ptr cloud, std::string prefix, int type){
 	}
 	pcl::io::savePCDFileASCII(name,*cloud);
 }
+
+// Type 1 : Object, 2 : Unexplored, 3 : Result
+// Ensure there is a folder called "DataRecAV" in Home folder
+void readPointCloud(ptCldColor::Ptr cloud, std::string prefix, int type){
+	std::string path = "./DataRecAV/";
+	std::string name;
+	switch(type){
+		case 1:
+		  name = path + prefix + "_object.pcd";	break;
+		case 2:
+			name = path + prefix + "_unexp.pcd";	break;
+		case 3:
+			name = path + prefix + "_result.pcd";	break;
+		default:
+			std::cout << "Error saving point cloud." << std::endl;
+			return;
+	}
+	if(pcl::io::loadPCDFile(name,*cloud) == -1) throw std::runtime_error("Could not read PCD file");
+}
+
+std::vector<std::vector<std::string>> readCSV(std::string filename){
+	std::vector<std::vector<std::string>> data;
+	std::vector<std::string> row;
+
+	// Create an input filestream
+	std::ifstream myFile(filename);
+	// Make sure the file is open
+  if(!myFile.is_open()) throw std::runtime_error("Could not open CSV file");
+
+	std::string line, element;
+
+	// Read data, line by line
+  while(std::getline(myFile, line)){
+    std::stringstream ss(line);
+		row.clear();
+		while(std::getline(ss, element, ',')){
+    	row.push_back(element);
+    }
+		data.push_back(row);
+  }
+
+	myFile.close();
+
+	return(data);
+}

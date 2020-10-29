@@ -1587,7 +1587,7 @@ void testSaveRollback(environment &av, int objID, int flag){
       rbgVis(viewer,av.ptrPtCldGripper,"Gripper1",vp[1]);
     }
     std::cout << "Close viewer to goto next direction." << std::endl;
-    while (!viewer->wasStopped ()){
+    while(!viewer->wasStopped ()){
       viewer->spinOnce(100);
       boost::this_thread::sleep (boost::posix_time::microseconds(100000));
     }
@@ -1656,8 +1656,8 @@ void testSaveRollback(environment &av, int objID, int flag){
   std::cout << "*** End ***" << std::endl;
 }
 
-// 13: A test function to test saving pointcloud
-void testSavePointCloud(environment &av, int objID){
+// 13: A function to test saving pointcloud
+void testSavePCD(environment &av, int objID){
   std::cout << "*** In point cloud save testing function ***" << std::endl;
   std::string time;
   ptCldColor::Ptr ptrPtCldTemp{new ptCldColor};
@@ -1689,6 +1689,63 @@ void testSavePointCloud(environment &av, int objID){
   std::cout << "*** END ***" << std::endl;
 }
 
+// 14: A function to test reading csv file
+void testReadCSV(std::string filename, int colID){
+  std::cout << "*** In CSV read testing function ***" << std::endl;
+
+  std::vector<std::vector<std::string>> data;
+  data = readCSV(filename);
+
+  std::cout << "Printing " << colID << " column of the csv." << std::endl;
+  for(int i = 0; i < data.size(); i++){
+    if (colID <= data[i].size()){
+      std::cout << data[i][colID-1] << std::endl;
+    }else{
+      std::cout << "****" << std::endl;
+    }
+  }
+  std::cout << "*** END ***" << std::endl;
+}
+
+// 15: A function to test reading PCD based on CSV file data
+void testReadPCD(std::string filename){
+  std::cout << "*** In PCD read testing function ***" << std::endl;
+  int colID = 11;
+  ptCldColor::Ptr ptrPtCldTemp{new ptCldColor};
+  std::vector<std::vector<std::string>> data;
+  data = readCSV(filename);
+
+  // Setting up the point cloud visualizer
+  ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
+  int vp[3] = {};
+  viewer->createViewPort(0.0,0.5,0.5,1.0,vp[0]);
+  viewer->createViewPort(0.5,0.5,1.0,1.0,vp[1]);
+  viewer->createViewPort(0.25,0.0,0.75,0.5,vp[2]);
+  viewer->addCoordinateSystem(1.0);
+  viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
+
+  std::cout << "Viewing first 4 data recerded." << std::endl;
+  for(int i = 0; i < 4; i++){
+    if (colID <= data[i].size()){
+      readPointCloud(ptrPtCldTemp,data[i][colID-1],1);
+      rbgVis(viewer,ptrPtCldTemp,"Obj",vp[0]);
+      readPointCloud(ptrPtCldTemp,data[i][colID-1],2);
+      rbgVis(viewer,ptrPtCldTemp,"Unexp",vp[1]);
+      readPointCloud(ptrPtCldTemp,data[i][colID-1],3);
+      rbgVis(viewer,ptrPtCldTemp,"Env",vp[2]);
+
+      std::cout << "Close viewer to view next." << std::endl;
+      while (!viewer->wasStopped()){
+        viewer->spinOnce(100);
+        boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+      }
+      viewer->resetStoppedFlag();
+      viewer->removeAllPointClouds();
+    }
+  }
+  std::cout << "*** END ***" << std::endl;
+}
+
 int main (int argc, char** argv){
 
   // Initialize ROS
@@ -1715,6 +1772,8 @@ int main (int argc, char** argv){
   std::cout << "12 : State vector generation." << std::endl;
   std::cout << "13 : Store and rollback configurations." << std::endl;
   std::cout << "14 : Save point clouds." << std::endl;
+  std::cout << "15 : Read CSV and print a column." << std::endl;
+  std::cout << "16 : Read PCD based on CSV data." << std::endl;
   std::cout << "Enter your choice : "; cin >> choice;
 
   if (choice >= 5 && choice <= 14) {
@@ -1736,38 +1795,37 @@ int main (int argc, char** argv){
     // activeVision.voxelGridSize = std::max(activeVision.voxelGridSize,0.005);
     // activeVision.voxelGridSize = std::min(activeVision.voxelGridSize,0.01);
   }
+  std::string filename;
+  int colID;
+  if(choice == 15 || choice == 16){
+    std::cin.ignore();
+    std::cout << "Enter csv filename with path : "; std::getline(std::cin,filename);
+  }
+  if(choice == 15){
+    std::cout << "Enter your column ID (>0) : "; std::cin>>colID;
+  }
 
   switch(choice){
     case 1:
-      testSpawnDeleteObj(activeVision);
-      break;
+      testSpawnDeleteObj(activeVision);               break;
     case 2:
-      testGripper(activeVision,1,0.05);
-      break;
+      testGripper(activeVision,1,0.05);               break;
     case 3:
-      testKinectMovement(activeVision);
-      break;
+      testKinectMovement(activeVision);               break;
     case 4:
-      testMoveKinectInViewsphere(activeVision);
-      break;
+      testMoveKinectInViewsphere(activeVision);       break;
     case 5:
-      testKinectRead(activeVision,objID-1,1);
-      break;
+      testKinectRead(activeVision,objID-1,1);         break;
     case 6:
-      testPtCldFuse(activeVision,objID-1,1);
-      break;
+      testPtCldFuse(activeVision,objID-1,1);          break;
     case 7:
-      testDataExtract(activeVision,objID-1,1);
-      break;
+      testDataExtract(activeVision,objID-1,1);        break;
     case 8:
-      testGenUnexpPtCld(activeVision,objID-1,1);
-      break;
+      testGenUnexpPtCld(activeVision,objID-1,1);      break;
     case 9:
-      testUpdateUnexpPtCld(activeVision,objID-1,1);
-      break;
+      testUpdateUnexpPtCld(activeVision,objID-1,1);   break;
     case 10:
-      testGraspsynthesis(activeVision,objID-1,1);
-      break;
+      testGraspsynthesis(activeVision,objID-1,1);     break;
     case 11:
       // for (int i = 1; i <= 4; i++) {
       //   for (int j = 0; j <= 5; j++) {
@@ -1778,14 +1836,15 @@ int main (int argc, char** argv){
       testComplete(activeVision,objID-1,4,graspMode,1,0);
       break;
     case 12:
-      testStateVector(activeVision,objID-1,1);
-      break;
+      testStateVector(activeVision,objID-1,1);   break;
     case 13:
-      testSaveRollback(activeVision,objID-1,1);
-      break;
+      testSaveRollback(activeVision,objID-1,1);  break;
     case 14:
-      testSavePointCloud(activeVision,objID-1);
-      break;
+      testSavePCD(activeVision,objID-1);         break;
+    case 15:
+      testReadCSV(filename,colID);               break;
+    case 16:
+      testReadPCD(filename);                     break;
     default:
       std::cout << "Invalid choice." << std::endl;
   }
