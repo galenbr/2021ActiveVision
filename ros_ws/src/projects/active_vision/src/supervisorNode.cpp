@@ -26,7 +26,7 @@ ptCldVis::Ptr initRGBViewer(){
 
 //Check that the azimuthal angle is less than 90.
 bool checkValidPose(std::vector<double> pose){
-	return (pose[2] < (M_PI/2+.1));
+	return (pose[2] < (M_PI/2+.1) && pose[2] > -(M_PI/2+.1));
 }
 
 void addValidPose(std::vector<std::vector<double>> *out, std::vector<double> startPose, double polarOffset, double azimuthalOffset){
@@ -175,8 +175,10 @@ void generateData(environment &kinectControl, int object, std::string dir, std::
 					currentRoute.goodInitialGrasp = false;
 					currentRoute.stepVector = exploreChildPoses(kinectControl, targetPose, viewer, pow(8,3));
 					currentRoute.stepNumber = currentRoute.stepVector.size();
+					currentRoute.direction = getDirection(currentRoute.stepVector[0],currentRoute.stepVector[1],MIN_ANGLE);
 				} else {
 					currentRoute.goodInitialGrasp = true;
+					currentRoute.direction = 0;
 				}
 				currentRoute.graspQuality = kinectControl.graspsPossible[kinectControl.selectedGrasp].quality;
 				kinectControl.updateGripper(kinectControl.selectedGrasp,0);
@@ -206,6 +208,6 @@ int main (int argc, char** argv){
 	std::cout << "Start Time : " << getCurTime() << std::endl;
 	generateData(kinectControl, 0, dir, time+csvName);	kinectControl.reset();
 	std::cout << "End Time : " << getCurTime() << std::endl;
-	generateData(kinectControl, 4, dir, time+csvName);  kinectControl.reset();
-	std::cout << "End Time : " << getCurTime() << std::endl;
+	// generateData(kinectControl, 4, dir, time+csvName);  kinectControl.reset();
+	// std::cout << "End Time : " << getCurTime() << std::endl;
  }

@@ -4,6 +4,24 @@ void test(){
 	std::cout << "Testing" << std::endl;
 }
 
+int getDirection(std::vector<double> &start, std::vector<double> &end, int minAngle){
+	double diff[2]={};
+	diff[0] = round((end[1]-start[1])*180/M_PI);
+	diff[1] = round((end[2]-start[2])*180/M_PI);
+	if     (diff[0]==0 					&& diff[1]==-minAngle) 	return(1);		//N
+	else if(diff[0]==minAngle 	&& diff[1]==-minAngle) 	return(2);		//NE
+	else if(diff[0]==minAngle 	&& diff[1]==0)	 				return(3);		//E
+	else if(diff[0]==minAngle 	&& diff[1]==minAngle) 	return(4);		//SE
+	else if(diff[0]==0 					&& diff[1]==minAngle) 	return(5);		//S
+	else if(diff[0]==-minAngle 	&& diff[1]==minAngle) 	return(6);		//SW
+	else if(diff[0]==-minAngle 	&& diff[1]==0) 					return(7);		//W
+	else if(diff[0]==-minAngle 	&& diff[1]==-minAngle) 	return(8);		//NW
+	else{
+		std::cout << "ERROR : getDirection function" << std::endl;
+		return(0);
+	}
+}
+
 void printRouteData(RouteData &in){
 	std::cout << in.objType << std::endl;
 	printf("(%1.2f, %1.2f, %1.2f)\n", in.objPose[0], in.objPose[1], in.objPose[2]);
@@ -11,6 +29,7 @@ void printRouteData(RouteData &in){
 	printf("%1.2f\n", in.graspQuality);
 	printf("Steps taken = %d\n", in.stepNumber);
 	if(in.stepVector.size() > 1){
+		printf("Direction = %d\n", in.direction);
 		printf("Step Path:\n");
 		for(int i=0; i < in.stepVector.size(); i++){
 			printf("(%1.2f, %1.2f, %1.2f)->", in.stepVector[i][0], in.stepVector[i][1], in.stepVector[i][2]);
@@ -26,8 +45,9 @@ void saveData(RouteData &in, std::fstream &saveTo, std::string &dir){
 			<< in.goodInitialGrasp << ","
 			<< in.graspQuality << ","
 			<< in.stepNumber << ","
+			<< in.direction << ","
 			<< in.filename << ",";
-	// std::vector<double> cVector;
+
 	for(int i=0; i < in.stepVector.size(); i++){
 		saveTo << in.stepVector[i][0] << "," << in.stepVector[i][1] << "," << in.stepVector[i][2];
 		if(i+1 < in.stepVector.size()){

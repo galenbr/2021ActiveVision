@@ -6,6 +6,12 @@ int counter = 0;
 bool ok = true;
 bool skipTo = false;
 
+std::map<int, std::string> dirLookup{{0, "Nil"},
+                                     {1, "N"}, {2, "NE"},
+																		 {3, "E"}, {4, "SE"},
+																		 {5, "S"}, {6, "SW"},
+																	 	 {7, "W"}, {8, "NW"}};
+
 void keyboardEventOccurred(const pcl::visualization::KeyboardEvent &event){
   if(event.keyUp()){
     // std::cout << event.getKeySym() << std::endl;
@@ -45,8 +51,9 @@ int main(int argc, char** argv){
   data = readCSV(directory+csvFile);
 
   int nStepColID = 10;
-  int pathColID = 11;
-  int stepColID = 12;
+  int dirColID = 11;
+  int pathColID = 12;
+  int stepColID = 13;
   int nSteps;
 
   std::vector<double> pose={0,0,0};
@@ -83,7 +90,8 @@ int main(int argc, char** argv){
       }
       readPointCloud(ptrPtCldTemp,directory,data[i][pathColID-1],3);
       rbgVis(viewer,ptrPtCldTemp,"Env",vp[2]);
-      viewer->addText("Data No : "+std::to_string(i+1),5,5,20,1,0,0,"Text",vp[2]);
+      viewer->addText("Data No : "+std::to_string(i+1),5,5,25,1,0,0,"Data",vp[2]);
+      viewer->addText("Direction : "+dirLookup[std::atoi(data[i][dirColID-1].c_str())],5,35,25,1,0,0,"Dir",vp[2]);
 
       nSteps = std::atoi(data[i][nStepColID-1].c_str());
       for (int j = stepColID; j < stepColID+(nSteps-1)*3; j+=3){

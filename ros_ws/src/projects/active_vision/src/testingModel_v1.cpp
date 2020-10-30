@@ -1712,7 +1712,7 @@ void testReadCSV(std::string filename, int colID){
 void testReadPCD(std::string filename){
   std::cout << "*** In PCD read testing function ***" << std::endl;
   std::string dir = "./DataRecAV/";
-  int colID = 11;
+  int colID = 12;
   ptCldColor::Ptr ptrPtCldTemp{new ptCldColor};
   std::vector<std::vector<std::string>> data;
   data = readCSV(filename);

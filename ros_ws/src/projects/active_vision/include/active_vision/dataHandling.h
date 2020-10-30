@@ -22,8 +22,6 @@ typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
 
 void test();
 
-// To Be Added: Direction
-// Not Needed: kinectPose
 struct RouteData {
   ptCldColor::Ptr obj{new ptCldColor};
   ptCldColor::Ptr unexp{new ptCldColor};
@@ -34,9 +32,12 @@ struct RouteData {
   bool goodInitialGrasp;
   float graspQuality;
   int stepNumber;
+  int direction;
   std::string filename;
   std::vector<std::vector<double>> stepVector;
 };
+
+int getDirection(std::vector<double> &start, std::vector<double> &end, int minAngle);
 
 void printRouteData(RouteData &in);
 
