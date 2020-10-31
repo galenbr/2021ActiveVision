@@ -336,8 +336,8 @@ void environment::moveKinectCartesian(std::vector<double> pose){
 
 // 6B: Funtion to move the Kinect in a viewsphere which has the table cente as its centre
 // R (Radius)
-// Theta (Polar Angle) -> 0 to 2*PI
-// Phi (Azhimuthal angle) -> 0 to PI/2
+// Phi (Azhimuthal angle) -> 0 to 2*PI
+// Theta (Polar Angle)) -> 0 to PI/2
 void environment::moveKinectViewsphere(std::vector<double> pose){
   //Create Matrix3x3 from Euler Angles
   tf::Matrix3x3 rotMat;
@@ -933,8 +933,8 @@ void testKinectMovement(environment &av){
                     av.tableCentre[1] << "," <<
                     av.tableCentre[2] << ")" << std::endl;
       std::cout << "R (Radius) : ";                         std::cin >> pose[0];
-      std::cout << "Theta (Polar Angle) (0->2*PI) : ";      std::cin >> pose[1];
-      std::cout << "Phi (Azhimuthal Angle) (0->PI/2): ";    std::cin >> pose[2];
+      std::cout << "Phi (Azhimuthal Angle) (0->2*PI) : ";      std::cin >> pose[1];
+      std::cout << "Theta (Polar Angle) (0->PI/2): ";    std::cin >> pose[2];
 
       av.moveKinectViewsphere(pose);
       std::cout << "Kinect moved" << std::endl;

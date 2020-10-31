@@ -4,24 +4,6 @@ void test(){
 	std::cout << "Testing" << std::endl;
 }
 
-int getDirection(std::vector<double> &start, std::vector<double> &end, int minAngle){
-	double diff[2]={};
-	diff[0] = round((end[1]-start[1])*180/M_PI);
-	diff[1] = round((end[2]-start[2])*180/M_PI);
-	if     (diff[0]==0 					&& diff[1]==-minAngle) 	return(1);		//N
-	else if(diff[0]==minAngle 	&& diff[1]==-minAngle) 	return(2);		//NE
-	else if(diff[0]==minAngle 	&& diff[1]==0)	 				return(3);		//E
-	else if(diff[0]==minAngle 	&& diff[1]==minAngle) 	return(4);		//SE
-	else if(diff[0]==0 					&& diff[1]==minAngle) 	return(5);		//S
-	else if(diff[0]==-minAngle 	&& diff[1]==minAngle) 	return(6);		//SW
-	else if(diff[0]==-minAngle 	&& diff[1]==0) 					return(7);		//W
-	else if(diff[0]==-minAngle 	&& diff[1]==-minAngle) 	return(8);		//NW
-	else{
-		std::cout << "ERROR : getDirection function" << std::endl;
-		return(0);
-	}
-}
-
 void printRouteData(RouteData &in){
 	std::cout << in.objType << std::endl;
 	printf("(%1.2f, %1.2f, %1.2f)\n", in.objPose[0], in.objPose[1], in.objPose[2]);

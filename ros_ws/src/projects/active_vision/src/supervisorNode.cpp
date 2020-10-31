@@ -26,11 +26,25 @@ ptCldVis::Ptr initRGBViewer(){
 
 //Check that the azimuthal angle is less than 90.
 bool checkValidPose(std::vector<double> pose){
-	return (pose[2] < (M_PI/2+.1) && pose[2] > -(M_PI/2+.1));
+	return (round(pose[2]*180/M_PI) <= 90);
 }
 
-void addValidPose(std::vector<std::vector<double>> *out, std::vector<double> startPose, double polarOffset, double azimuthalOffset){
-	std::vector<double> potentialPose = {startPose[0], startPose[1]+polarOffset, startPose[2]+azimuthalOffset};
+void addValidPose(std::vector<std::vector<double>> *out, std::vector<double> startPose, double azimuthalOffset, double polarOffset){
+	std::vector<double> potentialPose = {startPose[0], startPose[1]+azimuthalOffset, startPose[2]+polarOffset};
+
+	// Addressing the NW & NE scenario when polar angle goes from *ve to -ve
+	if(potentialPose[2] < 0 && startPose[2] > 0) potentialPose[1] = startPose[1]-azimuthalOffset;
+
+	// Polar angle should be +ve
+	if(potentialPose[2] < 0){
+		potentialPose[2] = -1*potentialPose[2];
+		potentialPose[1] = potentialPose[1] + M_PI;
+	}
+
+	// Azhimuthal angle 0 to 360 degree
+	potentialPose[1] = fmod(potentialPose[1],2*M_PI);
+	if(potentialPose[1] < 0) potentialPose[1] += 2*M_PI;
+
 	if(checkValidPose(potentialPose)){
 		(*out).insert((*out).end(), potentialPose);
 	}
@@ -88,25 +102,30 @@ bool singleExploration(environment &kinectControl, std::vector<double> targetPos
 	return (kinectControl.selectedGrasp != -1);
 }
 
-std::vector<std::vector<double>> exploreChildPoses(environment &kinectControl, std::vector<double> startPose, ptCldVis::Ptr viewer, int maxDepth){
+std::vector<std::vector<double>> exploreChildPoses(environment &kinectControl, std::vector<double> startPose, ptCldVis::Ptr viewer, int maxDepth, int &opDir){
 	int root = kinectControl.saveConfiguration("Base");
 	std::vector<std::vector<double>> poses = gen8Explorations(startPose);
-	std::vector<int> parents;
+	std::vector<int> parents, direction;
 	std::vector<std::vector<std::vector<double>>> histories;
 	for(int i=0; i<poses.size(); i++){
-		parents.push_back(root);
-		histories.push_back({startPose, poses[i]});
+		parents.insert(parents.begin(),root);
+		direction.insert(direction.begin(),i+1);
+		histories.insert(histories.begin(),{startPose, poses[i]});
 	}
 	bool finished = false;
 	int currentSave = 0;
 	while(!finished and parents.size() > 0 and maxDepth > 0){
 		finished = singleExploration(kinectControl, poses.back(), viewer, false);
-		if (finished) return histories.back();
+		if (finished){
+			opDir = direction.back();
+			return histories.back();
+		}
 		currentSave = kinectControl.saveConfiguration(std::to_string(parents.back()));
 		std::vector<std::vector<double>> nextPoses = gen8Explorations(poses.back());
 		for(int j=0; j < nextPoses.size(); j++){
 			poses.insert(poses.begin(), nextPoses[j]);
 			parents.insert(parents.begin(), currentSave);
+			direction.insert(direction.begin(), direction.back());
 			std::vector<std::vector<double>> oldPose = histories.back();
 			oldPose.push_back(nextPoses[j]);
 			histories.insert(histories.begin(), oldPose);
@@ -114,6 +133,7 @@ std::vector<std::vector<double>> exploreChildPoses(environment &kinectControl, s
 		kinectControl.rollbackConfiguration(parents.back());
 		poses.pop_back();
 		parents.pop_back();
+		direction.pop_back();
 		histories.pop_back();
 		maxDepth--;
 	}
@@ -159,12 +179,13 @@ void generateData(environment &kinectControl, int object, std::string dir, std::
  	std::vector<double> targetPose;
  	bool finished = false;
 
-	for (int polarAngle = 0; polarAngle < 360; polarAngle+=MIN_ANGLE){
-		std::cout << "***" << polarAngle << "***" << std::endl;
-		for (int azimuthalAngle = 10; azimuthalAngle < 90; azimuthalAngle+=MIN_ANGLE){
+	for (int azimuthalAngle = 0; azimuthalAngle < 360; azimuthalAngle+=MIN_ANGLE){
+		std::cout << "***" << azimuthalAngle << "***" << std::endl;
+		// Restricting the max polar angle for start to 85 so that the table is visible
+		for (int polarAngle = 10; polarAngle < 85; polarAngle+=MIN_ANGLE){
 				finished = false;
 				//Move kinect to position
-				targetPose = {1.4, polarAngle*(M_PI/180.0), azimuthalAngle*(M_PI/180.0)};
+				targetPose = {1.4, azimuthalAngle*(M_PI/180.0), polarAngle*(M_PI/180.0)};
 				currentRoute.kinectPose = targetPose;
 				currentRoute.stepNumber = 1;
 				currentRoute.stepVector = {targetPose};
@@ -173,9 +194,8 @@ void generateData(environment &kinectControl, int object, std::string dir, std::
 				*currentRoute.unexp = *kinectControl.ptrPtCldUnexp;
 				if(!finished){
 					currentRoute.goodInitialGrasp = false;
-					currentRoute.stepVector = exploreChildPoses(kinectControl, targetPose, viewer, pow(8,3));
+					currentRoute.stepVector = exploreChildPoses(kinectControl, targetPose, viewer, pow(8,3), currentRoute.direction);
 					currentRoute.stepNumber = currentRoute.stepVector.size();
-					currentRoute.direction = getDirection(currentRoute.stepVector[0],currentRoute.stepVector[1],MIN_ANGLE);
 				} else {
 					currentRoute.goodInitialGrasp = true;
 					currentRoute.direction = 0;

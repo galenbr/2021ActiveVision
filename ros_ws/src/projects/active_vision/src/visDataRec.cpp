@@ -59,7 +59,7 @@ int main(int argc, char** argv){
   std::vector<double> pose={0,0,0};
   pcl::PointXYZ sphereCentre;
   pcl::PointXYZ table,a1,a2;
-  table.x = 1.5,0,1; table.y = 0,1; table.z = 1;
+  table.x = 1.5; table.y = 0,1; table.z = 1;
 
   ptCldColor::Ptr ptrPtCldTemp{new ptCldColor};
 
@@ -124,11 +124,11 @@ int main(int argc, char** argv){
       }
 
       int vCtr = 0;
-      for (int polarAngle = 0; polarAngle < 360; polarAngle+=20){
-        for (int azimuthalAngle = 10; azimuthalAngle < 90; azimuthalAngle+=20){
-          a1.x = table.x+pose[0]*sin(azimuthalAngle*(M_PI/180.0))*cos(polarAngle*(M_PI/180.0));
-          a1.y = table.y+pose[0]*sin(azimuthalAngle*(M_PI/180.0))*sin(polarAngle*(M_PI/180.0));
-          a1.z = table.z+pose[0]*cos(azimuthalAngle*(M_PI/180.0));
+      for (int azimuthalAngle = 0; azimuthalAngle < 360; azimuthalAngle+=20){
+        for (int polarAngle = 10; polarAngle <= 90; polarAngle+=20){
+          a1.x = table.x+pose[0]*sin(polarAngle*(M_PI/180.0))*cos(azimuthalAngle*(M_PI/180.0));
+          a1.y = table.y+pose[0]*sin(polarAngle*(M_PI/180.0))*sin(azimuthalAngle*(M_PI/180.0));
+          a1.z = table.z+pose[0]*cos(polarAngle*(M_PI/180.0));
           vCtr++;
           viewer->addSphere(a1,0.02,0,0,1,"Sph_"+std::to_string(vCtr),vp[2]);
         }
