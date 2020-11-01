@@ -21,6 +21,7 @@ find_package(catkin REQUIRED COMPONENTS
   franka_gripper
   genmsg
   actionlib_msgs
+  message_generation
   )
 
   find_package(PCL REQUIRED)# COMPONENTS
@@ -35,6 +36,7 @@ find_package(Boost REQUIRED)
    FILES
    imgCapture.srv
    findKey.srv
+   getWrench.srv
  )
 
  ## Generate actions in the 'action' folder
@@ -45,13 +47,14 @@ find_package(Boost REQUIRED)
    SpiralInsert.action
  )
 
-## Generate added messages and services with any dependencies listed here
+## Generate added messages, actions, and services with any dependencies listed here
  generate_messages(
    DEPENDENCIES
    sensor_msgs
    geometry_msgs
    actionlib_msgs
  )
+
 catkin_package(DEPENDS moveit_planner)
 
 include_directories(include ${catkin_INCLUDE_DIRS})
@@ -69,6 +72,7 @@ add_executable(arm_constraints_node src/arm_constraints.cpp)
 add_executable(test_move_node src/test_move.cpp)
 add_executable(setup_node src/setup.cpp)
 add_executable(spiral_insert_node src/spiral_insert.cpp)
+add_executable(get_wrench_node src/wrench_server.cpp)
 
 add_dependencies(arm_move_node moveit_planner_gencpp)
 add_dependencies(img_capture_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
@@ -80,6 +84,7 @@ add_dependencies(arm_constraints_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 add_dependencies(test_move_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 add_dependencies(setup_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 add_dependencies(spiral_insert_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+add_dependencies(get_wrench_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
 target_link_libraries(arm_move_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 target_link_libraries(img_capture_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
@@ -91,3 +96,4 @@ target_link_libraries(arm_constraints_node ${catkin_LIBRARIES} ${Boost_LIBRARIES
 target_link_libraries(test_move_node ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 target_link_libraries(setup_node ${catkin_LIBRARIES})
 target_link_libraries(spiral_insert_node ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(get_wrench_node ${catkin_LIBRARIES})
