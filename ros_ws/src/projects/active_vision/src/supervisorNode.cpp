@@ -53,13 +53,29 @@ void addValidPose(std::vector<std::vector<double>> *out, std::vector<double> sta
 std::vector<std::vector<double>> gen8Explorations(std::vector<double> startPose){
 	std::vector<std::vector<double>> out;
 	addValidPose(&out, startPose, 0, -MIN_ANGLE_RAD); //N
+	// std::cout << "N : " << startPose[1]*180/M_PI << "," << startPose[2]*180/M_PI << "->" <<
+	//              out.back()[1]*180/M_PI << "," << out.back()[2]*180/M_PI << std::endl;
 	addValidPose(&out, startPose, MIN_ANGLE_RAD, -MIN_ANGLE_RAD); //NE
+	// std::cout << "NE : " << startPose[1]*180/M_PI << "," << startPose[2]*180/M_PI << "->" <<
+	//              out.back()[1]*180/M_PI << "," << out.back()[2]*180/M_PI << std::endl;
 	addValidPose(&out, startPose, MIN_ANGLE_RAD, 0); //E
+	// std::cout << "E : " << startPose[1]*180/M_PI << "," << startPose[2]*180/M_PI << "->" <<
+	//              out.back()[1]*180/M_PI << "," << out.back()[2]*180/M_PI << std::endl;
 	addValidPose(&out, startPose, MIN_ANGLE_RAD, MIN_ANGLE_RAD); //SE
+	// std::cout << "SE : " << startPose[1]*180/M_PI << "," << startPose[2]*180/M_PI << "->" <<
+	//              out.back()[1]*180/M_PI << "," << out.back()[2]*180/M_PI << std::endl;
 	addValidPose(&out, startPose, 0, MIN_ANGLE_RAD); //S
+	// std::cout << "S : " << startPose[1]*180/M_PI << "," << startPose[2]*180/M_PI << "->" <<
+	//              out.back()[1]*180/M_PI << "," << out.back()[2]*180/M_PI << std::endl;
 	addValidPose(&out, startPose, -MIN_ANGLE_RAD, MIN_ANGLE_RAD); //SW
+	// std::cout << "SW : " << startPose[1]*180/M_PI << "," << startPose[2]*180/M_PI << "->" <<
+	//              out.back()[1]*180/M_PI << "," << out.back()[2]*180/M_PI << std::endl;
 	addValidPose(&out, startPose, -MIN_ANGLE_RAD, 0); //W
+	// std::cout << "W : " << startPose[1]*180/M_PI << "," << startPose[2]*180/M_PI << "->" <<
+	//              out.back()[1]*180/M_PI << "," << out.back()[2]*180/M_PI << std::endl;
 	addValidPose(&out, startPose, -MIN_ANGLE_RAD, -MIN_ANGLE_RAD); //NW
+	// std::cout << "NW : " << startPose[1]*180/M_PI << "," << startPose[2]*180/M_PI << "->" <<
+	//              out.back()[1]*180/M_PI << "," << out.back()[2]*180/M_PI << std::endl;
 	return out;
 }
 
@@ -108,9 +124,9 @@ std::vector<std::vector<double>> exploreChildPoses(environment &kinectControl, s
 	std::vector<int> parents, direction;
 	std::vector<std::vector<std::vector<double>>> histories;
 	for(int i=0; i<poses.size(); i++){
-		parents.insert(parents.begin(),root);
-		direction.insert(direction.begin(),i+1);
-		histories.insert(histories.begin(),{startPose, poses[i]});
+		parents.push_back(root);
+		direction.push_back(i+1);
+		histories.push_back({startPose, poses[i]});
 	}
 	bool finished = false;
 	int currentSave = 0;
@@ -141,7 +157,7 @@ std::vector<std::vector<double>> exploreChildPoses(environment &kinectControl, s
 }
 
 void displayData(environment &kinectControl, int object){
-	kinectControl.spawnObject(object, 0, 0, 0);
+	kinectControl.spawnObject(object, 0, 0);
 	ptCldVis::Ptr viewer = initRGBViewer();
 	std::vector<std::vector<double>> kinectPoses = {{1.4,-M_PI,M_PI/3},
                                                   {1.4,-M_PI/2,M_PI/3},
@@ -168,13 +184,11 @@ void generateData(environment &kinectControl, int object, std::string dir, std::
  	currentRoute.objType= objLookup[object];
  	currentRoute.objPose={0,0,0};
 
- 	kinectControl.spawnObject(object,0,0,0);
+ 	kinectControl.spawnObject(object,1,0);
 	kinectControl.loadGripper();
 
 	ptCldVis::Ptr viewer;
-	if(visualize){
- 		viewer = initRGBViewer();
- 	}
+	if(visualize) viewer = initRGBViewer();
 
  	std::vector<double> targetPose;
  	bool finished = false;

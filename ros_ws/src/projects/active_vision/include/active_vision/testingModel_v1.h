@@ -161,6 +161,7 @@ public:
   pcl::PointXYZRGB minPtCol[5], maxPtCol[5];        // Min and Max x,y,z co-ordinates of the gripper used for collision check
 
   std::vector<std::vector<std::string>> objectDict; // List of objects which can be spawned
+  std::vector<std::vector<std::vector<double>>> objectPosesDict; //Stable object poses
   double voxelGridSize;                             // Voxel Grid size for environment
   double voxelGridSizeUnexp;                        // Voxel Grid size for unexplored point cloud
   std::vector<double> tableCentre;                  // Co-ordinates of table centre
@@ -186,8 +187,8 @@ public:
   // 1A: Callback function to point cloud subscriber
   void cbPtCld (const ptCldColor::ConstPtr& msg);
 
-  // 2: Spawning objects in gazebo on the table centre for a given RPY
-  void spawnObject(int objectID, float R, float P, float Y);
+  // 2: Spawning objects in gazebo on the table centre for a given pose option and yaw
+  void spawnObject(int objectID, int choice, float yaw);
 
   // 3: Deleting objects in gazebo
   void deleteObject(int objectID);

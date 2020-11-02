@@ -117,6 +117,17 @@ environment::environment(ros::NodeHandle *nh){
                 {"bowl2AV","Bowl2"},
                 {"cupAV","Cup"}};
 
+  // Stores stable poses for the objects (Z(m), Roll(Rad), Pitch(Rad))
+  objectPosesDict = {{{0.012,0.000,0.000},  {0.084,1.459,-0.751},
+                      {0.082,1.398,-0.014}, {0.040,0.280,-1.040},
+                      {0.249,2.860,-0.400}, {0.068,-1.287,-0.477},
+                      {0.048,-1.570,1.480}},
+                     {{0.015,0.000,0.000}},
+                     {{0.015,0.000,0.000},{0.015,0.000,1.570}},
+                     {{0.015,0.000,0.000}},
+                     {{0.015,0.000,0.000}},
+                     {{0.022,0.000,0.000}}};
+
   voxelGridSize = 0.01;          // Voxel Grid size for environment
   voxelGridSizeUnexp = 0.01;     // Voxel Grid size for unexplored point cloud
   tableCentre = {1.5,0,1};       // Co-ordinates of table centre
@@ -179,14 +190,18 @@ void cbImgDepth (const sensor_msgs::ImageConstPtr& msg){
   }
 }*/
 
-// 2: Spawning objects in gazebo on the table centre for a given RPY
-void environment::spawnObject(int objectID, float R, float P, float Y){
+// 2: Spawning objects in gazebo on the table centre for a given pose option and yaw
+void environment::spawnObject(int objectID, int choice, float yaw){
   gazebo_msgs::SpawnModel spawnObj;
   geometry_msgs::Pose pose;
 
+  if(choice >= objectPosesDict[objectID].size()){
+    choice = 0;
+    printf("Object spawn warning: Pose choice invalid. Setting choice to 0.\n");
+  }
   //Create Matrix3x3 from Euler Angles
   tf::Matrix3x3 m_rot;
-  m_rot.setEulerYPR(Y, P, R);
+  m_rot.setEulerYPR(yaw, objectPosesDict[objectID][choice][2], objectPosesDict[objectID][choice][1]);
 
   // Convert into quaternion
   tf::Quaternion quat;
@@ -194,7 +209,7 @@ void environment::spawnObject(int objectID, float R, float P, float Y){
 
   pose.position.x = tableCentre[0];
   pose.position.y = tableCentre[1];
-  pose.position.z = tableCentre[2];
+  pose.position.z = tableCentre[2]+objectPosesDict[objectID][choice][0];
   pose.orientation.x = quat.x();
   pose.orientation.y = quat.y();
   pose.orientation.z = quat.z();
@@ -898,11 +913,15 @@ void testSpawnDeleteObj(environment &av){
   std::cout << "*** In object spawn and delete testing function ***" << std::endl;
   int flag = 0;
   for (int i = 0; i < av.objectDict.size(); i++) {
-    av.spawnObject(i,0,0,0);
-    std::cout << "Object " << i+1 << " spawned. Enter any key to continue. "; std::cin >> flag;
-    av.deleteObject(i);
-    std::cout << "Object " << i+1 << " deleted." << std::endl;
-    boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
+    for (int j = 0; j < av.objectPosesDict[i].size(); j++) {
+      av.spawnObject(i,j,0);
+      printf("Object %d/%d with configuration %d/%d spawned. Enter any key to continue. ",
+             i+1,int(av.objectDict.size()),
+             j+1,int(av.objectPosesDict[i].size()));
+      std::cin >> flag;
+      av.deleteObject(i);
+      boost::this_thread::sleep(boost::posix_time::milliseconds(500));
+    }
   }
   std::cout << "*** End ***" << std::endl;
 }
@@ -960,7 +979,7 @@ void testMoveKinectInViewsphere(environment &av){
 // 3: A test function to check if the "readKinect" function is working
 void testKinectRead(environment &av, int objID, int flag){
   std::cout << "*** In kinect data read testing function ***" << std::endl;
-  av.spawnObject(objID,0,0,0);
+  av.spawnObject(objID,0,0);
 
   int row; int col;
   std::cout << "Enter pixel value to print data for" << std::endl;
@@ -1003,7 +1022,7 @@ void testKinectRead(environment &av, int objID, int flag){
 // 4: A test function to check fusing of data
 void testPtCldFuse(environment &av, int objID, int flag){
   std::cout << "*** In point cloud data fusion testing function ***" << std::endl;
-  av.spawnObject(objID,0,0,0);
+  av.spawnObject(objID,0,0);
 
   // Setting up the point cloud visualizer
   ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
@@ -1044,7 +1063,7 @@ void testPtCldFuse(environment &av, int objID, int flag){
 // 5: A test function to extract table and object data
 void testDataExtract(environment &av, int objID, int flag){
   std::cout << "*** In table and object extraction testing function ***" << std::endl;
-  av.spawnObject(objID,0,0,0);
+  av.spawnObject(objID,0,0);
 
   std::vector<double> kinectPose = {1.4,-M_PI,M_PI/3};
   av.moveKinectViewsphere(kinectPose);
@@ -1079,7 +1098,7 @@ void testDataExtract(environment &av, int objID, int flag){
 // 6: A test function to generate unexplored point cloud
 void testGenUnexpPtCld(environment &av, int objID, int flag){
   std::cout << "*** In unexplored point cloud generation testing function ***" << std::endl;
-  av.spawnObject(objID,0,0,0);
+  av.spawnObject(objID,0,0);
 
   std::vector<double> kinectPose = {1.4,-M_PI,M_PI/3};
   av.moveKinectViewsphere(kinectPose);
@@ -1113,7 +1132,7 @@ void testGenUnexpPtCld(environment &av, int objID, int flag){
 // 7: A test function to update unexplored point cloud
 void testUpdateUnexpPtCld(environment &av, int objID, int flag){
   std::cout << "*** In unexplored point cloud update testing function ***" << std::endl;
-  av.spawnObject(objID,0,0,0);
+  av.spawnObject(objID,0,0);
 
   // Setting up the point cloud visualizer
   ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
@@ -1206,7 +1225,7 @@ void testGripper(environment &av, int flag, float width){
 // 9: Grasp synthesis test function
 void testGraspsynthesis(environment &av, int objID, int flag){
   std::cout << "*** In grasp synthesis testing function ***" << std::endl;
-  av.spawnObject(objID,0,0,0);
+  av.spawnObject(objID,0,0);
 
   // 4 kinect position
   std::vector<std::vector<double>> kinectPoses = {{1.4,-M_PI,M_PI/3},
@@ -1342,7 +1361,7 @@ void testComplete(environment &av, int objID, int nVp, int graspMode, int flag, 
   std::chrono::high_resolution_clock::time_point start[4], end[4];
   double elapsed[4];
 
-  av.spawnObject(objID,0,0,M_PI);
+  av.spawnObject(objID,0,0);
   av.loadGripper();
 
   // 4 kinect poses
@@ -1483,7 +1502,7 @@ void testComplete(environment &av, int objID, int nVp, int graspMode, int flag, 
 // 11: A test function to check the state vector
 void testStateVector(environment &av, int objID, int flag){
   std::cout << "*** In state vector testing function ***" << std::endl;
-  av.spawnObject(objID,0,0,M_PI);
+  av.spawnObject(objID,0,0);
 
   // Setting up the point cloud visualizer
   ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
@@ -1534,7 +1553,7 @@ void testStateVector(environment &av, int objID, int flag){
 void testSaveRollback(environment &av, int objID, int flag){
   std::cout << "*** In save and rollback testing function ***" << std::endl;
   // av.reset();
-  av.spawnObject(objID,0,0,0);
+  av.spawnObject(objID,0,0);
   av.loadGripper();
 
   double step = 20*M_PI/180;
@@ -1663,7 +1682,7 @@ void testSavePCD(environment &av, int objID){
   std::string time;
   ptCldColor::Ptr ptrPtCldTemp{new ptCldColor};
 
-  av.spawnObject(objID,0,0,0);
+  av.spawnObject(objID,0,0);
   av.loadGripper();
 
   // 4 kinect poses
@@ -1760,7 +1779,7 @@ int main (int argc, char** argv){
 
   int choice, objID, graspMode;
   std::cout << "Available choices for test functions : " << std::endl;
-  std::cout << "1  : Spawn and delete 6 objects on the table." << std::endl;
+  std::cout << "1  : Spawn and delete objects and its configurations on the table." << std::endl;
   std::cout << "2  : Load and view the gripper model." << std::endl;
   std::cout << "3  : Move the kinect to a custom position." << std::endl;
   std::cout << "4  : Continuously move the kinect in a viewsphere with centre on the table." << std::endl;
