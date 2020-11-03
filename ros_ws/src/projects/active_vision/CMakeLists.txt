@@ -246,3 +246,7 @@ target_link_libraries(visViewsphere active_vision ${catkin_LIBRARIES} ${PCL_LIBR
 add_executable(findStablePos src/findStablePos.cpp)
 add_dependencies(findStablePos active_vision ${catkin_EXPORTED_TARGETS})
 target_link_libraries(findStablePos active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(genStateVec src/genStateVec.cpp)
+add_dependencies(genStateVec active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(genStateVec active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})

@@ -87,9 +87,6 @@ Eigen::Vector3f getEuler(const Eigen::Affine3f& tf);
 // Get Translational Part of a Affine3f
 Eigen::Vector3f getTranslation(const Eigen::Affine3f& tf);
 
-// Function to print the state vector
-void printStateVector(std::vector<float> &stateVec, int dim);
-
 // Class to store data of environment and its processing
 class environment{
 private:
@@ -169,8 +166,6 @@ public:
   double maxGripperWidth;                           // Gripper max width (Actual is 8 cm)
   double minGraspQuality;                           // Min grasp quality threshold
   int selectedGrasp;                                // Index of the selected grasp
-  int gridDim;                                      // Grid dimension for state vector
-  std::vector<float> stateVec;                      // State Vector
   std::vector<stateConfig> configurations;          // Vector to store states for rollback
 
   environment(ros::NodeHandle *nh);
@@ -237,9 +232,6 @@ public:
 
   // 15: Grasp and Collision check combined
   int graspAndCollisionCheck();
-
-  // 16: Creating the State vector
-  void createStateVector();
 };
 
 // Function to do a single pass

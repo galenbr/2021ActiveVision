@@ -52,37 +52,6 @@ Eigen::Vector3f getTranslation(const Eigen::Affine3f& tf){
   return Eigen::Vector3f(tf(0,3), tf(1,3), tf(2,3));
 }
 
-// Function to print the state vector
-void printStateVector(std::vector<float> &stateVec, int dim){
-  std::string red = "\x1b[31m";
-  std::string green = "\x1b[32m";
-  std::string off = "\x1b[0m";
-  if (stateVec.size() < 2*dim*dim+2){
-    std::cout << "Invalid State Vector" << std::endl;
-    return;
-  }
-  std::cout << "\t Object\t\t\t\tUnexplored" << std::endl;
-  for(int i = 0; i < dim; i++){
-    // Object State Vector
-    for(int j = 0; j < dim; j++){
-      if (stateVec[i*dim+j] != 0) std::cout << red;
-      std::cout << std::fixed << std::setprecision(2) << stateVec[i*dim+j] << " ";
-      if (stateVec[i*dim+j] != 0) std::cout << off;
-    }
-    std::cout << "\t";
-    // unexplored State Vector
-    for(int j = 0; j < dim; j++) {
-      if (stateVec[dim*dim+i*dim+j] != 0) std::cout << red;
-      std::cout << std::fixed << std::setprecision(2) << stateVec[dim*dim+i*dim+j] << " ";
-      if (stateVec[dim*dim+i*dim+j] != 0) std::cout << off;
-    }
-    std::cout << endl;
-  }
-  // Kinect Position
-  std::cout << "Polar Angle : " << stateVec[2*dim*dim]*180/M_PI
-            << ", Azhimuthal Angle : " << stateVec[2*dim*dim+1]*180/M_PI << std::endl << std::endl;
-}
-
 // ******************** ENVIRONMENT CLASS FUNCTIONS START ********************
 // Environment class constructor
 environment::environment(ros::NodeHandle *nh){
@@ -135,7 +104,6 @@ environment::environment(ros::NodeHandle *nh){
   maxGripperWidth = 0.075;       // Gripper max width (Actual is 8 cm)
   minGraspQuality = 150;         // Min grasp quality threshold
   selectedGrasp = -1;            // Index of the selected grasp
-  gridDim = 5;                   // Grid dimension for state vector
 }
 
 // Function to reset the environment
@@ -826,69 +794,6 @@ int environment::graspAndCollisionCheck(){
   return(nGrasp);
 }
 
-// 16: Creating the State vector
-void environment::createStateVector(){
-  Eigen::Vector3f pt;
-  float gridSize[2]={};
-  int gridLoc[2]={};
-
-  float stateObj[gridDim][gridDim] = {};
-  gridSize[0] = (maxPtObj.x-minPtObj.x)/gridDim;
-  gridSize[1] = (maxPtObj.y-minPtObj.y)/gridDim;
-  for (int i = 0; i < ptrPtCldObject->size(); i++){
-    pt = ptrPtCldObject->points[i].getVector3fMap();
-    pt[0] = pt[0]-minPtObj.x; pt[1] = pt[1]-minPtObj.y; pt[2] = pt[2]-minPtObj.z;
-
-    gridLoc[0] = (int)(pt[0]/gridSize[0]);
-    gridLoc[0] = std::min(gridLoc[0],gridDim-1);        // Ensuring that the grid loc for the extreme point is inside the grid
-    gridLoc[0] = (gridDim-1)-gridLoc[0];                // Reversing so that the array and grid indices match
-    gridLoc[1] = (int)(pt[1]/gridSize[1]);
-    gridLoc[1] = std::min(gridLoc[1],gridDim-1);        // Ensuring that the grid loc for the extreme point is inside the grid
-
-    stateObj[gridLoc[0]][gridLoc[1]] = std::max(stateObj[gridLoc[0]][gridLoc[1]],pt[2]);
-  }
-
-  float scale = 3;
-  pcl::PointXYZRGB minPtUnexp, maxPtUnexp;
-  minPtUnexp.x = minPtObj.x - (scale-1)*(maxPtObj.x-minPtObj.x)/2;
-  minPtUnexp.y = minPtObj.y - (scale-1)*(maxPtObj.y-minPtObj.y)/2;
-  minPtUnexp.z = minPtObj.z;
-  maxPtUnexp.x = maxPtObj.x + (scale-1)*(maxPtObj.x-minPtObj.x)/2;
-  maxPtUnexp.y = maxPtObj.y + (scale-1)*(maxPtObj.y-minPtObj.y)/2;
-  maxPtUnexp.z = maxPtObj.z + (scale-1)*(maxPtObj.z-minPtObj.z)/2;
-
-  float stateUnexp[gridDim][gridDim] = {};
-  gridSize[0] = (maxPtUnexp.x-minPtUnexp.x)/gridDim;
-  gridSize[1] = (maxPtUnexp.y-minPtUnexp.y)/gridDim;
-  for (int i = 0; i < ptrPtCldUnexp->size(); i++){
-    pt = ptrPtCldUnexp->points[i].getVector3fMap();
-    pt[0] = pt[0]-minPtUnexp.x; pt[1] = pt[1]-minPtUnexp.y; pt[2] = pt[2]-minPtUnexp.z;
-
-    gridLoc[0] = (int)(pt[0]/gridSize[0]);
-    gridLoc[0] = std::min(gridLoc[0],gridDim-1);        // Ensuring that the grid loc for the extreme point is inside the grid
-    gridLoc[0] = (gridDim-1)-gridLoc[0];                // Reversing so that the array and grid indices match
-    gridLoc[1] = (int)(pt[1]/gridSize[1]);
-    gridLoc[1] = std::min(gridLoc[1],gridDim-1);        // Ensuring that the grid loc for the extreme point is inside the grid
-
-    stateUnexp[gridLoc[0]][gridLoc[1]] = std::max(stateUnexp[gridLoc[0]][gridLoc[1]],pt[2]);
-  }
-
-  // Storing both in the state vector
-  stateVec.clear();
-  for(int i = 0; i < gridDim; i++){
-    for(int j = 0; j < gridDim; j++){
-      stateVec.push_back(stateObj[i][j]);
-    }
-  }
-  for(int i = 0; i < gridDim; i++){
-    for(int j = 0; j < gridDim; j++){
-      stateVec.push_back(stateUnexp[i][j]);
-    }
-  }
-  // Adding kinect position
-  stateVec.push_back(lastKinectPoseViewsphere[1]);
-  stateVec.push_back(lastKinectPoseViewsphere[2]);
-}
 // ******************** ENVIRONMENT CLASS FUNCTIONS END ********************
 
 // Function to do a single pass
@@ -1499,57 +1404,7 @@ void testComplete(environment &av, int objID, int nVp, int graspMode, int flag, 
   std::cout << "*** End ***" << std::endl;
 }
 
-// 11: A test function to check the state vector
-void testStateVector(environment &av, int objID, int flag){
-  std::cout << "*** In state vector testing function ***" << std::endl;
-  av.spawnObject(objID,0,0);
-
-  // Setting up the point cloud visualizer
-  ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
-  viewer->initCameraParameters();
-  int vp[4] = {};
-  viewer->createViewPort(0.0,0.5,0.5,1.0,vp[0]);
-  viewer->createViewPort(0.5,0.5,1.0,1.0,vp[1]);
-  viewer->createViewPort(0.0,0.0,0.5,0.5,vp[2]);
-  viewer->createViewPort(0.5,0.0,1.0,0.5,vp[3]);
-  viewer->addCoordinateSystem(1.0);
-  viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
-
-  // 4 kinect position to capture and fuse
-  std::vector<std::vector<double>> kinectPoses = {{1.4,-M_PI,M_PI/3},
-                                                  {1.4,-M_PI/2,M_PI/3},
-                                                  {1.4,0,M_PI/3},
-                                                  {1.4,M_PI/2,M_PI/3}};
-
-  for (int i = 0; i < 4; i++) {
-    av.moveKinectViewsphere(kinectPoses[i]);
-    av.readKinect();
-    av.fuseLastData();
-    av.dataExtract();
-    if (i==0){
-      av.genUnexploredPtCld();
-    }
-    av.updateUnexploredPtCld();
-    av.createStateVector();
-    std::cout << "State vector after viewpoint " + std::to_string(i+1) + " :" << std::endl;
-    printStateVector(av.stateVec,av.gridDim);
-    if (flag == 1){
-      rbgVis(viewer,av.cPtrPtCldEnv,"Env "+std::to_string(i),vp[i]);
-      rbgVis(viewer,av.ptrPtCldUnexp,"Unexp "+std::to_string(i),vp[i]);
-    }
-  }
-  if (flag == 1){
-    std::cout << "Close viewer to continue." << std::endl;
-    while (!viewer->wasStopped ()){
-      viewer->spinOnce(100);
-      boost::this_thread::sleep (boost::posix_time::microseconds(100000));
-    }
-  }
-  av.deleteObject(objID);
-  std::cout << "*** End ***" << std::endl;
-}
-
-// 12: A test function to check the state vector
+// 11: A test function to check rollback feature
 void testSaveRollback(environment &av, int objID, int flag){
   std::cout << "*** In save and rollback testing function ***" << std::endl;
   // av.reset();
@@ -1675,7 +1530,7 @@ void testSaveRollback(environment &av, int objID, int flag){
   std::cout << "*** End ***" << std::endl;
 }
 
-// 13: A function to test saving pointcloud
+// 12: A function to test saving pointcloud
 void testSavePCD(environment &av, int objID){
   std::cout << "*** In point cloud save testing function ***" << std::endl;
   std::string dir = "./DataRecAV/";
@@ -1709,7 +1564,7 @@ void testSavePCD(environment &av, int objID){
   std::cout << "*** END ***" << std::endl;
 }
 
-// 14: A function to test reading csv file
+// 13: A function to test reading csv file
 void testReadCSV(std::string filename, int colID){
   std::cout << "*** In CSV read testing function ***" << std::endl;
 
@@ -1727,7 +1582,7 @@ void testReadCSV(std::string filename, int colID){
   std::cout << "*** END ***" << std::endl;
 }
 
-// 15: A function to test reading PCD based on CSV file data
+// 14: A function to test reading PCD based on CSV file data
 void testReadPCD(std::string filename){
   std::cout << "*** In PCD read testing function ***" << std::endl;
   std::string dir = "./DataRecAV/";
@@ -1790,14 +1645,13 @@ int main (int argc, char** argv){
   std::cout << "9  : Update the unexplored pointcloud based on 4 different viewpoints." << std::endl;
   std::cout << "10 : Grasp synthesis after fusing 4 viewpoints." << std::endl;
   std::cout << "11 : Selecting a grasp after grasp synthesis and collision check for a object." << std::endl;
-  std::cout << "12 : State vector generation." << std::endl;
-  std::cout << "13 : Store and rollback configurations." << std::endl;
-  std::cout << "14 : Save point clouds." << std::endl;
-  std::cout << "15 : Read CSV and print a column." << std::endl;
-  std::cout << "16 : Read PCD based on CSV data." << std::endl;
+  std::cout << "12 : Store and rollback configurations." << std::endl;
+  std::cout << "13 : Save point clouds." << std::endl;
+  std::cout << "14 : Read CSV and print a column." << std::endl;
+  std::cout << "15 : Read PCD based on CSV data." << std::endl;
   std::cout << "Enter your choice : "; cin >> choice;
 
-  if (choice >= 5 && choice <= 14) {
+  if (choice >= 5 && choice <= 13) {
     std::cout << "Objects available :" << std::endl;
     std::cout << "1: Drill" << std::endl;
     std::cout << "2: Square Prism" << std::endl;
@@ -1818,11 +1672,11 @@ int main (int argc, char** argv){
   }
   std::string filename;
   int colID;
-  if(choice == 15 || choice == 16){
+  if(choice == 14 || choice == 15){
     std::cin.ignore();
     std::cout << "Enter csv filename with path : "; std::getline(std::cin,filename);
   }
-  if(choice == 15){
+  if(choice == 14){
     std::cout << "Enter your column ID (>0) : "; std::cin>>colID;
   }
 
@@ -1857,14 +1711,12 @@ int main (int argc, char** argv){
       testComplete(activeVision,objID-1,4,graspMode,1,0);
       break;
     case 12:
-      testStateVector(activeVision,objID-1,1);   break;
-    case 13:
       testSaveRollback(activeVision,objID-1,1);  break;
-    case 14:
+    case 13:
       testSavePCD(activeVision,objID-1);         break;
-    case 15:
+    case 14:
       testReadCSV(filename,colID);               break;
-    case 16:
+    case 15:
       testReadPCD(filename);                     break;
     default:
       std::cout << "Invalid choice." << std::endl;
