@@ -118,6 +118,84 @@ bool singleExploration(environment &kinectControl, std::vector<double> targetPos
 	return (kinectControl.selectedGrasp != -1);
 }
 
+std::vector<double> genRandomExploration(std::vector<double> currentPose, int &currentDir){
+	std::vector<std::vector<double>> potentialPoses = gen8Explorations(currentPose);
+	int selection = rand() % potentialPoses.size();
+	while(selection == currentDir){
+		selection = rand() % potentialPoses.size();
+	}
+	currentDir = selection;
+	return potentialPoses.at(currentDir);
+}
+
+void addRandomPath(std::vector<std::vector<double>> &poses, std::vector<std::vector<std::vector<double>>> &histories, std::vector<int> &directions, int maxDepth){
+	std::vector<double> currentPose = poses.back();
+	std::vector<double> nextPose;
+	int currentDir = directions.back();
+	std::vector<std::vector<double>> oldPose = histories.back();
+	for(int i=0; i<maxDepth; i++){
+		nextPose = genRandomExploration(currentPose, currentDir);
+		poses.insert(poses.begin(), nextPose);
+		directions.insert(directions.begin(), currentDir);
+		oldPose.push_back(nextPose);
+		histories.insert(histories.begin(), oldPose);
+		currentPose.swap(nextPose);
+		nextPose.clear();
+	}
+}
+
+std::vector<std::vector<double>> exploreRandomPoses(environment &kinectControl, std::vector<double> startPose, ptCldVis::Ptr viewer, int maxDepth, int &opDir){
+	int root = kinectControl.saveConfiguration("Base");
+	std::vector<std::vector<double>> poses = gen8Explorations(startPose);
+	std::vector<int> parents, direction;
+	std::vector<std::vector<std::vector<double>>> histories;
+	for(int i=0; i<poses.size(); i++){
+		parents.push_back(root);
+		direction.push_back(i+1);
+		histories.push_back({startPose, poses[i]});
+	}
+	bool finished = false;
+	int currentSave = 0;
+	for (int i=0; i<8; i++){
+		finished = singleExploration(kinectControl, poses.back(), viewer, false);
+		if (finished){
+			opDir = direction.back();
+			return histories.back();
+		}
+		currentSave = kinectControl.saveConfiguration(std::to_string(parents.back()));
+		addRandomPath(poses, histories, direction, maxDepth);
+		parents.insert(parents.begin(), currentSave);
+		kinectControl.rollbackConfiguration(parents.back());
+		poses.pop_back();
+		parents.pop_back();
+		direction.pop_back();
+		histories.pop_back();
+	}
+	int bestDir = 0;
+	int shortestLength = 999;
+	std::vector<std::vector<double>> ret = {{-1}};
+	for (int i=0; i<8; i++){
+		finished = false;
+		kinectControl.rollbackConfiguration(parents.back());
+		parents.pop_back();
+		for(int j=0; j<maxDepth; j++){
+			if(!finished){
+				finished = singleExploration(kinectControl, poses.back(), viewer, false);
+				if (finished and histories.back().size() < shortestLength){
+					bestDir = direction.back();
+					ret = histories.back();
+					shortestLength = histories.back().size();
+				}
+			}
+			poses.pop_back();
+			direction.pop_back();
+			histories.pop_back();
+		}
+	}
+	opDir = bestDir;
+	return ret;
+}
+
 std::vector<std::vector<double>> exploreChildPoses(environment &kinectControl, std::vector<double> startPose, ptCldVis::Ptr viewer, int maxDepth, int &opDir){
 	int root = kinectControl.saveConfiguration("Base");
 	std::vector<std::vector<double>> poses = gen8Explorations(startPose);
@@ -182,33 +260,38 @@ void generateData(environment &kinectControl, int object, std::string dir, std::
 
  	RouteData currentRoute;
  	currentRoute.objType= objLookup[object];
- 	currentRoute.objPose={0,0,0};
 
- 	kinectControl.spawnObject(object,1,0);
 	kinectControl.loadGripper();
+	kinectControl.deleteObject(object);
 
 	ptCldVis::Ptr viewer;
 	if(visualize) viewer = initRGBViewer();
 
  	std::vector<double> targetPose;
  	bool finished = false;
+ 	double azimuthalAngle = 0;
+ 	double polarAngle = 45;
 
-	for (int azimuthalAngle = 0; azimuthalAngle < 360; azimuthalAngle+=MIN_ANGLE){
-		std::cout << "***" << azimuthalAngle << "***" << std::endl;
+	for (int currentPoseCode = 0; currentPoseCode < kinectControl.objectPosesDict[object].size(); currentPoseCode+=1){
+		std::cout << "*** Pose #" << currentPoseCode << " ***" << std::endl;
 		// Restricting the max polar angle for start to 85 so that the table is visible
-		for (int polarAngle = 10; polarAngle < 85; polarAngle+=MIN_ANGLE){
+		for (int currentYaw = 0; currentYaw < 360; currentYaw+=MIN_ANGLE){
+				kinectControl.spawnObject(object,currentPoseCode,currentYaw);
 				finished = false;
 				//Move kinect to position
 				targetPose = {1.4, azimuthalAngle*(M_PI/180.0), polarAngle*(M_PI/180.0)};
 				currentRoute.kinectPose = targetPose;
 				currentRoute.stepNumber = 1;
 				currentRoute.stepVector = {targetPose};
+				currentRoute.objPose= kinectControl.objectPosesDict[object][currentPoseCode];
+				//Adjust the yaw
+				currentRoute.objPose[2] = currentYaw*(M_PI/180.0);
 				finished = singleExploration(kinectControl, targetPose, viewer, true);
 				*currentRoute.obj = *kinectControl.ptrPtCldObject;
 				*currentRoute.unexp = *kinectControl.ptrPtCldUnexp;
 				if(!finished){
 					currentRoute.goodInitialGrasp = false;
-					currentRoute.stepVector = exploreChildPoses(kinectControl, targetPose, viewer, pow(8,3), currentRoute.direction);
+					currentRoute.stepVector = exploreRandomPoses(kinectControl, targetPose, viewer, 10, currentRoute.direction);
 					currentRoute.stepNumber = currentRoute.stepVector.size();
 				} else {
 					currentRoute.goodInitialGrasp = true;
@@ -219,13 +302,10 @@ void generateData(environment &kinectControl, int object, std::string dir, std::
 				*currentRoute.env = *kinectControl.ptrPtCldEnv + *kinectControl.ptrPtCldGripper;
 				currentRoute.filename = getCurTime();
 				saveData(currentRoute, fout, dir);
-				// if(currentRoute.stepNumber != 1){
-				// 	printRouteData(currentRoute);
-				// }
+				kinectControl.deleteObject(object);
 				kinectControl.reset();
+			}
 		}
-	}
-	kinectControl.deleteObject(object);
 	fout.close();
 }
 
@@ -236,7 +316,7 @@ int main (int argc, char** argv){
  	environment kinectControl(&nh);
 	sleep(1);
 
-	std::string dir = "./DataRecAV/";
+	std::string dir = "./DataRecAV3/";
 	std::string time = getCurTime();
 	std::string csvName = "_dataRec.csv";
 	std::cout << "Start Time : " << getCurTime() << std::endl;
