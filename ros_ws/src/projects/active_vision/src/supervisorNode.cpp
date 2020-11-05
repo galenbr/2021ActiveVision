@@ -45,9 +45,7 @@ void addValidPose(std::vector<std::vector<double>> *out, std::vector<double> sta
 	potentialPose[1] = fmod(potentialPose[1],2*M_PI);
 	if(potentialPose[1] < 0) potentialPose[1] += 2*M_PI;
 
-	if(checkValidPose(potentialPose)){
-		(*out).insert((*out).end(), potentialPose);
-	}
+	(*out).insert((*out).end(), potentialPose);
 }
 
 std::vector<std::vector<double>> gen8Explorations(std::vector<double> startPose){
