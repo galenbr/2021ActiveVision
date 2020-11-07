@@ -1,8 +1,8 @@
 <launch>
 
-    <arg name="marker1Id"         default="100"/>
-    <arg name="marker2Id"         default="111"/>
-    <arg name="markerSize"        default="0.1"/>    <!-- in m -->
+    <arg name="marker1Id"         default="97"/>
+    <arg name="marker2Id"         default="72"/>
+    <arg name="markerSize"        default="0.02"/>    <!-- in m -->
     <arg name="eye"               default="left"/>
     <arg name="dct_normalization" default="True" />
     <arg name="dct_filter_size"   default="2" />
