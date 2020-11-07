@@ -58,8 +58,10 @@ struct graspPoint{
   pcl::PointXYZRGB p2;
   std::vector<float> pose;    // Note: This is not the final gripper pose
   float addnlPitch;
+  graspPoint();
 };
 
+// Function to compare grasp point for sorting
 bool compareGrasp(graspPoint A, graspPoint B);
 
 // Structure to store state for rollback
@@ -70,17 +72,20 @@ struct stateConfig{
   std::string description;          // Description of the configuration
 };
 
+// Fuction to view a rgb point cloud
 void rbgVis(ptCldVis::Ptr viewer, ptCldColor::ConstPtr cloud, std::string name,int vp);
 
+// Fuction to view a rgb point cloud with normals
 void rbgNormalVis(ptCldVis::Ptr viewer, ptCldColor::ConstPtr cloud, ptCldNormal::ConstPtr normal, std::string name,int vp);
 
+// Funstion to transpose a homogenous matrix
 Eigen::Affine3f homoMatTranspose(const Eigen::Affine3f& tf);
 
+// Get Rotation Part of a Affine3f
 Eigen::Vector3f getEuler(const Eigen::Affine3f& tf);
 
+// Get Translational Part of a Affine3f
 Eigen::Vector3f getTranslation(const Eigen::Affine3f& tf);
-
-void printStateVector(std::vector<float> &stateVec, int dim);
 
 // Class to store data of environment and its processing
 class environment{
@@ -88,9 +93,6 @@ private:
   ros::Rate r{10};                      // ROS sleep rate
   ros::Publisher pubKinectPose;         // Publisher : Kinect pose
   ros::Subscriber subKinectPtCld;       // Subscriber : Kinect pointcloud
-  // NOT USED (JUST FOR REFERENCE)
-  /*ros::Subscriber subKinectRGB;       // Subscriber : Kinect RGB
-  ros::Subscriber subKinectDepth;       // Subscriber : Kinect DepthMap */
   ros::ServiceClient gazeboSpawnModel;  // Service : Spawn Model
   ros::ServiceClient gazeboDeleteModel; // Service : Delete Model
 
@@ -108,11 +110,10 @@ private:
   Eigen::Affine3f tfGazWorld;      // Transform : Kinect Gazebo Frame to Gazebo World frame
   Eigen::Affine3f tfGripper;       // Transform : For gripper based on grasp points found
 
-  int readFlag[3];              // Flag used to read data from kinect only when needed
-  float fingerZOffset;     // Z axis offset between gripper hand and finger
+  int readFlag[3];                 // Flag used to read data from kinect only when needed
+  float fingerZOffset;             // Z axis offset between gripper hand and finger
 
   std::string path;                // Path the active vision package
-
 
 public:
   // PtCld: Last recorded viewpoint
@@ -157,15 +158,14 @@ public:
   pcl::PointXYZRGB minPtCol[5], maxPtCol[5];        // Min and Max x,y,z co-ordinates of the gripper used for collision check
 
   std::vector<std::vector<std::string>> objectDict; // List of objects which can be spawned
-  double voxelGridSize;                       // Voxel Grid size for environment
-  double voxelGridSizeUnexp;                  // Voxel Grid size for unexplored point cloud
-  std::vector<double> tableCentre;         // Co-ordinates of table centre
-  int scale;                                     // Scale value for unexplored point cloud generation
-  double maxGripperWidth;                    // Gripper max width (Actual is 8 cm)
-  double minGraspQuality;                      // Min grasp quality threshold
-  int selectedGrasp;                            // Index of the selected grasp
-  int gridDim;                                   // Grid dimension for state vector
-  std::vector<float> stateVec;                      // State Vector
+  std::vector<std::vector<std::vector<double>>> objectPosesDict; //Stable object poses
+  double voxelGridSize;                             // Voxel Grid size for environment
+  double voxelGridSizeUnexp;                        // Voxel Grid size for unexplored point cloud
+  std::vector<double> tableCentre;                  // Co-ordinates of table centre
+  int scale;                                        // Scale value for unexplored point cloud generation
+  double maxGripperWidth;                           // Gripper max width (Actual is 8 cm)
+  double minGraspQuality;                           // Min grasp quality threshold
+  int selectedGrasp;                                // Index of the selected grasp
   std::vector<stateConfig> configurations;          // Vector to store states for rollback
 
   environment(ros::NodeHandle *nh);
@@ -174,7 +174,7 @@ public:
   void reset();
 
   // Store the configuration
-  void saveConfiguration(std::string name);
+  int saveConfiguration(std::string name);
 
   // Rollback to a configuration
   void rollbackConfiguration(int index);
@@ -182,8 +182,8 @@ public:
   // 1A: Callback function to point cloud subscriber
   void cbPtCld (const ptCldColor::ConstPtr& msg);
 
-  // 2: Spawning objects in gazebo on the table centre for a given RPY
-  void spawnObject(int objectID, float R, float P, float Y);
+  // 2: Spawning objects in gazebo on the table centre for a given pose option and yaw
+  void spawnObject(int objectID, int choice, float yaw);
 
   // 3: Deleting objects in gazebo
   void deleteObject(int objectID);
@@ -205,6 +205,9 @@ public:
   // Theta (Polar Angle) -> 0 to 2*PI
   // Phi (Azhimuthal angle) -> 0 to PI/2
   void moveKinectViewsphere(std::vector<double> pose);
+
+  // 7: Function to read the kinect data.
+  void readKinect();
 
   // 8: Function to Fuse last data with existing data
   void fuseLastData();
@@ -229,11 +232,9 @@ public:
 
   // 15: Grasp and Collision check combined
   int graspAndCollisionCheck();
-
-  // 16: Creating the State vector
-  void createStateVector();
 };
 
+// Function to do a single pass
 void singlePass(environment &av, std::vector<double> kinectPose, bool initial);
 
 #endif

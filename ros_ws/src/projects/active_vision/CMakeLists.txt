@@ -233,4 +233,20 @@ target_link_libraries(testingModel_v1 active_vision ${catkin_LIBRARIES} ${PCL_LI
 
 add_executable(supervisorNode src/supervisorNode.cpp)
 add_dependencies(supervisorNode active_vision ${catkin_EXPORTED_TARGETS})
-target_link_libraries(supervisorNode active_vision ${catkin_LIBRARIES})
+target_link_libraries(supervisorNode active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(visDataRec src/visDataRec.cpp)
+add_dependencies(visDataRec active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(visDataRec active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(visViewsphere src/visViewsphere.cpp)
+add_dependencies(visViewsphere active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(visViewsphere active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(findStablePos src/findStablePos.cpp)
+add_dependencies(findStablePos active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(findStablePos active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(genStateVec src/genStateVec.cpp)
+add_dependencies(genStateVec active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(genStateVec active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
