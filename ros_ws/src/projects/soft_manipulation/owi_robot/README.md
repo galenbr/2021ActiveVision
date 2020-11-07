@@ -37,11 +37,19 @@ libusb: error [_get_usbfs_fd] libusb requires write access to USB device nodes.
 Error opening device
 ```
 
-If you receive an error with write permissions to the USB port use the [chmod](https://wiki.linuxquestions.org/wiki/Chmod) command as shoen below. This will elevate permissions for all users and the group on the computer to write to the USB device you receive an error for as in the example below (I received an error for USB001/025). *Make sure to change the USB device ID in the command below to reflect the error!*
+If you receive an error with write permissions to the USB port use the [chmod](https://wiki.linuxquestions.org/wiki/Chmod) command as shown below. This will elevate permissions for all users and the group on the computer to write to the USB device you receive an error for as in the example below (I received an error for USB001/025). *Make sure to change the USB device ID in the command below to reflect the error!*
 
 ```
 sudo chmod 666 /dev/bus/usb/001/025
 ```
 ### generatecmd.srv
 
-This service generates the 3 byte command for writing to the OWI USB Interface. It requires the inidividual motors and their directions of rotations as inputs. It will then generate a 3 byte cmd to run those motors. This command can be sent to the writecmd.srv to run the robot. An additional PWM service can be added in between to control the velocity of the joints.
+This service generates the 3 byte command for writing to the OWI USB Interface. It requires the inidividual motors and their directions of rotations as inputs. It will then generate a 3 byte cmd to run those motors. This command can be sent to the writecmd.srv to run the robot. An additional PWM service can be added in between to control the velocity of the joints. Here, a command table for each motor can be defined using bitset, the service will convert each 8 bit command into byte commands for the arm. This is done so we can run combinations of multiple motors by "adding"(|) their bit commands and then converting them into byte commands to write to the robot.  
+
+### pwm.srv
+
+This service can drive a single software pwm when called. It is a blocking service, which is why we are moving away from the software pwm architecture and using a dedicated hardware pwm controller instead.
+
+## Publishers
+
+This package also exposes publishers to a topic which can be used to send messages to external nodes that run have hardware PWM capability to control the robot's individual joints.
