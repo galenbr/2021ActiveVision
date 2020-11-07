@@ -27,7 +27,7 @@ ros_ws/devel/
 ros_ws/.vscode/
 ros_ws/.vscode/*
 ros_ws/.vscode
-.vscode/*
+\.vscode
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
