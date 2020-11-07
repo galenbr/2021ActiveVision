@@ -3,15 +3,38 @@
 
 #include "owi_robot/generatecmd.h"
 
+#define BASE_L      "00000010"
+#define BASE_R      "00000001"
+
 #define ELBOW_UP    "00010000"
 #define ELBOW_DN    "00100000"
+
 #define BYTE_SIZE   8
 #define SPLITTER    "00001111"
 
 bool cmdGenServer_callback(owi_robot::generatecmd::Request &req, owi_robot::generatecmd::Response &res){
-    
-    std::bitset<BYTE_SIZE> bset1(std::string(ELBOW_DN));
-    // std::cout << bset1 << std::endl;
+    int m = req.motor_num;
+    std::bitset<BYTE_SIZE> bset1;
+    if(m == 1){
+        //define bitset for wrist
+    }
+    else if(m == 2){
+        std::bitset<BYTE_SIZE> temp(std::string(ELBOW_DN));
+        bset1 = bset1 | temp ;
+    }
+    else if(m == 3){
+        //define bitset for shoulder
+    }
+    else if(m == 4){
+        if(req.direction == true){
+            std::bitset<BYTE_SIZE> temp(std::string(BASE_L));
+            bset1 = bset1 | temp;
+        }
+        else{
+            std::bitset<BYTE_SIZE> temp(std::string(BASE_R));
+            bset1 = bset1 | temp;
+        }
+    }
     
     std::bitset<BYTE_SIZE> splitter(std::string(SPLITTER));
     // std::cout << splitter << std::endl;

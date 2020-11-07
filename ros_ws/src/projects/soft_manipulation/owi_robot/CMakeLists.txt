@@ -23,6 +23,7 @@ add_service_files(
    FILES
    writecmd.srv
    generatecmd.srv
+#   pwm.srv
 )
 
 generate_messages(
@@ -45,3 +46,7 @@ target_link_libraries(cmd_gen_node ${catkin_LIBRARIES})
 add_executable(owi_control_node src/main.cpp)
 add_dependencies(owi_control_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(owi_control_node ${catkin_LIBRARIES})
+
+add_executable(pwm_node src/pwm_srv.cpp)
+add_dependencies(pwm_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(pwm_node ${catkin_LIBRARIES})

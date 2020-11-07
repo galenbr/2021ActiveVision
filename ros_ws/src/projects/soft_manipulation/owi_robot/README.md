@@ -44,4 +44,4 @@ sudo chmod 666 /dev/bus/usb/001/025
 ```
 ### generatecmd.srv
 
-This service generates the 3 byte command for writing to the OWI USB Interface. This service requires the inidividual motors and their directions of rotations as inputs. It will then generate a 3 byte cmd to run those motors. This command can be sent to the writecmd.srv to run the robot. An additional PWM service can be added in between to control the velocity of the joints.
+This service generates the 3 byte command for writing to the OWI USB Interface. It requires the inidividual motors and their directions of rotations as inputs. It will then generate a 3 byte cmd to run those motors. This command can be sent to the writecmd.srv to run the robot. An additional PWM service can be added in between to control the velocity of the joints.

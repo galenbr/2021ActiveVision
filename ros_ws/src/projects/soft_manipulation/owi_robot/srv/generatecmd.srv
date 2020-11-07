@@ -1,4 +1,6 @@
-
+int32 motor_num
+bool direction
+# True = clockwise, False = CC rotation
 ---
 string str1
 string str2
