@@ -7,7 +7,7 @@ void test(){
 void printRouteData(RouteData &in){
 	std::cout << in.objType << std::endl;
 	printf("(%1.2f, %1.2f, %1.2f)\n", in.objPose[0], in.objPose[1], in.objPose[2]);
-	printf("(%1.2f, %1.2f, %1.2f)\n", in.kinectPose[0], in.kinectPose[1], in.kinectPose[2]);
+	// printf("(%1.2f, %1.2f, %1.2f)\n", in.kinectPose[0], in.kinectPose[1], in.kinectPose[2]);
 	printf("%1.2f\n", in.graspQuality);
 	printf("Steps taken = %d\n", in.stepNumber);
 	if(in.stepVector.size() > 1){
@@ -21,14 +21,20 @@ void printRouteData(RouteData &in){
 }
 
 void saveData(RouteData &in, std::fstream &saveTo, std::string &dir){
+	// Saving with some blank spaces to add information later if needed
 	saveTo  << in.objType << ","
 			<< in.objPose[0] << "," << in.objPose[1] << "," << in.objPose[2] << ","
-			<< in.kinectPose[0] << "," << in.kinectPose[1] << "," << in.kinectPose[2] << ","
+			// << in.kinectPose[0] << "," << in.kinectPose[1] << "," << in.kinectPose[2] << ","
 			<< in.goodInitialGrasp << ","
 			<< in.graspQuality << ","
-			<< in.stepNumber << ","
+			<< "dummy"<< ","
+			<< "dummy"<< ","
+			<< "dummy"<< ","
+			<< "dummy"<< ","
+			<< "dummy"<< ","
+			<< in.filename << ","
 			<< in.direction << ","
-			<< in.filename << ",";
+			<< in.stepNumber << ",";
 
 	for(int i=0; i < in.stepVector.size(); i++){
 		saveTo << in.stepVector[i][0] << "," << in.stepVector[i][1] << "," << in.stepVector[i][2];

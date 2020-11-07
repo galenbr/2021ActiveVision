@@ -50,10 +50,10 @@ int main(int argc, char** argv){
   std::vector<std::vector<std::string>> data;
   data = readCSV(directory+csvFile);
 
-  int nStepColID = 10;
-  int dirColID = 11;
   int pathColID = 12;
-  int stepColID = 13;
+  int dirColID = 13;
+  int nStepColID = 14;
+  int stepColID = 15;
   int nSteps;
 
   std::vector<double> pose={0,0,0};
@@ -74,7 +74,7 @@ int main(int argc, char** argv){
     viewer->createViewPort(0.25,0.0,0.75,0.5,vp[2]);
   }
   viewer->addCoordinateSystem(1.0);
-  viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
+  viewer->setCameraPosition(-2,0,7,2,0,-1,1,0,2);
   viewer->registerKeyboardCallback(keyboardEventOccurred);
 
   std::cout << "***Key Bindings***\n \u2192 , \u2190 : Move between data \n z : Goto a data number \n Esc : Exit." << std::endl;
@@ -94,6 +94,7 @@ int main(int argc, char** argv){
       viewer->addText("Direction : "+dirLookup[std::atoi(data[i][dirColID-1].c_str())],5,35,25,1,0,0,"Dir",vp[2]);
 
       nSteps = std::atoi(data[i][nStepColID-1].c_str());
+      viewer->addText("nSteps : "+std::to_string(nSteps),5,65,25,1,0,0,"nSteps",vp[2]);
       for (int j = stepColID; j < stepColID+(nSteps-1)*3; j+=3){
         pose[0] = std::atof(data[i][j-1].c_str());
         pose[1] = std::atof(data[i][j-1+1].c_str());
@@ -112,20 +113,18 @@ int main(int argc, char** argv){
         viewer->addArrow(a2,a1,0,1,0,false,std::to_string(j),vp[2]);
       }
 
-      if(nSteps == 1){
-        pose[0] = std::atof(data[i][stepColID-1].c_str());
-        pose[1] = std::atof(data[i][stepColID-1+1].c_str());
-        pose[2] = std::atof(data[i][stepColID-1+2].c_str());
-        a1.x = table.x+pose[0]*sin(pose[2])*cos(pose[1]);
-        a1.y = table.y+pose[0]*sin(pose[2])*sin(pose[1]);
-        a1.z = table.z+pose[0]*cos(pose[2]);
+      pose[0] = std::atof(data[i][stepColID-1].c_str());
+      pose[1] = std::atof(data[i][stepColID-1+1].c_str());
+      pose[2] = std::atof(data[i][stepColID-1+2].c_str());
+      a1.x = table.x+pose[0]*sin(pose[2])*cos(pose[1]);
+      a1.y = table.y+pose[0]*sin(pose[2])*sin(pose[1]);
+      a1.z = table.z+pose[0]*cos(pose[2]);
 
-        viewer->addSphere(a1,0.03,0,1,0,"Cam",vp[2]);
-      }
+      viewer->addSphere(a1,0.03,0,1,0,"Cam",vp[2]);
 
       int vCtr = 0;
-      for (int azimuthalAngle = 0; azimuthalAngle < 360; azimuthalAngle+=20){
-        for (int polarAngle = 10; polarAngle <= 90; polarAngle+=20){
+      for (int azimuthalAngle = 0; azimuthalAngle < 360; azimuthalAngle+=10){
+        for (int polarAngle = 5; polarAngle <= 90; polarAngle+=10){
           a1.x = table.x+pose[0]*sin(polarAngle*(M_PI/180.0))*cos(azimuthalAngle*(M_PI/180.0));
           a1.y = table.y+pose[0]*sin(polarAngle*(M_PI/180.0))*sin(azimuthalAngle*(M_PI/180.0));
           a1.z = table.z+pose[0]*cos(polarAngle*(M_PI/180.0));

@@ -7,11 +7,35 @@
 
 bool visualize = false;
 
+struct explorer{
+  int parentID{-1};
+	int childID{-1};
+	int direction{-1};
+	std::vector<std::vector<double>> path;
+	// Result collection (Used for visualization)
+	double graspQuality{-1};
+  ptCldColor ptCldRes;
+
+  void reset(){
+    parentID = -1;
+    childID = -1;
+    direction = -1;
+    path.clear();
+    graspQuality = -1;
+    ptCldRes.clear();
+  }
+};
+
 std::map<int, std::string> objLookup{{0, "Drill"}, {1, "Square Prism"}, {2, "Rectangular Prism"}, {3, "Bowl"}, {4, "Big Bowl"}, {5, "Cup"}};
 
-void modifyTargetPosition(std::vector<double> &pos){
-	pos[0]+=0.1;
-	pos[1]+=0.1;
+void printVecofVec(std::vector<std::vector<double>> input){
+	for(int i=0; i < input.size(); i++){
+		double a, b, c;
+		a = input[i][0];
+		b = input[i][1];
+		c = input[i][2];
+		printf("(%1.2f, %1.2f, %1.2f)\n", a, b , c);
+	}
 }
 
 ptCldVis::Ptr initRGBViewer(){
@@ -25,11 +49,31 @@ ptCldVis::Ptr initRGBViewer(){
 }
 
 //Check that the azimuthal angle is less than 90.
-bool checkValidPose(std::vector<double> pose){
+bool checkValidPose(std::vector<double> &pose){
 	return (round(pose[2]*180/M_PI) <= 90);
 }
 
-void addValidPose(std::vector<std::vector<double>> *out, std::vector<double> startPose, double azimuthalOffset, double polarOffset){
+bool checkIfNewPose(std::vector<std::vector<double>> &oldPoses, std::vector<double> &pose){
+  for(int i = 0; i < oldPoses.size(); i++){
+    if(oldPoses[i] == pose) return false;
+  }
+  return true;
+}
+
+std::vector<double> calcExplorationPose(std::vector<double> startPose, int dir){
+	double azimuthalOffset, polarOffset;
+	switch(dir){
+		case 1: azimuthalOffset = 0; 							polarOffset = -MIN_ANGLE_RAD; break;	//N
+		case 2: azimuthalOffset = MIN_ANGLE_RAD; 	polarOffset = -MIN_ANGLE_RAD; break;	//NE
+		case 3: azimuthalOffset = MIN_ANGLE_RAD; 	polarOffset = 0; 							break;	//E
+		case 4: azimuthalOffset = MIN_ANGLE_RAD; 	polarOffset = MIN_ANGLE_RAD;  break;	//SE
+		case 5: azimuthalOffset = 0; 							polarOffset = MIN_ANGLE_RAD;  break;	//S
+		case 6: azimuthalOffset = -MIN_ANGLE_RAD; polarOffset = MIN_ANGLE_RAD;  break;	//SW
+		case 7: azimuthalOffset = -MIN_ANGLE_RAD; polarOffset = 0; 							break;	//W
+		case 8: azimuthalOffset = -MIN_ANGLE_RAD; polarOffset = -MIN_ANGLE_RAD; break;	//NW
+		default: printf("ERROR in calcExplorationPose\n");
+	}
+
 	std::vector<double> potentialPose = {startPose[0], startPose[1]+azimuthalOffset, startPose[2]+polarOffset};
 
 	// Addressing the NW & NE scenario when polar angle goes from *ve to -ve
@@ -45,48 +89,13 @@ void addValidPose(std::vector<std::vector<double>> *out, std::vector<double> sta
 	potentialPose[1] = fmod(potentialPose[1],2*M_PI);
 	if(potentialPose[1] < 0) potentialPose[1] += 2*M_PI;
 
-	(*out).insert((*out).end(), potentialPose);
+	// std::cout << dir << " " << startPose[1]*180/M_PI << "," << startPose[2]*180/M_PI << "->" <<
+	//                            potentialPose[1]*180/M_PI << "," << potentialPose[2]*180/M_PI << std::endl;
+
+	return(potentialPose);
 }
 
-std::vector<std::vector<double>> gen8Explorations(std::vector<double> startPose){
-	std::vector<std::vector<double>> out;
-	addValidPose(&out, startPose, 0, -MIN_ANGLE_RAD); //N
-	// std::cout << "N : " << startPose[1]*180/M_PI << "," << startPose[2]*180/M_PI << "->" <<
-	//              out.back()[1]*180/M_PI << "," << out.back()[2]*180/M_PI << std::endl;
-	addValidPose(&out, startPose, MIN_ANGLE_RAD, -MIN_ANGLE_RAD); //NE
-	// std::cout << "NE : " << startPose[1]*180/M_PI << "," << startPose[2]*180/M_PI << "->" <<
-	//              out.back()[1]*180/M_PI << "," << out.back()[2]*180/M_PI << std::endl;
-	addValidPose(&out, startPose, MIN_ANGLE_RAD, 0); //E
-	// std::cout << "E : " << startPose[1]*180/M_PI << "," << startPose[2]*180/M_PI << "->" <<
-	//              out.back()[1]*180/M_PI << "," << out.back()[2]*180/M_PI << std::endl;
-	addValidPose(&out, startPose, MIN_ANGLE_RAD, MIN_ANGLE_RAD); //SE
-	// std::cout << "SE : " << startPose[1]*180/M_PI << "," << startPose[2]*180/M_PI << "->" <<
-	//              out.back()[1]*180/M_PI << "," << out.back()[2]*180/M_PI << std::endl;
-	addValidPose(&out, startPose, 0, MIN_ANGLE_RAD); //S
-	// std::cout << "S : " << startPose[1]*180/M_PI << "," << startPose[2]*180/M_PI << "->" <<
-	//              out.back()[1]*180/M_PI << "," << out.back()[2]*180/M_PI << std::endl;
-	addValidPose(&out, startPose, -MIN_ANGLE_RAD, MIN_ANGLE_RAD); //SW
-	// std::cout << "SW : " << startPose[1]*180/M_PI << "," << startPose[2]*180/M_PI << "->" <<
-	//              out.back()[1]*180/M_PI << "," << out.back()[2]*180/M_PI << std::endl;
-	addValidPose(&out, startPose, -MIN_ANGLE_RAD, 0); //W
-	// std::cout << "W : " << startPose[1]*180/M_PI << "," << startPose[2]*180/M_PI << "->" <<
-	//              out.back()[1]*180/M_PI << "," << out.back()[2]*180/M_PI << std::endl;
-	addValidPose(&out, startPose, -MIN_ANGLE_RAD, -MIN_ANGLE_RAD); //NW
-	// std::cout << "NW : " << startPose[1]*180/M_PI << "," << startPose[2]*180/M_PI << "->" <<
-	//              out.back()[1]*180/M_PI << "," << out.back()[2]*180/M_PI << std::endl;
-	return out;
-}
-
-void printVecofVec(std::vector<std::vector<double>> input){
-	for(int i=0; i < input.size(); i++){
-		double a, b, c;
-		a = input[i][0];
-		b = input[i][1];
-		c = input[i][2];
-		printf("(%1.2f, %1.2f, %1.2f)\n", a, b , c);
-	}
-}
-
+/*
 bool singleExploration(environment &kinectControl, std::vector<double> targetPose, ptCldVis::Ptr viewer, bool first){
 	singlePass(kinectControl, targetPose, first);
 
@@ -231,25 +240,104 @@ std::vector<std::vector<double>> exploreChildPoses(environment &kinectControl, s
 	}
 	return {{-1}};
 }
+*/
 
-void displayData(environment &kinectControl, int object){
-	kinectControl.spawnObject(object, 0, 0);
-	ptCldVis::Ptr viewer = initRGBViewer();
-	std::vector<std::vector<double>> kinectPoses = {{1.4,-M_PI,M_PI/3},
-                                                  {1.4,-M_PI/2,M_PI/3},
-                                                  {1.4,0,M_PI/3},
-                                                  {1.4,M_PI/2,M_PI/3}};
+// Explore one step in all deirection from the home/parent position
+// Configurations are saved
+bool exploreOneStepAllDir(environment &env, explorer &home, std::vector<explorer> &opRecord){
+	bool success = false;
+	std::vector<double> curPose;
+	explorer explorerTemp;					// Used to record the iteration details
 
-  	for (int i = 0; i < 4; i++) {
-    	kinectControl.moveKinectViewsphere(kinectPoses[i]);
-    	kinectControl.readKinect();
-    	kinectControl.fuseLastData();
-    	kinectControl.dataExtract();
-  	}
+	// Saving the home configuration
+	explorerTemp.parentID = home.childID;
+  if (explorerTemp.parentID == -1) {
+    printf("ERROR exploreOneStepAllDir: Invalid parent ID.\n");
+    return(success);
+  }
 
-  	rbgVis(viewer,kinectControl.cPtrPtCldEnv,"Environment",0);
+	// Going to each direction for a step and saving their configurations
+	for (int i = 1; i <= 8 && success == false; i++){
+		// Rollback to the parent/home configuration
+		env.rollbackConfiguration(explorerTemp.parentID);
+		curPose = calcExplorationPose(env.lastKinectPoseViewsphere,i);
+		// If kinect pose if above the table, then proceed in that direction
+		if (checkValidPose(curPose) == true && checkIfNewPose(home.path,curPose) == true){
+			// Saving the direction and path taken
+			explorerTemp.direction = i;
+			explorerTemp.path = home.path;
+			explorerTemp.path.push_back(curPose);
+      explorerTemp.graspQuality = -1;
+      explorerTemp.ptCldRes.clear();
 
-	kinectControl.deleteObject(object);
+			// Doing a pass and saving the child
+			singlePass(env, curPose, false);
+			success = (env.selectedGrasp != -1);
+			int child = env.saveConfiguration("P" + std::to_string(explorerTemp.parentID) + "D" + std::to_string(i));
+			explorerTemp.childID = child;
+
+			// Exit the loop and updating variables used for visualization
+			if(success == true){
+				explorerTemp.graspQuality = env.graspsPossible[env.selectedGrasp].quality;
+				env.updateGripper(env.selectedGrasp,0);
+				explorerTemp.ptCldRes = *env.ptrPtCldEnv + *env.ptrPtCldGripper;
+			}
+
+			opRecord.push_back(explorerTemp);
+		}
+	}
+	return(success);
+}
+
+// Explore a max of "nSteps" random steps from the home/parent position
+// Configurations not saved
+bool exploreRdmStepOneDir(environment &env, explorer &home, int nSteps, explorer &opExp){
+  bool success = false;
+	std::vector<double> curPose;
+
+  // Sanity check
+  if (home.graspQuality != -1) printf("ERROR exploreOneStepAllDir: Starting with a successful grasp.\n");
+
+	// Saving the home configuration
+	opExp.parentID = home.childID;
+  if (opExp.parentID == -1) {
+    printf("ERROR exploreOneStepAllDir: Invalid parent ID.\n");
+    return(success);
+  }
+  opExp.direction = home.direction;
+  opExp.path = home.path;
+  opExp.childID = -1;
+  opExp.graspQuality = -1;
+  opExp.ptCldRes.clear();
+
+  // Rollback to the parent/home configuration
+  env.rollbackConfiguration(opExp.parentID);
+
+  srand (time(NULL)); // Randoming the seed used for rand generation
+
+  // Going taking a max of nSteps from thoe parent position
+	for (int i = 1; i <= nSteps && success == false; i++){
+    // Do until the pose is valid
+    do{
+      int dir = rand() % ((8-1)+1) + 1;
+      curPose = calcExplorationPose(env.lastKinectPoseViewsphere,dir);
+    }while(checkValidPose(curPose) != true || checkIfNewPose(opExp.path,curPose) != true);
+
+	  // Saving path taken
+		opExp.path.push_back(curPose);
+
+		// Doing a pass
+		singlePass(env, curPose, false);
+		success = (env.selectedGrasp != -1);
+
+		// Updating variables used for visualization
+		if(success == true){
+			opExp.graspQuality = env.graspsPossible[env.selectedGrasp].quality;
+			env.updateGripper(env.selectedGrasp,0);
+			opExp.ptCldRes = *env.ptrPtCldEnv + *env.ptrPtCldGripper;
+		}
+	}
+  return(success);
 }
 
 void generateData(environment &kinectControl, int object, std::string dir, std::string saveLocation){
@@ -257,53 +345,111 @@ void generateData(environment &kinectControl, int object, std::string dir, std::
  	fout.open(dir+saveLocation, ios::out | ios::app);
 
  	RouteData currentRoute;
- 	currentRoute.objType= objLookup[object];
+ 	currentRoute.objType= kinectControl.objectDict[object][1];
 
-	kinectControl.loadGripper();
-	kinectControl.deleteObject(object);
+  kinectControl.spawnObject(object,0,0);
 
 	ptCldVis::Ptr viewer;
 	if(visualize) viewer = initRGBViewer();
 
  	std::vector<double> targetPose;
- 	bool finished = false;
- 	double azimuthalAngle = 0;
+	bool success = false;
+ 	double azimuthalAngle = 180;
  	double polarAngle = 45;
+	int configID;
+	explorer expRes, expTemp1, expTemp2;
+	std::vector<explorer> expRec;
+
+  int maxRndSteps = 5;
 
 	for (int currentPoseCode = 0; currentPoseCode < kinectControl.objectPosesDict[object].size(); currentPoseCode+=1){
-		std::cout << "*** Pose #" << currentPoseCode << " ***" << std::endl;
-		// Restricting the max polar angle for start to 85 so that the table is visible
-		for (int currentYaw = 0; currentYaw < 360; currentYaw+=MIN_ANGLE){
-				kinectControl.spawnObject(object,currentPoseCode,currentYaw);
-				finished = false;
+		for (int currentYaw = kinectControl.objectPosesYawLimits[object][0]; currentYaw < kinectControl.objectPosesYawLimits[object][1]; currentYaw+=MIN_ANGLE){
+        printf("*** Obj #%d : Pose #%d with Yaw %d ***\n",object+1,currentPoseCode+1,currentYaw);
+
+        expRes.reset(); expTemp1.reset(); expTemp2.reset();
+        expRec.clear();
+
+				kinectControl.moveObject(object,currentPoseCode,currentYaw*(M_PI/180.0));
+
 				//Move kinect to position
 				targetPose = {1.4, azimuthalAngle*(M_PI/180.0), polarAngle*(M_PI/180.0)};
-				currentRoute.kinectPose = targetPose;
-				currentRoute.stepNumber = 1;
-				currentRoute.stepVector = {targetPose};
-				currentRoute.objPose= kinectControl.objectPosesDict[object][currentPoseCode];
-				//Adjust the yaw
-				currentRoute.objPose[2] = currentYaw*(M_PI/180.0);
-				finished = singleExploration(kinectControl, targetPose, viewer, true);
+				// currentRoute.kinectPose = targetPose;
+				currentRoute.objPose= {kinectControl.objectPosesDict[object][currentPoseCode][1],
+															 kinectControl.objectPosesDict[object][currentPoseCode][2],
+															 currentYaw*(M_PI/180.0)};
+
+				expTemp1.direction = 0;
+				expTemp1.path = {targetPose};
+
+				// Do a pass for the starting position
+				singlePass(kinectControl, targetPose, true);
+				success = (kinectControl.selectedGrasp != -1);
+				configID = kinectControl.saveConfiguration("Base");
+				expTemp1.childID = configID;
+				expTemp1.ptCldRes = *kinectControl.ptrPtCldEnv;
+
 				*currentRoute.obj = *kinectControl.ptrPtCldObject;
 				*currentRoute.unexp = *kinectControl.ptrPtCldUnexp;
-				if(!finished){
+
+        // If home position grasp is a success
+        if(success == true){
+          currentRoute.goodInitialGrasp = true;
+          expTemp1.graspQuality = kinectControl.graspsPossible[kinectControl.selectedGrasp].quality;
+    			kinectControl.updateGripper(kinectControl.selectedGrasp,0);
+    			expTemp1.ptCldRes = *kinectControl.ptrPtCldEnv + *kinectControl.ptrPtCldGripper;
+          expRes = expTemp1;
+        }
+				// If we do not find a grasp at home, then check for one step in each direction
+				if(success == false){
 					currentRoute.goodInitialGrasp = false;
-					currentRoute.stepVector = exploreRandomPoses(kinectControl, targetPose, viewer, 10, currentRoute.direction);
-					currentRoute.stepNumber = currentRoute.stepVector.size();
-				} else {
-					currentRoute.goodInitialGrasp = true;
-					currentRoute.direction = 0;
+					success = exploreOneStepAllDir(kinectControl,expTemp1,expRec);
+					if(success == true) expRes = expRec.back();
 				}
-				currentRoute.graspQuality = kinectControl.graspsPossible[kinectControl.selectedGrasp].quality;
-				kinectControl.updateGripper(kinectControl.selectedGrasp,0);
-				*currentRoute.env = *kinectControl.ptrPtCldEnv + *kinectControl.ptrPtCldGripper;
+        // If we dont find a grasp after one step, then check using random searches
+        int rdmSearchCtr = 1;
+        while(success == false && rdmSearchCtr<=3){
+          if (rdmSearchCtr > 1) printf("Doing %d set of random searches.\n",rdmSearchCtr);
+          int nSteps = maxRndSteps*rdmSearchCtr;
+          for(int i = 0; i < expRec.size(); i++) {
+            bool successTemp;
+            successTemp = exploreRdmStepOneDir(kinectControl,expRec[i],nSteps,expTemp2);
+            if(successTemp == true){
+              success = successTemp;
+              // If its the first time entering this, then store this in expRes
+              if(expRes.path.size() == 0){
+                expRes = expTemp2;
+              }
+              // If not, check if current result is better than the previous result and update expRes
+              else if((expTemp2.path.size() < expRes.path.size()) ||
+                      (expTemp2.path.size() == expRes.path.size() && expTemp2.graspQuality > expRes.graspQuality)){
+                expRes = expTemp2;
+              }
+              // Update nSteps to speed up the process
+              nSteps = std::min(nSteps,int(expRes.path.size())-2);
+              // If path length is 3 i.e 2 kinect movements then stop as its the best possible
+              if(expRes.path.size() == 3) break;
+            }
+          }
+          rdmSearchCtr++;
+        }
+        // If still no grasp found, probably need to try random search again
+        if(success == false){
+          printf("No grasp found still.\n");
+          expRes = expTemp1;
+        }
+
+				currentRoute.direction = expRes.direction;
+				currentRoute.stepVector = expRes.path;
+				currentRoute.stepNumber = expRes.path.size();
+				currentRoute.graspQuality = expRes.graspQuality;
+				*currentRoute.env = expRes.ptCldRes;
 				currentRoute.filename = getCurTime();
 				saveData(currentRoute, fout, dir);
-				kinectControl.deleteObject(object);
+
 				kinectControl.reset();
 			}
 		}
+  kinectControl.deleteObject(object);
 	fout.close();
 }
 
@@ -313,12 +459,16 @@ int main (int argc, char** argv){
 
  	environment kinectControl(&nh);
 	sleep(1);
+  kinectControl.loadGripper();
 
-	std::string dir = "./DataRecAV3/";
+	std::string dir = "./DataRecAV/";
 	std::string time = getCurTime();
 	std::string csvName = "_dataRec.csv";
 	std::cout << "Start Time : " << getCurTime() << std::endl;
-	generateData(kinectControl, 0, dir, time+csvName);	kinectControl.reset();
+  for (int i = 1; i < 2; i++) {
+    generateData(kinectControl, i, dir, time+csvName);
+    kinectControl.reset();
+  }
 	std::cout << "End Time : " << getCurTime() << std::endl;
 	// generateData(kinectControl, 4, dir, time+csvName);  kinectControl.reset();
 	// std::cout << "End Time : " << getCurTime() << std::endl;
