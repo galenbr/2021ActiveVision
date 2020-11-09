@@ -7,27 +7,6 @@
 
 bool visualize = false;
 
-struct explorer{
-  int parentID{-1};
-	int childID{-1};
-	int direction{-1};
-	std::vector<std::vector<double>> path;
-	// Result collection (Used for visualization)
-	double graspQuality{-1};
-  ptCldColor ptCldRes;
-
-  void reset(){
-    parentID = -1;
-    childID = -1;
-    direction = -1;
-    path.clear();
-    graspQuality = -1;
-    ptCldRes.clear();
-  }
-};
-
-std::map<int, std::string> objLookup{{0, "Drill"}, {1, "Square Prism"}, {2, "Rectangular Prism"}, {3, "Bowl"}, {4, "Big Bowl"}, {5, "Cup"}};
-
 void printVecofVec(std::vector<std::vector<double>> input){
 	for(int i=0; i < input.size(); i++){
 		double a, b, c;
@@ -97,7 +76,7 @@ std::vector<double> calcExplorationPose(std::vector<double> startPose, int dir){
 
 /*
 bool singleExploration(environment &kinectControl, std::vector<double> targetPose, ptCldVis::Ptr viewer, bool first){
-	singlePass(kinectControl, targetPose, first);
+	singlePass(kinectControl, targetPose, first, true);
 
 	// Visualization Section Start
 	if (visualize == true){
@@ -244,209 +223,256 @@ std::vector<std::vector<double>> exploreChildPoses(environment &kinectControl, s
 
 // Explore one step in all deirection from the home/parent position
 // Configurations are saved
-bool exploreOneStepAllDir(environment &env, explorer &home, std::vector<explorer> &opRecord){
-	bool success = false;
-	std::vector<double> curPose;
-	explorer explorerTemp;					// Used to record the iteration details
+bool exploreOneStepAllDir(environment &env, RouteData &home, std::vector<RouteData> &opOneStep){
 
-	// Saving the home configuration
-	explorerTemp.parentID = home.childID;
-  if (explorerTemp.parentID == -1) {
-    printf("ERROR exploreOneStepAllDir: Invalid parent ID.\n");
-    return(success);
+	std::vector<double> curPose;
+	RouteData temp;                // Used to record the iteration details
+
+  // Sanity check
+  if(home.childID == -1 || home.success == true){
+    printf("ERROR exploreOneStepAllDir: Invalid child ID / Grasp already found.\n");
+    return(false);
   }
 
+	temp.parentID = home.childID;
+  temp.success = false;
 	// Going to each direction for a step and saving their configurations
-	for (int i = 1; i <= 8 && success == false; i++){
+	for (int i = 1; i <= 8 && temp.success == false; i++){
 		// Rollback to the parent/home configuration
-		env.rollbackConfiguration(explorerTemp.parentID);
+		env.rollbackConfiguration(temp.parentID);
 		curPose = calcExplorationPose(env.lastKinectPoseViewsphere,i);
+
 		// If kinect pose if above the table, then proceed in that direction
 		if (checkValidPose(curPose) == true && checkIfNewPose(home.path,curPose) == true){
 			// Saving the direction and path taken
-			explorerTemp.direction = i;
-			explorerTemp.path = home.path;
-			explorerTemp.path.push_back(curPose);
-      explorerTemp.graspQuality = -1;
-      explorerTemp.ptCldRes.clear();
+			temp.direction = i;
+			temp.path = home.path;
+			temp.path.push_back(curPose);
 
 			// Doing a pass and saving the child
-			singlePass(env, curPose, false);
-			success = (env.selectedGrasp != -1);
-			int child = env.saveConfiguration("P" + std::to_string(explorerTemp.parentID) + "D" + std::to_string(i));
-			explorerTemp.childID = child;
+			singlePass(env, curPose, false, true);
+			temp.success = (env.selectedGrasp != -1);
+			temp.childID = env.saveConfiguration(env.configurations[temp.parentID].description+"_C"+std::to_string(i));
 
 			// Exit the loop and updating variables used for visualization
-			if(success == true){
-				explorerTemp.graspQuality = env.graspsPossible[env.selectedGrasp].quality;
+			if(temp.success == true){
+				temp.graspQuality = env.graspsPossible[env.selectedGrasp].quality;
 				env.updateGripper(env.selectedGrasp,0);
-				explorerTemp.ptCldRes = *env.ptrPtCldEnv + *env.ptrPtCldGripper;
-			}
+				temp.env = *env.ptrPtCldEnv + *env.ptrPtCldGripper;
+			}else{
+        temp.graspQuality = -1;
+        temp.env = *env.ptrPtCldEnv;
+      }
 
-			opRecord.push_back(explorerTemp);
+			opOneStep.push_back(temp);
 		}
 	}
-	return(success);
+	return(temp.success);
 }
 
 // Explore a max of "nSteps" random steps from the home/parent position
 // Configurations not saved
-bool exploreRdmStepOneDir(environment &env, explorer &home, int nSteps, explorer &opExp){
-  bool success = false;
+bool exploreRdmStep(environment &env, RouteData &home, int nSteps, RouteData &opData){
+
 	std::vector<double> curPose;
 
   // Sanity check
-  if (home.graspQuality != -1) printf("ERROR exploreOneStepAllDir: Starting with a successful grasp.\n");
-
-	// Saving the home configuration
-	opExp.parentID = home.childID;
-  if (opExp.parentID == -1) {
-    printf("ERROR exploreOneStepAllDir: Invalid parent ID.\n");
-    return(success);
+  if(home.childID == -1 || home.success == true){
+    printf("ERROR exploreRdmStep: Invalid child ID / Grasp already found.\n");
+    return(false);
   }
-  opExp.direction = home.direction;
-  opExp.path = home.path;
-  opExp.childID = -1;
-  opExp.graspQuality = -1;
-  opExp.ptCldRes.clear();
+
+	opData.parentID = home.childID;
+  opData.direction = home.direction;
+  opData.path = home.path;
 
   // Rollback to the parent/home configuration
-  env.rollbackConfiguration(opExp.parentID);
+  env.rollbackConfiguration(opData.parentID);
 
-  srand (time(NULL)); // Randoming the seed used for rand generation
+  srand(time(NULL)); // Randoming the seed used for rand generation
 
+  opData.success = false;
   // Going taking a max of nSteps from thoe parent position
-	for (int i = 1; i <= nSteps && success == false; i++){
+	for (int i = 1; i <= nSteps && opData.success == false; i++){
     // Do until the pose is valid
     do{
-      int dir = rand() % ((8-1)+1) + 1;
-      curPose = calcExplorationPose(env.lastKinectPoseViewsphere,dir);
-    }while(checkValidPose(curPose) != true || checkIfNewPose(opExp.path,curPose) != true);
+      curPose = calcExplorationPose(env.lastKinectPoseViewsphere,rand()%((8-1)+1)+1);
+    }while(checkValidPose(curPose) != true || checkIfNewPose(opData.path,curPose) != true);
 
 	  // Saving path taken
-		opExp.path.push_back(curPose);
+		opData.path.push_back(curPose);
 
 		// Doing a pass
-		singlePass(env, curPose, false);
-		success = (env.selectedGrasp != -1);
+		singlePass(env, curPose, false, true);
+		opData.success = (env.selectedGrasp != -1);
 
 		// Updating variables used for visualization
-		if(success == true){
-			opExp.graspQuality = env.graspsPossible[env.selectedGrasp].quality;
+		if(opData.success == true){
+			opData.graspQuality = env.graspsPossible[env.selectedGrasp].quality;
 			env.updateGripper(env.selectedGrasp,0);
-			opExp.ptCldRes = *env.ptrPtCldEnv + *env.ptrPtCldGripper;
+			opData.env = *env.ptrPtCldEnv + *env.ptrPtCldGripper;
 		}
 	}
-  return(success);
+  return(opData.success);
 }
 
-void generateData(environment &kinectControl, int object, std::string dir, std::string saveLocation){
+// Generating the home poses from which we need to search
+void genHomePoses(environment &env, std::vector<double> &stPose, int step, std::vector<RouteData> &opHomePoses){
+  if (step < 1 || step >3){
+    printf("WARNING genHomePoses: Invalid step. Step set to 1.\n");
+    step = 1;
+  }
+  std::vector<double> newPose;
+  RouteData temp; temp.reset();
+  if(step == 1){
+    temp.path = {stPose};
+    temp.type = 1;
+    singlePass(env, stPose, true, true);
+    temp.success = (env.selectedGrasp != -1);
+    temp.obj = *env.ptrPtCldObject;
+    temp.unexp = *env.ptrPtCldUnexp;
+    temp.childID = env.saveConfiguration("Home_0");
+    if(temp.success == true){
+      temp.goodInitialGrasp = true;
+      temp.graspQuality = env.graspsPossible[env.selectedGrasp].quality;
+      env.updateGripper(env.selectedGrasp,0);
+      temp.env = *env.ptrPtCldEnv + *env.ptrPtCldGripper;
+    }
+    else{
+      temp.goodInitialGrasp = false;
+      temp.env = *env.ptrPtCldEnv;
+    }
+    opHomePoses.push_back(temp);
+  }else if(step == 2){
+    temp.type = 2;
+    singlePass(env, stPose, true, false);
+    int homeID = env.saveConfiguration("Home_0");
+    for (int i = 1; i <= 8; i++){
+  		newPose = calcExplorationPose(stPose,i);
+      if(checkValidPose(newPose) == true){
+        temp.path = {stPose,newPose};
+        singlePass(env, newPose, false, true);
+        temp.success = (env.selectedGrasp != -1);\
+        temp.obj = *env.ptrPtCldObject;
+        temp.unexp = *env.ptrPtCldUnexp;
+        temp.childID = env.saveConfiguration("Home_0_"+std::to_string(i));
+        if(temp.success == true){
+          temp.goodInitialGrasp = true;
+          temp.graspQuality = env.graspsPossible[env.selectedGrasp].quality;
+          env.updateGripper(env.selectedGrasp,0);
+          temp.env = *env.ptrPtCldEnv + *env.ptrPtCldGripper;
+        }
+        else{
+          temp.goodInitialGrasp = false;
+          temp.env = *env.ptrPtCldEnv;
+        }
+        opHomePoses.push_back(temp);
+      }
+      env.rollbackConfiguration(homeID);
+    }
+  }else if(step == 3){
+
+  }
+}
+
+// Function the generate the daa for training
+void generateData(environment &kinectControl, int object, int homeType, std::string dir, std::string saveLocation){
+
 	fstream fout;
  	fout.open(dir+saveLocation, ios::out | ios::app);
 
- 	RouteData currentRoute;
- 	currentRoute.objType= kinectControl.objectDict[object][1];
-
   kinectControl.spawnObject(object,0,0);
 
-	ptCldVis::Ptr viewer;
-	if(visualize) viewer = initRGBViewer();
+ 	std::vector<double> startPose = {1.4, 180*(M_PI/180.0), 45*(M_PI/180.0)};
 
- 	std::vector<double> targetPose;
-	bool success = false;
- 	double azimuthalAngle = 180;
- 	double polarAngle = 45;
-	int configID;
-	explorer expRes, expTemp1, expTemp2;
-	std::vector<explorer> expRec;
+  bool graspFound = false;
+	RouteData dataFinal, dataFinalTemp;
+	std::vector<RouteData> dataOneStep,dataHomePoses;
 
   int maxRndSteps = 5;
+  int nHomeConfigs = 0;
 
 	for (int currentPoseCode = 0; currentPoseCode < kinectControl.objectPosesDict[object].size(); currentPoseCode+=1){
 		for (int currentYaw = kinectControl.objectPosesYawLimits[object][0]; currentYaw < kinectControl.objectPosesYawLimits[object][1]; currentYaw+=MIN_ANGLE){
-        printf("*** Obj #%d : Pose #%d with Yaw %d ***\n",object+1,currentPoseCode+1,currentYaw);
-
-        expRes.reset(); expTemp1.reset(); expTemp2.reset();
-        expRec.clear();
-
+        printf("*** Obj #%d, Step #%d : Pose #%d/%d with Yaw %d ***\n",object+1,homeType,currentPoseCode+1,int(kinectControl.objectPosesDict[object].size()),currentYaw);
 				kinectControl.moveObject(object,currentPoseCode,currentYaw*(M_PI/180.0));
 
-				//Move kinect to position
-				targetPose = {1.4, azimuthalAngle*(M_PI/180.0), polarAngle*(M_PI/180.0)};
-				// currentRoute.kinectPose = targetPose;
-				currentRoute.objPose= {kinectControl.objectPosesDict[object][currentPoseCode][1],
-															 kinectControl.objectPosesDict[object][currentPoseCode][2],
-															 currentYaw*(M_PI/180.0)};
+        // Get the homes poses to collect data for based on the step count
+        dataHomePoses.clear();
+        genHomePoses(kinectControl,startPose,homeType,dataHomePoses);
+        nHomeConfigs = kinectControl.configurations.size();
 
-				expTemp1.direction = 0;
-				expTemp1.path = {targetPose};
+        for(int poses = 0; poses < dataHomePoses.size(); poses++){
+          dataFinal.reset();
 
-				// Do a pass for the starting position
-				singlePass(kinectControl, targetPose, true);
-				success = (kinectControl.selectedGrasp != -1);
-				configID = kinectControl.saveConfiguration("Base");
-				expTemp1.childID = configID;
-				expTemp1.ptCldRes = *kinectControl.ptrPtCldEnv;
+          printf("    Home #%d/%d... ",poses+1,int(dataHomePoses.size())); std::cout << std::flush;
+          graspFound = dataHomePoses[poses].success;
+          // If home pose has a successful grasp
+          if(graspFound == true) dataFinal = dataHomePoses[poses];
 
-				*currentRoute.obj = *kinectControl.ptrPtCldObject;
-				*currentRoute.unexp = *kinectControl.ptrPtCldUnexp;
+          // If we do not find a grasp at home, then check for one step in each direction
+          if(graspFound == false){
+            printf("8 Dir Search... "); std::cout << std::flush;
+            dataOneStep.clear();
+            graspFound = exploreOneStepAllDir(kinectControl,dataHomePoses[poses],dataOneStep);
+            if(graspFound == true) dataFinal = dataOneStep.back();
+          }
 
-        // If home position grasp is a success
-        if(success == true){
-          currentRoute.goodInitialGrasp = true;
-          expTemp1.graspQuality = kinectControl.graspsPossible[kinectControl.selectedGrasp].quality;
-    			kinectControl.updateGripper(kinectControl.selectedGrasp,0);
-    			expTemp1.ptCldRes = *kinectControl.ptrPtCldEnv + *kinectControl.ptrPtCldGripper;
-          expRes = expTemp1;
-        }
-				// If we do not find a grasp at home, then check for one step in each direction
-				if(success == false){
-					currentRoute.goodInitialGrasp = false;
-					success = exploreOneStepAllDir(kinectControl,expTemp1,expRec);
-					if(success == true) expRes = expRec.back();
-				}
-        // If we dont find a grasp after one step, then check using random searches
-        int rdmSearchCtr = 1;
-        while(success == false && rdmSearchCtr<=3){
-          if (rdmSearchCtr > 1) printf("Doing %d set of random searches.\n",rdmSearchCtr);
-          int nSteps = maxRndSteps*rdmSearchCtr;
-          for(int i = 0; i < expRec.size(); i++) {
-            bool successTemp;
-            successTemp = exploreRdmStepOneDir(kinectControl,expRec[i],nSteps,expTemp2);
-            if(successTemp == true){
-              success = successTemp;
-              // If its the first time entering this, then store this in expRes
-              if(expRes.path.size() == 0){
-                expRes = expTemp2;
+          // for (int j = 0; j < kinectControl.configurations.size(); j++){
+          //   printf("%d,%s\n",j,kinectControl.configurations[j].description.c_str());
+          // }
+
+          // If we dont find a grasp after one step, then check using random searches
+          for (int rdmSearchCtr = 1; rdmSearchCtr <= 3 && graspFound == false; rdmSearchCtr++){
+            printf("Random Search #%d... ",rdmSearchCtr); std::cout << std::flush;
+            int nSteps = maxRndSteps*rdmSearchCtr;
+            for(int i = 0; i < dataOneStep.size(); i++){
+              dataFinalTemp.reset();
+              bool graspFoundTemp = exploreRdmStep(kinectControl,dataOneStep[i],nSteps,dataFinalTemp);
+              if(graspFoundTemp == true){
+                graspFound = true;
+                // If its the first time entering this, then store this in expRes
+                if(dataFinal.path.size() == 0){
+                  dataFinal = dataFinalTemp;
+                }
+                // If not, check if current result is better than the previous result and update expRes
+                else if((dataFinalTemp.path.size() < dataFinal.path.size()) ||
+                        (dataFinalTemp.path.size() == dataFinal.path.size() &&
+                         dataFinalTemp.graspQuality > dataFinal.graspQuality)){
+                  dataFinal = dataFinalTemp;
+                }
+                // Update nSteps to speed up the process
+                nSteps = std::min(nSteps,int(dataFinal.path.size()-dataOneStep[i].path.size()));
+                // If nSteps goes to 1, then break as the shortest ahs been found
+                if(nSteps == 1) break;
               }
-              // If not, check if current result is better than the previous result and update expRes
-              else if((expTemp2.path.size() < expRes.path.size()) ||
-                      (expTemp2.path.size() == expRes.path.size() && expTemp2.graspQuality > expRes.graspQuality)){
-                expRes = expTemp2;
-              }
-              // Update nSteps to speed up the process
-              nSteps = std::min(nSteps,int(expRes.path.size())-2);
-              // If path length is 3 i.e 2 kinect movements then stop as its the best possible
-              if(expRes.path.size() == 3) break;
             }
           }
-          rdmSearchCtr++;
-        }
-        // If still no grasp found, probably need to try random search again
-        if(success == false){
-          printf("No grasp found still.\n");
-          expRes = expTemp1;
+
+          // If still no grasp found, good luck
+          if(graspFound == false){
+            printf("Not OK.\n");
+            dataFinal = dataHomePoses[poses]; // Storing dummy data
+          }
+
+          dataFinal.objType = kinectControl.objectDict[object][1];
+          dataFinal.objPose = {kinectControl.objectPosesDict[object][currentPoseCode][1],
+                               kinectControl.objectPosesDict[object][currentPoseCode][2],
+                               currentYaw*(M_PI/180.0)};
+          dataFinal.type = dataHomePoses[poses].type;
+          dataFinal.nSteps = dataFinal.path.size()-dataFinal.type;
+          dataFinal.obj = dataHomePoses[poses].obj;
+          dataFinal.unexp = dataHomePoses[poses].unexp;
+          dataFinal.filename = getCurTime();
+
+          if(graspFound == true) printf("OK. %d Steps\n",dataFinal.nSteps);
+
+          saveData(dataFinal, fout, dir);
+
+          kinectControl.configurations.resize(nHomeConfigs);
         }
 
-				currentRoute.direction = expRes.direction;
-				currentRoute.stepVector = expRes.path;
-				currentRoute.stepNumber = expRes.path.size();
-				currentRoute.graspQuality = expRes.graspQuality;
-				*currentRoute.env = expRes.ptCldRes;
-				currentRoute.filename = getCurTime();
-				saveData(currentRoute, fout, dir);
-
-				kinectControl.reset();
+        kinectControl.reset();
 			}
 		}
   kinectControl.deleteObject(object);
@@ -466,7 +492,7 @@ int main (int argc, char** argv){
 	std::string csvName = "_dataRec.csv";
 	std::cout << "Start Time : " << getCurTime() << std::endl;
   for (int i = 1; i < 2; i++) {
-    generateData(kinectControl, i, dir, time+csvName);
+    generateData(kinectControl, i, 2, dir, time+csvName);
     kinectControl.reset();
   }
 	std::cout << "End Time : " << getCurTime() << std::endl;

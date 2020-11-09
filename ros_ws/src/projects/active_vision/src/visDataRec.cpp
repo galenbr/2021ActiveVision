@@ -26,10 +26,10 @@ void keyboardEventOccurred(const pcl::visualization::KeyboardEvent &event){
 
 void help(){
   std::cout << "******* Recorded Data Visualizer Help *******" << std::endl;
-  std::cout << "Arguments : [Directory] [CSV filename] [Type]" << std::endl;
+  std::cout << "Arguments : [Directory] [CSV filename] [Visual]" << std::endl;
   std::cout << "Directory : Directory where csv and pcd files are there (./DataRecAV/)" << std::endl;
   std::cout << "CSV filename : CSV file name (Data.csv)" << std::endl;
-  std::cout << "Type : 1 (result.pcd only), 2 (obj,unexp,result.pcd)" << std::endl;
+  std::cout << "Visual : 1 (result.pcd only), 2 (obj,unexp,result.pcd)" << std::endl;
   std::cout << "*******" << std::endl;
 }
 
@@ -38,10 +38,10 @@ int main(int argc, char** argv){
     std::cout << "ERROR. Incorrect number of arguments." << std::endl;
     help(); return(-1);
   }
-  int type;
-  type = std::atoi(argv[3]);
-  if(type != 1 && type != 2){
-    std::cout << "ERROR. Incorrect type." << std::endl;
+  int visual;
+  visual = std::atoi(argv[3]);
+  if(visual != 1 && visual != 2){
+    std::cout << "ERROR. Incorrect visual." << std::endl;
     help(); return(-1);
   }
 
@@ -50,11 +50,12 @@ int main(int argc, char** argv){
   std::vector<std::vector<std::string>> data;
   data = readCSV(directory+csvFile);
 
+  int typeColID = 11;
   int pathColID = 12;
   int dirColID = 13;
   int nStepColID = 14;
   int stepColID = 15;
-  int nSteps;
+  int nSteps,type;
 
   std::vector<double> pose={0,0,0};
   pcl::PointXYZ sphereCentre;
@@ -66,9 +67,9 @@ int main(int argc, char** argv){
   // Setting up the point cloud visualizer
   ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
   int vp[3] = {};
-  if(type == 1){
+  if(visual == 1){
     viewer->createViewPort(0.0,0.0,1.0,1.0,vp[2]);
-  }else if(type == 2){
+  }else if(visual == 2){
     viewer->createViewPort(0.0,0.5,0.5,1.0,vp[0]);
     viewer->createViewPort(0.5,0.5,1.0,1.0,vp[1]);
     viewer->createViewPort(0.25,0.0,0.75,0.5,vp[2]);
@@ -82,7 +83,7 @@ int main(int argc, char** argv){
   int i = 0;
   while(::ok){
     if (pathColID <= data[i].size()){
-      if(type==2){
+      if(visual==2){
         readPointCloud(ptrPtCldTemp,directory,data[i][pathColID-1],1);
         rbgVis(viewer,ptrPtCldTemp,"Obj",vp[0]);
         readPointCloud(ptrPtCldTemp,directory,data[i][pathColID-1],2);
@@ -93,9 +94,10 @@ int main(int argc, char** argv){
       viewer->addText("Data No : "+std::to_string(i+1),5,5,25,1,0,0,"Data",vp[2]);
       viewer->addText("Direction : "+dirLookup[std::atoi(data[i][dirColID-1].c_str())],5,35,25,1,0,0,"Dir",vp[2]);
 
+      type = std::atoi(data[i][typeColID-1].c_str());
       nSteps = std::atoi(data[i][nStepColID-1].c_str());
       viewer->addText("nSteps : "+std::to_string(nSteps),5,65,25,1,0,0,"nSteps",vp[2]);
-      for (int j = stepColID; j < stepColID+(nSteps-1)*3; j+=3){
+      for (int j = stepColID; j < stepColID+(nSteps+type-1)*3; j+=3){
         pose[0] = std::atof(data[i][j-1].c_str());
         pose[1] = std::atof(data[i][j-1+1].c_str());
         pose[2] = std::atof(data[i][j-1+2].c_str());
@@ -113,14 +115,14 @@ int main(int argc, char** argv){
         viewer->addArrow(a2,a1,0,1,0,false,std::to_string(j),vp[2]);
       }
 
-      pose[0] = std::atof(data[i][stepColID-1].c_str());
-      pose[1] = std::atof(data[i][stepColID-1+1].c_str());
-      pose[2] = std::atof(data[i][stepColID-1+2].c_str());
+      pose[0] = std::atof(data[i][stepColID+(type-1)*3-1].c_str());
+      pose[1] = std::atof(data[i][stepColID+(type-1)*3-1+1].c_str());
+      pose[2] = std::atof(data[i][stepColID+(type-1)*3-1+2].c_str());
       a1.x = table.x+pose[0]*sin(pose[2])*cos(pose[1]);
       a1.y = table.y+pose[0]*sin(pose[2])*sin(pose[1]);
       a1.z = table.z+pose[0]*cos(pose[2]);
 
-      viewer->addSphere(a1,0.03,0,1,0,"Cam",vp[2]);
+      viewer->addSphere(a1,0.04,1,0,0,"Cam",vp[2]);
 
       int vCtr = 0;
       for (int azimuthalAngle = 0; azimuthalAngle < 360; azimuthalAngle+=10){

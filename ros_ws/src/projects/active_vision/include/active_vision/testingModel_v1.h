@@ -239,6 +239,6 @@ public:
 };
 
 // Function to do a single pass
-void singlePass(environment &av, std::vector<double> kinectPose, bool initial);
+void singlePass(environment &av, std::vector<double> kinectPose, bool firstTime, bool findGrasp);
 
 #endif

@@ -821,18 +821,17 @@ int environment::graspAndCollisionCheck(){
 // ******************** ENVIRONMENT CLASS FUNCTIONS END ********************
 
 // Function to do a single pass
-void singlePass(environment &av, std::vector<double> kinectPose, bool initial){
+void singlePass(environment &av, std::vector<double> kinectPose, bool firstTime, bool findGrasp){
   av.moveKinectViewsphere(kinectPose);
   av.readKinect();
   av.fuseLastData();
   av.dataExtract();
-  if (initial == true){
-    av.genUnexploredPtCld();
-  }
+  if (firstTime == true) av.genUnexploredPtCld();
   av.updateUnexploredPtCld();
-  av.graspAndCollisionCheck();
-  // av.graspsynthesis();
-  // av.collisionCheck();
+  if (findGrasp == true){
+    av.graspAndCollisionCheck();
+    // av.graspsynthesis(); av.collisionCheck();
+  }
 }
 
 // ******************** SET OF FUNCTIONS FOR TESTING ********************
@@ -1571,7 +1570,7 @@ void testSavePCD(environment &av, int objID){
                                                   {1.4,M_PI/2,M_PI/3}};
 
   for(int i = 0; i < 4; i++){
-    singlePass(av, kinectPoses[i], i==0);
+    singlePass(av, kinectPoses[i], i==0, true);
     time = getCurTime();
     savePointCloud(av.ptrPtCldObject,dir,time,1);
     savePointCloud(av.ptrPtCldUnexp,dir,time,2);
