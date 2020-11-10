@@ -18,6 +18,8 @@ void keyboardEventOccurred(const pcl::visualization::KeyboardEvent &event){
     ::counter = 0;
     if(event.getKeySym() == "Right") ::counter = 1;
     else if(event.getKeySym() == "Left") ::counter = -1;
+    else if(event.getKeySym() == "period") ::counter = 10;
+    else if(event.getKeySym() == "comma") ::counter = -10;
     else if(event.getKeySym() == "Escape") ::ok = false;
     else if(event.getKeySym() == "z") ::skipTo = true;
     ::called = true;
@@ -78,7 +80,11 @@ int main(int argc, char** argv){
   viewer->setCameraPosition(-2,0,7,2,0,-1,1,0,2);
   viewer->registerKeyboardCallback(keyboardEventOccurred);
 
-  std::cout << "***Key Bindings***\n \u2192 , \u2190 : Move between data \n z : Goto a data number \n Esc : Exit." << std::endl;
+  std::cout << "***Key Bindings***" << std::endl;
+  std::cout << "\u2192 , \u2190 : Move between data (-1,+1)" << std::endl;
+  std::cout << "\',\' , \'.\' : Move between data (-10,+10)" << std::endl;
+  std::cout << "z : Goto a data number" << std::endl;
+  std::cout << "Esc : Exit" << std::endl;
 
   int i = 0;
   while(::ok){
@@ -97,6 +103,7 @@ int main(int argc, char** argv){
       type = std::atoi(data[i][typeColID-1].c_str());
       nSteps = std::atoi(data[i][nStepColID-1].c_str());
       viewer->addText("nSteps : "+std::to_string(nSteps),5,65,25,1,0,0,"nSteps",vp[2]);
+      viewer->addText("Data for step : "+std::to_string(type),5,95,25,1,0,0,"type",vp[2]);
       for (int j = stepColID; j < stepColID+(nSteps+type-1)*3; j+=3){
         pose[0] = std::atof(data[i][j-1].c_str());
         pose[1] = std::atof(data[i][j-1+1].c_str());
@@ -112,7 +119,11 @@ int main(int argc, char** argv){
         a2.y = table.y+pose[0]*sin(pose[2])*sin(pose[1]);
         a2.z = table.z+pose[0]*cos(pose[2]);
 
-        viewer->addArrow(a2,a1,0,1,0,false,std::to_string(j),vp[2]);
+        if(j-1 < stepColID+(type-1)*3-1){
+          viewer->addArrow(a2,a1,1,0,0,false,std::to_string(j),vp[2]);
+        }else{
+          viewer->addArrow(a2,a1,0,1,0,false,std::to_string(j),vp[2]);
+        }
       }
 
       pose[0] = std::atof(data[i][stepColID+(type-1)*3-1].c_str());
@@ -131,7 +142,7 @@ int main(int argc, char** argv){
           a1.y = table.y+pose[0]*sin(polarAngle*(M_PI/180.0))*sin(azimuthalAngle*(M_PI/180.0));
           a1.z = table.z+pose[0]*cos(polarAngle*(M_PI/180.0));
           vCtr++;
-          viewer->addSphere(a1,0.02,0,0,1,"Sph_"+std::to_string(vCtr),vp[2]);
+          viewer->addSphere(a1,0.02,0,0,0.75,"Sph_"+std::to_string(vCtr),vp[2]);
         }
       }
       viewer->addSphere(table,pose[0],0,0,1,"Viewsphere",vp[2]);
