@@ -91,7 +91,7 @@ Eigen::Vector3f getTranslation(const Eigen::Affine3f& tf);
 class environment{
 private:
   ros::Rate r{10};                      // ROS sleep rate
-  ros::Publisher pubKinectPose;         // Publisher : Kinect pose
+  ros::Publisher pubObjPose;            // Publisher : Kinect/Objects pose
   ros::Subscriber subKinectPtCld;       // Subscriber : Kinect pointcloud
   ros::ServiceClient gazeboSpawnModel;  // Service : Spawn Model
   ros::ServiceClient gazeboDeleteModel; // Service : Delete Model
@@ -130,6 +130,7 @@ public:
 
   // PtCld: Unexplored point cloud
   ptCldColor::Ptr ptrPtCldUnexp{new ptCldColor};     ptCldColor::ConstPtr cPtrPtCldUnexp{ptrPtCldUnexp};
+  ptCldColor::Ptr ptrPtCldCollCheck{new ptCldColor}; ptCldColor::ConstPtr cPtrPtCldCollCheck{ptrPtCldCollCheck};
 
   // PtCld: Gripper related
   ptCldColor::Ptr ptrPtCldGrpHnd{new ptCldColor};    ptCldColor::ConstPtr cPtrPtCldGrpHnd{ptrPtCldGrpHnd};
@@ -159,6 +160,7 @@ public:
 
   std::vector<std::vector<std::string>> objectDict; // List of objects which can be spawned
   std::vector<std::vector<std::vector<double>>> objectPosesDict; //Stable object poses
+  std::vector<std::vector<double>> objectPosesYawLimits;         //Yaw limits for the objects
   double voxelGridSize;                             // Voxel Grid size for environment
   double voxelGridSizeUnexp;                        // Voxel Grid size for unexplored point cloud
   std::vector<double> tableCentre;                  // Co-ordinates of table centre
@@ -182,8 +184,11 @@ public:
   // 1A: Callback function to point cloud subscriber
   void cbPtCld (const ptCldColor::ConstPtr& msg);
 
-  // 2: Spawning objects in gazebo on the table centre for a given pose option and yaw
+  // 2A: Spawning objects in gazebo on the table centre for a given pose option and yaw
   void spawnObject(int objectID, int choice, float yaw);
+
+  // 2B: Function to move the object. Same args as spawnObject
+  void moveObject(int objectID, int choice, float yaw);
 
   // 3: Deleting objects in gazebo
   void deleteObject(int objectID);
@@ -235,6 +240,6 @@ public:
 };
 
 // Function to do a single pass
-void singlePass(environment &av, std::vector<double> kinectPose, bool initial);
+void singlePass(environment &av, std::vector<double> kinectPose, bool firstTime, bool findGrasp);
 
 #endif

@@ -56,7 +56,7 @@ Eigen::Vector3f getTranslation(const Eigen::Affine3f& tf){
 // Environment class constructor
 environment::environment(ros::NodeHandle *nh){
 
-  pubKinectPose = nh->advertise<gazebo_msgs::ModelState> ("/gazebo/set_model_state", 1);
+  pubObjPose = nh->advertise<gazebo_msgs::ModelState> ("/gazebo/set_model_state", 1);
   subKinectPtCld = nh->subscribe ("/camera/depth/points", 1, &environment::cbPtCld, this);
   // NOT USED (JUST FOR REFERENCE)
   /*subKinectRGB = nh->subscribe ("/camera/color/image_raw", 1, &environment::cbImgRgb, this);
@@ -97,8 +97,10 @@ environment::environment(ros::NodeHandle *nh){
                      {{0.015,0.000,0.000}},
                      {{0.022,0.000,0.000}}};
 
+  objectPosesYawLimits = {{0,359},{0,89},{0,89},{0,1},{0,1},{0,1},{0,1}};
+
   voxelGridSize = 0.01;          // Voxel Grid size for environment
-  voxelGridSizeUnexp = 0.01;     // Voxel Grid size for unexplored point cloud
+  voxelGridSizeUnexp = 0.015;    // Voxel Grid size for unexplored point cloud
   tableCentre = {1.5,0,1};       // Co-ordinates of table centre
   scale = 3;                     // Scale value for unexplored point cloud generation
   maxGripperWidth = 0.075;       // Gripper max width (Actual is 8 cm)
@@ -158,30 +160,18 @@ void cbImgDepth (const sensor_msgs::ImageConstPtr& msg){
   }
 }*/
 
-// 2: Spawning objects in gazebo on the table centre for a given pose option and yaw
+// 2A: Spawning objects in gazebo on the table centre for a given pose option and yaw
 void environment::spawnObject(int objectID, int choice, float yaw){
   gazebo_msgs::SpawnModel spawnObj;
   geometry_msgs::Pose pose;
 
-  if(choice >= objectPosesDict[objectID].size()){
-    choice = 0;
-    printf("Object spawn warning: Pose choice invalid. Setting choice to 0.\n");
-  }
-  //Create Matrix3x3 from Euler Angles
-  tf::Matrix3x3 m_rot;
-  m_rot.setEulerYPR(yaw, objectPosesDict[objectID][choice][2], objectPosesDict[objectID][choice][1]);
-
-  // Convert into quaternion
-  tf::Quaternion quat;
-  m_rot.getRotation(quat);
-
-  pose.position.x = tableCentre[0];
-  pose.position.y = tableCentre[1];
-  pose.position.z = tableCentre[2]+objectPosesDict[objectID][choice][0];
-  pose.orientation.x = quat.x();
-  pose.orientation.y = quat.y();
-  pose.orientation.z = quat.z();
-  pose.orientation.w = quat.w();
+  pose.position.x = 0;
+  pose.position.y = 0;
+  pose.position.z = objectPosesDict[objectID][0][0];
+  pose.orientation.x = 0;
+  pose.orientation.y = 0;
+  pose.orientation.z = 0;
+  pose.orientation.w = 1;
 
   spawnObj.request.model_name = objectDict[objectID][1];
 
@@ -194,8 +184,42 @@ void environment::spawnObject(int objectID, int choice, float yaw){
   spawnObj.request.initial_pose = pose;
 
   gazeboSpawnModel.call(spawnObj);
+  boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
+  moveObject(objectID,choice,yaw);
+}
 
-  boost::this_thread::sleep(boost::posix_time::milliseconds(1500));
+// 2B: Function to move the object. Same args as spawnObject
+void environment::moveObject(int objectID, int choice, float yaw){
+
+  if(choice >= objectPosesDict[objectID].size()){
+    choice = 0;
+    printf("WARNING moveObject: Pose choice invalid. Setting choice to 0.\n");
+  }
+
+  //Create Matrix3x3 from Euler Angles
+  tf::Matrix3x3 m_rot;
+  m_rot.setEulerYPR(yaw, objectPosesDict[objectID][choice][2], objectPosesDict[objectID][choice][1]);
+
+  // Convert into quaternion
+  tf::Quaternion quat;
+  m_rot.getRotation(quat);
+
+  // Converting it to the required gazebo format
+  gazebo_msgs::ModelState ModelState;
+  ModelState.model_name = objectDict[objectID][1];
+  ModelState.reference_frame = "world";
+  ModelState.pose.position.x = tableCentre[0];
+  ModelState.pose.position.y = tableCentre[1];
+  ModelState.pose.position.z = tableCentre[2]+objectPosesDict[objectID][choice][0];
+  ModelState.pose.orientation.x = quat.x();
+  ModelState.pose.orientation.y = quat.y();
+  ModelState.pose.orientation.z = quat.z();
+  ModelState.pose.orientation.w = quat.w();
+
+  // Publishing it to gazebo
+  pubObjPose.publish(ModelState);
+  ros::spinOnce();
+  boost::this_thread::sleep(boost::posix_time::milliseconds(500));
 }
 
 // 3: Deleting objects in gazebo
@@ -309,7 +333,7 @@ void environment::moveKinectCartesian(std::vector<double> pose){
   ModelState.pose.orientation.w = quat.w();
 
   // Publishing it to gazebo
-  pubKinectPose.publish(ModelState);
+  pubObjPose.publish(ModelState);
   ros::spinOnce();
   boost::this_thread::sleep(boost::posix_time::milliseconds(250));
 
@@ -343,7 +367,7 @@ void environment::moveKinectViewsphere(std::vector<double> pose){
   ModelState.pose.orientation.w = quat.w();
 
   // Publishing it to gazebo
-  pubKinectPose.publish(ModelState);
+  pubObjPose.publish(ModelState);
   ros::spinOnce();
   boost::this_thread::sleep(boost::posix_time::milliseconds(250));
 
@@ -456,7 +480,7 @@ void environment::dataExtract(){
 
 // 10: Generating unexplored point cloud
 void environment::genUnexploredPtCld(){
-  if (ptrPtCldUnexp->width != 0){
+  if(ptrPtCldUnexp->width != 0){
     std::cerr << "Unexplored point cloud already created. Not creating new one." << std::endl;
     return;
   }
@@ -464,35 +488,24 @@ void environment::genUnexploredPtCld(){
   // Setting the min and max limits based on the object dimension and scale.
   // Min of 0.25m on each side
   // Note: Z scale is only used on +z axis
-  minUnexp.push_back(minPtObj.x-std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.25f));
-  minUnexp.push_back(minPtObj.y-std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.25f));
+  minUnexp.push_back(minPtObj.x-std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.40f));
+  minUnexp.push_back(minPtObj.y-std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.40f));
   minUnexp.push_back(minPtObj.z-0.02);
-  maxUnexp.push_back(maxPtObj.x+std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.25f));
-  maxUnexp.push_back(maxPtObj.y+std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.25f));
+  maxUnexp.push_back(maxPtObj.x+std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.40f));
+  maxUnexp.push_back(maxPtObj.y+std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.40f));
   maxUnexp.push_back(maxPtObj.z+std::max((scale-1)*(maxPtObj.z-minPtObj.z)/2,0.25f));
 
-  // Considering a point for every 1 cm and then downsampling it
-  float nPts = (maxUnexp[0]-minUnexp[0])*(maxUnexp[1]-minUnexp[1])*(maxUnexp[2]-minUnexp[2])*1000000;
-  // std::cout << minUnexp[0] << " " << minUnexp[1] << " " << minUnexp[2] << std::endl;
-  // std::cout << maxUnexp[0] << " " << maxUnexp[1] << " " << maxUnexp[2] << std::endl;
-
-  pcl::common::CloudGenerator<pcl::PointXYZRGB, pcl::common::UniformGenerator<float>> generator;
-  std::uint32_t seed = static_cast<std::uint32_t> (time (nullptr));
-  pcl::common::UniformGenerator<float>::Parameters x_params(minUnexp[0], maxUnexp[0], seed++);
-  generator.setParametersForX(x_params);
-  pcl::common::UniformGenerator<float>::Parameters y_params(minUnexp[1], maxUnexp[1], seed++);;
-  generator.setParametersForY(y_params);
-  pcl::common::UniformGenerator<float>::Parameters z_params(minUnexp[2], maxUnexp[2], seed++);;
-  generator.setParametersForZ(z_params);
-  int result = generator.fill(int(nPts), 1, *ptrPtCldUnexp);
-  if (result != 0) {
-    std::cerr << "Error creating unexplored point cloud." << std::endl;
-    return;
+  pcl::PointXYZRGB ptTemp;
+  for(float x = minUnexp[0]; x < maxUnexp[0]; x+=voxelGridSizeUnexp){
+    for(float y = minUnexp[1]; y < maxUnexp[1]; y+=voxelGridSizeUnexp){
+      for(float z = minUnexp[2]; z < maxUnexp[2]; z+=voxelGridSizeUnexp){
+        ptTemp.x = x; ptTemp.y = y; ptTemp.z = z;
+        ptrPtCldUnexp->points.push_back(ptTemp);
+      }
+    }
   }
-
-  voxelGrid.setInputCloud(cPtrPtCldUnexp);
-  voxelGrid.setLeafSize(voxelGridSizeUnexp, voxelGridSizeUnexp, voxelGridSizeUnexp);
-  voxelGrid.filter(*ptrPtCldUnexp);
+  ptrPtCldUnexp->width = ptrPtCldUnexp->points.size();
+  ptrPtCldUnexp->height = 1;
 }
 
 // 11: Updating the unexplored point cloud
@@ -647,7 +660,8 @@ void environment::findGripperPose(int index){
 // 14: Collision check for gripper and unexplored point cloud
 void environment::collisionCheck(){
   ptrPtCldCollided->clear();    // Reset the collision cloud
-  cpBox.setInputCloud(ptrPtCldUnexp);
+  *ptrPtCldCollCheck = *ptrPtCldUnexp + *ptrPtCldObject;
+  cpBox.setInputCloud(ptrPtCldCollCheck);
 
   bool stop = false;
   int nOrientations = 8;
@@ -797,18 +811,17 @@ int environment::graspAndCollisionCheck(){
 // ******************** ENVIRONMENT CLASS FUNCTIONS END ********************
 
 // Function to do a single pass
-void singlePass(environment &av, std::vector<double> kinectPose, bool initial){
+void singlePass(environment &av, std::vector<double> kinectPose, bool firstTime, bool findGrasp){
   av.moveKinectViewsphere(kinectPose);
   av.readKinect();
   av.fuseLastData();
   av.dataExtract();
-  if (initial == true){
-    av.genUnexploredPtCld();
-  }
+  if (firstTime == true) av.genUnexploredPtCld();
   av.updateUnexploredPtCld();
-  av.graspAndCollisionCheck();
-  // av.graspsynthesis();
-  // av.collisionCheck();
+  if (findGrasp == true){
+    av.graspAndCollisionCheck();
+    // av.graspsynthesis(); av.collisionCheck();
+  }
 }
 
 // ******************** SET OF FUNCTIONS FOR TESTING ********************
@@ -1367,18 +1380,12 @@ void testComplete(environment &av, int objID, int nVp, int graspMode, int flag, 
     viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
 
     rbgVis(viewer,av.ptrPtCldEnv,"Environment",vp[0]);
-
-    for (int i = 0; i < av.ptrPtCldObject->size(); i++) {
-      av.ptrPtCldObject->points[i].r = 0;
-      av.ptrPtCldObject->points[i].b = 200;
-      av.ptrPtCldObject->points[i].g = 0;
-    }
     rbgVis(viewer,av.ptrPtCldObject,"Object",vp[1]);
     // rbgNormalVis(viewer,av.ptrPtCldObject,av.ptrObjNormal,"Object",vp[1]);
 
     for (int i = 0; i < av.ptrPtCldUnexp->size(); i++) {
-      av.ptrPtCldUnexp->points[i].r = 200;
-      av.ptrPtCldUnexp->points[i].b = 0;
+      av.ptrPtCldUnexp->points[i].r = 0;
+      av.ptrPtCldUnexp->points[i].b = 200;
       av.ptrPtCldUnexp->points[i].g = 0;
     }
     rbgVis(viewer,av.ptrPtCldUnexp,"Unexplored",vp[1]);
@@ -1439,18 +1446,12 @@ void testSaveRollback(environment &av, int objID, int flag){
     viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
 
     rbgVis(viewer,av.ptrPtCldEnv,"Environment",vp[0]);
-
-    for (int i = 0; i < av.ptrPtCldObject->size(); i++) {
-      av.ptrPtCldObject->points[i].r = 0;
-      av.ptrPtCldObject->points[i].b = 200;
-      av.ptrPtCldObject->points[i].g = 0;
-    }
     rbgVis(viewer,av.ptrPtCldObject,"Object",vp[1]);
     // rbgNormalVis(viewer,av.ptrPtCldObject,av.ptrObjNormal,"Object",vp[1]);
 
     for (int i = 0; i < av.ptrPtCldUnexp->size(); i++) {
-      av.ptrPtCldUnexp->points[i].r = 200;
-      av.ptrPtCldUnexp->points[i].b = 0;
+      av.ptrPtCldUnexp->points[i].r = 0;
+      av.ptrPtCldUnexp->points[i].b = 200;
       av.ptrPtCldUnexp->points[i].g = 0;
     }
     rbgVis(viewer,av.ptrPtCldUnexp,"Unexplored",vp[1]);
@@ -1497,18 +1498,12 @@ void testSaveRollback(environment &av, int objID, int flag){
       // viewer->removeAllPointClouds(vp[1]);
 
       rbgVis(viewer,av.ptrPtCldEnv,"Environment",vp[0]);
-
-      for (int i = 0; i < av.ptrPtCldObject->size(); i++) {
-        av.ptrPtCldObject->points[i].r = 0;
-        av.ptrPtCldObject->points[i].b = 200;
-        av.ptrPtCldObject->points[i].g = 0;
-      }
       rbgVis(viewer,av.ptrPtCldObject,"Object",vp[1]);
       // rbgNormalVis(viewer,av.ptrPtCldObject,av.ptrObjNormal,"Object",vp[1]);
 
       for (int i = 0; i < av.ptrPtCldUnexp->size(); i++) {
-        av.ptrPtCldUnexp->points[i].r = 200;
-        av.ptrPtCldUnexp->points[i].b = 0;
+        av.ptrPtCldUnexp->points[i].r = 0;
+        av.ptrPtCldUnexp->points[i].b = 200;
         av.ptrPtCldUnexp->points[i].g = 0;
       }
       rbgVis(viewer,av.ptrPtCldUnexp,"Unexplored",vp[1]);
@@ -1547,7 +1542,7 @@ void testSavePCD(environment &av, int objID){
                                                   {1.4,M_PI/2,M_PI/3}};
 
   for(int i = 0; i < 4; i++){
-    singlePass(av, kinectPoses[i], i==0);
+    singlePass(av, kinectPoses[i], i==0, true);
     time = getCurTime();
     savePointCloud(av.ptrPtCldObject,dir,time,1);
     savePointCloud(av.ptrPtCldUnexp,dir,time,2);

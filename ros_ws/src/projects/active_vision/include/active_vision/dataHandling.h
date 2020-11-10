@@ -22,19 +22,32 @@ typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
 
 void test();
 
-struct RouteData {
-  ptCldColor::Ptr obj{new ptCldColor};
-  ptCldColor::Ptr unexp{new ptCldColor};
-  ptCldColor::Ptr env{new ptCldColor};
+struct RouteData{
+  int parentID{-1};
+  int childID{-1};
+  ptCldColor obj,unexp,env;
   std::string objType;
   std::vector<double> objPose;
-  std::vector<double> kinectPose;
-  bool goodInitialGrasp;
-  float graspQuality;
-  int stepNumber;
-  int direction;
+  bool goodInitialGrasp{false};
+  bool success{false};
+  float graspQuality{-1};
+  int nSteps{0};
+  std::vector<std::vector<double>> path;
+  int direction{-1};
+  int type{0};
   std::string filename;
-  std::vector<std::vector<double>> stepVector;
+
+  void reset(){
+    parentID = -1; childID = -1;
+    obj.clear();unexp.clear();env.clear();
+    objType.clear(); objPose.clear();
+    goodInitialGrasp = false; success = false;
+    graspQuality = -1;
+    nSteps = 0; path.clear();
+    direction = -1;
+    type = 0;
+    filename.clear();
+  }
 };
 
 int getDirection(std::vector<double> &start, std::vector<double> &end, int minAngle);

@@ -104,7 +104,7 @@ void help(){
 int main(int argc, char** argv){
   help();
 
-  std::vector<double> pose={1.4,M_PI,30*M_PI/180};
+  std::vector<double> pose={1.4,M_PI,45*M_PI/180};
   std::vector<double> temp=pose;
   std::vector<double> currPose=pose;
   pcl::PointXYZ table,a1;
@@ -120,8 +120,8 @@ int main(int argc, char** argv){
 
   // Adding possible viewspheres
   int vCtr = 0;
-  for (int azimuthalAngle = 0; azimuthalAngle < 360; azimuthalAngle+=20){
-    for (int polarAngle = 10; polarAngle <= 90; polarAngle+=20){
+  for (int azimuthalAngle = 0; azimuthalAngle < 360; azimuthalAngle+=10){
+    for (int polarAngle = 5; polarAngle <= 90; polarAngle+=10){
       temp[1] = azimuthalAngle*M_PI/180; temp[2] = polarAngle*M_PI/180;
       a1 = sphericalToCartesian(table,temp);
       viewer->addSphere(a1,0.02,0,0,1,"Sph_"+std::to_string(vCtr),vp); vCtr++;

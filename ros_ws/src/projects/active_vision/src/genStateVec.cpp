@@ -145,9 +145,9 @@ int main(int argc, char** argv){
   std::vector<std::vector<std::string>> data;
   data = readCSV(directory+csvFile);
 
-  int kinColID = 5;
-  int dirColID = 11;
   int pathColID = 12;
+  int dirColID = 13;
+  int kinColID = 15;
 
   int gridDim = 5;
   ptCldColor::Ptr ptrPtCldObj{new ptCldColor};
@@ -155,6 +155,7 @@ int main(int argc, char** argv){
   std::vector<double> kinViewsphere = {0,0,0};
   std::vector<float> stateVec;
 
+  printf("Number of rows in the input file = %d\n",int(data.size()));
   for(int i = 0; i < data.size(); i++){
     // Generate State Vector only if direction is not 0
     if(std::atoi(data[i][dirColID-1].c_str()) != 0){
@@ -172,5 +173,5 @@ int main(int argc, char** argv){
     }
   }
   fout.close();
-  std::cout << "State Vector saved to " << directory+newCsvFile << ".\n";
+  std::cout << "State Vectors saved to " << directory+newCsvFile << ".\n";
 }

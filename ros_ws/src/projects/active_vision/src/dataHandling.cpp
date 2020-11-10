@@ -7,40 +7,46 @@ void test(){
 void printRouteData(RouteData &in){
 	std::cout << in.objType << std::endl;
 	printf("(%1.2f, %1.2f, %1.2f)\n", in.objPose[0], in.objPose[1], in.objPose[2]);
-	printf("(%1.2f, %1.2f, %1.2f)\n", in.kinectPose[0], in.kinectPose[1], in.kinectPose[2]);
 	printf("%1.2f\n", in.graspQuality);
-	printf("Steps taken = %d\n", in.stepNumber);
-	if(in.stepVector.size() > 1){
+	printf("Steps taken = %d\n", in.nSteps);
+	if(in.path.size() > 1){
 		printf("Direction = %d\n", in.direction);
 		printf("Step Path:\n");
-		for(int i=0; i < in.stepVector.size(); i++){
-			printf("(%1.2f, %1.2f, %1.2f)->", in.stepVector[i][0], in.stepVector[i][1], in.stepVector[i][2]);
+		for(int i=0; i < in.path.size(); i++){
+			printf("(%1.2f, %1.2f, %1.2f)->", in.path[i][0], in.path[i][1], in.path[i][2]);
 		}
 		printf("\n");
 	}
 }
 
 void saveData(RouteData &in, std::fstream &saveTo, std::string &dir){
+	// Saving with some blank spaces to add information later if needed
 	saveTo  << in.objType << ","
 			<< in.objPose[0] << "," << in.objPose[1] << "," << in.objPose[2] << ","
-			<< in.kinectPose[0] << "," << in.kinectPose[1] << "," << in.kinectPose[2] << ","
 			<< in.goodInitialGrasp << ","
 			<< in.graspQuality << ","
-			<< in.stepNumber << ","
+			<< "dummy"<< ","
+			<< "dummy"<< ","
+			<< "dummy"<< ","
+			<< "dummy"<< ","
+			<< in.type << ","
+			<< in.filename << ","
 			<< in.direction << ","
-			<< in.filename << ",";
+			<< in.nSteps << ",";
 
-	for(int i=0; i < in.stepVector.size(); i++){
-		saveTo << in.stepVector[i][0] << "," << in.stepVector[i][1] << "," << in.stepVector[i][2];
-		if(i+1 < in.stepVector.size()){
+	for(int i=0; i < in.path.size(); i++){
+		saveTo << in.path[i][0] << "," << in.path[i][1] << "," << in.path[i][2];
+		if(i+1 < in.path.size()){
 			saveTo << ",";
 		} else {
 			saveTo << "\n";
 		}
 	}
-	savePointCloud(in.obj,dir,in.filename,1);
-	savePointCloud(in.unexp,dir,in.filename,2);
-	savePointCloud(in.env,dir,in.filename,3);
+
+	ptCldColor::Ptr temp{new ptCldColor};
+	*temp = in.obj; 	savePointCloud(temp,dir,in.filename,1);
+	*temp = in.unexp; savePointCloud(temp,dir,in.filename,2);
+	*temp = in.env; 	savePointCloud(temp,dir,in.filename,3);
 }
 
 std::string getCurTime(){
