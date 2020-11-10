@@ -100,7 +100,7 @@ environment::environment(ros::NodeHandle *nh){
   objectPosesYawLimits = {{0,359},{0,89},{0,89},{0,1},{0,1},{0,1},{0,1}};
 
   voxelGridSize = 0.01;          // Voxel Grid size for environment
-  voxelGridSizeUnexp = 0.01;     // Voxel Grid size for unexplored point cloud
+  voxelGridSizeUnexp = 0.015;    // Voxel Grid size for unexplored point cloud
   tableCentre = {1.5,0,1};       // Co-ordinates of table centre
   scale = 3;                     // Scale value for unexplored point cloud generation
   maxGripperWidth = 0.075;       // Gripper max width (Actual is 8 cm)
@@ -480,7 +480,7 @@ void environment::dataExtract(){
 
 // 10: Generating unexplored point cloud
 void environment::genUnexploredPtCld(){
-  if (ptrPtCldUnexp->width != 0){
+  if(ptrPtCldUnexp->width != 0){
     std::cerr << "Unexplored point cloud already created. Not creating new one." << std::endl;
     return;
   }
@@ -495,28 +495,17 @@ void environment::genUnexploredPtCld(){
   maxUnexp.push_back(maxPtObj.y+std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.40f));
   maxUnexp.push_back(maxPtObj.z+std::max((scale-1)*(maxPtObj.z-minPtObj.z)/2,0.25f));
 
-  // Considering a point for every 1 cm and then downsampling it
-  float nPts = (maxUnexp[0]-minUnexp[0])*(maxUnexp[1]-minUnexp[1])*(maxUnexp[2]-minUnexp[2])*1000000;
-  // std::cout << minUnexp[0] << " " << minUnexp[1] << " " << minUnexp[2] << std::endl;
-  // std::cout << maxUnexp[0] << " " << maxUnexp[1] << " " << maxUnexp[2] << std::endl;
-
-  pcl::common::CloudGenerator<pcl::PointXYZRGB, pcl::common::UniformGenerator<float>> generator;
-  std::uint32_t seed = static_cast<std::uint32_t> (time (nullptr));
-  pcl::common::UniformGenerator<float>::Parameters x_params(minUnexp[0], maxUnexp[0], seed++);
-  generator.setParametersForX(x_params);
-  pcl::common::UniformGenerator<float>::Parameters y_params(minUnexp[1], maxUnexp[1], seed++);;
-  generator.setParametersForY(y_params);
-  pcl::common::UniformGenerator<float>::Parameters z_params(minUnexp[2], maxUnexp[2], seed++);;
-  generator.setParametersForZ(z_params);
-  int result = generator.fill(int(nPts), 1, *ptrPtCldUnexp);
-  if (result != 0) {
-    std::cerr << "Error creating unexplored point cloud." << std::endl;
-    return;
+  pcl::PointXYZRGB ptTemp;
+  for(float x = minUnexp[0]; x < maxUnexp[0]; x+=voxelGridSizeUnexp){
+    for(float y = minUnexp[1]; y < maxUnexp[1]; y+=voxelGridSizeUnexp){
+      for(float z = minUnexp[2]; z < maxUnexp[2]; z+=voxelGridSizeUnexp){
+        ptTemp.x = x; ptTemp.y = y; ptTemp.z = z;
+        ptrPtCldUnexp->points.push_back(ptTemp);
+      }
+    }
   }
-
-  voxelGrid.setInputCloud(cPtrPtCldUnexp);
-  voxelGrid.setLeafSize(voxelGridSizeUnexp, voxelGridSizeUnexp, voxelGridSizeUnexp);
-  voxelGrid.filter(*ptrPtCldUnexp);
+  ptrPtCldUnexp->width = ptrPtCldUnexp->points.size();
+  ptrPtCldUnexp->height = 1;
 }
 
 // 11: Updating the unexplored point cloud
@@ -671,7 +660,8 @@ void environment::findGripperPose(int index){
 // 14: Collision check for gripper and unexplored point cloud
 void environment::collisionCheck(){
   ptrPtCldCollided->clear();    // Reset the collision cloud
-  cpBox.setInputCloud(ptrPtCldUnexp);
+  *ptrPtCldCollCheck = *ptrPtCldUnexp + *ptrPtCldObject;
+  cpBox.setInputCloud(ptrPtCldCollCheck);
 
   bool stop = false;
   int nOrientations = 8;
@@ -1390,18 +1380,12 @@ void testComplete(environment &av, int objID, int nVp, int graspMode, int flag, 
     viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
 
     rbgVis(viewer,av.ptrPtCldEnv,"Environment",vp[0]);
-
-    for (int i = 0; i < av.ptrPtCldObject->size(); i++) {
-      av.ptrPtCldObject->points[i].r = 0;
-      av.ptrPtCldObject->points[i].b = 200;
-      av.ptrPtCldObject->points[i].g = 0;
-    }
     rbgVis(viewer,av.ptrPtCldObject,"Object",vp[1]);
     // rbgNormalVis(viewer,av.ptrPtCldObject,av.ptrObjNormal,"Object",vp[1]);
 
     for (int i = 0; i < av.ptrPtCldUnexp->size(); i++) {
-      av.ptrPtCldUnexp->points[i].r = 200;
-      av.ptrPtCldUnexp->points[i].b = 0;
+      av.ptrPtCldUnexp->points[i].r = 0;
+      av.ptrPtCldUnexp->points[i].b = 200;
       av.ptrPtCldUnexp->points[i].g = 0;
     }
     rbgVis(viewer,av.ptrPtCldUnexp,"Unexplored",vp[1]);
@@ -1462,18 +1446,12 @@ void testSaveRollback(environment &av, int objID, int flag){
     viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
 
     rbgVis(viewer,av.ptrPtCldEnv,"Environment",vp[0]);
-
-    for (int i = 0; i < av.ptrPtCldObject->size(); i++) {
-      av.ptrPtCldObject->points[i].r = 0;
-      av.ptrPtCldObject->points[i].b = 200;
-      av.ptrPtCldObject->points[i].g = 0;
-    }
     rbgVis(viewer,av.ptrPtCldObject,"Object",vp[1]);
     // rbgNormalVis(viewer,av.ptrPtCldObject,av.ptrObjNormal,"Object",vp[1]);
 
     for (int i = 0; i < av.ptrPtCldUnexp->size(); i++) {
-      av.ptrPtCldUnexp->points[i].r = 200;
-      av.ptrPtCldUnexp->points[i].b = 0;
+      av.ptrPtCldUnexp->points[i].r = 0;
+      av.ptrPtCldUnexp->points[i].b = 200;
       av.ptrPtCldUnexp->points[i].g = 0;
     }
     rbgVis(viewer,av.ptrPtCldUnexp,"Unexplored",vp[1]);
@@ -1520,18 +1498,12 @@ void testSaveRollback(environment &av, int objID, int flag){
       // viewer->removeAllPointClouds(vp[1]);
 
       rbgVis(viewer,av.ptrPtCldEnv,"Environment",vp[0]);
-
-      for (int i = 0; i < av.ptrPtCldObject->size(); i++) {
-        av.ptrPtCldObject->points[i].r = 0;
-        av.ptrPtCldObject->points[i].b = 200;
-        av.ptrPtCldObject->points[i].g = 0;
-      }
       rbgVis(viewer,av.ptrPtCldObject,"Object",vp[1]);
       // rbgNormalVis(viewer,av.ptrPtCldObject,av.ptrObjNormal,"Object",vp[1]);
 
       for (int i = 0; i < av.ptrPtCldUnexp->size(); i++) {
-        av.ptrPtCldUnexp->points[i].r = 200;
-        av.ptrPtCldUnexp->points[i].b = 0;
+        av.ptrPtCldUnexp->points[i].r = 0;
+        av.ptrPtCldUnexp->points[i].b = 200;
         av.ptrPtCldUnexp->points[i].g = 0;
       }
       rbgVis(viewer,av.ptrPtCldUnexp,"Unexplored",vp[1]);
