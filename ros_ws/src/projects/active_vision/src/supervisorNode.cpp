@@ -4,8 +4,8 @@
 #define TIMEOUT 10
 #define MIN_ANGLE 20
 #define MIN_ANGLE_RAD MIN_ANGLE*(M_PI/180.0)
-#define SAVEONLYUSEFULDATA false
 
+bool saveOnlyUsefulData = true;
 bool visualize = false;
 
 void printVecofVec(std::vector<std::vector<double>> input){
@@ -493,7 +493,7 @@ std::vector<int> generateData(environment &kinectControl, int object, int homeTy
 						nSaved[1]++;
 					}else{
 						nSaved[0]++;
-						if(SAVEONLYUSEFULDATA == false) saveData(dataFinal, fout, dir);
+						if(saveOnlyUsefulData == false) saveData(dataFinal, fout, dir);
 					}
 
           kinectControl.configurations.resize(nHomeConfigs);
