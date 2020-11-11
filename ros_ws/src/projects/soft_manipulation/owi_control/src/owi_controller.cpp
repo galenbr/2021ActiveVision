@@ -36,6 +36,8 @@ int main(int argc, char **argv){
     
     ros::Subscriber sub = n.subscribe("object_position",1,get_cur_pose);
     ros::Publisher pub = n.advertise<std_msgs::Float64MultiArray>("pwm",1);
+    ros::Publisher err_pub = n.advertise<std_msgs::Float64MultiArray>("error",1);
+
     geometry_msgs::Point goal = get_goal_pose();
     
     Eigen::Vector3d f(curPose_.x, curPose_.y, curPose_.z);
@@ -45,8 +47,6 @@ int main(int argc, char **argv){
     Eigen::Vector3d j_dot;
 
     err = f_d - f;
-    float u = 0;
-    float v = 0;
     float lam = 0.035; // in m
     float z = 0.1;
     int kp = 1;
@@ -81,16 +81,47 @@ int main(int argc, char **argv){
         Jr_inv = Jr.inverse();
 
     t_dot = (Kp * Jv_inv) * err;
-
+    
     j_dot = Jr_inv * t_dot;
+    j_dot /= 10;        //normalization
+    
+    // Piecewise function
+    if(j_dot(1) > 1.0){
+        j_dot(1) = 1.0;
+    }
+    else if(j_dot(1) < -1.0){
+        j_dot(1) = -1.0;
+    }
+    else if(j_dot(1) > -0.45 && j_dot(1) < 0.45){
+        j_dot(1) = 0;
+    }
+
+    if(j_dot(2) > 1.0){
+        j_dot(2) = 1.0;
+    }
+    else if(j_dot(2) < -1.0){
+        j_dot(2) = -1.0;
+    }
+    else if(j_dot(2) > -0.45 && j_dot(2) < 0.45){
+        j_dot(2) = 0;
+    }
 
     std_msgs::Float64MultiArray vel_msg;    //Velocity Message for Pub
     vel_msg.data.resize(2);
+    
     vel_msg.data[0] = j_dot(1);
     vel_msg.data[1] = j_dot(2);
 
     pub.publish(vel_msg);
 
+    std_msgs::Float64MultiArray err_msg;
+    err_msg.data.resize(3);
+    
+    err_msg.data[0] = err(1);
+    err_msg.data[1] = err(2);
+    err_msg.data[2] = err(3);
+
+    err_pub.publish(err_msg);
 
 
 
