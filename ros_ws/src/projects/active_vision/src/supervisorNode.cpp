@@ -5,8 +5,9 @@
 #define MIN_ANGLE 20
 #define MIN_ANGLE_RAD MIN_ANGLE*(M_PI/180.0)
 
-bool saveOnlyUsefulData = true;
+bool saveOnlyUsefulData = false;
 bool visualize = false;
+int mode = 1;
 
 void printVecofVec(std::vector<std::vector<double>> input){
 	for(int i=0; i < input.size(); i++){
@@ -28,6 +29,28 @@ ptCldVis::Ptr initRGBViewer(){
     return viewer;
 }
 
+pcl::PointXYZ sphericalToCartesian(std::vector<double> &pose){
+  pcl::PointXYZ res;
+  res.x = pose[0]*sin(pose[2])*cos(pose[1]);
+  res.y = pose[0]*sin(pose[2])*sin(pose[1]);
+  res.z = pose[0]*cos(pose[2]);
+  return(res);
+}
+
+std::vector<double> cartesianToSpherical(pcl::PointXYZ &point){
+  std::vector<double> res = {0,0,0};
+  res[0] = sqrt(pow(point.x,2)+pow(point.y,2)+pow(point.z,2));
+  res[1] = atan2(point.y,point.x);
+  res[2] = atan2(sqrt(pow(point.x,2)+pow(point.y,2)),point.z);
+  return(res);
+}
+
+double disBtwSpherical(std::vector<double> &poseA,std::vector<double> &poseB){
+	pcl::PointXYZ poseAcart = sphericalToCartesian(poseA);
+	pcl::PointXYZ poseBcart = sphericalToCartesian(poseB);
+	return(sqrt(pow(poseAcart.x-poseBcart.x,2)+pow(poseAcart.y-poseBcart.y,2)+pow(poseAcart.z-poseBcart.z,2)));
+}
+
 //Check that the azimuthal angle is less than 90.
 bool checkValidPose(std::vector<double> &pose){
 	return (round(pose[2]*180/M_PI) <= 90);
@@ -35,12 +58,68 @@ bool checkValidPose(std::vector<double> &pose){
 
 bool checkIfNewPose(std::vector<std::vector<double>> &oldPoses, std::vector<double> &pose){
   for(int i = 0; i < oldPoses.size(); i++){
-    if(oldPoses[i] == pose) return false;
+		if(::mode == 1){
+			if(oldPoses[i] == pose) return false;
+		}else{
+			if(disBtwSpherical(oldPoses[i],pose) <= 0.75*(pose[0])*(20*M_PI/180)) return false;
+		}
+
   }
   return true;
 }
 
-std::vector<double> calcExplorationPose(std::vector<double> startPose, int dir){
+std::vector<double> calcExplorationPoseB(std::vector<double> &startPose, int dir){
+
+  Eigen::Vector3f xAxis,yAxis,zAxis,rotAxis,tempVec;
+  Eigen::Vector3f xyPlane(0,0,1);
+  Eigen::Matrix3f matA; matA << 1,0,0,0,1,0,0,0,1;
+  Eigen::Matrix3f matB, matC, tempMat;
+  // tf::Matrix3x3 rotMat;
+
+  pcl::PointXYZ stPoint = sphericalToCartesian(startPose);
+  pcl::PointXYZ endPoint;
+
+  zAxis = stPoint.getVector3fMap(); zAxis.normalize();
+  xAxis = zAxis.cross(xyPlane); xAxis.normalize();
+  yAxis = zAxis.cross(xAxis);
+
+	std::vector<double> ratio={0,0};
+	switch(dir){
+		case 1: ratio[0]=+1; ratio[1]=0;   break;
+		case 2: ratio[0]=+1; ratio[1]=-1;  break;
+		case 3: ratio[0]=0;  ratio[1]=-1;  break;
+		case 4: ratio[0]=-1; ratio[1]=-1;  break;
+		case 5: ratio[0]=-1; ratio[1]=0;   break;
+		case 6: ratio[0]=-1; ratio[1]=+1;  break;
+		case 7: ratio[0]=0;  ratio[1]=+1;  break;
+		case 8: ratio[0]=+1; ratio[1]=+1;  break;
+	}
+
+  rotAxis = ratio[0]*xAxis + ratio[1]*yAxis; rotAxis.normalize();
+  matB << 0,-rotAxis[2],rotAxis[1],rotAxis[2],0,-rotAxis[0],-rotAxis[1],rotAxis[0],0;
+  matC = rotAxis*rotAxis.transpose();
+
+  tempMat = cos(20*M_PI/180)*matA + sin(20*M_PI/180)*matB + (1-cos(20*M_PI/180))*matC;
+  tempVec = tempMat*stPoint.getVector3fMap();
+  endPoint.x = tempVec[0]; endPoint.y = tempVec[1]; endPoint.z = tempVec[2];
+
+  std::vector<double> end = cartesianToSpherical(endPoint);
+
+  // Polar angle 0 to 90 degree
+  if(end[2] < 0){
+    end[2] = -1*end[2];
+    end[1] = end[1] + M_PI;
+  }
+
+  // Azhimuthal angle 0 to 360 degree
+  end[1] = fmod(end[1],2*M_PI);
+  if(end[1] < 0) end[1] += 2*M_PI;
+
+	if(checkValidPose(end)) return end;
+  else                    return startPose;
+}
+
+std::vector<double> calcExplorationPoseA(std::vector<double> &startPose, int dir){
 	double azimuthalOffset, polarOffset;
 	switch(dir){
 		case 1: azimuthalOffset = 0; 							polarOffset = -MIN_ANGLE_RAD; break;	//N
@@ -75,12 +154,16 @@ std::vector<double> calcExplorationPose(std::vector<double> startPose, int dir){
 	return(potentialPose);
 }
 
+std::vector<double> calcExplorationPose(std::vector<double> &startPose, int dir){
+	if(::mode == 1) return calcExplorationPoseA(startPose,dir);
+	else return calcExplorationPoseB(startPose,dir);
+}
 /*
 bool singleExploration(environment &kinectControl, std::vector<double> targetPose, ptCldVis::Ptr viewer, bool first){
 	singlePass(kinectControl, targetPose, first, true);
 
 	// Visualization Section Start
-	if (visualize == true){
+	if (::visualize == true){
 		for (int i = 0; i < kinectControl.ptrPtCldObject->size(); i++) {
 			kinectControl.ptrPtCldObject->points[i].r = 0;
 			kinectControl.ptrPtCldObject->points[i].b = 200;
@@ -493,7 +576,7 @@ std::vector<int> generateData(environment &kinectControl, int object, int homeTy
 						nSaved[1]++;
 					}else{
 						nSaved[0]++;
-						if(saveOnlyUsefulData == false) saveData(dataFinal, fout, dir);
+						if(::saveOnlyUsefulData == false) saveData(dataFinal, fout, dir);
 					}
 
           kinectControl.configurations.resize(nHomeConfigs);
@@ -509,17 +592,18 @@ std::vector<int> generateData(environment &kinectControl, int object, int homeTy
 
 void help(){
   std::cout << "******* Supervisor Node Help *******" << std::endl;
-  std::cout << "Arguments : [CSV filename] [Object] [Step No]" << std::endl;
+  std::cout << "Arguments : [CSV filename] [Object] [Step No] [Mode]" << std::endl;
   std::cout << "CSV filename : CSV file name (Eg:data.csv) (Use \"default.csv\" to use time as the file name)" << std::endl;
 	std::cout << "Object : Object ID -> 0(Drill),1(Sq Prism),2(Rect Prism)" << std::endl;
 	std::cout << "Step No : 1->Data for first step, 2->Second step, 3->Third Step" << std::endl;
+	std::cout << "Mode : 1->Normal, 2->New" << std::endl;
   std::cout << "*******" << std::endl;
 }
 
 int main (int argc, char** argv){
 	ros::init(argc, argv, "Supervisor_Node");
 
-	if(argc != 4){
+	if(argc != 5){
     std::cout << "ERROR. Incorrect number of arguments." << std::endl;
     help(); return(-1);
   }
@@ -547,12 +631,14 @@ int main (int argc, char** argv){
 	if(objID < 0 && objID > 2) objID = 0;
 	int stepType = std::atoi(argv[3]);
 	if(stepType < 1 && stepType > 3) stepType = 1;
+	::mode = std::atoi(argv[4]);
+	if(::mode < 1 && ::mode > 2) ::mode = 1;
 
 	std::cout << "Start Time : " << getCurTime() << std::endl;
 	std::vector<int> ctrData;
 	start = std::chrono::high_resolution_clock::now();
 
-	printf("***** Object #%d, Data Type #%d *****\n",objID+1,stepType);
+	printf("***** Object #%d, Data Type #%d *****\n",objID,stepType);
 	ctrData = generateData(kinectControl, objID, stepType, dir, csvName);
 
 	end = std::chrono::high_resolution_clock::now();

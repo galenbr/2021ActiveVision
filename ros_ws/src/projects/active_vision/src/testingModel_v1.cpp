@@ -102,6 +102,8 @@ environment::environment(ros::NodeHandle *nh){
   voxelGridSize = 0.01;          // Voxel Grid size for environment
   voxelGridSizeUnexp = 0.015;    // Voxel Grid size for unexplored point cloud
   tableCentre = {1.5,0,1};       // Co-ordinates of table centre
+  minUnexp = {0,0,0};
+  maxUnexp = {0,0,0};
   scale = 3;                     // Scale value for unexplored point cloud generation
   maxGripperWidth = 0.075;       // Gripper max width (Actual is 8 cm)
   minGraspQuality = 150;         // Min grasp quality threshold
@@ -488,12 +490,12 @@ void environment::genUnexploredPtCld(){
   // Setting the min and max limits based on the object dimension and scale.
   // Min of 0.25m on each side
   // Note: Z scale is only used on +z axis
-  minUnexp.push_back(minPtObj.x-std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.40f));
-  minUnexp.push_back(minPtObj.y-std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.40f));
-  minUnexp.push_back(minPtObj.z-0.02);
-  maxUnexp.push_back(maxPtObj.x+std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.40f));
-  maxUnexp.push_back(maxPtObj.y+std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.40f));
-  maxUnexp.push_back(maxPtObj.z+std::max((scale-1)*(maxPtObj.z-minPtObj.z)/2,0.25f));
+  minUnexp[0] = (minPtObj.x-std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.40f));
+  minUnexp[1] = (minPtObj.y-std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.40f));
+  minUnexp[2] = (minPtObj.z-0.02);
+  maxUnexp[0] = (maxPtObj.x+std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.40f));
+  maxUnexp[1] = (maxPtObj.y+std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.40f));
+  maxUnexp[2] = (maxPtObj.z+std::max((scale-1)*(maxPtObj.z-minPtObj.z)/2,0.25f));
 
   pcl::PointXYZRGB ptTemp;
   for(float x = minUnexp[0]; x < maxUnexp[0]; x+=voxelGridSizeUnexp){
@@ -572,15 +574,16 @@ void environment::graspsynthesis(){
       graspTemp.p1 = ptrPtCldObject->points[i];
       graspTemp.p2 = ptrPtCldObject->points[j];
 
+      // Ignoring point closer to table
+      if(graspTemp.p1.z <= tableCentre[2]+0.03 || graspTemp.p2.z <= tableCentre[2]+0.03) continue;
+
       // Vector connecting the two grasp points and its distance
       vectA = graspTemp.p1.getVector3fMap() - graspTemp.p2.getVector3fMap();
       vectB = graspTemp.p2.getVector3fMap() - graspTemp.p1.getVector3fMap();
       graspTemp.gripperWidth = vectA.norm() + voxelGridSize; // Giving a tolerance based on voxel grid size
 
       // If grasp width is greater than the limit then skip the rest
-      if (graspTemp.gripperWidth > maxGripperWidth){
-        continue;
-      }
+      if(graspTemp.gripperWidth > maxGripperWidth) continue;
 
       // Using normals to find the angle
       A = std::min(pcl::getAngle3D(vectA,ptrObjNormal->points[i].getNormalVector3fMap()),
@@ -590,9 +593,7 @@ void environment::graspsynthesis(){
 
       graspTemp.quality = 180 - ( A + B );
       // If grasp quality is less than the min requirement then skip the rest
-      if (graspTemp.quality < minGraspQuality){
-        continue;
-      }
+      if(graspTemp.quality < minGraspQuality) continue;
 
       // Push this into the vector
       graspsPossible.push_back(graspTemp);
@@ -638,7 +639,7 @@ void environment::findGripperPose(int index){
   Eigen::Vector3f xyPlane(0,0,1);
 
   yAxis = graspsPossible[index].p1.getVector3fMap() - graspsPossible[index].p2.getVector3fMap(); yAxis.normalize();
-  zAxis = yAxis.cross(xyPlane);
+  zAxis = yAxis.cross(xyPlane); zAxis.normalize();
   xAxis = yAxis.cross(zAxis);
 
   tf::Matrix3x3 rotMat;
@@ -730,15 +731,16 @@ int environment::graspAndCollisionCheck(){
       graspTemp.p1 = ptrPtCldObject->points[i];
       graspTemp.p2 = ptrPtCldObject->points[j];
 
+      // Ignoring point closer to table
+      if(graspTemp.p1.z <= tableCentre[2]+0.03 || graspTemp.p2.z <= tableCentre[2]+0.03) continue;
+
       // Vector connecting the two grasp points and its distance
       vectA = graspTemp.p1.getVector3fMap() - graspTemp.p2.getVector3fMap();
       vectB = graspTemp.p2.getVector3fMap() - graspTemp.p1.getVector3fMap();
       graspTemp.gripperWidth = vectA.norm() + voxelGridSize; // Giving a tolerance based on voxel grid size
 
       // If grasp width is greater than the limit then skip the rest
-      if (graspTemp.gripperWidth > maxGripperWidth){
-        continue;
-      }
+      if(graspTemp.gripperWidth > maxGripperWidth) continue;
 
       // Using normals to find the angle
       A = std::min(pcl::getAngle3D(vectA,ptrObjNormal->points[i].getNormalVector3fMap()),
@@ -749,9 +751,8 @@ int environment::graspAndCollisionCheck(){
       graspTemp.quality = 180 - ( A + B );
 
       // If grasp quality is less than the min requirement then skip the rest
-      if (graspTemp.quality < minGraspQuality){
-        continue;
-      }
+      if (graspTemp.quality < minGraspQuality) continue;
+
       nGrasp++;
       // Push this into the vector
       if (graspsPossible.size() == 0){
