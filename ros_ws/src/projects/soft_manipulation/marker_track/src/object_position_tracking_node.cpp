@@ -10,7 +10,7 @@ float Orientation_Reference_Z;
 
 void Callback1(const geometry_msgs::Pose &msg1)
 {
-	x1[0]=msg1.position.x;
+	x1[0]=(msg1.position.x) - 0.0057;  // Adding an offset to the marker1
 	x1[1]=msg1.position.y;
 	x1[2]=msg1.position.z;
 	for(int i= 0;i<3;i++)
