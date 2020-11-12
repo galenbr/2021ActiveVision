@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
+from sklearn.model_selection import train_test_split
 
 def helpDisp(text):
     print(text)
@@ -36,24 +37,40 @@ def readInput(fileName,dim):
 
 	return np.asarray(states),np.asarray(dir)
 
-def paperPipeline(filename, dim=52):
-    stateVec, dirVec = readInput(filename, dim)
+def calculatePCALDA(X, y):
     scaler = StandardScaler()
-    stateVec = scaler.fit_transform(stateVec)
+    Xscaled = scaler.fit_transform(X)
 
     pca = PCA(n_components=26)
-    pca.fit(stateVec)
-    statePCA = pca.transform(stateVec)
-
+    pca.fit(Xscaled)
+    Xcomponents = pca.transform(Xscaled)
+    
     lda = LDA()
-    lda.fit(statePCA, dirVec.ravel())
-    ouput = lda.transform(statePCA)
+    lda.fit(Xcomponents, y)
 
-    print(stateVec.shape)
-    print(statePCA.shape)
-    print(ouput.shape)
     return pca, lda
 
+def pipeLine(X, pca, lda):
+    scaler = StandardScaler()
+    Xscaled = scaler.fit_transform(X)
+
+    X1 = pca.transform(Xscaled)
+    X2 = lda.transform(X1)
+
+    return X2
+
+def paperPipeline(filename, dim=52):
+    stateVec, dirVec = readInput(filename, dim)
+
+    X_train, X_test, y_train, y_test = train_test_split(stateVec, dirVec.ravel(), test_size=0.2)
+    
+    pca, lda = calculatePCALDA(X_train, y_train)
+    scaler = StandardScaler()
+    testScaled = scaler.fit_transform(X_test)
+    X1 = pca.transform(testScaled)
+    y1 = lda.predict(X1)
+    for i in range(y1.shape[0]):
+        print(y1[i], y_test[i])
 
 if __name__ == "__main__":
 
