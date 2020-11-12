@@ -16,7 +16,7 @@ Run "roslaunch active_vision workspace.launch" to start gazebo with table, kinec
 
 2) rosrun active_vision supervisorNode
    Code to generate data sets and store point clouds for training purpose. Store the data to a csv.
-   (Example usage : rosrun active_vision supervisorNode data.csv 2 1)
+   (Example usage : rosrun active_vision supervisorNode data.csv 2 1 1)
 
 3) rosrun active_vision genStateVec
    Code to generate the state vector from the saved point clouds
