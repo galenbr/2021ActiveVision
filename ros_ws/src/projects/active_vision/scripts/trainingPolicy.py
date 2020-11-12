@@ -5,6 +5,9 @@ import sys, csv, time, random, math
 import numpy as np
 from os import path
 from matplotlib import pyplot as plt
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 
 def helpDisp(text):
     print(text)
@@ -25,10 +28,32 @@ def readInput(fileName,dim):
         for line in csv_reader:
             # Going through it line by line as storing it in a list
             if(len(line) != dim+4): helpDisp("ERROR : Data set inconsistent")
-            states.append([float(i) for i in line[2:dim+2]])
-            dir.append([float(i) for i in line[dim+3]])
+            currentDirection = float(line[dim+3])
+            #Remove final images
+            if(-1 != currentDirection):
+                states.append([float(i) for i in line[2:dim+2]])
+                dir.append([currentDirection])
 
 	return np.asarray(states),np.asarray(dir)
+
+def paperPipeline(filename, dim=52):
+    stateVec, dirVec = readInput(filename, dim)
+    scaler = StandardScaler()
+    stateVec = scaler.fit_transform(stateVec)
+
+    pca = PCA(n_components=26)
+    pca.fit(stateVec)
+    statePCA = pca.transform(stateVec)
+
+    lda = LDA()
+    lda.fit(statePCA, dirVec.ravel())
+    ouput = lda.transform(statePCA)
+
+    print(stateVec.shape)
+    print(statePCA.shape)
+    print(ouput.shape)
+    return pca, lda
+
 
 if __name__ == "__main__":
 
@@ -39,6 +64,5 @@ if __name__ == "__main__":
 
     dir = sys.argv[1]
     file = sys.argv[2]
-
-    stateVec,dirVec = readInput(dir+file,52)
-    print(dirVec[0][0])
+    paperPipeline(dir+file)
+    

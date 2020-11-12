@@ -613,7 +613,7 @@ int main (int argc, char** argv){
 
  	environment kinectControl(&nh);
 	sleep(1);
-  kinectControl.loadGripper();
+  	kinectControl.loadGripper();
 
 	std::string dir = "./DataRecAV/";
 	std::string time = getCurTime();
