@@ -34,7 +34,8 @@ generate_messages(
 
 catkin_package()
 include_directories(include ${catkin_INCLUDE_DIRS})
+include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
 
 add_executable(owi_controller_node src/owi_controller.cpp)
 add_dependencies(owi_controller_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(owi_controller_node ${catkin_LIBRARIES})
+target_link_libraries(owi_controller_node ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
