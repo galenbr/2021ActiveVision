@@ -45,7 +45,7 @@ void get_cur_pose(const geometry_msgs::Point &msg){
 
     float lam = 1.95; // in m
     float z = 0.4;
-    int k = 32;
+    int k = 320;
     // float l1 = 0.09;    // in m
     // float l2 = 0.065;   // in m
     // float th1 = 45;
@@ -56,7 +56,7 @@ void get_cur_pose(const geometry_msgs::Point &msg){
     // float jr3 = l1*cos(th1*PI) + l2*cos((th1 + th2)*PI);
     // float jr4 = l2*cos((th1 + th2)*PI);
     
-    if(abs(err(1))>=0.001){
+    if(abs(err(1))>=0.0001){
     // Eigen::MatrixXd Jv(2,2); // Image Jacobian
     // Jv << 1,0,
     //       0,1;
