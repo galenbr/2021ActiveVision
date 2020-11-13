@@ -1,7 +1,8 @@
 <launch>
   <!-- Arguments -->
-  <arg name="table_height" value="0.4" />
-  <arg name="table_center" value="0.75" />
+  <arg name="table_height" value="0.4" /> <!--Was 0.4 -->
+  <arg name="table_center_x" value="0.61" /> <!-- robot to table center -->
+  <arg name="table_edge_x" value="0.50" />
   
   <!--<arg name="table_width" value="1" />
   <arg name="table_length" value="0.6" /> -->
@@ -25,13 +26,17 @@
   </include>
   <node name="spawn_franka_urdf" pkg="gazebo_ros" type="spawn_model"
   	args="-param robot_description -urdf -model panda -J panda_joint2 0.0 -J panda_joint6 0.785398 -J panda_joint7 0.785398" />
-  <node name="spawn_table_urdf" pkg="gazebo_ros" type="spawn_model"
-  	args="-file $(find lock_key)/desc/surface.urdf -urdf -model table_surface" />
-  <!-- <node name="spawn_padlock_urdf" pkg="gazebo_ros" type="spawn_model" -->
-  	<!-- args="-file $(find lock_key)/desc/padlock.urdf -urdf -model padlock -z $(arg table_height) -x $(arg table_center)" /> -->
+  <!-- <node name="spawn_table_urdf" pkg="gazebo_ros" type="spawn_model"
+  	args="-file $(find lock_key)/desc/surface.urdf -urdf -model table_surface" /> -->
+  <node name="spawn_padlock_urdf" pkg="gazebo_ros" type="spawn_model"
+  	args="-file $(find lock_key)/desc/padlock.urdf -urdf -model padlock
+          -x $(arg table_center_x) -y 0.0125 -z 0.35
+          -R 1.5708 -P 0.0 -Y 0.0" />
   
   <node name="spawn_key_urdf" pkg="gazebo_ros" type="spawn_model"
-  	args="-file $(find lock_key)/desc/key.urdf -urdf -model key -z $(arg table_height) -x 0.6 -y 0.1" />
+  	args="-file $(find lock_key)/desc/key.urdf -urdf -model key
+          -x 0.55 -y 0.1 -z 0.30
+          -R 0.0 -P 0.0 -Y 0.0" />
 
   <!-- Launch controllers -->
   <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"

@@ -9,11 +9,19 @@
 #include "moveit_planner/GetPose.h"
 #include "moveit_planner/MoveJoint.h"
 #include "moveit_planner/SetVelocity.h"
+#include "moveit_planner/AddCollision.h"
+#include <moveit_msgs/CollisionObject.h>
+// Actions
+#include <actionlib/client/simple_action_client.h>
+#include <actionlib/client/terminal_state.h>
+#include <lock_key/SpiralInsertAction.h>
 // Publish Marker
 #include <visualization_msgs/Marker.h>
 // Transform Listener
 #include <tf/transform_listener.h>
 #include <geometry_msgs/PointStamped.h>
+
+typedef actionlib::SimpleActionClient<lock_key::SpiralInsertAction> SpiralClient;
 
 void wait_for_service(int32_t timeout){
     ros::service::waitForService("move_to_pose",timeout);
@@ -22,6 +30,7 @@ void wait_for_service(int32_t timeout){
     ros::service::waitForService("get_pose", timeout);
     ros::service::waitForService("move_to_joint_space", timeout);
     ros::service::waitForService("set_velocity_scaling", timeout);
+    ros::service::waitForService("add_collision_object",timeout);
     ROS_INFO("SERVICES READY");
 }
 
@@ -49,6 +58,7 @@ int main(int argc, char **argv){
     ros::ServiceClient getPoseClient = n.serviceClient<moveit_planner::GetPose>("get_pose");
     ros::ServiceClient jointSpaceClient = n.serviceClient<moveit_planner::MoveJoint>("move_to_joint_space");
     ros::ServiceClient velScalingClient = n.serviceClient<moveit_planner::SetVelocity>("set_velocity_scaling");
+    ros::ServiceClient addCollisionClient = n.serviceClient<moveit_planner::AddCollision>("add_collision_object");
 
     // Client Objects
     lock_key::imgCapture reqImg;
@@ -81,31 +91,30 @@ int main(int argc, char **argv){
     geometry_msgs::PointStamped keypose;
     listener.transformPoint("panda_link0",keyImg.response.p,keypose);
     ROS_INFO_STREAM(keypose);
-    // // Visualization and Debugging
-    // ros::Publisher cloud_pub = n.advertise<sensor_msgs::PointCloud2>("debugPC2", 1);
-    // ros::Publisher centroid_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 1);
+    // Visualization and Debugging
+    ros::Publisher cloud_pub = n.advertise<sensor_msgs::PointCloud2>("debugPC2", 1);
+    ros::Publisher centroid_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 1);
 
+    visualization_msgs::Marker marker;
 
-    // visualization_msgs::Marker marker;
+    marker.type = visualization_msgs::Marker::SPHERE;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.scale.x = .005;
+    marker.scale.y = .005;
+    marker.scale.z = .005;
+    marker.color.a = 1;
+    marker.color.r = 1;
+    marker.color.g = 1;
+    marker.color.b = 1;
+    marker.pose.orientation.w = 1;
+    marker.header.frame_id="/panda_camera_optical_link";
+    marker.header.stamp = ros::Time();
+    marker.id = 0;
+    marker.pose.position.x = keyImg.response.p.point.x;
+    marker.pose.position.y = keyImg.response.p.point.y;
+    marker.pose.position.z = keyImg.response.p.point.z;
 
-    // marker.type = visualization_msgs::Marker::SPHERE;
-    // marker.action = visualization_msgs::Marker::ADD;
-    // marker.scale.x = .005;
-    // marker.scale.y = .005;
-    // marker.scale.z = .005;
-    // marker.color.a = 1;
-    // marker.color.r = 1;
-    // marker.color.g = 1;
-    // marker.color.b = 1;
-    // marker.pose.orientation.w = 1;
-    // marker.header.frame_id="/panda_camera_optical_link";
-    // marker.header.stamp = ros::Time();
-    // marker.id = 0;
-    // marker.pose.position.x = keyImg.response.p.point.x;
-    // marker.pose.position.y = keyImg.response.p.point.y;
-    // marker.pose.position.z = keyImg.response.p.point.z;
-
-    // ROS_INFO_STREAM(marker.pose);
+    ROS_INFO_STREAM(marker.pose);
 
     // int count =0;
     //  while (count<50)
@@ -182,15 +191,32 @@ int main(int argc, char **argv){
     ros::Duration(1).sleep();
     grip.request.force = -20.0;
     gripperClient.call(grip);
-    ros::Duration(0.1).sleep();
-    grip.request.force = -20.0;
-    gripperClient.call(grip);
-    ros::Duration(0.1).sleep();
-    grip.request.force = -100.0;
-    gripperClient.call(grip);
-    ros::Duration(0.2).sleep();
+    // ros::Duration(0.1).sleep();
+    // grip.request.force = -20.0;
+    // gripperClient.call(grip);
+    // ros::Duration(0.1).sleep();
+    // grip.request.force = -125.0; //-100.0
+    // gripperClient.call(grip);
+    // ros::Duration(0.2).sleep();
+    // Attach key to robot
+    // First, remove key from environment (this part works)
+    // moveit_planner::AddCollision collisionObj;
+    // moveit_msgs::CollisionObject remove_object;
+    // remove_object.id = "key";
+    // remove_object.header.frame_id = "panda_link0";
+    // remove_object.operation = remove_object.REMOVE;
+    // collisionObj.request.collObject = remove_object;
+    // addCollisionClient.call(collisionObj);
+
+    // ROS_INFO("Attaching the object to the right wrist and removing it from the world.");
+    // moveit_msgs::PlanningScene planning_scene;
+    // planning_scene.world.collision_objects.clear();
+    // planning_scene.world.collision_objects.push_back(remove_object);
+    // planning_scene.robot_state.attached_collision_objects.push_back(attached_object);
+    // planning_scene_diff_publisher.publish(planning_scene);
 
     // Move away
+    ROS_INFO("Moving away");
     cart2.request.val.push_back(p);
     p.position.x -= 0.04;
     cart2.request.val.push_back(p);
@@ -209,7 +235,7 @@ int main(int argc, char **argv){
     
     pose2.request.val.position.x = 0.65;
     pose2.request.val.position.y = 0.0;
-    pose2.request.val.position.z = 0.45;
+    pose2.request.val.position.z = 0.444; //0.45
     pose2.request.val.orientation.w = 0;//.00653015;
     pose2.request.val.orientation.x = 0;//.915333;
     pose2.request.val.orientation.y = 1; //.402644;
@@ -221,15 +247,29 @@ int main(int argc, char **argv){
     velscale.request.velScaling = 1.0;
     velScalingClient.call(velscale);
 
-    // Move to insert key
-    ros::Duration(1).sleep();
-    p.position = pose2.request.val.position;
-    p.orientation = pose2.request.val.orientation;
-    cart3.request.val.push_back(p);
-    p.position.z -= 0.1;
-    cart3.request.val.push_back(p);
-    cart3.request.execute = true;
-    moveCartClient.call(cart3);
+    ROS_INFO("Waiting for Insertion Action Server");
+    SpiralClient client("spiral_insert_key", true); // true -> don't need ros::spin()
+    client.waitForServer();
+
+    lock_key::SpiralInsertGoal goal;
+
+    ROS_INFO("Retrieving spiral parameters");
+    n.getParam("spiral_Ft", goal.Ft);
+    n.getParam("spiral_Fd", goal.Fd);
+    n.getParam("spiral_Fi", goal.Fi);
+    n.getParam("spiral_delta_max", goal.delta_max);
+
+    ROS_INFO("Sending action goal");
+    client.sendGoal(goal);
+
+    // ros::Duration(1).sleep();
+    // p.position = pose2.request.val.position;
+    // p.orientation = pose2.request.val.orientation;
+    // cart3.request.val.push_back(p);
+    // p.position.z -= 0.1;
+    // cart3.request.val.push_back(p);
+    // cart3.request.execute = true;
+    // moveCartClient.call(cart3);
 
 
     ros::spin();

@@ -1,4 +1,18 @@
 <launch>
+<!--   Ft: Max force when moving to insertion plane
+       Fd: Max wrist Force/Torque during spiral
+       Fi: Max Insertion Force
+       delta_max: acceptable travel in z-axis  -->
+  <param name="spiral_Ft" type="double" value="50.0" />
+  <param name="spiral_Fd" type="double" value="80.0" />
+  <param name="spiral_Fi" type="double" value="10.0" />
+  <param name="spiral_delta_max" type="double" value="0.01" />
+  <param name="delta_step" type="double" value="0.00025" />
+  <param name="r_step" type="double" value="0.0005" /> <!--0.00001-->
+  <param name="phi_step" type="double" value="0.25" />
+  <param name="Tx_limit" type="double" value="20.0" />
+  <param name="Ty_limit" type="double" value="20.0" />
+
   <!-- <include file="$(find ref_benchmark_moveit_config)/launch/move_group.launch" /> -->
   <!-- launch moveit API -->
   <!-- <node name="moveit_api" type="main_node" pkg="moveit_planner" /> -->
@@ -6,10 +20,14 @@
   <node name="setup" type="setup_node" pkg="lock_key" />
   <!-- Start get pose node -->
   <node name="get_pose" type="pose_node" pkg="moveit_planner" />
+  <!-- Start get wrench node -->
+  <node name="get_wrench" type="get_wrench_node" pkg="lock_key" />
   <!-- Start Collision Objects Node -->
   <node name="collision_obj" type="collision_obj_node" pkg="lock_key" />
   <!-- Start Constraints Node -->
   <node name="constraints" type="arm_constraints_node" pkg="lock_key" />
+  <!--Start Spiral Insert Node-->
+  <node name="spiral_insert" type="spiral_insert_node" pkg="lock_key" output="screen"/>
   <!--Start Controller Node -->
-  <node name="controller" type="control_node" pkg="lock_key" />
+  <node name="controller" type="control_node" pkg="lock_key" output="screen"/>
 </launch>
