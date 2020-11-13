@@ -136,7 +136,7 @@ int main(int argc, char** argv){
   std::string directory(argv[1]);
   std::string csvFile(argv[2]);
   std::string newCsvFile;
-  newCsvFile = csvFile.substr(0,18)+"stateVec.csv";
+  newCsvFile = csvFile.substr(0,csvFile.size()-4) + "_stateVec.csv";
   // std::cout << csvFile << "," << newCsvFile << std::endl;
   std::fstream fout;
  	fout.open(directory+newCsvFile, std::ios::out);
@@ -145,9 +145,11 @@ int main(int argc, char** argv){
   std::vector<std::vector<std::string>> data;
   data = readCSV(directory+csvFile);
 
+  int stepTypeColID = 11;
   int pathColID = 12;
   int dirColID = 13;
   int kinColID = 15;
+  int stepType = 0;
 
   int gridDim = 5;
   ptCldColor::Ptr ptrPtCldObj{new ptCldColor};
@@ -157,13 +159,14 @@ int main(int argc, char** argv){
 
   printf("Number of rows in the input file = %d\n",int(data.size()));
   for(int i = 0; i < data.size(); i++){
-    // Generate State Vector only if direction is not 0
-    if(std::atoi(data[i][dirColID-1].c_str()) != 0){
+    // Generate State Vector only if direction is not -1
+    if(std::atoi(data[i][dirColID-1].c_str()) != -1){
+      stepType = std::atoi(data[i][stepTypeColID-1].c_str());
       readPointCloud(ptrPtCldObj,directory,data[i][pathColID-1],1);
       readPointCloud(ptrPtCldUnexp,directory,data[i][pathColID-1],2);
-      kinViewsphere[0] = std::atof(data[i][kinColID-1].c_str());
-      kinViewsphere[1] = std::atof(data[i][kinColID-1+1].c_str());
-      kinViewsphere[2] = std::atof(data[i][kinColID-1+2].c_str());
+      kinViewsphere[0] = std::atof(data[i][kinColID-1+(stepType-1)*3].c_str());
+      kinViewsphere[1] = std::atof(data[i][kinColID-1+1+(stepType-1)*3].c_str());
+      kinViewsphere[2] = std::atof(data[i][kinColID-1+2+(stepType-1)*3].c_str());
 
       if(type == 1){
         stateVec = HAFStVec(ptrPtCldObj,ptrPtCldUnexp,kinViewsphere,gridDim);
