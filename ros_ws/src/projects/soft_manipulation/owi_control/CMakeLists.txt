@@ -7,6 +7,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   geometry_msgs
   Eigen3
+  rosbag
 )
 
 find_package(Boost REQUIRED COMPONENTS system)
@@ -39,3 +40,7 @@ include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
 add_executable(owi_controller_node src/owi_controller.cpp)
 add_dependencies(owi_controller_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(owi_controller_node ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
+
+add_executable(owi_record_node src/bag.cpp)
+add_dependencies(owi_record_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(owi_record_node ${catkin_LIBRARIES})
