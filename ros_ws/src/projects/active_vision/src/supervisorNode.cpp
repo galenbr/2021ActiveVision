@@ -567,7 +567,7 @@ std::vector<int> generateData(environment &kinectControl, int object, int homeTy
           dataFinal.nSteps = dataFinal.path.size()-dataFinal.type;
           dataFinal.obj = dataHomePoses[poses].obj;
           dataFinal.unexp = dataHomePoses[poses].unexp;
-          dataFinal.filename = getCurTime();
+          dataFinal.filename = getCurTime()+"_"+std::to_string(nSaved[0]+nSaved[1]);
 
           if(graspFound == true) printf(" OK. %d Steps\n",dataFinal.nSteps);
 
