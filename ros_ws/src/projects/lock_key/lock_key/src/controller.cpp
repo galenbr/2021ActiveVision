@@ -233,9 +233,17 @@ int main(int argc, char **argv){
     velscale.request.velScaling = 0.3;
     velScalingClient.call(velscale);
     
-    pose2.request.val.position.x = 0.65;
-    pose2.request.val.position.y = 0.0;
-    pose2.request.val.position.z = 0.444; //0.45
+    // Get padlock goal position
+    n.getParam("padlock_goal_x",pose2.request.val.position.x);
+    pose2.request.val.position.x+=0.04; //Add depth/2 of box
+    n.getParam("padlock_goal_y",pose2.request.val.position.y);
+    pose2.request.val.position.y-=0.0125; //Subtract width/2 of box
+    n.getParam("padlock_goal_z",pose2.request.val.position.z);
+    pose2.request.val.position.z+=0.094; //Add height of box and extra
+
+    //pose2.request.val.position.x = 0.65;
+    //pose2.request.val.position.y = 0.0;
+    //pose2.request.val.position.z = 0.444; //0.45
     pose2.request.val.orientation.w = 0;//.00653015;
     pose2.request.val.orientation.x = 0;//.915333;
     pose2.request.val.orientation.y = 1; //.402644;

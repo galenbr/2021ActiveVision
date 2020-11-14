@@ -46,6 +46,5 @@ int main(int argc, char **argv)
     ros::Subscriber wrench_sub = n.subscribe("panda_joint7_wrench", 1000, wrenchSubCallback);
     ros::ServiceServer wrench_server = n.advertiseService("getWrench", wrenchServiceCallback);
 
-
     ros::waitForShutdown();
 }
