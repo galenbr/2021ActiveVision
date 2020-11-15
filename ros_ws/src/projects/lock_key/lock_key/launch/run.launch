@@ -1,18 +1,23 @@
 <launch>
-<!--   Ft: Max force when moving to insertion plane
-       Fd: Max wrist Force/Torque during spiral
-       Fi: Max Insertion Force
-       delta_max: acceptable travel in z-axis  -->
-  <param name="spiral_Ft" type="double" value="50.0" />
-  <param name="spiral_Fd" type="double" value="80.0" />
-  <param name="spiral_Fi" type="double" value="10.0" />
-  <param name="spiral_delta_max" type="double" value="0.01" />
-  <param name="delta_step" type="double" value="0.00025" />
-  <param name="r_step" type="double" value="0.0005" /> <!--0.00001-->
-  <param name="phi_step" type="double" value="0.25" />
-  <param name="Tx_limit" type="double" value="20.0" />
-  <param name="Ty_limit" type="double" value="20.0" />
-
+<!--   spiral_Ft: Max force when moving to insertion plane
+       spiral_Fd: Max wrist Force during spiral
+       spiral_Fi: Max Insertion Force
+       spiral_Tx: Max Torque in X during spiral
+       spiral_Ty: Max Torque in Y during spiral
+       spiral_a: Initial distance from origin
+       spiral_b: Distance between spiral turns
+       spiral_nmax: Number of points in spiral
+       spiral_rot: Number of spiral rotations-->
+  <param name="spiral_Ft" type="double" value="40.0" />
+  <param name="spiral_Fd" type="double" value="60.0" />
+  <param name="spiral_Fi" type="double" value="80.0" />
+  <param name="spiral_Tx" type="double" value="20.0" />
+  <param name="spiral_Ty" type="double" value="20.0" />
+  <param name="spiral_delta_step" type="double" value="0.00025" />
+  <param name="spiral_a" type="double" value="0.0" />
+  <param name="spiral_b" type="double" value="0.000025" />
+  <param name="spiral_nmax" type="int" value="100" />
+  <param name="spiral_rot" type="double" value="4.0" />
   <!-- <include file="$(find ref_benchmark_moveit_config)/launch/move_group.launch" /> -->
   <!-- launch moveit API -->
   <!-- <node name="moveit_api" type="main_node" pkg="moveit_planner" /> -->
