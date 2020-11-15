@@ -137,55 +137,6 @@ def readInput(fileName,dim):
 
 	return np.asarray(states),np.asarray(dir)
 
-def calculatePCALDA(X, y):
-    scaler = StandardScaler()
-    Xscaled = scaler.fit_transform(X)
-
-    pca = PCA(n_components=26)
-    pca.fit(Xscaled)
-    Xcomponents = pca.transform(Xscaled)
-    
-    lda = LDA()
-    lda.fit(Xcomponents, y)
-
-    return pca, lda
-
-def pipeLine(X, pca, lda):
-    scaler = StandardScaler()
-    Xscaled = scaler.fit_transform(X)
-
-    X1 = pca.transform(Xscaled)
-    X2 = lda.transform(X1)
-
-    return X2
-
-def calculatePCA(X, y):
-    scaler = StandardScaler()
-    Xscaled = scaler.fit_transform(X)
-
-    pca = PCA(n_components=7)
-    pca.fit(Xscaled)
-
-    return pca, 0
-
-def PCApipeLine(X, pca, lda):
-    scaler = StandardScaler()
-    Xscaled = scaler.fit_transform(X)
-    X1 = pca.transform(Xscaled)
-
-    return X1
-
-def paperPipeline(filename, dim=52):
-    stateVec, dirVec = readInput(filename, dim)
-
-    X_train, X_test, y_train, y_test = train_test_split(stateVec, dirVec.ravel(), test_size=0.2)
-    
-    pipeline = PCALDAPipeline(26)
-    pipeline.calculateFunction(X_train, y_train)
-    y1 = pipeline.predictWFunction(X_test)
-    for i in range(y1.shape[0]):
-        print(y1[i], y_test[i])
-
 def kFold(filename, pipeline, model, dim=52, k=5):
     stateVec, dirVec = readInput(filename, dim)
     dirVec = dirVec.ravel()
