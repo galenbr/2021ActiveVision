@@ -24,14 +24,14 @@ def helpDisp(text):
 class methodPipeline(object):
     def __init__(self):
         self.ready = False
+        self.scaler = StandardScaler()
         return self
 
     def calculateFunction(self, X, y):
         return self.ready
 
     def normalize(self, X):
-        scaler = StandardScaler()
-        Xscaled = scaler.fit_transform(X)
+        Xscaled = self.scaler.transform(X)
         return Xscaled
 
     def applyFunction(self, X):
@@ -39,10 +39,11 @@ class methodPipeline(object):
 
 class PCALDAPipeline(methodPipeline):
     def __init__(self, n_components):
-        super(methodPipeline, self).__init__()
+        methodPipeline.__init__(self)
         self.n_components = n_components
 
     def calculateFunction(self, X, y):
+        self.scaler.fit(X)
         X = self.normalize(X)
         self.pca = PCA(self.n_components)
         X_components = self.pca.fit_transform(X)
@@ -72,10 +73,11 @@ class PCALDAPipeline(methodPipeline):
 
 class PCAPipeline(methodPipeline):
     def __init__(self, n_components):
-        super(methodPipeline, self).__init__()
+        methodPipeline.__init__(self)
         self.n_components = n_components
 
     def calculateFunction(self, X, y):
+        self.scaler.fit(X)
         X = self.normalize(X)
         self.pca = PCA(self.n_components)
         X_components = self.pca.fit_transform(X)
@@ -102,12 +104,6 @@ class PCAPipeline(methodPipeline):
 class BrickPipeline(methodPipeline):
     def __init__(self):
         super(methodPipeline, self).__init__()
-
-    def calculateFunction(self, X, y):
-        return methodPipeline.calculateFunction(self, X, y)
-
-    def applyFunction(self, X):
-        return methodPipeline.applyFunction(self, X)
 
     def predictWFunction(self, X):
         return np.ones(X.shape[0])
