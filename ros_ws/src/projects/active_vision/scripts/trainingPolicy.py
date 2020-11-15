@@ -8,7 +8,9 @@ from matplotlib import pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, KFold
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
 
 def helpDisp(text):
     print(text)
@@ -59,6 +61,22 @@ def pipeLine(X, pca, lda):
 
     return X2
 
+def calculatePCA(X, y):
+    scaler = StandardScaler()
+    Xscaled = scaler.fit_transform(X)
+
+    pca = PCA(n_components=7)
+    pca.fit(Xscaled)
+
+    return pca, 0
+
+def PCApipeLine(X, pca, lda):
+    scaler = StandardScaler()
+    Xscaled = scaler.fit_transform(X)
+    X1 = pca.transform(Xscaled)
+
+    return X1
+
 def paperPipeline(filename, dim=52):
     stateVec, dirVec = readInput(filename, dim)
 
@@ -72,6 +90,29 @@ def paperPipeline(filename, dim=52):
     for i in range(y1.shape[0]):
         print(y1[i], y_test[i])
 
+def kFold(filename, calcFunc, useFunc, dim=52, k=5):
+    stateVec, dirVec = readInput(filename, dim)
+    dirVec = dirVec.ravel()
+    kFold = KFold(n_splits=k, random_state=None)
+    model = LogisticRegression(solver='liblinear')
+    accuracies = []
+    for train_index, test_index in kFold.split(stateVec):
+        X_train, X_test = stateVec[train_index, :], stateVec[test_index, :]
+        y_train, y_test = dirVec[train_index], dirVec[test_index]
+        cPCA, cLDA = calcFunc(X_train, y_train)
+        X_train_vec = useFunc(X_train, cPCA, cLDA)
+        X_test_vec = useFunc(X_test, cPCA, cLDA)
+        model.fit(X_train_vec, y_train)
+        pred_values = model.predict(X_test_vec)
+        #pred_values = np.ones(pred_values.shape)
+        acc = accuracy_score(pred_values, y_test)
+        accuracies.append(acc)
+    avg_accuracy = sum(accuracies)/k
+    for acc in accuracies:
+        print("%1.2f" % acc)
+    print("Overall average: %1.2f" % (avg_accuracy))
+
+
 if __name__ == "__main__":
 
     if len(sys.argv) != 3: helpDisp("ERROR : Incorrent number of arguments")
@@ -82,4 +123,5 @@ if __name__ == "__main__":
     dir = sys.argv[1]
     file = sys.argv[2]
     paperPipeline(dir+file)
+    kFold(dir+file, calculatePCA, PCApipeLine)
     
