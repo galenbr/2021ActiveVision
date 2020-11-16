@@ -12,6 +12,8 @@ using namespace std;
 
 ros::NodeHandle* n_ptr;
 int32_t timeout = 1000;
+double Tx_limit;
+double Ty_limit;
 
 typedef actionlib::SimpleActionServer<lock_key::SpiralInsertAction> Server;
 
@@ -25,7 +27,10 @@ bool maxDownForce(double force){
                            currentWrench.response.fy,
                            currentWrench.response.fz};
 
-	return forces[2]<force;
+    ROS_INFO("If (Fz: %f > %f)==False, then keep going",
+             forces[2], force);
+
+	return forces[2]>force;
 }
 
 bool maxSpiralForces(double Fd){
@@ -41,9 +46,13 @@ bool maxSpiralForces(double Fd){
                             currentWrench.response.ty,
                             currentWrench.response.tz};
 
-	return ((sqrt(pow(forces[0],2))>0.9) ||
-            (sqrt(pow(torques[1],2))>0.9) ||
-            (forces[2]>-Fd));
+    ROS_INFO("If (Tx: %f > %f || Ty: %f > %f || Fz: %f < %f)==False, then keep spiraling",
+            sqrt(pow(torques[0],2)),Tx_limit,sqrt(pow(torques[1],2)),Ty_limit,
+            forces[2],-Fd);
+
+	return ((sqrt(pow(torques[0],2))>Tx_limit) || //tx>0.9 or
+            (sqrt(pow(torques[1],2))>Ty_limit) || //ty>0.9 or
+            (forces[2]<-Fd));                //fz>Fd
 }
 
 void moveAbs(double x, double y, double z, double qw, double qx, double qy, double qz){
@@ -91,7 +100,7 @@ void moveRel(double x, double y, double z, double qw, double qx, double qy, doub
 }
 
 void InsertPartSpiral(double Ft, double Fd, double Fi, double delta_max){
-	// Implement Algorithm 1 from Paper here.
+	// Implement Algorithm 1 from Watson, Miller, and Correll 2020 Paper here.
 
     // 11. MoveAbs - Move to insertion plane. Should already be
     //               accomplished by controller.cpp
@@ -101,34 +110,45 @@ void InsertPartSpiral(double Ft, double Fd, double Fi, double delta_max){
     ROS_INFO("Moving to insertion plane");
     double delta{0.0};
     //Break delta up into smaller steps
-    double delta_cmd{delta_max/20.0};
+    double delta_cmd;
+    n_ptr->getParam("spiral_delta_step",delta_cmd); // Distance to move down per step
     while (delta<=delta_max && maxDownForce(-Ft)==0){
         moveRel(0.0,0.0,-delta_cmd,0.0,0.0,0.0,0.0);
+        ROS_INFO("delta: %f",delta);
         // Update delta. TODO: Use actual feedback rather than cmd
-        delta-=delta_cmd;
+        delta+=delta_cmd;
     }
 
+    ROS_INFO("Arrived at insertion plane");
     // 13. MoveSpiral - Perform spiral motion while 
     //                  MaxSpiralForces is true
     double x{0}, y{0};           // Current EE position
     double prev_x{0}, prev_y{0}; // Previous EE position
-    double r{0}, phi{0}; //Spiral radius and angle
-    double r_step{0.00001}, phi_step{0.05}; //Step size for radius and angle
-    int ii{1}; // Iteration Counter
-    int ii_max{1000}; //Max number of iterations
+    int nn{1}; // Iteration Counter
+    double spiral_a, spiral_b, spiral_rad, spiral_rot, phi;
+    int spiral_nmax; //Max number of iterations
+
+    ROS_INFO("Retrieving spiral parameters");
+    n_ptr->getParam("spiral_Tx",Tx_limit);
+    n_ptr->getParam("spiral_Ty",Ty_limit);
+    n_ptr->getParam("spiral_a",spiral_a);
+    n_ptr->getParam("spiral_b",spiral_b);
+    n_ptr->getParam("spiral_nmax",spiral_nmax);
+    n_ptr->getParam("spiral_rot",spiral_rot);
 
     ROS_INFO("Starting Spiral Insertion Motion");
 
-    while (ii<ii_max && maxSpiralForces(Fd)==1){
+    while (nn<spiral_nmax && maxSpiralForces(Fd)==0){
         //Calculate new xy
-        x+=r*cos(phi); y+=r*sin(phi);
+        phi = sqrt(nn/spiral_nmax)*(spiral_rot*2.0*M_PI);
+        spiral_rad=(spiral_a-spiral_b*phi);
+        x+=spiral_rad*cos(phi);
+        y+=spiral_rad*sin(phi);
         ROS_INFO("Spiral X: %.4f, Y: %.4f", x, y);
         //Send relative movement command
         moveRel(x-prev_x,y-prev_y,0,0.0,0.0,0.0,0.0);
         //Update parameters
-        ii+=1; r+=r_step, phi+=phi_step;
-        prev_x=x; prev_y=y;
-
+        nn+=1; prev_x=x; prev_y=y;
     }
 
     ROS_INFO("Performing final insertion");
@@ -137,8 +157,10 @@ void InsertPartSpiral(double Ft, double Fd, double Fi, double delta_max){
     while (delta<=delta_max && maxDownForce(-Fi)==0){
         moveRel(0.0,0.0,-delta_cmd,0.0,0.0,0.0,0.0);
         // Update delta. TODO: Use actual feedback rather than cmd
-        delta-=delta_cmd;
+        delta+=delta_cmd;
     }
+
+    ROS_INFO("Insertion complete!");
 
 }
 

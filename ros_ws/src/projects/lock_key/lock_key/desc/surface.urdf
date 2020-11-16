@@ -27,8 +27,12 @@
     </inertial>
   </link>
 
+  <gazebo reference="table">
+  <material>Gazebo/DarkGrey</material>
+  </gazebo>
+
   <joint name="fixed" type="fixed">
-    <origin rpy="0 0 0" xyz="0.75 0 0.25" />
+    <origin rpy="0 0 0" xyz="0.75 0 0.4" />
     <parent link="world" />
     <child link="table" />
   </joint>
