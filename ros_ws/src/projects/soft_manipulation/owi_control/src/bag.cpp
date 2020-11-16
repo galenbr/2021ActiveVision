@@ -32,7 +32,7 @@ int main(int argc, char** argv){
     ros::NodeHandle n;
 
     ros::Subscriber sub1 = n.subscribe("error",1,rec_err);
-    ros::Subscriber sub2 = n.subscribe("arcuo_simple/result",1,rec_img);
+    ros::Subscriber sub2 = n.subscribe("usb_cam/image_raw",1,rec_img);
     ros::Rate r{30};
     while(ros::ok()){
         ros::Time t = ros::Time::now();
