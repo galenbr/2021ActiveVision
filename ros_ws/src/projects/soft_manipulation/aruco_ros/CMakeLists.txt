@@ -54,6 +54,10 @@ add_executable(marker_publisher src/marker_publish.cpp
 add_dependencies(marker_publisher ${PROJECT_NAME}_gencfg)
 target_link_libraries(marker_publisher ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
+add_executable(triple src/simple_triple.cpp
+                      src/aruco_ros_utils.cpp)
+add_dependencies(triple ${PROJECT_NAME}_gencfg)
+target_link_libraries(triple ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 #############
 ## Install ##
 #############
