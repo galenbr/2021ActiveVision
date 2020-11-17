@@ -44,3 +44,7 @@ target_link_libraries(owi_controller_node ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES
 add_executable(owi_record_node src/bag.cpp)
 add_dependencies(owi_record_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(owi_record_node ${catkin_LIBRARIES})
+
+add_executable(owi_keyboard_node src/keyboard.cpp)
+add_dependencies(owi_keyboard_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(owi_keyboard_node ${catkin_LIBRARIES})
