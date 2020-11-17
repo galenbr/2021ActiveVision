@@ -1,8 +1,12 @@
 #include "ros/ros.h"
 #include <tf/tf.h>
+#include <math.h>
+
 #include "geometry_msgs/Pose.h"
 #include "geometry_msgs/Point.h"
 #include "std_msgs/Float32.h"
+
+#define PI 57.2957795786
 
 float x1[3], x2[3], x3[3]; //x2 is the end effector, x3 is the elbow marker
 float Orientation_Z;
@@ -73,10 +77,12 @@ int main(int argc, char **argv)
 	ros::Subscriber sub1 = n.subscribe("/aruco_simple/pose", 1000, Callback1);
 	ros::Subscriber sub2 = n.subscribe("/aruco_simple/pose2", 1000, Callback2);
 	ros::Subscriber sub3 = n.subscribe("/aruco_simple/pose3", 1000, Callback3);
+	
 	ros::Publisher pub = n.advertise<geometry_msgs::Point>("/object_position", 1000);
 	ros::Publisher pub1 = n.advertise<std_msgs::Float32>("/object_orientation", 1000);
-
+	ros::Publisher theta_pub = n.advertise<geometry_msgs::Point>("/theta_vals", 1000);
 	ros::Publisher elbow_pub = n.advertise<geometry_msgs::Point>("/elbow_position", 1000);
+	
 	ros::Rate r(20);
 	while(ros::ok())
 	{
@@ -90,19 +96,45 @@ int main(int argc, char **argv)
 		msg.x = -x[0];
 		msg.y = x[1];
 		msg.z = x[2];
-		std_msgs::Float32 Block_orientation;
-		Block_orientation.data= Orientation_Z - Orientation_Reference_Z;
+		// std_msgs::Float32 Block_orientation;
+		// Block_orientation.data= Orientation_Z - Orientation_Reference_Z;
 
 		geometry_msgs::Point elbow_msg;
 		msg.x = - elbow_marker[0];
 		msg.y = elbow_marker[1];
 		msg.z = elbow_marker[2];
 
+		// Computing angles
+		float theta1 = 0;
+		float theta2 = 0;
+
+		if(x3[0]!= x1[0]){
+			theta1 = atan2((x3[1] - x1[1]),(x1[0] - x3[0])) * PI; //Since x is opposite dirn
+		}
+		else
+		{
+			theta1 = 90;	
+		}
+
+		if(x2[0] != x1[0]){
+			theta2 = (atan2((x2[1] - x1[1]),(x1[0] - x2[0])) * PI) - theta1; //Since x is opp dirn
+		}
+		else
+		{
+			theta2 = 90 - theta1;
+		}
+		geometry_msgs::Point angle_msg;
+		angle_msg.x = theta1;
+		angle_msg.y = theta2;
+		angle_msg.z = 0.0;
+
 		//ROS_INFO("publishing the pose difference");
 
 		pub.publish(msg);
 		elbow_pub.publish(elbow_msg);
-		pub1.publish(Block_orientation);
+		theta_pub.publish(angle_msg);
+		// pub1.publish(Block_orientation);
+
 		for(int i= 0;i<3;i++)
 		{
 			printf("***POSE***: ");
