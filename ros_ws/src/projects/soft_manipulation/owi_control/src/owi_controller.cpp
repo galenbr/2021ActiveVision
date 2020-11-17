@@ -12,6 +12,7 @@
 ros::NodeHandle* nh;
 ros::Publisher pub;
 ros::Publisher err_pub;
+Eigen::MatrixXd Jr(2,2);
 
 geometry_msgs::Point curPose_;
 
@@ -158,6 +159,25 @@ void get_cur_pose(const geometry_msgs::Point &msg){
     }
 }
 
+void update_Jr(const geometry_msgs::Point &msg){
+
+    float th1 = msg.x;
+    float th2 = msg.y;
+
+    float l1 = 0.09;    // in m
+    float l2 = 0.065;   // in m
+
+    float jr1 = - l1*sin(th1*PI) - l2*sin((th1+th2)*PI);
+    float jr2 = - l2*sin((th1 + th2)*PI);
+    float jr3 = l1*cos(th1*PI) + l2*cos((th1 + th2)*PI);
+    float jr4 = l2*cos((th1 + th2)*PI);
+    
+    Jr << jr1, jr2,
+          jr3, jr4;
+
+
+}
+
 int main(int argc, char **argv){
     
     ros::init(argc, argv, "owi_controller");
@@ -166,8 +186,10 @@ int main(int argc, char **argv){
 
     
     ros::Subscriber sub = nh->subscribe("object_position",1,get_cur_pose);
+    ros::Subscriber theta_sub = nh->subscribe("theta_vals",1,update_Jr);
     pub = nh->advertise<std_msgs::Float64MultiArray>("pwm",10);
     err_pub = nh->advertise<std_msgs::Float64MultiArray>("error",10);
+
     
     ros::spin();
     return 0;
