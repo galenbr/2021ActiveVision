@@ -11,6 +11,7 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.model_selection import train_test_split, KFold
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
+from sklearn.neighbors import KNeighborsClassifier
 
 def helpDisp(text):
     print(text)
@@ -146,6 +147,7 @@ def kFold(filename, pipeline, model, dim=52, k=5):
         X_test_vec = pipeline.applyFunction(X_test)
         model.fit(X_train_vec, y_train)
         pred_values = model.predict(X_test_vec)
+        #print(pred_values, y_test)
         #pred_values = np.ones(pred_values.shape)
         acc = accuracy_score(pred_values, y_test)
         accuracies.append(acc)
@@ -156,6 +158,7 @@ def kFold(filename, pipeline, model, dim=52, k=5):
 
 def standardRun(file):
     model = LogisticRegression(solver='liblinear', multi_class='auto')
+    model = KNeighborsClassifier(n_neighbors=7)
     print("*****%s*****" % file)
     print("*****PCA-LDA*****")
     kFold(file, PCALDAPipeline(26), model)
