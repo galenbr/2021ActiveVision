@@ -58,6 +58,12 @@ add_executable(triple src/simple_triple.cpp
                       src/aruco_ros_utils.cpp)
 add_dependencies(triple ${PROJECT_NAME}_gencfg)
 target_link_libraries(triple ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+
+add_executable(quad src/simple_quad.cpp
+                      src/aruco_ros_utils.cpp)
+add_dependencies(quad ${PROJECT_NAME}_gencfg)
+target_link_libraries(quad ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+
 #############
 ## Install ##
 #############
