@@ -4,8 +4,8 @@ project(active_vision)
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
 find_package(PCL 1.5 REQUIRED)
-# find_package(OpenCV REQUIRED)
-# include_directories(${OpenCV_INCLUDE_DIRS})
+find_package(OpenCV REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -141,8 +141,8 @@ add_library(${PROJECT_NAME}
    src/testingModel_v1.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${PCL_LIBRARIES})
-# target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
+# target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -250,3 +250,7 @@ target_link_libraries(findStablePos active_vision ${catkin_LIBRARIES} ${PCL_LIBR
 add_executable(genStateVec src/genStateVec.cpp)
 add_dependencies(genStateVec active_vision ${catkin_EXPORTED_TARGETS})
 target_link_libraries(genStateVec active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(projBasedMovement src/projBasedMovement.cpp)
+add_dependencies(projBasedMovement active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(projBasedMovement active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
