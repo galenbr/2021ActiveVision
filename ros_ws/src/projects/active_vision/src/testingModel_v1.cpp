@@ -84,7 +84,9 @@ environment::environment(ros::NodeHandle *nh){
                 {"rectPrismAV","Rectangular Prism"},
                 {"bowlAV","Bowl"},
                 {"bowl2AV","Bowl2"},
-                {"cupAV","Cup"}};
+                {"cupAV","Cup"},
+                {"cinderBlockAV","Cinder Block"},
+                {"handleAV","Door Handle"}};
 
   // Stores stable poses for the objects (Z(m), Roll(Rad), Pitch(Rad))
   objectPosesDict = {{{0.012,0.000,0.000},  {0.084,1.459,-0.751},
@@ -95,9 +97,11 @@ environment::environment(ros::NodeHandle *nh){
                      {{0.015,0.000,0.000},{0.015,0.000,1.570}},
                      {{0.015,0.000,0.000}},
                      {{0.015,0.000,0.000}},
-                     {{0.022,0.000,0.000}}};
+                     {{0.022,0.000,0.000}},
+                     {{0.015,0.000,0.000}},
+                     {{0.015,0.000,0.000}}};
 
-  objectPosesYawLimits = {{0,359},{0,89},{0,89},{0,1},{0,1},{0,1},{0,1}};
+  objectPosesYawLimits = {{0,359},{0,89},{0,89},{0,1},{0,1},{0,1},{0,359},{0,359}};
 
   voxelGridSize = 0.01;          // Voxel Grid size for environment
   voxelGridSizeUnexp = 0.015;    // Voxel Grid size for unexplored point cloud
@@ -530,11 +534,13 @@ void environment::updateUnexploredPtCld(){
     proj = proj/proj[2];
     proj[0] = round(proj[0])-1;
     proj[1] = round(proj[1])-1;
-    projIndex = proj[1]*(ptrPtCldLast->width)+proj[0];
-    // If the z value of unexplored pt is greater than the corresponding
-    // projected point in Kinect Raw data then that point is occluded.
-    if (ptrPtCldLast->points[projIndex].z <= ptTemp[2]){
-      occludedIndices->indices.push_back(i);
+    if(proj[0] >=0 && proj[0] <= 640-1 && proj[1] >=0 && proj[1] <= 480-1){
+      projIndex = proj[1]*(ptrPtCldLast->width)+proj[0];
+      // If the z value of unexplored pt is greater than the corresponding
+      // projected point in Kinect Raw data then that point is occluded.
+      if (ptrPtCldLast->points[projIndex].z <= ptTemp[2]){
+        occludedIndices->indices.push_back(i);
+      }
     }
   }
 

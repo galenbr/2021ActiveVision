@@ -305,6 +305,18 @@ std::vector<std::vector<double>> exploreChildPoses(environment &kinectControl, s
 }
 */
 
+std::vector<int> randomDirection(){
+	std::vector<int> dirs = {1,2,3,4,5,6,7,8};
+	std::vector<int> ret;
+	int randIndex;
+	while(dirs.size() > 0){
+		randIndex = rand() % (dirs.size());
+		ret.push_back(dirs[randIndex]);
+		dirs.erase(dirs.begin()+randIndex);
+	}
+	return ret;
+}
+
 // Explore one step in all deirection from the home/parent position
 // Configurations are saved
 bool exploreOneStepAllDir(environment &env, RouteData &home, std::vector<RouteData> &opOneStep){
@@ -321,22 +333,23 @@ bool exploreOneStepAllDir(environment &env, RouteData &home, std::vector<RouteDa
 	temp.parentID = home.childID;
   temp.success = false;
 	// Going to each direction for a step and saving their configurations
+  	std::vector<int> dirs = randomDirection();
 	for (int i = 1; i <= 8 && temp.success == false; i++){
 		// Rollback to the parent/home configuration
 		env.rollbackConfiguration(temp.parentID);
-		curPose = calcExplorationPose(env.lastKinectPoseViewsphere,i);
+		curPose = calcExplorationPose(env.lastKinectPoseViewsphere,dirs[i]);
 		std::cout << "." << std::flush;
 		// If kinect pose if above the table, then proceed in that direction
 		if (checkValidPose(curPose) == true && checkIfNewPose(home.path,curPose) == true){
 			// Saving the direction and path taken
-			temp.direction = i;
+			temp.direction = dirs[i];
 			temp.path = home.path;
 			temp.path.push_back(curPose);
 
 			// Doing a pass and saving the child
 			singlePass(env, curPose, false, true);
 			temp.success = (env.selectedGrasp != -1);
-			temp.childID = env.saveConfiguration(env.configurations[temp.parentID].description+"_C"+std::to_string(i));
+			temp.childID = env.saveConfiguration(env.configurations[temp.parentID].description+"_C"+std::to_string(dirs[i]));
 
 			// Exit the loop and updating variables used for visualization
 			if(temp.success == true){
@@ -493,8 +506,8 @@ std::vector<int> generateData(environment &kinectControl, int object, int homeTy
   int maxRndSteps = 5;
   int nHomeConfigs = 0;
 
-	for (int currentPoseCode = 0; currentPoseCode < kinectControl.objectPosesDict[object].size(); currentPoseCode+=1){
-		for (int currentYaw = kinectControl.objectPosesYawLimits[object][0]; currentYaw < kinectControl.objectPosesYawLimits[object][1]; currentYaw+=40){
+	for (int currentPoseCode = 0; currentPoseCode < kinectControl.objectPosesDict[object].size(); currentPoseCode+=100){
+		for (int currentYaw = kinectControl.objectPosesYawLimits[object][0]; currentYaw < kinectControl.objectPosesYawLimits[object][1]; currentYaw+=4){
         printf("  *** Pose #%d/%d with Yaw %d ***\n",currentPoseCode+1,int(kinectControl.objectPosesDict[object].size()),currentYaw);
 				kinectControl.moveObject(object,currentPoseCode,currentYaw*(M_PI/180.0));
 
