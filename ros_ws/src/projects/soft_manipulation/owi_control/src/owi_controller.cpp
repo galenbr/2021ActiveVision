@@ -20,9 +20,9 @@ geometry_msgs::Point get_goal_pose(){
 
     geometry_msgs::Point goalPose;
     
-    goalPose.x = -0.096145;  //Read from YAML
-    goalPose.y = -0.049568;
-    goalPose.z = -0.007454;
+    goalPose.x = 200;  //Read from YAML
+    goalPose.y = 300;
+    goalPose.z = 0;
 
     return goalPose;
 }
