@@ -105,7 +105,14 @@ int main(int argc, char **argv)
 		float theta2 = 0;
 
 		if(elbow[0]!= base[0]){
-			theta1 = atan((elbow[1] - base[1])/(elbow[0] - base[0])) * PI; //Since x is opposite dirn
+			if(elbow[0]<base[0]){
+				theta1 = atan((elbow[1] - base[1])/(elbow[0] - base[0])) * PI; //Since x is opposite dirn
+			}
+			else
+			{
+				theta1 = 180 + atan((elbow[1] - base[1])/(elbow[0] - base[0])) * PI;
+			}
+			
 		}
 		else
 		{
@@ -113,7 +120,13 @@ int main(int argc, char **argv)
 		}
 
 		if(ee[0] != l2[0]){
-			theta2 = (atan((ee[1] - l2[1])/(ee[0] - l2[0])) * PI) - theta1; //Since x is opp dirn
+			if(l2[0] > ee[0]){
+				theta2 = (atan((ee[1] - l2[1])/(ee[0] - l2[0])) * PI) - theta1; //Since x is opp dirn
+			}
+			else
+			{
+				theta2 = 180 + (atan((ee[1] - l2[1])/(ee[0] - l2[0])) * PI) - theta1;
+			}
 		}
 		else
 		{
