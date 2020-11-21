@@ -27,10 +27,10 @@ bool maxDownForce(double force){
                            currentWrench.response.fy,
                            currentWrench.response.fz};
 
-    ROS_INFO("If (Fz: %f > %f)==False, then keep going",
+    ROS_INFO("Stop if (Fz: %f > %f)",
              forces[2], force);
 
-	return forces[2]>force;
+	return forces[2]<force; //Return true to keep going
 }
 
 bool maxSpiralForces(double Fd){
@@ -112,7 +112,7 @@ void InsertPartSpiral(double Ft, double Fd, double Fi, double delta_max){
     //Break delta up into smaller steps
     double delta_cmd;
     n_ptr->getParam("spiral_delta_step",delta_cmd); // Distance to move down per step
-    while (delta<=delta_max && maxDownForce(-Ft)==0){
+    while (delta<=delta_max && maxDownForce(-Ft)){
         moveRel(0.0,0.0,-delta_cmd,0.0,0.0,0.0,0.0);
         ROS_INFO("delta: %f",delta);
         // Update delta. TODO: Use actual feedback rather than cmd
@@ -154,7 +154,7 @@ void InsertPartSpiral(double Ft, double Fd, double Fi, double delta_max){
     ROS_INFO("Performing final insertion");
 
     // 14. MoveRel - Finish insertion
-    while (delta<=delta_max && maxDownForce(-Fi)==0){
+    while (delta<=delta_max && maxDownForce(Fi)){
         moveRel(0.0,0.0,-delta_cmd,0.0,0.0,0.0,0.0);
         // Update delta. TODO: Use actual feedback rather than cmd
         delta+=delta_cmd;

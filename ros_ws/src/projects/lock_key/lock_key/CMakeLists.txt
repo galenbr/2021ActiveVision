@@ -36,6 +36,7 @@ find_package(Boost REQUIRED)
    FILES
    imgCapture.srv
    findKey.srv
+   getAveWrench.srv
    getWrench.srv
  )
 

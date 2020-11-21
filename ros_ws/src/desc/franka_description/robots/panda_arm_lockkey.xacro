@@ -218,8 +218,17 @@
       <limit effort="12" lower="-2.8973" upper="2.8973" velocity="2.6100"/>
     </joint>
 
-    <gazebo reference="${arm_id}_joint7">
+<!--     <gazebo reference="${arm_id}_joint7">
         <provideFeedback>true</provideFeedback>
+    </gazebo> -->
+    <gazebo reference="${arm_id}_joint7">
+      <disableFixedJointLumping>true</disableFixedJointLumping>
+      <sensor name="joint7_ft_sensor" type="force_torque">
+        <force_torque>
+          <frame>parent</frame>
+          <measure_direction>parent_to_child</measure_direction>
+        </force_torque>
+      </sensor>
     </gazebo>
     <gazebo>
         <plugin name="ft_sensor" filename="libgazebo_ros_ft_sensor.so">
