@@ -11,19 +11,19 @@
        spiral_nmax: Number of points in spiral
        spiral_rot: Number of spiral rotations
        ft_samples: Number of FT samples to take before insertion
-       ft_sleep: Sleep time between FT samples-->
-  <param name="spiral_Ft" type="double" value="0.0" />
-  <param name="spiral_Fd" type="double" value="10.0" />
+       ft_sleep: Sleep time between FT samples -->
+  <param name="spiral_Ft" type="double" value="2.5" />
+  <param name="spiral_Fd" type="double" value="3.0" />
   <param name="spiral_Fi" type="double" value="20.0" />
-  <param name="spiral_Tx" type="double" value="10.0" />
-  <param name="spiral_Ty" type="double" value="10.0" />
+  <param name="spiral_Tx" type="double" value="20.0" />
+  <param name="spiral_Ty" type="double" value="20.0" />
   <param name="spiral_delta_max" type="double" value="0.1" />
-  <param name="spiral_delta_step" type="double" value="0.001" /> <!-- Should be 0.00025 eventually -->
+  <param name="spiral_delta_step" type="double" value="0.0005" /> <!-- Should be 0.00025 eventually -->
   <param name="spiral_a"    type="double" value="0.0" />
-  <param name="spiral_b"    type="double" value="0.000025" />
-  <param name="spiral_nmax" type="int" value="100" />
-  <param name="spiral_rot"  type="double" value="4.0" />
-  <param name="ft_samples"  type="int" value="10" />
+  <param name="spiral_b"    type="double" value="0.0005" /> <!-- 0.000025 -->
+  <param name="spiral_nmax" type="int" value="50" />
+  <param name="spiral_rot"  type="double" value="10.0" />
+  <param name="ft_samples"  type="int" value="25" />
   <param name="ft_sleep"    type="double" value="0.05" />
   <!-- <include file="$(find ref_benchmark_moveit_config)/launch/move_group.launch" /> -->
   <!-- launch moveit API -->

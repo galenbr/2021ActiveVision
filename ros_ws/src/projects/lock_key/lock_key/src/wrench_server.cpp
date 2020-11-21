@@ -10,7 +10,7 @@ vector<double> forces (3);
 vector<double> torques (3);
 
 void wrenchSubCallback(const geometry_msgs::WrenchStamped::ConstPtr& msg){
-    ROS_INFO("Received wrist wrench");
+    //ROS_INFO("Received wrist wrench");
     forces[0]=msg->wrench.force.x;
     forces[1]=msg->wrench.force.y;
     forces[2]=msg->wrench.force.z;
@@ -28,8 +28,8 @@ bool wrenchServiceCallback(lock_key::getWrench::Request &req,
   res.tx = torques[0];
   res.ty = torques[1];
   res.tz = torques[2];
-  ROS_INFO("Fx: %.2f, Fy: %.2f, Fz: %.2f", res.fx, res.fy, res.fz);
-  ROS_INFO("Tx: %.2f, Ty: %.2f, Tz: %.2f", res.tx, res.ty, res.tz);
+  //ROS_INFO("Fx: %.2f, Fy: %.2f, Fz: %.2f", res.fx, res.fy, res.fz);
+  //ROS_INFO("Tx: %.2f, Ty: %.2f, Tz: %.2f", res.tx, res.ty, res.tz);
   return true;
 }
 
@@ -57,8 +57,8 @@ bool wrenchAveServiceCallback(lock_key::getAveWrench::Request &req,
     res.ty += torques[1];
     res.tz += torques[2];
     ROS_INFO("Collected sample %i/%i.",ii+1,ii_max);
-    ROS_INFO("Fx: %.2f, Fy: %.2f, Fz: %.2f", res.fx, res.fy, res.fz);
-    ROS_INFO("Tx: %.2f, Ty: %.2f, Tz: %.2f", res.tx, res.ty, res.tz);
+    ROS_INFO("Fx: %.2f, Fy: %.2f, Fz: %.2f", forces[0], forces[1], forces[2]);
+    ROS_INFO("Tx: %.2f, Ty: %.2f, Tz: %.2f", torques[0], torques[1], torques[2]);
     ros::Duration(ft_sleep).sleep();
   }
   // Divide by number of samples to get average. Multiply by 1.0 to get double
