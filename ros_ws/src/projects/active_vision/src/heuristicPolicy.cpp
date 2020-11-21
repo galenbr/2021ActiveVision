@@ -1,186 +1,12 @@
-#include "active_vision/testingModel_v1.h"
-#include "active_vision/dataHandling.h"
+#include "active_vision/environment.h"
+#include "active_vision/toolDataHandling.h"
+#include "active_vision/toolViewPointCalc.h"
+#include "active_vision/toolVisualization.h"
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-#define MIN_ANGLE 20
-#define MIN_ANGLE_RAD MIN_ANGLE*(M_PI/180.0)
-
 int runMode;
 int mode;
-int dirChosen = 0;
-bool called = false;
-bool quit = false;
-
-std::map<int, std::string> dirLookup{{0, "Reset"},
-                                     {1, "N"}, {2, "NE"},
-																		 {3, "E"}, {4, "SE"},
-																		 {5, "S"}, {6, "SW"},
-																	 	 {7, "W"}, {8, "NW"}};
-
-void keyboardEventOccurred(const pcl::visualization::KeyboardEvent &event){
-  if(event.keyUp()){
-    ::dirChosen = -1;
-    if      (event.getKeySym() == "KP_5"){ ::dirChosen = 0; ::called = true;}
-    else if (event.getKeySym() == "KP_1"){ ::dirChosen = 6; ::called = true;}
-    else if (event.getKeySym() == "KP_2"){ ::dirChosen = 5; ::called = true;}
-    else if (event.getKeySym() == "KP_3"){ ::dirChosen = 4; ::called = true;}
-    else if (event.getKeySym() == "KP_4"){ ::dirChosen = 7; ::called = true;}
-    else if (event.getKeySym() == "KP_6"){ ::dirChosen = 3; ::called = true;}
-    else if (event.getKeySym() == "KP_7"){ ::dirChosen = 8; ::called = true;}
-    else if (event.getKeySym() == "KP_8"){ ::dirChosen = 1; ::called = true;}
-    else if (event.getKeySym() == "KP_9"){ ::dirChosen = 2; ::called = true;}
-    else if (event.getKeySym() == "5"){ ::dirChosen = 0;    ::called = true;}
-    else if (event.getKeySym() == "1"){ ::dirChosen = 6;    ::called = true;}
-    else if (event.getKeySym() == "2"){ ::dirChosen = 5;    ::called = true;}
-    else if (event.getKeySym() == "3"){ ::dirChosen = 4;    ::called = true;}
-    else if (event.getKeySym() == "4"){ ::dirChosen = 7;    ::called = true;}
-    else if (event.getKeySym() == "6"){ ::dirChosen = 3;    ::called = true;}
-    else if (event.getKeySym() == "7"){ ::dirChosen = 8;    ::called = true;}
-    else if (event.getKeySym() == "8"){ ::dirChosen = 1;    ::called = true;}
-    else if (event.getKeySym() == "9"){ ::dirChosen = 2;    ::called = true;}
-    else if (event.getKeySym() == "Escape"){ ::quit = true; ::called = true;}
-  }
-}
-
-void initRGBViewer(ptCldVis::Ptr viewer, std::vector<int> &vp){
-
-	viewer->createViewPort(0.0,0.0,0.5,1.0,vp[0]);
-	viewer->createViewPort(0.5,0.0,1.0,1.0,vp[1]);
-	viewer->addCoordinateSystem(1.0);
-	viewer->setCameraPosition(-2,0,7,2,0,-1,1,0,2);
-	viewer->registerKeyboardCallback(keyboardEventOccurred);
-	viewer->setPosition(550,20);
-}
-
-pcl::PointXYZ sphericalToCartesian(std::vector<double> &pose){
-  pcl::PointXYZ res;
-  res.x = pose[0]*sin(pose[2])*cos(pose[1]);
-  res.y = pose[0]*sin(pose[2])*sin(pose[1]);
-  res.z = pose[0]*cos(pose[2]);
-  return(res);
-}
-
-std::vector<double> cartesianToSpherical(pcl::PointXYZ &point){
-  std::vector<double> res = {0,0,0};
-  res[0] = sqrt(pow(point.x,2)+pow(point.y,2)+pow(point.z,2));
-  res[1] = atan2(point.y,point.x);
-  res[2] = atan2(sqrt(pow(point.x,2)+pow(point.y,2)),point.z);
-  return(res);
-}
-
-double disBtwSpherical(std::vector<double> &poseA,std::vector<double> &poseB){
-	pcl::PointXYZ poseAcart = sphericalToCartesian(poseA);
-	pcl::PointXYZ poseBcart = sphericalToCartesian(poseB);
-	return(sqrt(pow(poseAcart.x-poseBcart.x,2)+pow(poseAcart.y-poseBcart.y,2)+pow(poseAcart.z-poseBcart.z,2)));
-}
-
-//Check that the azimuthal angle is less than 90.
-bool checkValidPose(std::vector<double> &pose){
-	return (round(pose[2]*180/M_PI) <= 90);
-}
-
-bool checkIfNewPose(std::vector<std::vector<double>> &oldPoses, std::vector<double> &pose){
-  for(int i = 0; i < oldPoses.size(); i++){
-		if(::mode == 1){
-			if(oldPoses[i] == pose) return false;
-		}else{
-			if(disBtwSpherical(oldPoses[i],pose) <= 0.75*(pose[0])*(20*M_PI/180)) return false;
-		}
-  }
-  return true;
-}
-
-std::vector<double> calcExplorationPoseB(std::vector<double> &startPose, int dir){
-
-  Eigen::Vector3f xAxis,yAxis,zAxis,rotAxis,tempVec;
-  Eigen::Vector3f xyPlane(0,0,1);
-  Eigen::Matrix3f matA; matA << 1,0,0,0,1,0,0,0,1;
-  Eigen::Matrix3f matB, matC, tempMat;
-  // tf::Matrix3x3 rotMat;
-
-  pcl::PointXYZ stPoint = sphericalToCartesian(startPose);
-  pcl::PointXYZ endPoint;
-
-  zAxis = stPoint.getVector3fMap(); zAxis.normalize();
-  xAxis = zAxis.cross(xyPlane); xAxis.normalize();
-  yAxis = zAxis.cross(xAxis);
-
-	std::vector<double> ratio={0,0};
-	switch(dir){
-		case 1: ratio[0]=+1; ratio[1]=0;   break;
-		case 2: ratio[0]=+1; ratio[1]=-1;  break;
-		case 3: ratio[0]=0;  ratio[1]=-1;  break;
-		case 4: ratio[0]=-1; ratio[1]=-1;  break;
-		case 5: ratio[0]=-1; ratio[1]=0;   break;
-		case 6: ratio[0]=-1; ratio[1]=+1;  break;
-		case 7: ratio[0]=0;  ratio[1]=+1;  break;
-		case 8: ratio[0]=+1; ratio[1]=+1;  break;
-	}
-
-  rotAxis = ratio[0]*xAxis + ratio[1]*yAxis; rotAxis.normalize();
-  matB << 0,-rotAxis[2],rotAxis[1],rotAxis[2],0,-rotAxis[0],-rotAxis[1],rotAxis[0],0;
-  matC = rotAxis*rotAxis.transpose();
-
-  tempMat = cos(20*M_PI/180)*matA + sin(20*M_PI/180)*matB + (1-cos(20*M_PI/180))*matC;
-  tempVec = tempMat*stPoint.getVector3fMap();
-  endPoint.x = tempVec[0]; endPoint.y = tempVec[1]; endPoint.z = tempVec[2];
-
-  std::vector<double> end = cartesianToSpherical(endPoint);
-
-  // Polar angle 0 to 90 degree
-  if(end[2] < 0){
-    end[2] = -1*end[2];
-    end[1] = end[1] + M_PI;
-  }
-
-  // Azhimuthal angle 0 to 360 degree
-  end[1] = fmod(end[1],2*M_PI);
-  if(end[1] < 0) end[1] += 2*M_PI;
-
-	if(checkValidPose(end)) return end;
-  else                    return startPose;
-}
-
-std::vector<double> calcExplorationPoseA(std::vector<double> &startPose, int dir){
-	double azimuthalOffset, polarOffset;
-	switch(dir){
-		case 1: azimuthalOffset = 0; 							polarOffset = -MIN_ANGLE_RAD; break;	//N
-		case 2: azimuthalOffset = MIN_ANGLE_RAD; 	polarOffset = -MIN_ANGLE_RAD; break;	//NE
-		case 3: azimuthalOffset = MIN_ANGLE_RAD; 	polarOffset = 0; 							break;	//E
-		case 4: azimuthalOffset = MIN_ANGLE_RAD; 	polarOffset = MIN_ANGLE_RAD;  break;	//SE
-		case 5: azimuthalOffset = 0; 							polarOffset = MIN_ANGLE_RAD;  break;	//S
-		case 6: azimuthalOffset = -MIN_ANGLE_RAD; polarOffset = MIN_ANGLE_RAD;  break;	//SW
-		case 7: azimuthalOffset = -MIN_ANGLE_RAD; polarOffset = 0; 							break;	//W
-		case 8: azimuthalOffset = -MIN_ANGLE_RAD; polarOffset = -MIN_ANGLE_RAD; break;	//NW
-		default: printf("ERROR in calcExplorationPose\n");
-	}
-
-	std::vector<double> potentialPose = {startPose[0], startPose[1]+azimuthalOffset, startPose[2]+polarOffset};
-
-	// Addressing the NW & NE scenario when polar angle goes from *ve to -ve
-	if(potentialPose[2] < 0 && startPose[2] > 0) potentialPose[1] = startPose[1]-azimuthalOffset;
-
-	// Polar angle should be +ve
-	if(potentialPose[2] < 0){
-		potentialPose[2] = -1*potentialPose[2];
-		potentialPose[1] = potentialPose[1] + M_PI;
-	}
-
-	// Azhimuthal angle 0 to 360 degree
-	potentialPose[1] = fmod(potentialPose[1],2*M_PI);
-	if(potentialPose[1] < 0) potentialPose[1] += 2*M_PI;
-
-	// std::cout << dir << " " << startPose[1]*180/M_PI << "," << startPose[2]*180/M_PI << "->" <<
-	//                            potentialPose[1]*180/M_PI << "," << potentialPose[2]*180/M_PI << std::endl;
-
-	return(potentialPose);
-}
-
-std::vector<double> calcExplorationPose(std::vector<double> &startPose, int dir){
-	if(::mode == 1) return calcExplorationPoseA(startPose,dir);
-	else return calcExplorationPoseB(startPose,dir);
-}
 
 Eigen::Affine3f tfKinect(std::vector<double> &pose){
   std::vector<double> cartesian = {0,0,0,0,0,0};
@@ -202,22 +28,9 @@ void cleanUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr unexp){
   pcl::PointXYZRGB minPtObj, maxPtObj;
   pcl::getMinMax3D(*obj, minPtObj, maxPtObj);
 
-  // int scale = 3;
-  // pcl::PointXYZRGB minPtUnexp, maxPtUnexp;
-  // minPtUnexp.x = minPtObj.x - (scale-1)*(maxPtObj.x-minPtObj.x)/2;
-  // minPtUnexp.y = minPtObj.y - (scale-1)*(maxPtObj.y-minPtObj.y)/2;
-  // minPtUnexp.z = minPtObj.z;
-  // maxPtUnexp.x = maxPtObj.x + (scale-1)*(maxPtObj.x-minPtObj.x)/2;
-  // maxPtUnexp.y = maxPtObj.y + (scale-1)*(maxPtObj.y-minPtObj.y)/2;
-  // maxPtUnexp.z = maxPtObj.z + 0.05;
-
   ptCldColor::ConstPtr cPtrUnexp{unexp};
   pcl::PassThrough<pcl::PointXYZRGB> pass;
   pass.setInputCloud(cPtrUnexp);
-  // pass.setFilterFieldName("x"); pass.setFilterLimits(minPtUnexp.x,maxPtUnexp.x);
-  // pass.filter(*unexp);
-  // pass.setFilterFieldName("y"); pass.setFilterLimits(minPtUnexp.y,maxPtUnexp.y);
-  // pass.filter(*unexp);
   pass.setFilterFieldName("z"); pass.setFilterLimits(minPtObj.z,maxPtObj.z + 0.05);
   pass.filter(*unexp);
 }
@@ -299,7 +112,7 @@ std::vector<int> findVisibleUnexp8Dir(ptCldColor::Ptr obj, ptCldColor::Ptr unexp
   std::vector<double> newPose;
   cv::Mat single, final;
   for(int i = 1; i <= 8; i++){
-    newPose = calcExplorationPose(pose,i);
+    newPose = calcExplorationPose(pose,i,::mode);
     if(checkValidPose(newPose) == true){
       temp = findVisibleUnexp(tempObj,tempUnexp,newPose,single);
       cv::Size s = single.size();
@@ -348,18 +161,10 @@ void updateRouteData(environment &env, RouteData &data, bool save ,std::string n
 	}
 }
 
-void viewerSetCamPose(ptCldVis::Ptr viewer, std::vector<double> pose){
-	pose[0]*=1.5;
-	pcl::PointXYZ temp;
-	temp = sphericalToCartesian(pose);
-	temp.x+=1.5; temp.z+=1;
-	viewer->setCameraPosition(temp.x,temp.y,temp.z,1.5,0,1,0,0,1);
-}
-
 // Function the find the grasp
 void findGrasp(environment &kinectControl, int object, int objPoseCode, int objYaw, std::string dir, std::string saveLocation, ptCldVis::Ptr viewer){
-	fstream fout;
- 	fout.open(dir+saveLocation, ios::out | ios::app);
+	std::fstream fout;
+ 	fout.open(dir+saveLocation, std::ios::out | std::ios::app);
 
   kinectControl.spawnObject(object,0,0);
 
@@ -385,92 +190,87 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 	updateRouteData(kinectControl,home,true,"Home");
 	current = home;
 
-	std::vector<int> vp = {0,0,0};
-	initRGBViewer(viewer,vp);
+	std::vector<int> vp;
+	setupViewer(viewer, 2, vp);
+  viewer->setPosition(550,20);
+  keyboardEvent keyPress(viewer,2); keyPress.help();
 
 	ptCldColor::Ptr tempPtCld{new ptCldColor};
 	pcl::PointXYZ table,a1,a2;
   table.x = 1.5; table.y = 0; table.z = 1;
 	std::vector<int> nUnexp;
 
-	while(::quit == false){
+	while(keyPress.ok){
 		viewer->resetStoppedFlag();
 		viewer->removeAllPointClouds();
 		viewer->removeAllShapes();
 
-		rbgVis(viewer,kinectControl.ptrPtCldObject,"Obj",vp[0]);
+		addRGB(viewer,kinectControl.ptrPtCldObject,"Obj",vp[0]);
 		*tempPtCld = *kinectControl.ptrPtCldUnexp;
 		cleanUnexp(kinectControl.ptrPtCldObject,tempPtCld);
-		rbgVis(viewer,tempPtCld,"Unexp",vp[0]);
-		*tempPtCld = current.env; rbgVis(viewer,tempPtCld,"Env",vp[1]);
+		addRGB(viewer,tempPtCld,"Unexp",vp[0]);
+		*tempPtCld = current.env; addRGB(viewer,tempPtCld,"Env",vp[1]);
 
-		viewer->addSphere(table,current.path[0][0],0,0,1,"Viewsphere",vp[1]);
-		viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_REPRESENTATION,pcl::visualization::PCL_VISUALIZER_REPRESENTATION_WIREFRAME,"Viewsphere");
-		a1 = sphericalToCartesian(current.path[0]);   a1.x += table.x; a1.y += table.y; a1.z += table.z;
+    addViewsphere(viewer,vp.back(),table,current.path[0][0],false);
+		a1 = sphericalToCartesian(current.path[0],table);
 		viewer->addSphere(a1,0.04,1,0,0,"Start",vp[1]);
 		viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_REPRESENTATION,pcl::visualization::PCL_VISUALIZER_REPRESENTATION_WIREFRAME,"Start");
-		for(int i = 0; i < current.path.size()-1; i++){
-			a1 = sphericalToCartesian(current.path[i]);   a1.x += table.x; a1.y += table.y; a1.z += table.z;
-			a2 = sphericalToCartesian(current.path[i+1]); a2.x += table.x; a2.y += table.y; a2.z += table.z;
+
+    for(int i = 0; i < current.path.size()-1; i++){
+			a1 = sphericalToCartesian(current.path[i],table);
+			a2 = sphericalToCartesian(current.path[i+1],table);
 			viewer->addArrow(a2,a1,0,1,0,false,std::to_string(i),vp[1]);
 		}
-		viewerSetCamPose(viewer,current.path.back());
+
+		setCamView(viewer,current.path.back(),table);
 		int maxIndex = 0;
 		if(current.success == true){
-			// std::cout << "GRASP FOUND. Saving and exiting." << std::endl;
 			current.filename = getCurTime();
 			saveData(current, fout, dir);
 			viewer->addText("GRASP FOUND. Saving and exiting.",4,5,25,1,0,0,"Dir1",vp[1]);
 		} else{
 			nUnexp = findVisibleUnexp8Dir(kinectControl.ptrPtCldObject,kinectControl.ptrPtCldUnexp,current.path.back());
 			maxIndex = std::max_element(nUnexp.begin(),nUnexp.end()) - nUnexp.begin();
-			viewer->addText("Best direction calculated : " + dirLookup[maxIndex+1],4,5,25,1,0,0,"Dir1",vp[1]);
-			// std::cout << "Best direction calculated : " << dirLookup[maxIndex+1] << "." << std::flush;
+			viewer->addText("Best direction calculated : " + std::to_string(maxIndex+1) + "(" + dirLookup[maxIndex+1] + ")",4,5,25,1,0,0,"Dir1",vp[1]);
 		}
 
 		if(::runMode == 1){
-			::called = false;
-			while(!viewer->wasStopped() && ::called==false){
+			keyPress.called = false;
+			while(!viewer->wasStopped() && keyPress.called==false){
 				viewer->spinOnce(100);
 				boost::this_thread::sleep (boost::posix_time::microseconds(100000));
 			}
 		}else{
 			viewer->spinOnce(100);
 			boost::this_thread::sleep (boost::posix_time::microseconds(100000));
-			::dirChosen = maxIndex+1;
+			keyPress.dir = maxIndex+1;
 		}
 
 		if(current.success == true){
-			::dirChosen = 0;
-			::quit = true;
+			keyPress.dir = 0;
+			keyPress.ok = false;
 		}
 
 		// Reset to home if direction is 0
-		if(::dirChosen == 0){
-			// if(current.success != true){
-			// 	std::cout << " Direction Setected : " << dirLookup[::dirChosen] << "." << std::flush;
-			// }
+		if(keyPress.dir == 0){
 			kinectControl.rollbackConfiguration(home.childID);
 			current = home;
 			current.nSteps = 0;
 		}
 
-		if(::dirChosen >=1 && ::dirChosen <= 8){
-			// std::cout << " Direction Setected : " << dirLookup[::dirChosen] << "." << std::flush;
-      nextPose = calcExplorationPose(current.path.back(),::dirChosen);
+		if(keyPress.dir >=1 && keyPress.dir <= 8){
+      nextPose = calcExplorationPose(current.path.back(),keyPress.dir,::mode);
 			if(checkValidPose(nextPose) == true){
 				singlePass(kinectControl, nextPose, false, true);
 				updateRouteData(kinectControl,current,false,"dummy");
 				current.path.push_back(nextPose);
 				current.nSteps++;
-				if(current.nSteps == 1) home.direction = ::dirChosen;
+				if(current.nSteps == 1) home.direction = keyPress.dir;
 			}
     }
-
-		// std::cout << std::endl;
 	}
 
-	::quit = false;
+	keyPress.ok = true;
 	kinectControl.deleteObject(object);
 	kinectControl.reset();
 	fout.close();

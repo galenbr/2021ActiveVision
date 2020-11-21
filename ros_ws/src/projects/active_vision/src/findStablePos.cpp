@@ -70,14 +70,15 @@ public:
 
     tableCentre = {0,0,0};       // Co-ordinates of table centre
 
-    // Dictionary of objects to be spawned
-    objectDict = {{"drillAV","Cordless Drill"},
-                  {"squarePrismAV","Square Prism"},
-                  {"rectPrismAV","Rectangular Prism"},
-                  {"bowlAV","Bowl"},
-                  {"bowl2AV","Bowl2"},
-                  {"cupAV","Cup"}};
-
+		// Dictionary of objects to be spawned
+	  objectDict = {{"drillAV","Cordless Drill"},
+	                {"squarePrismAV","Square Prism"},
+	                {"rectPrismAV","Rectangular Prism"},
+	                {"bowlAV","Bowl"},
+	                {"bowl2AV","Bowl2"},
+	                {"cupAV","Cup"},
+	                {"cinderBlockAV","Cinder Block"},
+	                {"handleAV","Door Handle"}};
   }
 
   // Reading object pose

@@ -2,7 +2,7 @@ Active vision project
 
 Run "roslaunch active_vision workspace.launch" to start gazebo with table, kinect and a object
 
-1) rosrun active_vision testingModel_v1
+1) rosrun active_vision environmentTesting
    Code with the "environment" class to do the following functions:
    a) Communicate with gazebo to move kinect / spawn & delete object.
    b) Read the kinect data
@@ -14,7 +14,7 @@ Run "roslaunch active_vision workspace.launch" to start gazebo with table, kinec
    h) Save / Rollback a environment configuration
    i) Reset the environment
 
-2) rosrun active_vision supervisorNode
+2) rosrun active_vision dataCollector
    Code to generate data sets and store point clouds for training purpose. Store the data to a csv.
    (Example usage : rosrun active_vision supervisorNode data.csv 2 1 1)
 

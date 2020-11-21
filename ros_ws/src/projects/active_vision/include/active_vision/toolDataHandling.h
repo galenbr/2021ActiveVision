@@ -1,5 +1,5 @@
-#ifndef DATA_HANDLING
-#define DATA_HANDLING
+#ifndef TOOLDATAHANDLING
+#define TOOLDATAHANDLING
 
 #include <iostream>
 #include <math.h>
@@ -19,8 +19,6 @@
 
 // Typedef for convinience
 typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
-
-void test();
 
 struct RouteData{
   int parentID{-1};
@@ -49,8 +47,6 @@ struct RouteData{
     filename.clear();
   }
 };
-
-int getDirection(std::vector<double> &start, std::vector<double> &end, int minAngle);
 
 void printRouteData(RouteData &in);
 
