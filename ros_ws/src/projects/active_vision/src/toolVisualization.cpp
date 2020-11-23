@@ -98,13 +98,12 @@ void keyboardEvent::keyboardEventOccurredA(const pcl::visualization::KeyboardEve
   if(event.keyUp()){
     // std::cout << event.getKeySym() << std::endl;
     counter = 0;
-    if(event.getKeySym() == "Right")        counter = 1;
-    else if(event.getKeySym() == "Left")    counter = -1;
-    else if(event.getKeySym() == "period")  counter = 10;
-    else if(event.getKeySym() == "comma")   counter = -10;
-    else if(event.getKeySym() == "Escape")  ok = false;
-    else if(event.getKeySym() == "z")       skipTo = true;
-    called = true;
+    if(event.getKeySym() == "Right"){        counter = 1;    called = true;}
+    else if(event.getKeySym() == "Left"){    counter = -1;   called = true;}
+    else if(event.getKeySym() == "period"){  counter = 10;   called = true;}
+    else if(event.getKeySym() == "comma"){   counter = -10;  called = true;}
+    else if(event.getKeySym() == "Escape"){  ok = false;     called = true;}
+    else if(event.getKeySym() == "z"){       skipTo = true;  called = true;}
   }
 }
 
@@ -112,29 +111,28 @@ void keyboardEvent::keyboardEventOccurredB(const pcl::visualization::KeyboardEve
   if(event.keyUp()){
     // std::cout << event.getKeySym() << std::endl;
     dir = -1;
-    if      (event.getKeySym() == "KP_0") dir = 0;
-    else if (event.getKeySym() == "KP_1") dir = 1;
-    else if (event.getKeySym() == "KP_2") dir = 2;
-    else if (event.getKeySym() == "KP_3") dir = 3;
-    else if (event.getKeySym() == "KP_4") dir = 4;
-    else if (event.getKeySym() == "KP_5") dir = 5;
-    else if (event.getKeySym() == "KP_6") dir = 6;
-    else if (event.getKeySym() == "KP_7") dir = 7;
-    else if (event.getKeySym() == "KP_8") dir = 8;
-    else if (event.getKeySym() == "0")    dir = 0;
-    else if (event.getKeySym() == "1")    dir = 1;
-    else if (event.getKeySym() == "2")    dir = 2;
-    else if (event.getKeySym() == "3")    dir = 3;
-    else if (event.getKeySym() == "4")    dir = 4;
-    else if (event.getKeySym() == "6")    dir = 5;
-    else if (event.getKeySym() == "7")    dir = 6;
-    else if (event.getKeySym() == "8")    dir = 7;
-    else if (event.getKeySym() == "9")    dir = 8;
-    else if (event.getKeySym() == "Escape") ok = false;
-    else if (event.getKeySym() == "space")  mode++;
+    if      (event.getKeySym() == "KP_0"){ dir = 0;  called = true;}
+    else if (event.getKeySym() == "KP_1"){ dir = 1;  called = true;}
+    else if (event.getKeySym() == "KP_2"){ dir = 2;  called = true;}
+    else if (event.getKeySym() == "KP_3"){ dir = 3;  called = true;}
+    else if (event.getKeySym() == "KP_4"){ dir = 4;  called = true;}
+    else if (event.getKeySym() == "KP_5"){ dir = 5;  called = true;}
+    else if (event.getKeySym() == "KP_6"){ dir = 6;  called = true;}
+    else if (event.getKeySym() == "KP_7"){ dir = 7;  called = true;}
+    else if (event.getKeySym() == "KP_8"){ dir = 8;  called = true;}
+    else if (event.getKeySym() == "0"){    dir = 0;  called = true;}
+    else if (event.getKeySym() == "1"){    dir = 1;  called = true;}
+    else if (event.getKeySym() == "2"){    dir = 2;  called = true;}
+    else if (event.getKeySym() == "3"){    dir = 3;  called = true;}
+    else if (event.getKeySym() == "4"){    dir = 4;  called = true;}
+    else if (event.getKeySym() == "6"){    dir = 5;  called = true;}
+    else if (event.getKeySym() == "7"){    dir = 6;  called = true;}
+    else if (event.getKeySym() == "8"){    dir = 7;  called = true;}
+    else if (event.getKeySym() == "9"){    dir = 8;  called = true;}
+    else if (event.getKeySym() == "Escape"){ ok = false;  called = true;}
+    else if (event.getKeySym() == "space"){  mode++; called = true;}
     mode %= 2;
     if(mode == 0) mode = 2;
-    called = true;
   }
 }
 

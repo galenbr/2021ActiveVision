@@ -68,6 +68,8 @@ struct stateConfig{
   ptCldColor unexp;                 // Unexplored point cloud
   std::vector<double> kinectPose;   // Kinect Pose in Viewsphere
   std::string description;          // Description of the configuration
+  std::vector<double> unexpMin;
+  std::vector<double> unexpMax;
 };
 
 // Funstion to transpose a homogenous matrix

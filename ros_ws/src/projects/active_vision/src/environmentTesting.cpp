@@ -267,6 +267,7 @@ void testGripper(environment &av, int flag, float width){
     // Setting up the point cloud visualizer
     ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer")); std::vector<int> vp;
     setupViewer(viewer, 1, vp);
+    viewer->removeCoordinateSystem();
     viewer->setCameraPosition(0.5,0,0,-1,0,0,0,0,1);
 
     // Adding the point cloud
@@ -362,25 +363,23 @@ void testCollisionDummy(environment &av, bool result, int flag){
 
   // Creating a dummy unexplored point cloud
   av.ptrPtCldUnexp->clear();
-  pcl::common::CloudGenerator<pcl::PointXYZRGB, pcl::common::UniformGenerator<float>> generator;
-  std::uint32_t seed = static_cast<std::uint32_t> (time (nullptr));
-  pcl::common::UniformGenerator<float>::Parameters x_params(-0.03, 0.03, seed++);
-  generator.setParametersForX(x_params);
-  pcl::common::UniformGenerator<float>::Parameters y_params(-0.15, 0.15, seed++);
-  generator.setParametersForY(y_params);
-  if(result == true){
-    pcl::common::UniformGenerator<float>::Parameters z_params(-0.15, -0.02, seed++);
-    generator.setParametersForZ(z_params);
-  }else{
-    pcl::common::UniformGenerator<float>::Parameters z_params(-0.15, 0.15, seed++);
-    generator.setParametersForZ(z_params);
-  }
+  std::vector<double> min{0,0,0}, max{0,0,0};
+  min[0] = -0.03; max[0] = 0.03;
+  min[1] = -0.15; max[1] = 0.15;
+  if(result == true) {min[2] = -0.15; max[2] = -0.02;}
+  else {min[2] = -0.15; max[2] = 0.15;}
 
-  int dummy = generator.fill(5000, 1, *av.ptrPtCldUnexp);
-  // Setting color to blue
-  for (int i = 0; i < av.ptrPtCldUnexp->size(); i++) {
-    av.ptrPtCldUnexp->points[i].b = 200;
+  pcl::PointXYZRGB ptTemp; ptTemp.b = 200;
+  for(float x = min[0]; x < max[0]; x+=0.01){
+    for(float y = min[1]; y < max[1]; y+=0.01){
+      for(float z = min[2]; z < max[2]; z+=0.01){
+        ptTemp.x = x; ptTemp.y = y; ptTemp.z = z;
+        av.ptrPtCldUnexp->points.push_back(ptTemp);
+      }
+    }
   }
+  av.ptrPtCldUnexp->width = av.ptrPtCldUnexp->points.size();
+  av.ptrPtCldUnexp->height = 1;
 
   av.collisionCheck();
   if (av.selectedGrasp == -1) {
@@ -397,7 +396,7 @@ void testCollisionDummy(environment &av, bool result, int flag){
     // Setting up the point cloud visualizer
     ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer")); std::vector<int> vp;
     setupViewer(viewer, 1, vp);
-    viewer->addCoordinateSystem(0.0);
+    viewer->removeCoordinateSystem();
     viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
 
     addRGB(viewer,av.ptrPtCldUnexp,"Unexplored",vp[0]);

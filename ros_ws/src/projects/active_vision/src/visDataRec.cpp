@@ -2,6 +2,14 @@
 #include <active_vision/toolDataHandling.h>
 #include <active_vision/toolVisualization.h>
 
+void passThroughFilterZ(ptCldColor::Ptr ptrPtCld,float minZ, float maxZ){
+
+  ptCldColor::ConstPtr cPtrPtCld{ptrPtCld};
+  pcl::PassThrough<pcl::PointXYZRGB> pass;
+  pass.setInputCloud(cPtrPtCld);
+  pass.setFilterFieldName("z"); pass.setFilterLimits(minZ,maxZ); pass.filter(*ptrPtCld);
+}
+
 void help(){
   std::cout << "******* Recorded Data Visualizer Help *******" << std::endl;
   std::cout << "Arguments : [Directory] [CSV filename] [Visual]" << std::endl;
@@ -46,7 +54,7 @@ int main(int argc, char** argv){
   ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer")); std::vector<int> vp;
   if(visual == 1)      setupViewer(viewer, 1, vp);
   else if(visual == 2) setupViewer(viewer, 3, vp);
-  viewer->setCameraPosition(-2,0,7,2,0,-1,1,0,2);
+  viewer->setCameraPosition(-2,0,7,table.x,table.y,table.z,0,0,1);
   keyboardEvent keyPress(viewer,1); keyPress.help();
 
   int i = 0;
@@ -55,7 +63,10 @@ int main(int argc, char** argv){
       if(visual==2){
         readPointCloud(ptrPtCldTemp,directory,data[i][pathColID-1],1);
         addRGB(viewer,ptrPtCldTemp,"Obj",vp[0]);
+        pcl::PointXYZRGB minPtObj, maxPtObj;
+        pcl::getMinMax3D(*ptrPtCldTemp, minPtObj, maxPtObj);
         readPointCloud(ptrPtCldTemp,directory,data[i][pathColID-1],2);
+        passThroughFilterZ(ptrPtCldTemp,minPtObj.z,maxPtObj.z+0.05);
         addRGB(viewer,ptrPtCldTemp,"Unexp",vp[1]);
       }
       readPointCloud(ptrPtCldTemp,directory,data[i][pathColID-1],3);
@@ -67,7 +78,7 @@ int main(int argc, char** argv){
       viewer->addText("Data No : "+std::to_string(i+1),5,5,25,1,0,0,"Data",vp.back());
       viewer->addText("Direction : "+dirLookup[std::atoi(data[i][dirColID-1].c_str())],5,35,25,1,0,0,"Dir",vp.back());
       viewer->addText("nSteps : "+std::to_string(nSteps),5,65,25,1,0,0,"nSteps",vp.back());
-      viewer->addText("Data for step : "+std::to_string(type),5,95,25,1,0,0,"type",vp.back());
+      viewer->addText("Data for step "+std::to_string(type),5,95,25,1,0,0,"type",vp.back());
 
       for (int j = stepColID; j < stepColID+(nSteps+type-1)*3; j+=3){
         pose[0] = std::atof(data[i][j-1].c_str());

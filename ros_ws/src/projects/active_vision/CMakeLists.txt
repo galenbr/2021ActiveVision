@@ -139,6 +139,7 @@ include
 add_library(${PROJECT_NAME}
    src/environment.cpp
    src/toolDataHandling.cpp
+   src/toolStateVector.cpp
    src/toolVisualization.cpp
    src/toolViewPointCalc.cpp
 )

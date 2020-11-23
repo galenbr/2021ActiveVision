@@ -83,10 +83,10 @@ environment::environment(ros::NodeHandle *nh){
                      {{0.015,0.000,0.000}},
                      {{0.015,0.000,0.000}}};
 
-  objectPosesYawLimits = {{0,359},{0,89},{0,89},{0,1},{0,1},{0,1},{0,89},{0,359}};
+  objectPosesYawLimits = {{0,359},{0,89},{0,179},{0,1},{0,1},{0,1},{0,89},{0,359}};
 
   voxelGridSize = 0.01;          // Voxel Grid size for environment
-  voxelGridSizeUnexp = 0.015;    // Voxel Grid size for unexplored point cloud
+  voxelGridSizeUnexp = 0.01;     // Voxel Grid size for unexplored point cloud
   tableCentre = {1.5,0,1};       // Co-ordinates of table centre
   minUnexp = {0,0,0};
   maxUnexp = {0,0,0};
@@ -110,6 +110,8 @@ int environment::saveConfiguration(std::string name){
   configTemp.unexp = *ptrPtCldUnexp;
   configTemp.kinectPose = lastKinectPoseViewsphere;
   configTemp.description = name;
+  configTemp.unexpMin = minUnexp;
+  configTemp.unexpMax = maxUnexp;
   configurations.push_back(configTemp);
   //std::cout << "State saved : " << name << std::endl;
   return configurations.size()-1;
@@ -120,6 +122,8 @@ void environment::rollbackConfiguration(int index){
   *ptrPtCldEnv = configurations[index].env;
   *ptrPtCldUnexp = configurations[index].unexp;
   lastKinectPoseViewsphere = configurations[index].kinectPose;
+  minUnexp = configurations[index].unexpMin;
+  maxUnexp = configurations[index].unexpMax;
   //std::cout << "Rolled back to state : " << configurations[index].description << std::endl;
 }
 
@@ -474,7 +478,7 @@ void environment::genUnexploredPtCld(){
   }
 
   // Setting the min and max limits based on the object dimension and scale.
-  // Min of 0.25m on each side
+  // Min of 0.40m on each side
   // Note: Z scale is only used on +z axis
   minUnexp[0] = (minPtObj.x-std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.40f));
   minUnexp[1] = (minPtObj.y-std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.40f));
@@ -514,8 +518,8 @@ void environment::updateUnexploredPtCld(){
     ptTemp = ptrPtCldTemp->points[i].getVector4fMap();
     proj = projectionMat*ptTemp;
     proj = proj/proj[2];
-    proj[0] = round(proj[0])-1;
-    proj[1] = round(proj[1])-1;
+    proj[0] = round(proj[0]);
+    proj[1] = round(proj[1]);
     if(proj[0] >=0 && proj[0] <= 640-1 && proj[1] >=0 && proj[1] <= 480-1){
       projIndex = proj[1]*(ptrPtCldLast->width)+proj[0];
       // If the z value of unexplored pt is greater than the corresponding

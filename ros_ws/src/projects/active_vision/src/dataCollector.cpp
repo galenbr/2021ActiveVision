@@ -60,6 +60,7 @@ bool exploreOneStepAllDir(environment &env, RouteData &home, std::vector<RouteDa
         temp.graspQuality = -1;
         temp.env = *env.ptrPtCldEnv;
       }
+			temp.env += *env.ptrPtCldUnexp;
 
 			opOneStep.push_back(temp);
 		}
@@ -108,6 +109,7 @@ bool exploreRdmStep(environment &env, RouteData &home, int nSteps, RouteData &op
 			opData.graspQuality = env.graspsPossible[env.selectedGrasp].quality;
 			env.updateGripper(env.selectedGrasp,0);
 			opData.env = *env.ptrPtCldEnv + *env.ptrPtCldGripper;
+			opData.env += *env.ptrPtCldUnexp;
 		}
 	}
   return(opData.success);
@@ -128,6 +130,7 @@ void updateTemp(environment &env, RouteData &data, std::string &name){
 		data.goodInitialGrasp = false;
 		data.env = *env.ptrPtCldEnv;
 	}
+	data.env += *env.ptrPtCldUnexp;
 }
 
 // Generating the home poses from which we need to search
@@ -207,7 +210,7 @@ std::vector<int> generateData(environment &kinectControl, int object, int homeTy
   int nHomeConfigs = 0;
 
 	for (int currentPoseCode = 0; currentPoseCode < kinectControl.objectPosesDict[object].size(); currentPoseCode+=1){
-		for (int currentYaw = kinectControl.objectPosesYawLimits[object][0]; currentYaw < kinectControl.objectPosesYawLimits[object][1]; currentYaw+=40){
+		for (int currentYaw = kinectControl.objectPosesYawLimits[object][0]; currentYaw < kinectControl.objectPosesYawLimits[object][1]; currentYaw+=10){
         printf("  *** Pose #%d/%d with Yaw %d ***\n",currentPoseCode+1,int(kinectControl.objectPosesDict[object].size()),currentYaw);
 				kinectControl.moveObject(object,currentPoseCode,currentYaw*(M_PI/180.0));
 
@@ -282,7 +285,7 @@ std::vector<int> generateData(environment &kinectControl, int object, int homeTy
           dataFinal.unexp = dataHomePoses[poses].unexp;
           dataFinal.filename = getCurTime()+"_"+std::to_string(nSaved[0]+nSaved[1]);
 
-          if(graspFound == true) printf(" OK. %d Steps\n",dataFinal.nSteps);
+          if(graspFound == true) printf(" OK. %d Steps, Dir : %d.\n",dataFinal.nSteps,dataFinal.direction);
 
 					if(dataFinal.nSteps > 0){
 						saveData(dataFinal, fout, dir);
