@@ -812,7 +812,7 @@ void singlePass(environment &av, std::vector<double> kinectPose, bool firstTime,
   if (firstTime == true) av.genUnexploredPtCld();
   av.updateUnexploredPtCld();
   if (findGrasp == true){
-    // av.graspAndCollisionCheck();
-    av.graspsynthesis(); av.collisionCheck();
+    av.graspAndCollisionCheck();
+    // av.graspsynthesis(); av.collisionCheck();
   }
 }

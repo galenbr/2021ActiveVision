@@ -255,3 +255,7 @@ target_link_libraries(genStateVec active_vision ${catkin_LIBRARIES} ${PCL_LIBRAR
 add_executable(heuristicPolicy src/heuristicPolicy.cpp)
 add_dependencies(heuristicPolicy active_vision ${catkin_EXPORTED_TARGETS})
 target_link_libraries(heuristicPolicy active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
+
+add_executable(bfs src/bfs.cpp)
+add_dependencies(bfs active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(bfs active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
