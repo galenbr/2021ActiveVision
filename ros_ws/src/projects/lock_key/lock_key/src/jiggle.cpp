@@ -1,0 +1,83 @@
+#include <ros/ros.h>
+#include <lock_key/JiggleAction.h> // Note: "Action" is appended
+#include <actionlib/server/simple_action_server.h>
+#include "moveit_planner/GetPose.h"
+#include "moveit_planner/MoveCart.h"
+#include "moveit_planner/MovePose.h"
+#include "lock_key/getWrench.h"
+#include "lock_key/getAveWrench.h"
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <iostream>
+#include <vector>
+#include <cmath>
+using namespace std;
+
+ros::NodeHandle* n_ptr;
+int32_t timeout = 1000;
+
+typedef actionlib::SimpleActionServer<lock_key::JiggleAction> Server;
+
+void moveRel(double x, double y, double z, double roll, double pitch, double yaw){
+	//Waiting for services to be available
+	ros::service::waitForService("move_to_pose",timeout);
+	ros::ServiceClient getPoseClient = n_ptr->serviceClient<moveit_planner::GetPose>("get_pose");
+	ros::ServiceClient moveCartClient = n_ptr->serviceClient<moveit_planner::MoveCart>("cartesian_move");
+	moveit_planner::GetPose curPose;
+	moveit_planner::MoveCart cart;
+	//Get current robot pose
+	getPoseClient.call(curPose);
+	geometry_msgs::Pose p;
+    p=curPose.response.pose;
+	//Convert RPY to quat
+	tf2::Quaternion q_orig, q_change, q_new;
+    tf2::convert(p.orientation , q_orig);
+	q_change.setRPY(roll, pitch, yaw);
+	q_new=q_change*q_orig;
+	q_new.normalize();
+	tf2::convert(q_new, p.orientation);
+    //Update position with relative changes
+	p.position.x += x;
+	p.position.y += y;
+	p.position.z += z;
+	cart.request.val.push_back(p);
+    cart.request.execute = true;
+    moveCartClient.call(cart);
+    //ROS_INFO("Moving to Relative Position");
+}
+
+void jiggle(double roll, double pitch, double yaw){
+	ROS_INFO("Jiggle about X");
+	moveRel(0.0,0.0,0.0,-roll,0.0,0.0);
+	moveRel(0.0,0.0,0.0,2*roll,0.0,0.0);
+	moveRel(0.0,0.0,0.0,-roll,0.0,0.0);
+
+	ROS_INFO("Jiggle about Y");	
+	moveRel(0.0,0.0,0.0,0.0,-pitch,0.0);
+	moveRel(0.0,0.0,0.0,0.0,2*pitch,0.0);
+	moveRel(0.0,0.0,0.0,0.0,-pitch,0.0);
+	
+	ROS_INFO("Jiggle about Z");
+	moveRel(0.0,0.0,0.0,0.0,0.0,-yaw);
+	moveRel(0.0,0.0,0.0,0.0,0.0,2*yaw);
+	moveRel(0.0,0.0,0.0,0.0,0.0,-yaw);
+}
+
+void execute(const lock_key::JiggleGoalConstPtr& goal, Server* as){  // Note: "Action" is not appended here
+    ROS_INFO("Beginning jiggle procedure");
+
+    jiggle(goal->roll, goal->pitch, goal->yaw);
+
+    ROS_INFO("End jiggle procedure");
+    as->setSucceeded();
+}
+
+int main(int argc, char **argv){
+    ros::init(argc, argv, "jiggleKey");
+    ros::NodeHandle n;
+    n_ptr=&n;
+    
+    Server server(n, "jiggle_key", boost::bind(&execute, _1, &server), false);
+    server.start();
+
+    ros::spin();
+}
