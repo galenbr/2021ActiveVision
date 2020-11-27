@@ -7,7 +7,6 @@ State machine for key-in-lock pipeline.
 import rospy
 import smach
 import smach_ros
-from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 import actionlib
 from std_msgs.msg import String
 from nav_msgs.msg import Odometry
@@ -27,7 +26,25 @@ class NavigateToKey(smach.State):
 
 	def execute(self, userdata):
 		rospy.loginfo('Navigating to Key')
-		rospy.wait_for_service("...")
+		# Retrieve goal position from param server
+		goal_x=rospy.get_param("key_goal_x")
+		goal_y=rospy.get_param("key_goal_y")
+		goal_z=rospy.get_param("key_goal_z")
+		goal_roll=0.0
+		goal_pitch=0.0
+		goal_yaw=0.0
+		# Call move absolute action
+		client = actionlib.SimpleActionClient('move_abs_server', 
+											  lock_key.msg.MoveAbsAction)
+		client.wait_for_server()
+		goal=lock_key.msg.MoveAbsAction(goal_x,goal_y,goal_z,
+										goal_roll,goal_pitch,goal_yaw)
+		client.send_goal(goal)
+		client.wait_for_result()
+		# Get result from action server
+		action_result=client.get_result()
+		# Define smach result here (should be updated)
+		result='succeeded'
 		return result
 
 class GraspKey(smach.State):
@@ -45,7 +62,25 @@ class NavigateToLock(smach.State):
 
 	def execute(self, userdata):
 		rospy.loginfo('Navigating to Lock')
-		rospy.wait_for_service("...")
+		# Retrieve goal position from param server
+		goal_x=rospy.get_param("padlock_goal_x")
+		goal_y=rospy.get_param("padlock_goal_y")
+		goal_z=rospy.get_param("padlock_goal_z")
+		goal_roll=0.0
+		goal_pitch=0.0
+		goal_yaw=0.0
+		# Call move absolute action
+		client = actionlib.SimpleActionClient('move_abs_server', 
+											  lock_key.msg.MoveAbsAction)
+		client.wait_for_server()
+		goal=lock_key.msg.MoveAbsAction(goal_x,goal_y,goal_z,
+										goal_roll,goal_pitch,goal_yaw)
+		client.send_goal(goal)
+		client.wait_for_result()
+		# Get result from action server
+		action_result=client.get_result()
+		# Define smach result here (should be updated)
+		result='succeeded'
 		return result
 
 class MoveToInsertionPlane(smach.State):
@@ -98,17 +133,53 @@ class RestartFromHome(smach.State):
 	    smach.State.__init__(self, outcomes=['succeeded','failed'])
 
 	def execute(self, userdata):
-		rospy.loginfo('Move to home to restart procedure.')
-		rospy.wait_for_service("...")
+		rospy.loginfo('Navigating to Lock')
+		# Retrieve goal position from param server
+		goal_x=rospy.get_param("home_goal_x")
+		goal_y=rospy.get_param("home_goal_y")
+		goal_z=rospy.get_param("home_goal_z")
+		goal_roll=0.0
+		goal_pitch=0.0
+		goal_yaw=0.0
+		# Call move absolute action
+		client = actionlib.SimpleActionClient('move_abs_server', 
+											  lock_key.msg.MoveAbsAction)
+		client.wait_for_server()
+		goal=lock_key.msg.MoveAbsAction(goal_x,goal_y,goal_z,
+										goal_roll,goal_pitch,goal_yaw)
+		client.send_goal(goal)
+		client.wait_for_result()
+		# Get result from action server
+		action_result=client.get_result()
+		# Define smach result here (should be updated)
+		result='succeeded'
 		return result
 
 class NavigateToHome(smach.State):
 	def __init__(self):
-	    smach.State.__init__(self, outcomes=['succeeded'])
+	    smach.State.__init__(self, outcomes=['succeeded','failed'])
 
 	def execute(self, userdata):
-		rospy.loginfo('Move to home to finish procedure.')
-		rospy.wait_for_service("...")
+		rospy.loginfo('Navigating to Lock')
+		# Retrieve goal position from param server
+		goal_x=rospy.get_param("home_goal_x")
+		goal_y=rospy.get_param("home_goal_y")
+		goal_z=rospy.get_param("home_goal_z")
+		goal_roll=0.0
+		goal_pitch=0.0
+		goal_yaw=0.0
+		# Call move absolute action
+		client = actionlib.SimpleActionClient('move_abs_server', 
+											  lock_key.msg.MoveAbsAction)
+		client.wait_for_server()
+		goal=lock_key.msg.MoveAbsAction(goal_x,goal_y,goal_z,
+										goal_roll,goal_pitch,goal_yaw)
+		client.send_goal(goal)
+		client.wait_for_result()
+		# Get result from action server
+		action_result=client.get_result()
+		# Define smach result here (should be updated)
+		result='succeeded'
 		return result
 
 def main():
@@ -119,51 +190,51 @@ def main():
 
 	# Open the container
 	with sm:
-	    # Add states to the container
-	    smach.StateMachine.add('DetectKeyPose', DetectKeyPose(), 
-	                           transitions={'succeeded':'NavigateToKey', 
-	                                        'failed':'RestartFromHome'})
-	    smach.StateMachine.add('NavigateToKey', NavigateToKey(), 
-	                           transitions={'succeeded':'GraspKey',  
-	                                        'failed':'RestartFromHome'})
-	    smach.StateMachine.add('GraspKey', GraspKey(), 
-	                           transitions={'succeeded':'NavigateToLock', 
-	                                        'failed':'RestartFromHome'})
-	    smach.StateMachine.add('NavigateToLock', NavigateToLock(), 
-	                           transitions={'succeeded':'InsertKey', 
-	                                        'failed':'RestartFromHome'})
+		# Add states to the container
+		smach.StateMachine.add('DetectKeyPose', DetectKeyPose(), 
+		                       transitions={'succeeded':'NavigateToKey', 
+		                                    'failed':'RestartFromHome'})
+		smach.StateMachine.add('NavigateToKey', NavigateToKey(), 
+		                       transitions={'succeeded':'GraspKey',  
+		                                    'failed':'RestartFromHome'})
+		smach.StateMachine.add('GraspKey', GraspKey(), 
+		                       transitions={'succeeded':'NavigateToLock', 
+		                                    'failed':'RestartFromHome'})
+		smach.StateMachine.add('NavigateToLock', NavigateToLock(), 
+		                       transitions={'succeeded':'InsertKey', 
+		                                    'failed':'RestartFromHome'})
 
-	    # Create sub SMACH state machine for key insertion
+		# Create sub SMACH state machine for key insertion
 		key_sub_sm = smach.StateMachine(outcomes=['succeeded','failed'])
 		# Open the sub-container
 		with key_sub_sm:
 			# Add states to the sub-container
-		    smach.StateMachine.add('MoveToInsertionPlane', MoveToInsertionPlane(), 
-		                           transitions={'succeeded':'SpiralSearch', 
-		                                        'failed':'NavigateToLock'})
-		    smach.StateMachine.add('SpiralSearch', SpiralSearch(), 
-		                           transitions={'succeeded':'MoveDownward', 
-		                                        'failed':'NavigateToLock'})
-		    smach.StateMachine.add('MoveDownward', MoveDownward(), 
-		                           transitions={'succeeded':'complete',
-		                           				'failed':'failed',
-		                           				'stuck':'Jiggle'})
-		    smach.StateMachine.add('Jiggle', Jiggle(), 
-		                           transitions={'succeeded':'MoveDownward',
-		                           				'still_stuck':'Jiggle',})
+			smach.StateMachine.add('MoveToInsertionPlane', MoveToInsertionPlane(), 
+			                       transitions={'succeeded':'SpiralSearch', 
+			                                    'failed':'NavigateToLock'})
+			smach.StateMachine.add('SpiralSearch', SpiralSearch(), 
+			                       transitions={'succeeded':'MoveDownward', 
+			                                    'failed':'NavigateToLock'})
+			smach.StateMachine.add('MoveDownward', MoveDownward(), 
+			                       transitions={'succeeded':'complete',
+			                       				'failed':'failed',
+			                       				'stuck':'Jiggle'})
+			smach.StateMachine.add('Jiggle', Jiggle(), 
+			                       transitions={'succeeded':'MoveDownward',
+			                       				'still_stuck':'Jiggle',})
 
 		# Add more states to the higher level container
-	    smach.StateMachine.add('InsertKey', key_sub_sm, 
-	                           transitions={'succeeded':'OpenGripper', 
-	                                        'failed':'NavigateToHome'})
-	    smach.StateMachine.add('OpenGripper', OpenGripper(), 
-	                           transitions={'succeeded':'NavigateToHome', 
-	                                        'failed':'OpenGripper'})
-	    smach.StateMachine.add('RestartFromHome', RestartFromHome(), 
-	                           transitions={'succeeded':'DetectKeyPose',
-	                           				'failed':'RestartFromHome'})
-	    smach.StateMachine.add('NavigateToHome', NavigateToHome(), 
-	                           transitions={'succeeded':'complete'})
+		smach.StateMachine.add('InsertKey', key_sub_sm, 
+		                       transitions={'succeeded':'OpenGripper', 
+		                                    'failed':'NavigateToHome'})
+		smach.StateMachine.add('OpenGripper', OpenGripper(), 
+		                       transitions={'succeeded':'NavigateToHome', 
+		                                    'failed':'OpenGripper'})
+		smach.StateMachine.add('RestartFromHome', RestartFromHome(), 
+		                       transitions={'succeeded':'DetectKeyPose',
+		                       				'failed':'RestartFromHome'})
+		smach.StateMachine.add('NavigateToHome', NavigateToHome(), 
+		                       transitions={'succeeded':'complete'})
 	#Add subscriptions
 	#rospy.Subscriber(topic,type,callback)
 

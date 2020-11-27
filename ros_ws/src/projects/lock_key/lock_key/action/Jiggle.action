@@ -1,7 +1,6 @@
 # Define the goal
-float64 roll
-float64 pitch
-float64 yaw
+float64 angle
+uint8 axis
 ---
 # Define the result
 bool success_failure

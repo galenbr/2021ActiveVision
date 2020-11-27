@@ -45,29 +45,32 @@ void moveRel(double x, double y, double z, double roll, double pitch, double yaw
     //ROS_INFO("Moving to Relative Position");
 }
 
-void jiggle(double roll, double pitch, double yaw){
-	ROS_INFO("Jiggle about X");
-	moveRel(0.0,0.0,0.0,-roll,0.0,0.0);
-	moveRel(0.0,0.0,0.0,2*roll,0.0,0.0);
-	moveRel(0.0,0.0,0.0,-roll,0.0,0.0);
-
-	ROS_INFO("Jiggle about Y");	
-	moveRel(0.0,0.0,0.0,0.0,-pitch,0.0);
-	moveRel(0.0,0.0,0.0,0.0,2*pitch,0.0);
-	moveRel(0.0,0.0,0.0,0.0,-pitch,0.0);
-	
-	ROS_INFO("Jiggle about Z");
-	moveRel(0.0,0.0,0.0,0.0,0.0,-yaw);
-	moveRel(0.0,0.0,0.0,0.0,0.0,2*yaw);
-	moveRel(0.0,0.0,0.0,0.0,0.0,-yaw);
+void jiggle(double angle, char axis){
+	switch(axis){
+		case 'x' :
+			ROS_INFO("Jiggle about X");
+			moveRel(0.0,0.0,0.0,-angle,0.0,0.0);
+			moveRel(0.0,0.0,0.0,2*angle,0.0,0.0);
+			moveRel(0.0,0.0,0.0,-angle,0.0,0.0);
+		case 'y' :
+			ROS_INFO("Jiggle about Y");	
+			moveRel(0.0,0.0,0.0,0.0,-angle,0.0);
+			moveRel(0.0,0.0,0.0,0.0,2*angle,0.0);
+			moveRel(0.0,0.0,0.0,0.0,-angle,0.0);
+		case 'z' :
+			ROS_INFO("Jiggle about Z");
+			moveRel(0.0,0.0,0.0,0.0,0.0,-angle);
+			moveRel(0.0,0.0,0.0,0.0,0.0,2*angle);
+			moveRel(0.0,0.0,0.0,0.0,0.0,-angle);
+		default : 
+			ROS_INFO("Unknown axis. Please use x, y, or z.");
+	}
 }
 
 void execute(const lock_key::JiggleGoalConstPtr& goal, Server* as){  // Note: "Action" is not appended here
-    ROS_INFO("Beginning jiggle procedure");
 
-    jiggle(goal->roll, goal->pitch, goal->yaw);
+    jiggle(goal->angle, goal->axis);
 
-    ROS_INFO("End jiggle procedure");
     as->setSucceeded();
 }
 
