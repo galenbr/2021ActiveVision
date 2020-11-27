@@ -2,11 +2,33 @@
 <launch>
   <!-- If needed, broadcast static tf for robot root -->
   <node pkg="tf2_ros" type="static_transform_publisher" name="virtual_joint_broadcaster_1" args="0 0 0 0 0 0 world panda_link0" />
-
+  
+  <!-- Arguments -->
+  <arg name="padlock_x" value="0.61" />
+  <arg name="padlock_y" value="-0.1875" />
+  <arg name="padlock_z" value="0.35" />
+  <arg name="key_x" value="0.55" />
+  <arg name="key_y" value="0.1" />
+  <arg name="key_z" value="0.3" />
+  <arg name="home_x" value="0.5" />
+  <arg name="home_y" value="0.0" />
+  <arg name="home_z" value="0.4" />
+	
   <arg name="robot_ip" default="172.16.0.2" />
   <arg name="load_gripper" default="false" />
   <arg name="launch_rviz" default="true" />
-
+	
+  <!-- Set Parameters so other nodes can access them -->
+  <param name="padlock_goal_x" type="double" value="$(arg padlock_x)" />
+  <param name="padlock_goal_y" type="double" value="$(arg padlock_y)" />
+  <param name="padlock_goal_z" type="double" value="$(arg padlock_z)" />
+  <param name="key_goal_x" type="double" value="$(arg key_x)" />
+  <param name="key_goal_y" type="double" value="$(arg key_y)" />
+  <param name="key_goal_z" type="double" value="$(arg key_z)" />
+  <param name="home_goal_x" type="double" value="$(arg home_x)" />
+  <param name="home_goal_y" type="double" value="$(arg home_y)" />
+  <param name="home_goal_z" type="double" value="$(arg home_z)" />
+	
   <include file="$(find franka_control)/launch/franka_control.launch" >
     <arg name="robot_ip" value="$(arg robot_ip)" />
     <arg name="load_gripper" value="$(arg load_gripper)" />
