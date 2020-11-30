@@ -64,11 +64,10 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+  FILES
+  heuristicPolicySRV.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -78,10 +77,11 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  sensor_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -252,9 +252,13 @@ add_executable(genStateVec src/genStateVec.cpp)
 add_dependencies(genStateVec active_vision ${catkin_EXPORTED_TARGETS})
 target_link_libraries(genStateVec active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable(heuristicPolicy src/heuristicPolicy.cpp)
-add_dependencies(heuristicPolicy active_vision ${catkin_EXPORTED_TARGETS})
-target_link_libraries(heuristicPolicy active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
+add_executable(policyTester src/policyTester.cpp)
+add_dependencies(policyTester active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(policyTester active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(heuristicPolicyService src/heuristicPolicyService.cpp)
+add_dependencies(heuristicPolicyService active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(heuristicPolicyService active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
 
 add_executable(bfs src/bfs.cpp)
 add_dependencies(bfs active_vision ${catkin_EXPORTED_TARGETS})

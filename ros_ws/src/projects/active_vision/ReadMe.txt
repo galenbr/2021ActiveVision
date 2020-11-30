@@ -1,6 +1,7 @@
 Active vision project
 
-Run "roslaunch active_vision workspace.launch" to start gazebo with table, kinect and a object
+roslaunch active_vision workspace.launch policy:="heuristic"
+-> Starts gazebo with table and kinect. The heuristic policy service is also started.
 
 1) rosrun active_vision environmentTesting
    Code with the "environment" class to do the following functions:
