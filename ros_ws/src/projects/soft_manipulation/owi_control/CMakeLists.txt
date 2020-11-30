@@ -6,8 +6,11 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   geometry_msgs
+  sensor_msgs
   Eigen3
   rosbag
+  cv_bridge
+  image_transport
 )
 
 find_package(Boost REQUIRED COMPONENTS system)
@@ -31,10 +34,11 @@ generate_messages(
  DEPENDENCIES
  std_msgs
  geometry_msgs
+ sensor_msgs
 )
 
 catkin_package()
-include_directories(include ${catkin_INCLUDE_DIRS})
+include_directories(include ${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
 
 add_executable(owi_controller_node src/owi_controller.cpp)
@@ -48,3 +52,7 @@ target_link_libraries(owi_record_node ${catkin_LIBRARIES})
 add_executable(owi_keyboard_node src/keyboard.cpp)
 add_dependencies(owi_keyboard_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(owi_keyboard_node ${catkin_LIBRARIES})
+
+add_executable(owi_trajectory_node src/traj_plot.cpp)
+add_dependencies(owi_trajectory_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(owi_trajectory_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
