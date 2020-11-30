@@ -85,7 +85,8 @@ int main(int argc, char **argv)
     ros::AsyncSpinner spinner(3);
     spinner.start();
 
-    ros::Subscriber wrench_sub = n.subscribe("panda_joint7_wrench", 1000, wrenchSubCallback);
+    //ros::Subscriber wrench_sub = n.subscribe("panda_joint7_wrench", 1000, wrenchSubCallback); //Topic for gazebo simulation
+    ros::Subscriber wrench_sub = n.subscribe("franka_state_controller/F_ext", 1000, wrenchSubCallback); // Topic for real panda
     ros::ServiceServer wrench_server = n.advertiseService("getWrench", wrenchServiceCallback);
     ros::ServiceServer wrench_ave_server = n.advertiseService("getAveWrench", wrenchAveServiceCallback);
 

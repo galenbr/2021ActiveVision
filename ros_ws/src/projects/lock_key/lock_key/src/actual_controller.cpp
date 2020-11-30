@@ -1,98 +1,95 @@
 #include <ros/ros.h>
 #include "moveit_planner/MoveCart.h"
+#include "moveit_planner/SetVelocity.h"
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <moveit/move_group_interface/move_group_interface.h>
+#include <actionlib/client/simple_action_client.h>
+#include <actionlib/client/terminal_state.h>
+#include <franka_gripper/GraspAction.h>
+#include <lock_key/SpiralInsertAction.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
-void closedGripper(trajectory_msgs::JointTrajectory& posture)
-{
-    // BEGIN_SUB_TUTORIAL closed_gripper
-    /* Add both finger joints of panda robot. */
-    posture.joint_names.resize(2);
-    posture.joint_names[0] = "panda_finger_joint1";
-    posture.joint_names[1] = "panda_finger_joint2";
+typedef actionlib::SimpleActionClient<lock_key::SpiralInsertAction> SpiralClient;
 
-    /* Set them as closed. */
-    posture.points.resize(1);
-    posture.points[0].positions.resize(2);
-    posture.points[0].positions[0] = 0.00;
-    posture.points[0].positions[1] = 0.00;
-    posture.points[0].time_from_start = ros::Duration(0.5);
-    // END_SUB_TUTORIAL
+void moveGripper(double Grasp_Width,double gripper_timout){
+    actionlib::SimpleActionClient<franka_gripper::GraspAction> ac("franka_gripper/grasp", true);
+    ac.waitForServer();
+
+    franka_gripper::GraspGoal goal;
+    goal.width = Grasp_Width;   // Distance between fingers [m]
+    goal.speed = 0.1;           //  Closing speed. [m/s]
+    goal.force = 40;            //   Grasping (continuous) force [N]
+    goal.epsilon.inner = 0.05;  // Maximum tolerated deviation when the actual grasped width is
+                                // smaller than the commanded grasp width.
+    goal.epsilon.outer = 0.05;  // Maximum tolerated deviation when the actual grasped width is
+                                // larger than the commanded grasp width.
+    ac.sendGoal(goal);          // Sending the Grasp command to gripper
+
+    bool finished_before_timeout = ac.waitForResult(ros::Duration(gripper_timout));
+
+    if (finished_before_timeout){
+    ROS_INFO("Gripper action finished.");
+    }
+    else {
+    ROS_INFO("Gripper action did not finish before the time out.");
+    }
 }
 
-void openGripper(trajectory_msgs::JointTrajectory& posture)
-{
-    // BEGIN_SUB_TUTORIAL open_gripper
-    /* Add both finger joints of panda robot. */
-    posture.joint_names.resize(2);
-    posture.joint_names[0] = "panda_finger_joint1";
-    posture.joint_names[1] = "panda_finger_joint2";
+// void addCollisionObjects(moveit::planning_interface::PlanningSceneInterface& planning_scene_interface)
+// {
+//     // BEGIN_SUB_TUTORIAL table1
+//     //
+//     // Creating Environment
+//     // ^^^^^^^^^^^^^^^^^^^^
+//     // Create vector to hold 3 collision objects.
+//     std::vector<moveit_msgs::CollisionObject> collision_objects;
+//     collision_objects.resize(3);
 
-    /* Set them as open, wide enough for the object to fit. */
-    posture.points.resize(1);
-    posture.points[0].positions.resize(2);
-    posture.points[0].positions[0] = 0.04;
-    posture.points[0].positions[1] = 0.04;
-    posture.points[0].time_from_start = ros::Duration(0.5);
-    // END_SUB_TUTORIAL
-}
+//     // Add the first table where the cube will originally be kept.
+//     collision_objects[0].id = "table1";
+//     collision_objects[0].header.frame_id = "panda_link0";
 
-void addCollisionObjects(moveit::planning_interface::PlanningSceneInterface& planning_scene_interface)
-{
-    // BEGIN_SUB_TUTORIAL table1
-    //
-    // Creating Environment
-    // ^^^^^^^^^^^^^^^^^^^^
-    // Create vector to hold 3 collision objects.
-    std::vector<moveit_msgs::CollisionObject> collision_objects;
-    collision_objects.resize(3);
+//     /* Define the primitive and its dimensions. */
+//     collision_objects[0].primitives.resize(1);
+//     collision_objects[0].primitives[0].type = collision_objects[0].primitives[0].BOX;
+//     collision_objects[0].primitives[0].dimensions.resize(3);
+//     collision_objects[0].primitives[0].dimensions[0] = 0.2;
+//     collision_objects[0].primitives[0].dimensions[1] = 0.4;
+//     collision_objects[0].primitives[0].dimensions[2] = 0.4;
 
-    // Add the first table where the cube will originally be kept.
-    collision_objects[0].id = "table1";
-    collision_objects[0].header.frame_id = "panda_link0";
+//     /* Define the pose of the table. */
+//     collision_objects[0].primitive_poses.resize(1);
+//     collision_objects[0].primitive_poses[0].position.x = 0.5;
+//     collision_objects[0].primitive_poses[0].position.y = 0;
+//     collision_objects[0].primitive_poses[0].position.z = 0.2;
+//     // END_SUB_TUTORIAL
 
-    /* Define the primitive and its dimensions. */
-    collision_objects[0].primitives.resize(1);
-    collision_objects[0].primitives[0].type = collision_objects[0].primitives[0].BOX;
-    collision_objects[0].primitives[0].dimensions.resize(3);
-    collision_objects[0].primitives[0].dimensions[0] = 0.2;
-    collision_objects[0].primitives[0].dimensions[1] = 0.4;
-    collision_objects[0].primitives[0].dimensions[2] = 0.4;
+//     collision_objects[0].operation = collision_objects[0].ADD;
 
-    /* Define the pose of the table. */
-    collision_objects[0].primitive_poses.resize(1);
-    collision_objects[0].primitive_poses[0].position.x = 0.5;
-    collision_objects[0].primitive_poses[0].position.y = 0;
-    collision_objects[0].primitive_poses[0].position.z = 0.2;
-    // END_SUB_TUTORIAL
+//     // BEGIN_SUB_TUTORIAL object
+//     // Define the object that we will be manipulating
+//     collision_objects[1].header.frame_id = "panda_link0";
+//     collision_objects[1].id = "object";
 
-    collision_objects[0].operation = collision_objects[0].ADD;
+//     /* Define the primitive and its dimensions. */
+//     collision_objects[1].primitives.resize(1);
+//     collision_objects[1].primitives[0].type = collision_objects[1].primitives[0].BOX;
+//     collision_objects[1].primitives[0].dimensions.resize(3);
+//     collision_objects[1].primitives[0].dimensions[0] = 0.02;
+//     collision_objects[1].primitives[0].dimensions[1] = 0.02;
+//     collision_objects[1].primitives[0].dimensions[2] = 0.2;
 
-    // BEGIN_SUB_TUTORIAL object
-    // Define the object that we will be manipulating
-    collision_objects[1].header.frame_id = "panda_link0";
-    collision_objects[1].id = "object";
+//     /* Define the pose of the object. */
+//     collision_objects[1].primitive_poses.resize(1);
+//     collision_objects[1].primitive_poses[0].position.x = 0.5;
+//     collision_objects[1].primitive_poses[0].position.y = 0;
+//     collision_objects[1].primitive_poses[0].position.z = 0.5;
+//     // END_SUB_TUTORIAL
 
-    /* Define the primitive and its dimensions. */
-    collision_objects[1].primitives.resize(1);
-    collision_objects[1].primitives[0].type = collision_objects[1].primitives[0].BOX;
-    collision_objects[1].primitives[0].dimensions.resize(3);
-    collision_objects[1].primitives[0].dimensions[0] = 0.02;
-    collision_objects[1].primitives[0].dimensions[1] = 0.02;
-    collision_objects[1].primitives[0].dimensions[2] = 0.2;
+//     collision_objects[1].operation = collision_objects[1].ADD;
 
-    /* Define the pose of the object. */
-    collision_objects[1].primitive_poses.resize(1);
-    collision_objects[1].primitive_poses[0].position.x = 0.5;
-    collision_objects[1].primitive_poses[0].position.y = 0;
-    collision_objects[1].primitive_poses[0].position.z = 0.5;
-    // END_SUB_TUTORIAL
-
-    collision_objects[1].operation = collision_objects[1].ADD;
-
-    planning_scene_interface.applyCollisionObjects(collision_objects);
-}
+//     planning_scene_interface.applyCollisionObjects(collision_objects);
+// }
 
 int main(int argc, char ** argv){
     ros::init(argc, argv, "actual_control");
@@ -100,60 +97,164 @@ int main(int argc, char ** argv){
     ros::AsyncSpinner spinner(1);
     spinner.start();
 
-    ros::ServiceClient cartMoveClient = n.serviceClient<moveit_planner::MoveCart>("cartesian_move");
-    ros::service::waitForService("cartesian_move",-1);
+    double insert_timout=120.0;
 
-    moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
-    moveit::planning_interface::MoveGroupInterface group("panda_arm");
-    addCollisionObjects(planning_scene_interface);
-    ros::WallDuration(1.0).sleep();
+    ros::ServiceClient cartMoveClient = n.serviceClient<moveit_planner::MoveCart>("cartesian_move");
+    ros::ServiceClient velScalingClient = n.serviceClient<moveit_planner::SetVelocity>("set_velocity_scaling");
+    ros::service::waitForService("cartesian_move",-1);
+    ros::service::waitForService("set_velocity_scaling",-1);
+    moveit_planner::SetVelocity velscale;
+
+    // moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
+    // moveit::planning_interface::MoveGroupInterface group("panda_arm");
+    // addCollisionObjects(planning_scene_interface);
+    // ros::WallDuration(1.0).sleep();
+
+    // Move to above Key
+    moveit_planner::MoveCart move1;
+    geometry_msgs::Pose p1;
+    p1.orientation.x = 1.0;
+    p1.orientation.y = -0.5;
+    p1.orientation.z = 0.0;
+    p1.orientation.w = 0.0;
+    p1.position.x = 0.52;
+    p1.position.y = 0.2;
+    p1.position.z = 0.15+0.15;
+    move1.request.val.push_back(p1);
+    move1.request.execute = true;
+    cartMoveClient.call(move1);
+    ROS_INFO("Reached pre-key pose!");
 
     // Move to Key
-    moveit_planner::MoveCart move;
-    geometry_msgs::Pose p;
-    p.orientation.x = 0.83;
-    p.orientation.y = -0.55;
-    p.orientation.z = 0.01;
-    p.orientation.w = -0.01;
-    p.position.x = 0.5;
-    p.position.y = 0.2;
-    p.position.z = 0.1;
-    move.request.val.push_back(p);
-    move.request.execute = true;
-    cartMoveClient.call(move);
-    ROS_INFO("Reached key!");
-
-    // Move to Lock
     moveit_planner::MoveCart move2;
     geometry_msgs::Pose p2;
-    p2.orientation.x = 0.96;
-    p2.orientation.y = -0.26;
-    p2.orientation.z = 0.01;
-    p2.orientation.w = -0.01;
-    p2.position.x = 0.5;
-    p2.position.y = -0.2;
-    p2.position.z = 0.1;
+    p2.orientation.x = 1.0;
+    p2.orientation.y = -0.5;
+    p2.orientation.z = 0.0;
+    p2.orientation.w = 0.0;
+    p2.position.x = 0.52;
+    p2.position.y = 0.2;
+    p2.position.z = 0.17;
     move2.request.val.push_back(p2);
     move2.request.execute = true;
     cartMoveClient.call(move2);
-    ROS_INFO("Reached lock!");
+    ROS_INFO("Reached key!");
 
-    // Move to Home (roughly)
+    // Begin grasp
+    moveGripper(0.02,5.0);
+
+    // Move to above Key after grasping it
+    moveit_planner::MoveCart move1a;
+    geometry_msgs::Pose p1a;
+    p1a.orientation.x = 1.0;
+    p1a.orientation.y = -0.5;
+    p1a.orientation.z = 0.0;
+    p1a.orientation.w = 0.0;
+    p1a.position.x = 0.52;
+    p1a.position.y = 0.2;
+    p1a.position.z = 0.15+0.15;
+    move1a.request.val.push_back(p1a);
+    move1a.request.execute = true;
+    cartMoveClient.call(move1a);
+    ROS_INFO("Reached post-key pose!");
+
+    // Move to above Lock
     moveit_planner::MoveCart move3;
     geometry_msgs::Pose p3;
-    p3.orientation.x = 0.83;
-    p3.orientation.y = -0.55;
-    p3.orientation.z = 0.01;
-    p3.orientation.w = -0.01;
-    p3.position.x = 0.3;
-    p3.position.y = 0.0;
-    p3.position.z = 0.6;
+    p3.orientation.x = 1.0;
+    p3.orientation.y = -0.5;
+    p3.orientation.z = 0.0;
+    p3.orientation.w = 0.0;
+    p3.position.x = 0.52;
+    p3.position.y = -0.16;
+    p3.position.z = 0.15+0.15;
     move3.request.val.push_back(p3);
     move3.request.execute = true;
     cartMoveClient.call(move3);
+    ROS_INFO("Reached pre-lock pose!");
+
+    // reducing velocity
+    velscale.request.velScaling = 0.3;
+    velScalingClient.call(velscale);
+
+    // Start spiral insert routine
+    ROS_INFO("Waiting for Insertion Action Server");
+    SpiralClient client("spiral_insert_key", true); // true -> don't need ros::spin()
+    client.waitForServer();
+
+    lock_key::SpiralInsertGoal goal;
+
+    ROS_INFO("Retrieving spiral parameters");
+    n.getParam("spiral_Ft", goal.Ft);
+    n.getParam("spiral_Fd", goal.Fd);
+    n.getParam("spiral_Fi", goal.Fi);
+    n.getParam("spiral_delta_max", goal.delta_max);
+
+    ROS_INFO("Sending action goal");
+    client.sendGoal(goal);
+
+    // // Move to Lock
+    // moveit_planner::MoveCart move4;
+    // geometry_msgs::Pose p4;
+    // p4.orientation.x = 1.0;
+    // p4.orientation.y = -0.5;
+    // p4.orientation.z = 0.0;
+    // p4.orientation.w = 0.0;
+    // p4.position.x = 0.52;
+    // p4.position.y = -0.16;
+    // p4.position.z = 0.15;
+    // move4.request.val.push_back(p4);
+    // move4.request.execute = true;
+    // cartMoveClient.call(move4);
+    // ROS_INFO("Reached lock!");
+
+    bool insert_finished_before_timeout = client.waitForResult(ros::Duration(insert_timout));
+
+    if (insert_finished_before_timeout){
+        ROS_INFO("Insertion action finished.");
+    }
+    else {
+        ROS_INFO("Insertion action did not finish before the time out.");
+    }
+
+    // Release grasp
+    moveGripper(0.1,5.0);
+
+    // increasing velocity
+    velscale.request.velScaling = 1.0;
+    velScalingClient.call(velscale);
+
+    // Move to above Lock after key insertion
+    moveit_planner::MoveCart move3a;
+    geometry_msgs::Pose p3a;
+    p3a.orientation.x = 1.0;
+    p3a.orientation.y = -0.5;
+    p3a.orientation.z = 0.0;
+    p3a.orientation.w = 0.0;
+    p3a.position.x = 0.52;
+    p3a.position.y = -0.16;
+    p3a.position.z = 0.15+0.15;
+    move3a.request.val.push_back(p3a);
+    move3a.request.execute = true;
+    cartMoveClient.call(move3a);
+    ROS_INFO("Reached post-lock pose!");
+
+    // Move to Home (roughly)
+    moveit_planner::MoveCart move5;
+    geometry_msgs::Pose p5;
+    p5.orientation.x = 0.83;
+    p5.orientation.y = -0.55;
+    p5.orientation.z = 0.01;
+    p5.orientation.w = -0.01;
+    p5.position.x = 0.3;
+    p5.position.y = 0.0;
+    p5.position.z = 0.6;
+    move5.request.val.push_back(p5);
+    move5.request.execute = true;
+    cartMoveClient.call(move5);
     ROS_INFO("Reached Home!");
 
-    ros::waitForShutdown();
+    // ros::waitForShutdown();
     return 0;
 
 }
