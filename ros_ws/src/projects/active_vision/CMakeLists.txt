@@ -64,11 +64,10 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+  FILES
+  heuristicPolicySRV.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -78,10 +77,11 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  sensor_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -137,8 +137,11 @@ include
 
 ## Declare a C++ library
 add_library(${PROJECT_NAME}
-   src/dataHandling.cpp
-   src/testingModel_v1.cpp
+   src/environment.cpp
+   src/toolDataHandling.cpp
+   src/toolStateVector.cpp
+   src/toolVisualization.cpp
+   src/toolViewPointCalc.cpp
 )
 
 # target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${PCL_LIBRARIES})
@@ -225,15 +228,13 @@ add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EX
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
-#add_executable(helperFunctions src/helperFunctions.cpp)
+add_executable(environmentTesting src/environmentTesting.cpp)
+add_dependencies(environmentTesting active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(environmentTesting active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable(testingModel_v1 src/testingModel_v1.cpp)
-add_dependencies(testingModel_v1 active_vision ${catkin_EXPORTED_TARGETS})
-target_link_libraries(testingModel_v1 active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
-
-add_executable(supervisorNode src/supervisorNode.cpp)
-add_dependencies(supervisorNode active_vision ${catkin_EXPORTED_TARGETS})
-target_link_libraries(supervisorNode active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+add_executable(dataCollector src/dataCollector.cpp)
+add_dependencies(dataCollector active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(dataCollector active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(visDataRec src/visDataRec.cpp)
 add_dependencies(visDataRec active_vision ${catkin_EXPORTED_TARGETS})
@@ -243,14 +244,22 @@ add_executable(visViewsphere src/visViewsphere.cpp)
 add_dependencies(visViewsphere active_vision ${catkin_EXPORTED_TARGETS})
 target_link_libraries(visViewsphere active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable(findStablePos src/findStablePos.cpp)
-add_dependencies(findStablePos active_vision ${catkin_EXPORTED_TARGETS})
-target_link_libraries(findStablePos active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+# add_executable(findStablePos src/findStablePos.cpp)
+# add_dependencies(findStablePos active_vision ${catkin_EXPORTED_TARGETS})
+# target_link_libraries(findStablePos active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(genStateVec src/genStateVec.cpp)
 add_dependencies(genStateVec active_vision ${catkin_EXPORTED_TARGETS})
 target_link_libraries(genStateVec active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable(projBasedMovement src/projBasedMovement.cpp)
-add_dependencies(projBasedMovement active_vision ${catkin_EXPORTED_TARGETS})
-target_link_libraries(projBasedMovement active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
+add_executable(policyTester src/policyTester.cpp)
+add_dependencies(policyTester active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(policyTester active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(heuristicPolicyService src/heuristicPolicyService.cpp)
+add_dependencies(heuristicPolicyService active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(heuristicPolicyService active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
+
+add_executable(bfs src/bfs.cpp)
+add_dependencies(bfs active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(bfs active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})

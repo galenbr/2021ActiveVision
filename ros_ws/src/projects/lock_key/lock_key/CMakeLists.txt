@@ -36,6 +36,7 @@ find_package(Boost REQUIRED)
    FILES
    imgCapture.srv
    findKey.srv
+   getAveWrench.srv
    getWrench.srv
  )
 
@@ -44,6 +45,8 @@ find_package(Boost REQUIRED)
    DIRECTORY
    action
    FILES
+   Jiggle.action
+   MoveAbs.action
    SpiralInsert.action
  )
 
@@ -73,6 +76,9 @@ add_executable(test_move_node src/test_move.cpp)
 add_executable(setup_node src/setup.cpp)
 add_executable(spiral_insert_node src/spiral_insert.cpp)
 add_executable(get_wrench_node src/wrench_server.cpp)
+add_executable(actual_control_node src/actual_controller.cpp)
+add_executable(jiggle_node src/jiggle.cpp)
+add_executable(move_abs_node src/move_absolute.cpp)
 
 add_dependencies(arm_move_node moveit_planner_gencpp)
 add_dependencies(img_capture_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
@@ -85,6 +91,9 @@ add_dependencies(test_move_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 add_dependencies(setup_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 add_dependencies(spiral_insert_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 add_dependencies(get_wrench_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+add_dependencies(actual_control_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+add_dependencies(jiggle_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+add_dependencies(move_abs_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
 target_link_libraries(arm_move_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 target_link_libraries(img_capture_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
@@ -97,3 +106,6 @@ target_link_libraries(test_move_node ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 target_link_libraries(setup_node ${catkin_LIBRARIES})
 target_link_libraries(spiral_insert_node ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 target_link_libraries(get_wrench_node ${catkin_LIBRARIES})
+target_link_libraries(actual_control_node ${catkin_LIBRARIES})
+target_link_libraries(jiggle_node ${catkin_LIBRARIES})
+target_link_libraries(move_abs_node ${catkin_LIBRARIES})

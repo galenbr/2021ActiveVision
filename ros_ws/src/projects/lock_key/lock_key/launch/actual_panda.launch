@@ -1,0 +1,78 @@
+<?xml version="1.0" ?>
+<launch>
+  <!-- If needed, broadcast static tf for robot root -->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="virtual_joint_broadcaster_1" args="0 0 0 0 0 0 world panda_link0" />
+  
+  <!-- Arguments -->
+  <arg name="padlock_x" value="0.61" />
+  <arg name="padlock_y" value="-0.1875" />
+  <arg name="padlock_z" value="0.35" />
+  <arg name="key_x" value="0.55" />
+  <arg name="key_y" value="0.1" />
+  <arg name="key_z" value="0.3" />
+  <arg name="home_x" value="0.5" />
+  <arg name="home_y" value="0.0" />
+  <arg name="home_z" value="0.4" />
+	
+  <arg name="robot_ip" default="172.16.0.2" />
+  <arg name="load_gripper" default="true" />
+  <arg name="launch_rviz" default="true" />
+	
+  <!-- Set Parameters so other nodes can access them -->
+  <param name="padlock_goal_x" type="double" value="$(arg padlock_x)" />
+  <param name="padlock_goal_y" type="double" value="$(arg padlock_y)" />
+  <param name="padlock_goal_z" type="double" value="$(arg padlock_z)" />
+  <param name="key_goal_x" type="double" value="$(arg key_x)" />
+  <param name="key_goal_y" type="double" value="$(arg key_y)" />
+  <param name="key_goal_z" type="double" value="$(arg key_z)" />
+  <param name="home_goal_x" type="double" value="$(arg home_x)" />
+  <param name="home_goal_y" type="double" value="$(arg home_y)" />
+  <param name="home_goal_z" type="double" value="$(arg home_z)" />
+	<!--   spiral_Ft: Max force when moving to insertion plane
+       spiral_Fd: Max wrist Force during spiral
+       spiral_Fi: Max Insertion Force
+       spiral_Tx: Max Torque in X during spiral
+       spiral_Ty: Max Torque in Y during spiral
+       spiral_delta_max: Max distance for EE to move in Z
+       spiral_delta_step: Distance to move EE in Z each step
+       spiral_a: Initial distance from origin
+       spiral_b: Distance between spiral turns
+       spiral_nmax: Number of points in spiral
+       spiral_rot: Number of spiral rotations
+       ft_samples: Number of FT samples to take before insertion
+       ft_sleep: Sleep time between FT samples -->
+  <param name="spiral_Ft" type="double" value="0.5" />
+  <param name="spiral_Fd" type="double" value="0.5" />
+  <param name="spiral_Fi" type="double" value="2.0" />
+  <param name="spiral_Tx" type="double" value="0.5" />
+  <param name="spiral_Ty" type="double" value="0.5" />
+  <param name="spiral_delta_max" type="double" value="0.1" />
+  <param name="spiral_delta_step" type="double" value="0.0005" /> <!-- Should be 0.00025 eventually -->
+  <param name="spiral_a"    type="double" value="0.0" />
+  <param name="spiral_b"    type="double" value="0.0005" /> <!-- 0.000025 -->
+  <param name="spiral_nmax" type="int" value="50" />
+  <param name="spiral_rot"  type="double" value="10.0" />
+  <param name="ft_samples"  type="int" value="25" />
+  <param name="ft_sleep"    type="double" value="0.05" />
+
+  <include file="$(find franka_control)/launch/franka_control.launch" >
+    <arg name="robot_ip" value="$(arg robot_ip)" />
+    <arg name="load_gripper" value="$(arg load_gripper)" />
+  </include>
+
+  <include file="$(find panda_moveit_config)/launch/panda_moveit.launch">
+    <arg name="load_gripper" value="$(arg load_gripper)" />
+  </include>
+
+  <!-- Launch moveit planning services -->
+  <node name="moveit_planner" pkg="moveit_planner" type="main_node" args="panda_arm"/>
+  <!-- Start get pose node (for EE tip position) -->
+  <node name="get_pose" type="pose_node" pkg="moveit_planner" />
+  <!-- Start get wrench node -->
+  <node name="get_wrench" type="get_wrench_node" pkg="lock_key"  output="screen"/>
+  <!-- Start Constraints Node -->
+  <node name="constraints" type="arm_constraints_node" pkg="lock_key" />
+  <!--Start Spiral Insert Node-->
+  <node name="spiral_insert" type="spiral_insert_node" pkg="lock_key" output="screen"/>
+  <include file="$(find panda_moveit_config)/launch/moveit_rviz.launch" if="$(arg launch_rviz)" />
+</launch>

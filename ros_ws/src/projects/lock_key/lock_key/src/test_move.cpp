@@ -7,6 +7,8 @@ int main(int argc, char ** argv){
 
     ros::ServiceClient cartMoveClient = n.serviceClient<moveit_planner::MoveCart>("cartesian_move");
 
+    ros::service::waitForService("cartesian_move",-1);
+
     moveit_planner::MoveCart move;
     geometry_msgs::Pose p;
     p.orientation.w = 0.7071068;

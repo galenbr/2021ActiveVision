@@ -1,49 +1,115 @@
-#ifndef TESTING_MODEL
-#define TESTING_MODEL
+#ifndef ENVIRONMENT
+#define ENVIRONMENT
 
-#include "active_vision/helperFunctions.h"
+#include <iostream>
+#include <math.h>
+#include <stdlib.h>
+#include <vector>
+#include <array>
+#include <string>
+#include <fstream>
+#include <chrono>
+#include <boost/make_shared.hpp>
 
-void rbgVis(ptCldVis::Ptr viewer, ptCldColor::ConstPtr cloud, std::string name,int vp);
+#include <ros/ros.h>
+#include <ros/package.h>
+#include <tf/transform_datatypes.h>
 
-void rbgNormalVis(ptCldVis::Ptr viewer, ptCldColor::ConstPtr cloud, ptCldNormal::ConstPtr normal, std::string name,int vp);
+// PCL specific includes
+#include <pcl_ros/point_cloud.h>
+#include <pcl/io/ply_io.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl/common/transforms.h>
+#include <pcl/common/common.h>
+#include <pcl/common/generate.h>
+#include <pcl/common/random.h>
+#include <pcl/common/distances.h>
+#include <pcl/common/centroid.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/filters/extract_indices.h>
+#include <pcl/filters/crop_hull.h>
+#include <pcl/filters/crop_box.h>
+#include <pcl/ModelCoefficients.h>
+#include <pcl/sample_consensus/method_types.h>
+#include <pcl/sample_consensus/model_types.h>
+#include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/segmentation/extract_polygonal_prism_data.h>
+#include <pcl/surface/convex_hull.h>
+#include <pcl/features/normal_3d.h>
+
+//Gazebo specific includes
+#include <gazebo_msgs/SetModelState.h>
+#include <gazebo_msgs/SpawnModel.h>
+#include <gazebo_msgs/DeleteModel.h>
+
+// Typedef for convinience
+typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
+typedef pcl::PointCloud<pcl::Normal> ptCldNormal;
+
+// Structure to store one grasp related data
+struct graspPoint{
+  float quality;
+  float gripperWidth;
+  pcl::PointXYZRGB p1;
+  pcl::PointXYZRGB p2;
+  std::vector<float> pose;    // Note: This is not the final gripper pose
+  float addnlPitch;
+  graspPoint();
+};
+
+// Function to compare grasp point for sorting
+bool compareGrasp(graspPoint A, graspPoint B);
+
+// Structure to store state for rollback
+struct stateConfig{
+  ptCldColor env;                   // Environment point cloud
+  ptCldColor unexp;                 // Unexplored point cloud
+  std::vector<double> kinectPose;   // Kinect Pose in Viewsphere
+  std::string description;          // Description of the configuration
+  std::vector<double> unexpMin;
+  std::vector<double> unexpMax;
+};
+
+// Funstion to transpose a homogenous matrix
+Eigen::Affine3f homoMatTranspose(const Eigen::Affine3f& tf);
+
+// Get Rotation Part of a Affine3f
+Eigen::Vector3f getEuler(const Eigen::Affine3f& tf);
+
+// Get Translational Part of a Affine3f
+Eigen::Vector3f getTranslation(const Eigen::Affine3f& tf);
 
 // Class to store data of environment and its processing
 class environment{
 private:
-  ros::Rate r;                          // ROS sleep rate
-  ros::Publisher pubKinectPose;         // Publisher : Kinect pose
+  ros::Rate r{10};                      // ROS sleep rate
+  ros::Publisher pubObjPose;            // Publisher : Kinect/Objects pose
   ros::Subscriber subKinectPtCld;       // Subscriber : Kinect pointcloud
-  // NOT USED (JUST FOR REFERENCE)
-  /*ros::Subscriber subKinectRGB;       // Subscriber : Kinect RGB
-  ros::Subscriber subKinectDepth;       // Subscriber : Kinect DepthMap */
   ros::ServiceClient gazeboSpawnModel;  // Service : Spawn Model
   ros::ServiceClient gazeboDeleteModel; // Service : Delete Model
 
-  pcl::PassThrough<pcl::PointXYZRGB> pass;         // Passthrough filter
-  pcl::VoxelGrid<pcl::PointXYZRGB> voxelGrid;      // VoxelGrid object
-  pcl::SACSegmentation<pcl::PointXYZRGB> seg;      // Segmentation object
-  pcl::ExtractIndices<pcl::PointXYZRGB> extract;   // Extracting object
-  pcl::ConvexHull<pcl::PointXYZRGB> cvHull;        // Convex hull object
-  pcl::CropHull<pcl::PointXYZRGB> cpHull;          // Crop hull object
+  pcl::PassThrough<pcl::PointXYZRGB> pass;                  // Passthrough filter
+  pcl::VoxelGrid<pcl::PointXYZRGB> voxelGrid;               // VoxelGrid object
+  pcl::SACSegmentation<pcl::PointXYZRGB> seg;               // Segmentation object
+  pcl::ExtractIndices<pcl::PointXYZRGB> extract;            // Extracting object
+  pcl::ConvexHull<pcl::PointXYZRGB> cvHull;                 // Convex hull object
+  pcl::CropBox<pcl::PointXYZRGB> cpBox;                     // Crop box object
   pcl::ExtractPolygonalPrismData<pcl::PointXYZRGB> prism;   // Prism object
   pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;  // Normal Estimation
 
   Eigen::MatrixXf projectionMat;   // Camera projection matrix
-
-  int readFlag[3];                 // Flag used to read data from kinect only when needed
-  float fingerZOffset;             // Z axis offset between gripper hand and finger
-
-  std::string path;                                     // Path the active vision package
-
-public:
-  // NOT USED (JUST FOR REFERENCE)
-  /* cv_bridge::CvImageConstPtr ptrRgbLast{new cv_bridge::CvImage};    // RGB image from camera
-  cv_bridge::CvImageConstPtr ptrDepthLast{new cv_bridge::CvImage};  // Depth map from camera */
-
   Eigen::Affine3f tfKinOptGaz;     // Transform : Kinect Optical Frame to Kinect Gazebo frame
   Eigen::Affine3f tfGazWorld;      // Transform : Kinect Gazebo Frame to Gazebo World frame
   Eigen::Affine3f tfGripper;       // Transform : For gripper based on grasp points found
 
+  int readFlag[3];                 // Flag used to read data from kinect only when needed
+  float fingerZOffset;             // Z axis offset between gripper hand and finger
+
+  std::string path;                // Path the active vision package
+
+public:
   // PtCld: Last recorded viewpoint
   ptCldColor::Ptr ptrPtCldLast{new ptCldColor};      ptCldColor::ConstPtr cPtrPtCldLast{ptrPtCldLast};
 
@@ -56,7 +122,7 @@ public:
   // PtCld: Sorting the convex hull generated
   ptCldColor::Ptr ptrPtCldHull{new ptCldColor};      ptCldColor::ConstPtr cPtrPtCldHull{ptrPtCldHull};
 
-  // PtCld: Unexplored point cloud, point clould used for collision check (unexplored + table)
+  // PtCld: Unexplored point cloud
   ptCldColor::Ptr ptrPtCldUnexp{new ptCldColor};     ptCldColor::ConstPtr cPtrPtCldUnexp{ptrPtCldUnexp};
   ptCldColor::Ptr ptrPtCldCollCheck{new ptCldColor}; ptCldColor::ConstPtr cPtrPtCldCollCheck{ptrPtCldCollCheck};
 
@@ -80,12 +146,15 @@ public:
   std::vector<pcl::Vertices> hullVertices;          // Used in convex hull during collision check
   std::vector<double> lastKinectPoseCartesian;      // Last Kinect pose where it was moved in cartesian co-ordiantes
   std::vector<double> lastKinectPoseViewsphere;     // Last Kinect pose where it was moved in viewsphere co-ordinates
-  std::vector<double> minUnexp;                     // Min x,y,z of unexplored pointcloud generated
-  std::vector<double> maxUnexp;                     // Max x,y,z of unexplored pointcloud generated
+  std::vector<double> minUnexp, maxUnexp;           // Min and Max x,y,z of unexplored pointcloud generated
   std::vector<graspPoint> graspsPossible;           // List of possible grasps
   pcl::PointXYZRGB minPtObj, maxPtObj;              // Min and Max x,y,z co-ordinates of the object
+  pcl::PointXYZRGB minPtGrp[3], maxPtGrp[3];        // Min and Max x,y,z co-ordinates of the gripper
+  pcl::PointXYZRGB minPtCol[5], maxPtCol[5];        // Min and Max x,y,z co-ordinates of the gripper used for collision check
 
   std::vector<std::vector<std::string>> objectDict; // List of objects which can be spawned
+  std::vector<std::vector<std::vector<double>>> objectPosesDict; //Stable object poses
+  std::vector<std::vector<double>> objectPosesYawLimits;         //Yaw limits for the objects
   double voxelGridSize;                             // Voxel Grid size for environment
   double voxelGridSizeUnexp;                        // Voxel Grid size for unexplored point cloud
   std::vector<double> tableCentre;                  // Co-ordinates of table centre
@@ -93,16 +162,27 @@ public:
   double maxGripperWidth;                           // Gripper max width (Actual is 8 cm)
   double minGraspQuality;                           // Min grasp quality threshold
   int selectedGrasp;                                // Index of the selected grasp
-  int gridDim;                                      // Grid dimension for state vector
-  std::vector<float> stateVec;                      // State Vector
+  std::vector<stateConfig> configurations;          // Vector to store states for rollback
 
   environment(ros::NodeHandle *nh);
+
+  // Function to reset the environment
+  void reset();
+
+  // Store the configuration
+  int saveConfiguration(std::string name);
+
+  // Rollback to a configuration
+  void rollbackConfiguration(int index);
 
   // 1A: Callback function to point cloud subscriber
   void cbPtCld (const ptCldColor::ConstPtr& msg);
 
-  // 2: Spawning objects in gazebo on the table centre for a given RPY
-  void spawnObject(int objectID, float R, float P, float Y);
+  // 2A: Spawning objects in gazebo on the table centre for a given pose option and yaw
+  void spawnObject(int objectID, int choice, float yaw);
+
+  // 2B: Function to move the object. Same args as spawnObject
+  void moveObject(int objectID, int choice, float yaw);
 
   // 3: Deleting objects in gazebo
   void deleteObject(int objectID);
@@ -111,25 +191,28 @@ public:
   void loadGripper();
 
   // 5: Update gripper
+  // 0 -> Visualization
+  // 1 -> Axis Collision Check
+  // 2 -> Gripper Collision Check
   void updateGripper(int index ,int choice);
-  void updateGripper(int index ,int choice, std::vector<graspPoint> *graspsP);
 
   // 6A: Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
   void moveKinectCartesian(std::vector<double> pose);
 
   // 6B: Funtion to move the Kinect in a viewsphere which has the table cente as its centre
+  // R (Radius)
+  // Theta (Polar Angle) -> 0 to 2*PI
+  // Phi (Azhimuthal angle) -> 0 to PI/2
   void moveKinectViewsphere(std::vector<double> pose);
 
   // 7: Function to read the kinect data.
   void readKinect();
 
   // 8: Function to Fuse last data with existing data
-  void fuseLastData(void);
-  void fuseLastData(ptCldColor::Ptr retEnv);
+  void fuseLastData();
 
   // 9: Extracting the major plane (Table) and object
-  void dataExtract(void);
-  void dataExtract(ptCldColor::ConstPtr cEnv, ptCldColor::Ptr target);
+  void dataExtract();
 
   // 10: Generating unexplored point cloud
   void genUnexploredPtCld();
@@ -137,15 +220,20 @@ public:
   // 11: Updating the unexplored point cloud
   void updateUnexploredPtCld();
 
-  // 12: Finding pairs of grasp points from object point cloud
-  void graspSynthesis(void);
-  void graspSynthesis(ptCldColor::Ptr object);
+  // 12: Finding normals and pairs of grasp points from object point cloud
+  void graspsynthesis();
 
   // 13: Given a grasp point pair find the gripper orientation
   void findGripperPose(int index);
 
   // 14: Collision check for gripper and unexplored point cloud
   void collisionCheck();
+
+  // 15: Grasp and Collision check combined
+  int graspAndCollisionCheck();
 };
+
+// Function to do a single pass
+void singlePass(environment &av, std::vector<double> kinectPose, bool firstTime, bool findGrasp);
 
 #endif

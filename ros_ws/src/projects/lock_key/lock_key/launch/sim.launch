@@ -33,24 +33,24 @@
     <arg name="paused" value="true" />
   </include>
   <node name="spawn_franka_urdf" pkg="gazebo_ros" type="spawn_model"
-  	args="-param robot_description -urdf -model panda
+    args="-param robot_description -urdf -model panda
           -J panda_joint2 0.0 -J panda_joint6 0.785398
           -J panda_joint7 0.785398" />
   <!-- <node name="spawn_table_urdf" pkg="gazebo_ros" type="spawn_model"
-  	args="-file $(find lock_key)/desc/surface.urdf -urdf -model table_surface" /> -->
+    args="-file $(find lock_key)/desc/surface.urdf -urdf -model table_surface" /> -->
   <node name="spawn_padlock_urdf" pkg="gazebo_ros" type="spawn_model"
-  	args="-file $(find lock_key)/desc/padlock.urdf -urdf -model padlock
+    args="-file $(find lock_key)/desc/padlock.urdf -urdf -model padlock
           -x $(arg padlock_x) -y $(arg padlock_y) -z $(arg padlock_z)
           -R 1.5708 -P 0.0 -Y 0.0" />
   
   <node name="spawn_key_urdf" pkg="gazebo_ros" type="spawn_model"
-  	args="-file $(find lock_key)/desc/key.urdf -urdf -model key
+    args="-file $(find lock_key)/desc/key.urdf -urdf -model key
           -x $(arg key_x) -y $(arg key_y) -z $(arg key_z)
           -R 0.0 -P -1.5708 -Y 0.0" />
 
   <!-- Launch controllers -->
   <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
-	output="screen" args="joint_state_controller gazebo_ros_control" ns="/panda" />
+  output="screen" args="joint_state_controller gazebo_ros_control" ns="/panda" />
   
   <include file="$(find panda_finger_torque_controller)/launch/main.launch" />
   <!-- <include file="$(find panda_finger_position_controller)/launch/main.launch" /> -->
