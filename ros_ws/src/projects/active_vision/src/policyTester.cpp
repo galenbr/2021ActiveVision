@@ -41,6 +41,7 @@ std::vector<int> nearbyDirections(int dir){
 }
 // Function the find the grasp
 void findGrasp(environment &kinectControl, int object, int objPoseCode, int objYaw, std::string dir, std::string saveLocation, ptCldVis::Ptr viewer, ros::ServiceClient &policy){
+	int maxSteps = 10;
 	std::fstream fout;
  	fout.open(dir+saveLocation, std::ios::out | std::ios::app);
 
@@ -80,7 +81,7 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
   table.x = 1.5; table.y = 0; table.z = 1;
 	std::vector<int> nUnexp;
 
-	while(keyPress.ok && current.nSteps <= 10){
+	while(keyPress.ok){
 		viewer->resetStoppedFlag();
 		viewer->removeAllPointClouds();
 		viewer->removeAllShapes();
@@ -163,6 +164,14 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 		if(current.success == true){
 			keyPress.dir = 0;
 			keyPress.ok = false;
+		}else{
+			// Limiting the steps
+			if(current.nSteps > maxSteps){
+				current.filename = getCurTime();
+				saveData(current, fout, dir);
+				keyPress.dir = 0;
+				keyPress.ok = false;
+			}
 		}
 
 		// Reset to home if direction is 0
