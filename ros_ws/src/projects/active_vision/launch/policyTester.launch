@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<launch>
+
+  <arg name="policy" default="NIL" doc="NIL / HEURISTIC / PCA_LDA_LR / PCA_LR" />
+
+  <arg name="policyDir" default="./DataCollected/rectPrism/" doc="Directory where the .pkl files are there" />
+  <arg name="policyCommonName" default="rectNormalVP_" doc="Common name or prefix for the .pkl files" />
+
+  <arg name="CSV" default="default.csv" doc="csv file name to save the results" />
+  <arg name="objID" default="2" doc="0->Drill, 1->Sq Prism, 2->Rect Prism" />
+  <arg name="moveMode" default="1" doc="1->Normal, 2->New" />
+
+  <env name="ROSCONSOLE_FORMAT" value='[${severity}]: ${message}'/>
+
+  <group if="$(eval arg('policy') == 'NIL')">
+    <node name="policyTester" pkg="active_vision" type="policyTester" args="$(arg CSV) $(arg objID) $(arg moveMode) 0" output="screen"/>
+  </group>
+  <group if="$(eval arg('policy') == 'HEURISTIC')">
+    <node name="heuristicPolicyService" pkg="active_vision" type="heuristicPolicyService" args="0" output="screen" launch-prefix="gnome-terminal --" />
+    <node name="policyTester" pkg="active_vision" type="policyTester" args="$(arg CSV) $(arg objID) $(arg moveMode) 1" output="screen"/>
+  </group>
+  <group if="$(eval arg('policy') == 'PCA_LDA_LR')">
+    <node name="trainedPolicyService" pkg="active_vision" type="trainedPolicyService.py" args="$(arg policyDir) $(arg policyCommonName) PCA_LDA_LR" output="screen" launch-prefix="gnome-terminal --" />
+    <node name="policyTester" pkg="active_vision" type="policyTester" args="$(arg CSV) $(arg objID) $(arg moveMode) 2" output="screen"/>
+  </group>
+  <group if="$(eval arg('policy') == 'PCA_LR')">
+    <node name="trainedPolicyService" pkg="active_vision" type="trainedPolicyService.py" args="$(arg policyDir) $(arg policyCommonName) PCA_LR" output="screen" launch-prefix="gnome-terminal --" />
+    <node name="policyTester" pkg="active_vision" type="policyTester" args="$(arg CSV) $(arg objID) $(arg moveMode) 2" output="screen"/>
+  </group>
+
+</launch>

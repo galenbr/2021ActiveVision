@@ -12,6 +12,7 @@ from sklearn.model_selection import train_test_split, KFold
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 from sklearn.neighbors import KNeighborsClassifier
+from pickle import dump
 
 def helpDisp(text):
     print(text)
@@ -48,11 +49,16 @@ class PCALDAPipeline(methodPipeline):
         X = self.normalize(X)
         self.pca = PCA(self.n_components)
         X_components = self.pca.fit_transform(X)
-        
+
         self.lda = LDA()
         self.lda.fit(X_components, y)
         self.ready = True
         return methodPipeline.calculateFunction(self, X, y)
+
+    def saveModel(self,name):
+        dump(self.scaler, open(name+'_scaler.pkl', 'wb'))
+        dump(self.pca, open(name+'_pca.pkl', 'wb'))
+        dump(self.lda, open(name+'_lda.pkl', 'wb'))
 
     def applyFunction(self, X):
         if(not self.ready):
@@ -85,6 +91,10 @@ class PCAPipeline(methodPipeline):
 
         self.ready = True
         return methodPipeline.calculateFunction(self, X, y)
+
+    def saveModel(self,name):
+        dump(self.scaler, open(name+'_scaler.pkl', 'wb'))
+        dump(self.pca, open(name+'_pca.pkl', 'wb'))
 
     def applyFunction(self, X):
         if(not self.ready):
@@ -134,7 +144,7 @@ def readInput(fileName,dim):
 
 	return np.asarray(states),np.asarray(dir)
 
-def kFold(filename, pipeline, model, dim=52, k=5):
+def kFold(filename, pipeline, model, name='na', dim=52, k=5):
     stateVec, dirVec = readInput(filename, dim)
     dirVec = dirVec.ravel()
     kFold = KFold(n_splits=k, random_state=None)
@@ -156,14 +166,21 @@ def kFold(filename, pipeline, model, dim=52, k=5):
         print("%1.2f" % acc)
     print("Overall average: %1.2f" % (avg_accuracy))
 
+    # Storing the trained models
+    if name != 'na':
+        pipeline.calculateFunction(stateVec, dirVec)
+        pipeline.saveModel(name)
+        model.fit(pipeline.applyFunction(stateVec), dirVec)
+        dump(model, open(name+'_lr.pkl', 'wb'))
+
 def standardRun(file):
     model = LogisticRegression(solver='liblinear', multi_class='auto')
-    model = KNeighborsClassifier(n_neighbors=7)
+    # model = KNeighborsClassifier(n_neighbors=7)
     print("*****%s*****" % file)
     print("*****PCA-LDA*****")
-    kFold(file, PCALDAPipeline(26), model)
+    kFold(file, PCALDAPipeline(26), model, file[0:-12]+'PL')
     print("*****PCA*****")
-    kFold(file, PCAPipeline(7), model)
+    kFold(file, PCAPipeline(7), model, file[0:-12]+'P')
     print("*****Brick*****")
     kFold(file, PCAPipeline(7), BrickModel())
 
@@ -179,4 +196,3 @@ if __name__ == "__main__":
         dir = sys.argv[1]
         file = sys.argv[2]
         standardRun(dir+file)
-    

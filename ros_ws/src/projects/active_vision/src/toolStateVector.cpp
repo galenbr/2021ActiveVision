@@ -17,8 +17,16 @@ void HAFStVec1::setInput(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector
   dataSet = true;
 }
 
-void HAFStVec1::setgridDim(int &dim){
+void HAFStVec1::setGridDim(int dim){
   gridDim = dim;
+}
+
+void HAFStVec1::setMaintainScale(bool val){
+  maintainScale = val;
+}
+
+std::vector<float> HAFStVec1::getStateVec(){
+  return(stateVec);
 }
 
 void HAFStVec1::print(){
@@ -59,6 +67,20 @@ void HAFStVec1::calculate(){
 
   pcl::PointXYZRGB minPtObj, maxPtObj;
   pcl::getMinMax3D(*ptrPtCldObj, minPtObj, maxPtObj);
+  // printf("1---%f,%f,%f,%f\n",minPtObj.x,maxPtObj.x,minPtObj.y,maxPtObj.y);
+  if(maintainScale == true){
+    float midPointX,midPointY;
+    midPointX = (maxPtObj.x+minPtObj.x)/2;
+    midPointY = (maxPtObj.y+minPtObj.y)/2;
+    if((maxPtObj.x-minPtObj.x) > (maxPtObj.y-minPtObj.y)){
+      minPtObj.y = midPointY - (maxPtObj.x-minPtObj.x)/2;
+      maxPtObj.y = midPointY + (maxPtObj.x-minPtObj.x)/2;
+    }else{
+      minPtObj.x = midPointX - (maxPtObj.y-minPtObj.y)/2;
+      maxPtObj.x = midPointX + (maxPtObj.y-minPtObj.y)/2;
+    }
+  }
+  // printf("2---%f,%f,%f,%f\n",minPtObj.x,maxPtObj.x,minPtObj.y,maxPtObj.y);
 
   float stateObj[gridDim][gridDim] = {};
   gridSize[0] = (maxPtObj.x-minPtObj.x)/gridDim;

@@ -67,6 +67,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_service_files(
   FILES
   heuristicPolicySRV.srv
+  trainedPolicySRV.srv
 )
 
 ## Generate actions in the 'action' folder

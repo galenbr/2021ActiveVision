@@ -1,7 +1,13 @@
 Active vision project
 
-roslaunch active_vision workspace.launch policy:="heuristic"
--> Starts gazebo with table and kinect. The heuristic policy service is also started.
+roslaunch active_vision workspace.launch
+-> Starts gazebo with table and kinect.
+
+roslaunch --ros-args active_vision policyTester.launch
+-> Show the arguments for the launch file
+
+roslaunch active_vision policyTester.launch policy:="PCA_LDA_LR"
+-> Starts the policy tester with PCA_LDA_LR policy
 
 1) rosrun active_vision environmentTesting
    Code with the "environment" class to do the following functions:
