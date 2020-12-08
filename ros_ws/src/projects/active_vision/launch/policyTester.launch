@@ -3,12 +3,12 @@
 
   <arg name="policy" default="NIL" doc="NIL / HEURISTIC / PCA_LDA_LR / PCA_LR" />
 
-  <arg name="policyDir" default="./DataCollected/rectPrism/" doc="Directory where the .pkl files are there" />
-  <arg name="policyCommonName" default="rectNormalVP_" doc="Common name or prefix for the .pkl files" />
+  <arg name="policyDir" default="./DataCollected/prismNewVP/" doc="Directory where the .pkl files are there" />
+  <arg name="policyCommonName" default="prismNewVP_" doc="Common name or prefix for the .pkl files" />
 
   <arg name="CSV" default="default.csv" doc="csv file name to save the results" />
   <arg name="objID" default="2" doc="0->Drill, 1->Sq Prism, 2->Rect Prism" />
-  <arg name="moveMode" default="1" doc="1->Normal, 2->New" />
+  <arg name="moveMode" default="2" doc="1->Normal, 2->New" />
 
   <env name="ROSCONSOLE_FORMAT" value='[${severity}]: ${message}'/>
 

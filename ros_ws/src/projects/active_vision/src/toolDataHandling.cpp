@@ -115,3 +115,28 @@ std::vector<std::vector<std::string>> readCSV(std::string filename){
 
 	return(data);
 }
+
+std::vector<nodeData> convertToTree(std::vector<std::vector<std::string>> &data){
+  std::vector<nodeData> result; result.clear();
+  nodeData temp;
+  std::size_t found;
+  int childID;
+  // storing all the nodes first
+  for(int i = 0; i < data.size(); i++){
+    temp.reset();
+    found = data[i][0].find(":");
+    temp.nodeID = std::atoi(data[i][0].substr(0,found).c_str());
+    temp.dirs = data[i][0].substr(found+1);
+    result.push_back(temp);
+  }
+  for(int i = 0; i < data.size(); i++){
+    for(int j = 1; j < data[i].size(); j++){
+      if(data[i][j].length() > 0){
+        childID = std::atoi(data[i][j].c_str());
+        result[i].childIDs.push_back(childID);
+        result[childID].parentID = i;
+      }
+    }
+  }
+  return result;
+}

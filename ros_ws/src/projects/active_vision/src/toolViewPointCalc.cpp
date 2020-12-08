@@ -25,7 +25,7 @@ bool checkIfNewPose(std::vector<std::vector<double>> &oldPoses, std::vector<doub
 		if(type == 1){
 			if(oldPoses[i] == pose) return false;
 		}else{
-			if(disBtwSpherical(oldPoses[i],pose) <= 0.75*(pose[0])*(20*M_PI/180)) return false;
+			if(disBtwSpherical(oldPoses[i],pose) <= 0.5*(pose[0])*(20*M_PI/180)) return false;
 		}
   }
   return true;
@@ -120,8 +120,7 @@ std::vector<double> calcExplorationPoseB(std::vector<double> &startPose, int dir
   end[1] = fmod(end[1],2*M_PI);
   if(end[1] < 0) end[1] += 2*M_PI;
 
-	if(checkValidPose(end)) return end;
-  else                    return startPose;
+	return end;
 }
 
 std::vector<double> calcExplorationPose(std::vector<double> &startPose, int dir, int mode){

@@ -17,18 +17,22 @@ void help(){
 int main(int argc, char** argv){
   help();
 
-  std::vector<double> pose={1.4,M_PI,45*M_PI/180};
-  std::vector<double> temp=pose;
-  std::vector<double> currPose=pose;
-  pcl::PointXYZ table,a1;
+  std::vector<double> homePose={1.4,M_PI,45*M_PI/180};
+  std::vector<double> nextPose;
+  std::vector<double> temp;
+  std::vector<std::vector<double>> path;
+  path.push_back(homePose);
+  std::vector<int> arrIDs = {0};
+  pcl::PointXYZ table,a1,a2;
   table.x = 1.5; table.y = 0; table.z = 1;
 
   // Setting up the point cloud visualizer
   ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer")); std::vector<int> vp;
   setupViewer(viewer, 1, vp);
   keyboardEvent keyPress(viewer,2); keyPress.help();
+  keyPress.mode = 2;
 
-  addViewsphere(viewer,vp[0],table,pose[0],true);
+  addViewsphere(viewer,vp[0],table,homePose[0],false);
 
   viewer->addCube(table.x-0.25,table.x+0.25,
                   table.y-0.50,table.y+0.50,
@@ -43,17 +47,39 @@ int main(int argc, char** argv){
 
   while(keyPress.ok){
     // Adding the Kinect position
-    if(keyPress.dir >=1 && keyPress.dir <= 8)
-      currPose = calcExplorationPose(currPose,keyPress.dir,keyPress.mode);
-    else if(keyPress.dir == 0)
-      currPose = pose;
+    if(keyPress.dir >=1 && keyPress.dir <= 8){
+      nextPose = calcExplorationPose(path.back(),keyPress.dir,keyPress.mode);
+      if(checkValidPose(nextPose) == true && checkIfNewPose(path,nextPose,keyPress.mode) == true){
+        path.push_back(nextPose);
+      }
+    }
+    else if(keyPress.dir == 0){
+      path.clear();
+      path.push_back(homePose);
+    }
 
-    a1 = sphericalToCartesian(currPose,table);
+    for(int i=1; i<=8; i++){
+      nextPose = calcExplorationPose(path.back(),i,keyPress.mode);
+      a1 = sphericalToCartesian(nextPose,table);
+      viewer->addSphere(a1,0.04,1,0,0,"Sphere"+std::to_string(i),vp[0]);
+    }
+    a1 = sphericalToCartesian(path.back(),table);
     viewer->addSphere(a1,0.04,0,1,0,"Sphere",vp[0]);
 
-    viewer->addText("Polar : "+std::to_string(round(currPose[1]*180/M_PI)),5,5,25,1,0,0,"Polar",vp[0]);
-    viewer->addText("Azhimuthal : "+std::to_string(round(currPose[2]*180/M_PI)),5,35,25,1,0,0,"Azhi",vp[0]);
+    for(int i = 0; i < path.size()-1; i++){
+      a1 = sphericalToCartesian(path[i],table);
+      a2 = sphericalToCartesian(path[i+1],table);
+      viewer->addArrow(a2,a1,0,1,0,false,"Arr"+std::to_string(arrIDs.back()),vp[0]);
+      arrIDs.push_back(arrIDs.back()+1);
+    }
+
+    viewer->addText("Polar : "+std::to_string(round(path.back()[1]*180/M_PI)),5,5,25,1,0,0,"Polar",vp[0]);
+    viewer->addText("Azhimuthal : "+std::to_string(round(path.back()[2]*180/M_PI)),5,35,25,1,0,0,"Azhi",vp[0]);
     viewer->addText("Mode " +std::to_string(keyPress.mode)+" (Space to switch)",5,140,20,1,0,0,"Mode",vp[0]);
+
+    temp = path.back(); temp[0]*=3;
+    a1 = sphericalToCartesian(temp,table);
+    viewer->setCameraPosition(a1.x,a1.y,a1.z,table.x,table.y,table.z,0,0,1);
 
     keyPress.called = false;
     while(!viewer->wasStopped() && keyPress.called==false){
@@ -63,6 +89,15 @@ int main(int argc, char** argv){
     viewer->resetStoppedFlag();
     viewer->removeShape("Mode",vp[0]);
     viewer->removeShape("Sphere",vp[0]);
+    for(int i = 1; i <= 8; i++) {
+      viewer->removeShape("Sphere"+std::to_string(i),vp[0]);
+    }
+
+    // for(int i = 0; i < arrIDs.size(); i++){
+    //   viewer->removeShape("Arr"+std::to_string(arrIDs[i]),vp[0]);
+    // }
+    // arrIDs = {0};
+
     viewer->removeShape("Polar",vp[0]);
     viewer->removeShape("Azhi",vp[0]);
   }
