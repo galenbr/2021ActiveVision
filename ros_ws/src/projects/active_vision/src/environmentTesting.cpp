@@ -788,8 +788,9 @@ int main (int argc, char** argv){
     std::cout << "2: Square Prism" << std::endl;
     std::cout << "3: Rectangular Prism" << std::endl;
     std::cout << "4: Bowl" << std::endl;
-    std::cout << "5: Big Bowl" << std::endl;
-    std::cout << "6: Cup" << std::endl;
+    std::cout << "5: Cinder Block" << std::endl;
+    std::cout << "6: Handle" << std::endl;
+    std::cout << "7: Gasket" << std::endl;
     std::cout << "Enter your choice : "; std::cin>>objID;
     if(choice == 11){
       std::cout << "Grasp Modes available :" << std::endl;

@@ -65,10 +65,9 @@ environment::environment(ros::NodeHandle *nh){
                 {"squarePrismAV","Square Prism"},
                 {"rectPrismAV","Rectangular Prism"},
                 {"bowlAV","Bowl"},
-                {"bowl2AV","Bowl2"},
-                {"cupAV","Cup"},
                 {"cinderBlockAV","Cinder Block"},
-                {"handleAV","Door Handle"}};
+                {"handleAV","Door Handle"},
+                {"gasketAV","Gasket"}};
 
   // Stores stable poses for the objects (Z(m), Roll(Rad), Pitch(Rad))
   objectPosesDict = {{{0.012,0.000,0.000},  {0.084,1.459,-0.751},
@@ -79,11 +78,10 @@ environment::environment(ros::NodeHandle *nh){
                      {{0.015,0.000,0.000}},
                      {{0.015,0.000,0.000}},
                      {{0.015,0.000,0.000}},
-                     {{0.022,0.000,0.000}},
                      {{0.015,0.000,0.000}},
                      {{0.015,0.000,0.000}}};
 
-  objectPosesYawLimits = {{0,359},{0,89},{0,179},{0,1},{0,1},{0,1},{0,89},{0,359}};
+  objectPosesYawLimits = {{0,359},{0,89},{0,179},{0,1},{0,89},{0,359},{0,179}};
 
   voxelGridSize = 0.01;          // Voxel Grid size for environment
   voxelGridSizeUnexp = 0.01;     // Voxel Grid size for unexplored point cloud
