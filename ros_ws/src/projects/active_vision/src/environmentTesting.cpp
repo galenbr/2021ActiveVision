@@ -784,13 +784,14 @@ int main (int argc, char** argv){
 
   if (choice >= 5 && choice <= 13) {
     std::cout << "Objects available :" << std::endl;
-    std::cout << "1: Drill" << std::endl;
-    std::cout << "2: Square Prism" << std::endl;
-    std::cout << "3: Rectangular Prism" << std::endl;
+    std::cout << "1: Prism 6x6x6" << std::endl;
+    std::cout << "2: Prism 10x8x4" << std::endl;
+    std::cout << "3: Prism 20x6x5" << std::endl;
     std::cout << "4: Bowl" << std::endl;
     std::cout << "5: Cinder Block" << std::endl;
     std::cout << "6: Handle" << std::endl;
     std::cout << "7: Gasket" << std::endl;
+    std::cout << "8: Drill" << std::endl;
     std::cout << "Enter your choice : "; std::cin>>objID;
     if(choice == 11){
       std::cout << "Grasp Modes available :" << std::endl;

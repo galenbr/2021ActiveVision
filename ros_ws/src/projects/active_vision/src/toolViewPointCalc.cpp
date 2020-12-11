@@ -17,7 +17,7 @@ std::vector<double> cartesianToSpherical(pcl::PointXYZ &point, pcl::PointXYZ &ce
 }
 
 bool checkValidPose(std::vector<double> pose){
-	return (pose[2] < (M_PI/2+.1));
+	return (pose[2] <= 1.006*(M_PI/2));
 }
 
 bool checkIfNewPose(std::vector<std::vector<double>> &oldPoses, std::vector<double> &pose, int type){

@@ -1,15 +1,32 @@
 <?xml version="1.0"?>
 <launch>
 
-  <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="world_name" value="$(find active_vision)/worlds/environment.world"/>
-    <arg name="paused" value="false"/>
-    <arg name="use_sim_time" value="true"/>
-    <arg name="gui" value="true"/>
-    <arg name="headless" value="false"/>
-    <arg name="recording" value="false"/>
-    <arg name="debug" value="false"/>
-  </include>
-  <!-- <node name="spawn" pkg="gazebo_ros" type="spawn_model" args="-file $(find pcl_test)/models/Kinect.sdf -sdf -x 1.5 -y 0 -z 0.964 -P .523 -model Kinect"/> -->
+  <arg name="visual" default="ON" />
+
+  <env name="ROSCONSOLE_FORMAT" value='[${severity}]: ${message}'/>
+
+  <group if="$(eval arg('visual') == 'ON')">
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+      <arg name="world_name" value="$(find active_vision)/worlds/environment.world"/>
+      <arg name="paused" value="false"/>
+      <arg name="use_sim_time" value="true"/>
+      <arg name="gui" value="true"/>
+      <arg name="headless" value="false"/>
+      <arg name="recording" value="false"/>
+      <arg name="debug" value="false"/>
+    </include>
+  </group>
+
+  <group if="$(eval arg('visual') == 'OFF')">
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+      <arg name="world_name" value="$(find active_vision)/worlds/environment.world"/>
+      <arg name="paused" value="false"/>
+      <arg name="use_sim_time" value="true"/>
+      <arg name="gui" value="false"/>
+      <arg name="headless" value="true"/>
+      <arg name="recording" value="false"/>
+      <arg name="debug" value="false"/>
+    </include>
+  </group>
 
 </launch>

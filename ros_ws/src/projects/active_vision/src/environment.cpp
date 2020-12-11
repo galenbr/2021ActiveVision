@@ -61,27 +61,26 @@ environment::environment(ros::NodeHandle *nh){
   path = ros::package::getPath("active_vision");  // Path to the active_vision package folder
 
   // Dictionary of objects to be spawned
-  objectDict = {{"drillAV","Cordless Drill"},
-                {"squarePrismAV","Square Prism"},
-                {"rectPrismAV","Rectangular Prism"},
+  objectDict = {{"prismAV6x6x6","Prism 6x6x6"},
+                {"prismAV10x8x4","Prism 10x8x4"},
+                {"prismAV20x6x5","Prism 20x6x5"},
                 {"bowlAV","Bowl"},
                 {"cinderBlockAV","Cinder Block"},
                 {"handleAV","Door Handle"},
-                {"gasketAV","Gasket"}};
+                {"gasketAV","Gasket"},
+                {"drillAV","Cordless Drill"}};
 
   // Stores stable poses for the objects (Z(m), Roll(Rad), Pitch(Rad))
-  objectPosesDict = {{{0.012,0.000,0.000},  {0.084,1.459,-0.751},
-                      {0.082,1.398,-0.014}, {0.040,0.280,-1.040},
-                      {0.249,2.860,-0.400}, {0.068,-1.287,-0.477},
-                      {0.048,-1.570,1.480}},
+  objectPosesDict = {{{0.050,0.000,0.000}},
+                     {{0.060,1.570,0.000},{0.070,1.570,1.570}},
+                     {{0.040,0.000,0.000},{0.050,1.570,0.000},{0.120,1.570,1.570}},
                      {{0.015,0.000,0.000}},
                      {{0.015,0.000,0.000}},
                      {{0.015,0.000,0.000}},
                      {{0.015,0.000,0.000}},
-                     {{0.015,0.000,0.000}},
-                     {{0.015,0.000,0.000}}};
+                     {{0.012,0.000,0.000},{0.084,1.459,-0.751},{0.082,1.398,-0.014},{0.040,0.280,-1.040},{0.249,2.860,-0.400},{0.068,-1.287,-0.477},{0.048,-1.570,1.480}}};
 
-  objectPosesYawLimits = {{0,359},{0,89},{0,179},{0,1},{0,89},{0,359},{0,179}};
+  objectPosesYawLimits = {{0,89},{0,179},{0,179},{0,179},{0,1},{0,89},{0,359},{0,179},{0,359}};
 
   voxelGridSize = 0.01;          // Voxel Grid size for environment
   voxelGridSizeUnexp = 0.01;     // Voxel Grid size for unexplored point cloud
