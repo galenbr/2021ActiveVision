@@ -182,16 +182,16 @@ int main(int argc, char ** argv){
     SpiralClient client("spiral_insert_key", true); // true -> don't need ros::spin()
     client.waitForServer();
 
-    lock_key::SpiralInsertGoal goal;
+    lock_key::SpiralInsertGoal key_goal;
 
     ROS_INFO("Retrieving spiral parameters");
-    n.getParam("spiral_Ft", goal.Ft);
-    n.getParam("spiral_Fd", goal.Fd);
-    n.getParam("spiral_Fi", goal.Fi);
-    n.getParam("spiral_delta_max", goal.delta_max);
+    n.getParam("spiral_Ft", key_goal.Ft);
+    n.getParam("spiral_Fd", key_goal.Fd);
+    n.getParam("spiral_Fi", key_goal.Fi);
+    n.getParam("spiral_delta_max", key_goal.delta_max);
 
     ROS_INFO("Sending action goal");
-    client.sendGoal(goal);
+    client.sendGoal(key_goal);
 
     // // Move to Lock
     // moveit_planner::MoveCart move4;

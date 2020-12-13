@@ -93,22 +93,18 @@ void moveRel(double x, double y, double z, double qw, double qx, double qy, doub
 	getPoseClient.call(curPose);
 	geometry_msgs::Pose p;
     p=curPose.response.pose;
-    //Update position with relative changes (SWITCH Y and Z AXES)
-    ROS_INFO("Currently at: %.3f, %.3f, %.3f.",p.position.x,p.position.y,p.position.z);
+    //Update position with relative changes
+    ROS_INFO("Currently at: %.3f, %.3f, %.3f.",p.position.x,p.position.y,p.position.z+0.333);
 	p.position.x += x;
-	p.position.y = p.position.z+y;
-	p.position.z = p.position.y+z;
-    // p.position.x += x;
-	// p.position.y += y;
-	// p.position.z += z;
+	p.position.y += y;
+    p.position.z += z+0.333; // +0.333 offset from CF1 to CF0
+
     ROS_INFO("Going to: %.3f, %.3f, %.3f.",p.position.x,p.position.y,p.position.z);
-	// p.orientation.w += qw;
-	// p.orientation.x += qx;
-	// p.orientation.y += qy;
-	// p.orientation.z += qz;
-	cart.request.val.push_back(p);
+
+    cart.request.val.push_back(p);
     cart.request.execute = true;
     moveCartClient.call(cart);
+    
     //ROS_INFO("Moving to Relative Position");
 }
 
