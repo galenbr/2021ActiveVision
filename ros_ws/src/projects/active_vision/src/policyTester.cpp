@@ -47,7 +47,7 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 
   kinectControl.spawnObject(object,0,0);
 
- 	std::vector<double> startPose = {1.4, 180*(M_PI/180.0), 45*(M_PI/180.0)};
+ 	std::vector<double> startPose = {kinectControl.viewsphereRad, 180*(M_PI/180.0), 45*(M_PI/180.0)};
 	std::vector<double> nextPose;
 	RouteData home, current;
 
@@ -227,6 +227,8 @@ int main(int argc, char** argv){
  	ros::NodeHandle nh;
   ros::ServiceClient policy;
  	environment kinectControl(&nh); sleep(1);
+	kinectControl.setPtCldNoise(0.5);
+	kinectControl.viewsphereRad = 1.0;
   kinectControl.loadGripper();
 
 	std::string dir = "./policyAV/";

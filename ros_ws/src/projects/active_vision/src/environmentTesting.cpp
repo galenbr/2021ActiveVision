@@ -63,7 +63,7 @@ void testMoveKinectInViewsphere(environment &av){
   std::cout << "*** In Kinect move in viewsphere testing function ***" << std::endl;
   for (double i = M_PI/2; i > 0;) {
     for (double j = 0; j < 2*M_PI;) {
-      av.moveKinectViewsphere({1.4,j,i});
+      av.moveKinectViewsphere({1.0,j,i});
       j += 2*M_PI/10;
     }
     std::cout << (int)((M_PI/2-i)/(M_PI/2/10)+1)<< " out of 10 completed." << std::endl;
@@ -123,10 +123,10 @@ void testPtCldFuse(environment &av, int objID, int flag){
   viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
 
   // 4 kinect position to capture and fuse
-  std::vector<std::vector<double>> kinectPoses = {{1.4,-M_PI,M_PI/3},
-                                                  {1.4,-M_PI/2,M_PI/3},
-                                                  {1.4,0,M_PI/3},
-                                                  {1.4,M_PI/2,M_PI/3}};
+  std::vector<std::vector<double>> kinectPoses = {{1.0,-M_PI,M_PI/4},
+                                                  {1.0,-M_PI/2,M_PI/4},
+                                                  {1.0,0,M_PI/4},
+                                                  {1.0,M_PI/2,M_PI/4}};
 
   for (int i = 0; i < 4; i++) {
     av.moveKinectViewsphere(kinectPoses[i]);
@@ -152,10 +152,17 @@ void testDataExtract(environment &av, int objID, int flag){
   std::cout << "*** In table and object extraction testing function ***" << std::endl;
   av.spawnObject(objID,0,0);
 
-  std::vector<double> kinectPose = {1.4,-M_PI,M_PI/3};
-  av.moveKinectViewsphere(kinectPose);
-  av.readKinect();
-  av.fuseLastData();
+  // 4 kinect position to capture and fuse
+  std::vector<std::vector<double>> kinectPoses = {{1.0,-M_PI,M_PI/4},
+                                                  {1.0,-M_PI/2,M_PI/4},
+                                                  {1.0,0,M_PI/4},
+                                                  {1.0,M_PI/2,M_PI/4}};
+  for (int i = 0; i < 4; i++) {
+    av.moveKinectViewsphere(kinectPoses[i]);
+    av.readKinect();
+    av.fuseLastData();
+  }
+
   av.dataExtract();
 
   if(flag==1){
@@ -183,7 +190,7 @@ void testGenUnexpPtCld(environment &av, int objID, int flag){
   std::cout << "*** In unexplored point cloud generation testing function ***" << std::endl;
   av.spawnObject(objID,0,0);
 
-  std::vector<double> kinectPose = {1.4,-M_PI,M_PI/3};
+  std::vector<double> kinectPose = {1.0,-M_PI,M_PI/4};
   av.moveKinectViewsphere(kinectPose);
   av.readKinect();
   av.fuseLastData();
@@ -220,10 +227,10 @@ void testUpdateUnexpPtCld(environment &av, int objID, int flag){
   viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
 
   // 4 kinect position to capture and fuse
-  std::vector<std::vector<double>> kinectPoses = {{1.4,-M_PI,M_PI/3},
-                                                  {1.4,-M_PI/2,M_PI/3},
-                                                  {1.4,0,M_PI/3},
-                                                  {1.4,M_PI/2,M_PI/3}};
+  std::vector<std::vector<double>> kinectPoses = {{1.0,-M_PI,M_PI/4},
+                                                  {1.0,-M_PI/2,M_PI/4},
+                                                  {1.0,0,M_PI/4},
+                                                  {1.0,M_PI/2,M_PI/4}};
 
   for (int i = 0; i < 4; i++) {
     av.moveKinectViewsphere(kinectPoses[i]);
@@ -301,10 +308,10 @@ void testGraspsynthesis(environment &av, int objID, int flag){
   av.spawnObject(objID,0,0);
 
   // 4 kinect position
-  std::vector<std::vector<double>> kinectPoses = {{1.4,-M_PI,M_PI/3},
-                                                  {1.4,-M_PI/2,M_PI/3},
-                                                  {1.4,0,M_PI/3},
-                                                  {1.4,M_PI/2,M_PI/3}};
+  std::vector<std::vector<double>> kinectPoses = {{1.0,-M_PI,M_PI/4},
+                                                  {1.0,-M_PI/2,M_PI/4},
+                                                  {1.0,0,M_PI/4},
+                                                  {1.0,M_PI/2,M_PI/4}};
 
   for (int i = 0; i < 4; i++) {
     av.moveKinectViewsphere(kinectPoses[i]);
@@ -431,10 +438,10 @@ void testComplete(environment &av, int objID, int nVp, int graspMode, int flag, 
   av.loadGripper();
 
   // 4 kinect poses
-  std::vector<std::vector<double>> kinectPoses = {{1.4,-M_PI,M_PI/3},
-                                                  {1.4,-M_PI/2,M_PI/3},
-                                                  {1.4,0,M_PI/3},
-                                                  {1.4,M_PI/2,M_PI/3}};
+  std::vector<std::vector<double>> kinectPoses = {{1,-M_PI,M_PI/4},
+                                                  {1,-M_PI/2,M_PI/4},
+                                                  {1,0,M_PI/4},
+                                                  {1,M_PI/2,M_PI/4}};
 
   start[0] = std::chrono::high_resolution_clock::now();
 
@@ -568,7 +575,7 @@ void testSaveRollback(environment &av, int objID, int flag){
                                                  { 00, step},{-step, step},
                                                  {-step, 00},{-step,-step}};
 
-  std::vector<double> kinectPose = {1.4,-M_PI,M_PI/3};
+  std::vector<double> kinectPose = {1.0,-M_PI,M_PI/4};
   av.moveKinectViewsphere(kinectPose);
   av.readKinect();
   av.fuseLastData();
@@ -676,10 +683,10 @@ void testSavePCD(environment &av, int objID){
   av.loadGripper();
 
   // 4 kinect poses
-  std::vector<std::vector<double>> kinectPoses = {{1.4,-M_PI,M_PI/3},
-                                                  {1.4,-M_PI/2,M_PI/3},
-                                                  {1.4,0,M_PI/3},
-                                                  {1.4,M_PI/2,M_PI/3}};
+  std::vector<std::vector<double>> kinectPoses = {{1.0,-M_PI,M_PI/4},
+                                                  {1.0,-M_PI/2,M_PI/4},
+                                                  {1.0,0,M_PI/4},
+                                                  {1.0,M_PI/2,M_PI/4}};
 
   for(int i = 0; i < 4; i++){
     singlePass(av, kinectPoses[i], i==0, true);
@@ -760,6 +767,8 @@ int main (int argc, char** argv){
   ros::NodeHandle nh;
 
   environment activeVision(&nh);
+  activeVision.setPtCldNoise(0.5);
+  activeVision.viewsphereRad = 1;
   // Delay to ensure all publishers and subscribers are connected
   boost::this_thread::sleep(boost::posix_time::milliseconds(500));
 

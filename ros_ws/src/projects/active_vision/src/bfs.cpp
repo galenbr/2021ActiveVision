@@ -186,7 +186,7 @@ int main (int argc, char** argv){
 
 	kinectControl.spawnObject(objID,objPoseCode,objYaw*(M_PI/180.0));
 
-	std::vector<double> homePos = {1.4, 180*(M_PI/180.0), 45*(M_PI/180.0)};
+	std::vector<double> homePos = {1.0, 180*(M_PI/180.0), 45*(M_PI/180.0)};
 	std::cout << "Start Time : " << getCurTime() << std::endl;
 	start = std::chrono::high_resolution_clock::now();
 

@@ -9,6 +9,7 @@
 #include <string>
 #include <fstream>
 #include <chrono>
+#include <random>
 #include <boost/make_shared.hpp>
 
 #include <ros/ros.h>
@@ -106,6 +107,9 @@ private:
 
   int readFlag[3];                 // Flag used to read data from kinect only when needed
   float fingerZOffset;             // Z axis offset between gripper hand and finger
+  bool addNoise;
+  float depthNoise;                // Depth in %
+  std::default_random_engine generator;
 
   std::string path;                // Path the active vision package
 
@@ -163,6 +167,7 @@ public:
   double minGraspQuality;                           // Min grasp quality threshold
   int selectedGrasp;                                // Index of the selected grasp
   std::vector<stateConfig> configurations;          // Vector to store states for rollback
+  float viewsphereRad;                              // Viewsphere Radius in m
 
   environment(ros::NodeHandle *nh);
 
@@ -176,7 +181,10 @@ public:
   void rollbackConfiguration(int index);
 
   // 1A: Callback function to point cloud subscriber
-  void cbPtCld (const ptCldColor::ConstPtr& msg);
+  void cbPtCld(const ptCldColor::ConstPtr& msg);
+
+  // Function to set noise variables
+  void setPtCldNoise(float num);
 
   // 2A: Spawning objects in gazebo on the table centre for a given pose option and yaw
   void spawnObject(int objectID, int choice, float yaw);

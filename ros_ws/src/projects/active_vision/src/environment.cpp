@@ -84,13 +84,17 @@ environment::environment(ros::NodeHandle *nh){
 
   voxelGridSize = 0.01;          // Voxel Grid size for environment
   voxelGridSizeUnexp = 0.01;     // Voxel Grid size for unexplored point cloud
+  viewsphereRad = 1;
   tableCentre = {1.5,0,1};       // Co-ordinates of table centre
   minUnexp = {0,0,0};
   maxUnexp = {0,0,0};
   scale = 3;                     // Scale value for unexplored point cloud generation
-  maxGripperWidth = 0.075;       // Gripper max width (Actual is 8 cm)
+  maxGripperWidth = 0.08;        // Gripper max width
   minGraspQuality = 150;         // Min grasp quality threshold
   selectedGrasp = -1;            // Index of the selected grasp
+
+  addNoise = false;
+  depthNoise = 0;
 }
 
 // Function to reset the environment
@@ -126,10 +130,30 @@ void environment::rollbackConfiguration(int index){
 
 // 1A: Callback function to point cloud subscriber
 void environment::cbPtCld(const ptCldColor::ConstPtr& msg){
-  if (readFlag[0]==1) {
+  if(readFlag[0]==1){
     *ptrPtCldLast = *msg;
+    if(addNoise == true){
+      for(int i = 0; i < ptrPtCldLast->points.size(); i++){
+        if(!isinf(ptrPtCldLast->points[i].z)){
+          float stdDev = (ptrPtCldLast->points[i].z)*depthNoise/100;
+          std::normal_distribution<float> normDistb{0,stdDev};
+          float noise = normDistb(generator);
+          // Truncating to 1 sigma limit
+          noise = std::min(noise,stdDev); noise = std::max(-stdDev,noise);
+          ptrPtCldLast->points[i].z += noise;
+        }
+      }
+    }
     readFlag[0] = 0;
   }
+}
+
+// Function to set noise variables
+void environment::setPtCldNoise(float num){
+
+  depthNoise = abs(num);
+  if(depthNoise != 0) addNoise = true;
+  else addNoise = false;
 }
 
 // NOT USED (JUST FOR REFERENCE)
@@ -419,10 +443,13 @@ void environment::dataExtract(){
   // Find the major plane and get its coefficients and indices
   seg.setInputCloud(cPtrPtCldEnv);
   seg.setOptimizeCoefficients(true);
-  seg.setModelType(pcl::SACMODEL_PLANE);
+  seg.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
   seg.setMethodType(pcl::SAC_RANSAC);
   seg.setMaxIterations(1000);
-  seg.setDistanceThreshold(0.01);
+  seg.setDistanceThreshold(0.01+viewsphereRad*depthNoise/100);
+  Eigen::Vector3f axis = Eigen::Vector3f(0.0,0.0,1.0); //y axis
+  seg.setAxis(axis);
+  seg.setEpsAngle(10.0f*(M_PI/180.0f) );
   seg.segment(*tableIndices,*tableCoeff);
 
   if (tableIndices->indices.size () == 0){
@@ -436,13 +463,19 @@ void environment::dataExtract(){
   extract.setNegative(false);
   extract.filter(*ptrPtCldTable);
 
+  Eigen::Vector4f centroid, minTab, maxTab;
+  pcl::compute3DCentroid(*ptrPtCldTable, centroid);
+  pcl::getMinMax3D(*ptrPtCldTable, minTab, maxTab);
+  // std::cout << tableCoeff->values[0] << " " << tableCoeff->values[1] << " " << tableCoeff->values[2] << " " << tableCoeff->values[3] << std::endl;
+  // std::cout << minTab[2] << " " << centroid[2] << " " << maxTab[2] << std::endl;
+
   // Using convex hull to get the table boundary which would be like a rectangle
   cvHull.setInputCloud(cPtrPtCldTable);
   cvHull.setDimension(2);
   cvHull.reconstruct(*ptrPtCldHull);
 
   // Double checking the hull dimensions
-  if (cvHull.getDimension() != 2){
+  if(cvHull.getDimension() != 2){
     std::cerr << "Convex hull dimension != 2" << std::endl;
     return;
   }
@@ -450,10 +483,10 @@ void environment::dataExtract(){
   // Using polygonal prism and hull the extract object above the table
   prism.setInputCloud(cPtrPtCldEnv);
   prism.setInputPlanarHull(cPtrPtCldHull);
-  if (tableCoeff->values[3] < 0) {
-    prism.setHeightLimits(-1.5f,-0.005f-voxelGridSize);         // Z height (min, max) in m
+  if(tableCoeff->values[3] < 0){
+    prism.setHeightLimits(-1.5f,-(maxTab[2]-centroid[2]+viewsphereRad*depthNoise/100+0.005)); // Z height (min, max) in m
   }else{
-    prism.setHeightLimits(0.005f+voxelGridSize,1.5f);           // Z height (min, max) in m
+    prism.setHeightLimits(maxTab[2]-centroid[2]+viewsphereRad*depthNoise/100+0.005,1.5f);     // Z height (min, max) in m
   }
   prism.segment(*objectIndices);
 
@@ -479,7 +512,7 @@ void environment::genUnexploredPtCld(){
   // Note: Z scale is only used on +z axis
   minUnexp[0] = (minPtObj.x-std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.40f));
   minUnexp[1] = (minPtObj.y-std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.40f));
-  minUnexp[2] = (minPtObj.z-0.02);
+  minUnexp[2] = 1;
   maxUnexp[0] = (maxPtObj.x+std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.40f));
   maxUnexp[1] = (maxPtObj.y+std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.40f));
   maxUnexp[2] = (maxPtObj.z+std::max((scale-1)*(maxPtObj.z-minPtObj.z)/2,0.25f));
@@ -558,8 +591,8 @@ void environment::graspsynthesis(){
   Eigen::Vector3f vectA, vectB;
   double A,B;
 
-  for (int i = 0; i < ptrPtCldObject->size()-1; i++){
-    for (int j = i+1; j < ptrPtCldObject->size(); j++){
+  for(int i = 0; i < ptrPtCldObject->size()-1; i=i+2){
+    for(int j = i+1; j < ptrPtCldObject->size(); j=j+2){
       graspTemp.p1 = ptrPtCldObject->points[i];
       graspTemp.p2 = ptrPtCldObject->points[j];
 

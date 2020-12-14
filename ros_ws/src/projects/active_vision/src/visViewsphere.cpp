@@ -17,7 +17,7 @@ void help(){
 int main(int argc, char** argv){
   help();
 
-  std::vector<double> homePose={1.4,M_PI,45*M_PI/180};
+  std::vector<double> homePose={1.0,M_PI,45*M_PI/180};
   std::vector<double> nextPose;
   std::vector<double> temp;
   std::vector<std::vector<double>> path;

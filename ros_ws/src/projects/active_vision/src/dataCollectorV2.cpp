@@ -1,6 +1,7 @@
 #include "active_vision/environment.h"
 #include "active_vision/toolDataHandling.h"
 #include "active_vision/toolViewPointCalc.h"
+#include <active_vision/toolVisualization.h>
 
 int mode = 1;
 
@@ -201,7 +202,7 @@ int generateData(environment &kinectControl, int object, std::string homePosesTr
 
   kinectControl.spawnObject(object,0,0);
 
- 	std::vector<double> startPose = {1.4, 180*(M_PI/180.0), 45*(M_PI/180.0)};
+ 	std::vector<double> startPose = {kinectControl.viewsphereRad, 180*(M_PI/180.0), 45*(M_PI/180.0)};
 
   bool graspFound = false;
 	RouteData dataFinalTemp;
@@ -213,8 +214,9 @@ int generateData(environment &kinectControl, int object, std::string homePosesTr
 	int nSaved=0;
 	int currentPoseCode;
 	int currentYaw;
+	int nZeroHomePoses = 0;
 
-	while(nSaved < nDataPoints){
+	while(nSaved < nDataPoints && nZeroHomePoses <= 5){
 
 		currentPoseCode = rand()%(kinectControl.objectPosesDict[object].size());
 		currentYaw = rand()%(int(kinectControl.objectPosesYawLimits[object][1])-int(kinectControl.objectPosesYawLimits[object][0]) + 1) + int(kinectControl.objectPosesYawLimits[object][0]);
@@ -228,6 +230,8 @@ int generateData(environment &kinectControl, int object, std::string homePosesTr
     genHomePoses(kinectControl,startPose,homePosesTree,dataHomePoses);
 		dataFinal.resize(dataHomePoses.size());
     nHomeConfigs = kinectControl.configurations.size();
+		if(nHomeConfigs == 0) nZeroHomePoses++;
+
 		std::cout << " " << dataHomePoses.size() << " configs." << std::endl;
 
 		// for (int j = 0; j < kinectControl.configurations.size(); j++){
@@ -377,6 +381,8 @@ int main (int argc, char** argv){
 
  	environment kinectControl(&nh);
 	sleep(1);
+	kinectControl.setPtCldNoise(0.5);
+	kinectControl.viewsphereRad = 1;
   kinectControl.loadGripper();
 
 	std::string dir = "./DataRecAV/";
