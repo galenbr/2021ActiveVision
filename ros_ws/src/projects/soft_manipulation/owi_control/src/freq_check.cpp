@@ -7,15 +7,27 @@
 float prevTime = 0;
 float old_theta1 = 0;
 float angular_vel = 0;
-
+ros::Publisher pub;
+float dt = 0.033;
 void diff(const geometry_msgs::Point &msg){
     
     float theta1 = msg.x * rad;    
     float curTime = ros::Time::now().toSec();
-    angular_vel = (theta1 - old_theta1)/0.033;
+    if(theta1 != old_theta1){
+        angular_vel = (theta1 - old_theta1)/dt;
+        dt = 0.033;
+    }
+    else{
+        dt += 0.033;
+    }
     // ROS_INFO("time %f :", curTime);
+    
     old_theta1 = theta1;
     prevTime = curTime;
+
+    std_msgs::Float32 angular_msg;
+    angular_msg.data = angular_vel;
+    pub.publish(angular_msg);
 
 }
 
@@ -29,17 +41,15 @@ int main(int argc, char **argv){
     // callback: (cur angle - old angle)/(timestamp cur - timestamp old)
     
     // publish this amgular velocity
-    ros::Publisher pub = n.advertise<std_msgs::Float32>("angular_vel",1);
-    std_msgs::Float32 angular_msg;
-
-    ros::Rate r{30};
-    while(ros::ok()){
-        angular_msg.data = angular_vel;
-        pub.publish(angular_msg);
+    pub = n.advertise<std_msgs::Float32>("angular_vel",1);
     
-        ros::spinOnce();
-        r.sleep();
-    }
+    // ros::Rate r{30};
+    // while(ros::ok()){
+        
+    
+    //     ros::spinOnce();
+    //     r.sleep();
+    // }
     //record angular velocity
     //plot angular velocity
 
