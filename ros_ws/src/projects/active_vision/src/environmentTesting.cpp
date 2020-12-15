@@ -543,12 +543,12 @@ void testComplete(environment &av, int objID, int nVp, int graspMode, int flag, 
 
     if(av.selectedGrasp == -1){
       std::cout << "No grasp orientation for the grasp points found." << std::endl;
-      std::cout << "Showing the object (blue), collision check points (red). Close viewer to continue" << std::endl;
+      std::cout << "Showing the object (red), collision check points (blue). Close viewer to continue" << std::endl;
     }else{
       av.updateGripper(av.selectedGrasp,0);    // Only for visulization purpose
       addRGB(viewer,av.ptrPtCldGripper,"Gripper",vp[0]);
       addRGB(viewer,av.ptrPtCldGripper,"Gripper1",vp[1]);
-      std::cout << "Showing the object (blue), collision check points (red), selected gripper position (black). Close viewer to continue" << std::endl;
+      std::cout << "Showing the object (red), collision check points (blue), selected gripper position (black). Close viewer to continue" << std::endl;
     }
 
     while (!viewer->wasStopped ()){

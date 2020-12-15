@@ -134,7 +134,7 @@ void environment::cbPtCld(const ptCldColor::ConstPtr& msg){
     *ptrPtCldLast = *msg;
     if(addNoise == true){
       for(int i = 0; i < ptrPtCldLast->points.size(); i++){
-        if(!isinf(ptrPtCldLast->points[i].z)){
+        if(!isnan(ptrPtCldLast->points[i].z)){
           float stdDev = (ptrPtCldLast->points[i].z)*depthNoise/100;
           std::normal_distribution<float> normDistb{0,stdDev};
           float noise = normDistb(generator);
@@ -463,11 +463,10 @@ void environment::dataExtract(){
   extract.setNegative(false);
   extract.filter(*ptrPtCldTable);
 
-  Eigen::Vector4f centroid, minTab, maxTab;
-  pcl::compute3DCentroid(*ptrPtCldTable, centroid);
-  pcl::getMinMax3D(*ptrPtCldTable, minTab, maxTab);
+  pcl::compute3DCentroid(*ptrPtCldTable, cenTable);
+  pcl::getMinMax3D(*ptrPtCldTable, minTable, maxTable);
   // std::cout << tableCoeff->values[0] << " " << tableCoeff->values[1] << " " << tableCoeff->values[2] << " " << tableCoeff->values[3] << std::endl;
-  // std::cout << minTab[2] << " " << centroid[2] << " " << maxTab[2] << std::endl;
+  // std::cout << minTable.z << " " << cenTable[2] << " " << maxTable.z << std::endl;
 
   // Using convex hull to get the table boundary which would be like a rectangle
   cvHull.setInputCloud(cPtrPtCldTable);
@@ -484,9 +483,9 @@ void environment::dataExtract(){
   prism.setInputCloud(cPtrPtCldEnv);
   prism.setInputPlanarHull(cPtrPtCldHull);
   if(tableCoeff->values[3] < 0){
-    prism.setHeightLimits(-1.5f,-(maxTab[2]-centroid[2]+viewsphereRad*depthNoise/100+0.005)); // Z height (min, max) in m
+    prism.setHeightLimits(-1.5f,-(maxTable.z-cenTable[2]+viewsphereRad*depthNoise/100/2+voxelGridSize)); // Z height (min, max) in m
   }else{
-    prism.setHeightLimits(maxTab[2]-centroid[2]+viewsphereRad*depthNoise/100+0.005,1.5f);     // Z height (min, max) in m
+    prism.setHeightLimits(maxTable.z-cenTable[2]+viewsphereRad*depthNoise/100/2+voxelGridSize,1.5f);     // Z height (min, max) in m
   }
   prism.segment(*objectIndices);
 
@@ -512,7 +511,7 @@ void environment::genUnexploredPtCld(){
   // Note: Z scale is only used on +z axis
   minUnexp[0] = (minPtObj.x-std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.40f));
   minUnexp[1] = (minPtObj.y-std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.40f));
-  minUnexp[2] = 1;
+  minUnexp[2] = cenTable[2]-0.01;
   maxUnexp[0] = (maxPtObj.x+std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.40f));
   maxUnexp[1] = (maxPtObj.y+std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.40f));
   maxUnexp[2] = (maxPtObj.z+std::max((scale-1)*(maxPtObj.z-minPtObj.z)/2,0.25f));
@@ -544,18 +543,24 @@ void environment::updateUnexploredPtCld(){
 
   // Looping through all the points and finding occluded ones.
   // Using the camera projection matrix to project 3D point to camera plane
-  for (int i = 0; i < ptrPtCldTemp->width; i++){
+  for(int i = 0; i < ptrPtCldTemp->width; i++){
     ptTemp = ptrPtCldTemp->points[i].getVector4fMap();
     proj = projectionMat*ptTemp;
     proj = proj/proj[2];
     proj[0] = round(proj[0]);
     proj[1] = round(proj[1]);
-    if(proj[0] >=0 && proj[0] <= 640-1 && proj[1] >=0 && proj[1] <= 480-1){
-      projIndex = proj[1]*(ptrPtCldLast->width)+proj[0];
-      // If the z value of unexplored pt is greater than the corresponding
-      // projected point in Kinect Raw data then that point is occluded.
-      if (ptrPtCldLast->points[projIndex].z <= ptTemp[2]){
-        occludedIndices->indices.push_back(i);
+
+    // Leave Points below the table as it is
+    if(ptrPtCldUnexp->points[i].z < cenTable[2]){
+      occludedIndices->indices.push_back(i);
+    }else{
+      if(proj[0] >=0 && proj[0] <= 640-1 && proj[1] >=0 && proj[1] <= 480-1){
+        projIndex = proj[1]*(ptrPtCldLast->width)+proj[0];
+        // If the z value of unexplored pt is greater than the corresponding
+        // projected point in Kinect Raw data then that point is occluded.
+        if(ptrPtCldLast->points[projIndex].z <= ptTemp[2]){
+          occludedIndices->indices.push_back(i);
+        }
       }
     }
   }
@@ -568,8 +573,7 @@ void environment::updateUnexploredPtCld(){
 
   if(minUnexp[0] > minPtObj.x || minUnexp[1] > minPtObj.y ||
      maxUnexp[0] < maxPtObj.x || maxUnexp[1] < maxPtObj.y || maxUnexp[2] < maxPtObj.z){
-    std::cout << "WARNING : Unexplored point cloud initially generated smaller than the object. " <<
-                 "Increase unexplored point cloud size for better accuracy during collision check." << std::endl;
+    ROS_WARN("Unexplored point cloud initially generated smaller than the object.");
   }
 
   ptrPtCldTemp->clear();
@@ -684,6 +688,7 @@ void environment::findGripperPose(int index){
 void environment::collisionCheck(){
   ptrPtCldCollided->clear();    // Reset the collision cloud
   *ptrPtCldCollCheck = *ptrPtCldUnexp + *ptrPtCldObject;
+  // *ptrPtCldCollCheck += *ptrPtCldTable;
   cpBox.setInputCloud(ptrPtCldCollCheck);
 
   bool stop = false;

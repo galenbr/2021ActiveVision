@@ -153,6 +153,8 @@ public:
   std::vector<double> minUnexp, maxUnexp;           // Min and Max x,y,z of unexplored pointcloud generated
   std::vector<graspPoint> graspsPossible;           // List of possible grasps
   pcl::PointXYZRGB minPtObj, maxPtObj;              // Min and Max x,y,z co-ordinates of the object
+  pcl::PointXYZRGB minTable, maxTable;              // Min and Max x,y,z co-ordinates of the object
+  Eigen::Vector4f cenTable;
   pcl::PointXYZRGB minPtGrp[3], maxPtGrp[3];        // Min and Max x,y,z co-ordinates of the gripper
   pcl::PointXYZRGB minPtCol[5], maxPtCol[5];        // Min and Max x,y,z co-ordinates of the gripper used for collision check
 
