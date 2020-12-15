@@ -56,3 +56,15 @@ target_link_libraries(owi_keyboard_node ${catkin_LIBRARIES})
 add_executable(owi_trajectory_node src/traj_plot.cpp)
 add_dependencies(owi_trajectory_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(owi_trajectory_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+
+add_executable(owi_sine_node src/sin_velocity.cpp)
+add_dependencies(owi_sine_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(owi_sine_node ${catkin_LIBRARIES})
+
+add_executable(owi_freq_node src/freq_check.cpp)
+add_dependencies(owi_freq_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(owi_freq_node ${catkin_LIBRARIES})
+
+add_executable(owi_freq_record_node src/record_angular_vel.cpp)
+add_dependencies(owi_freq_record_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(owi_freq_record_node ${catkin_LIBRARIES})
