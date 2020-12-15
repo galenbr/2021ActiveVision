@@ -1,26 +1,25 @@
 <?xml version="1.0" ?>
 <sdf version="1.5">
-  <model name="bowlAV">
+  <model name="prismAV20x6x5">
     <link name="link">
+      <pose>0 0 0 0 0 0</pose>
       <inertial>
-      <pose>0 0 0.0175 0 0 0</pose>
-        <mass>0.1</mass>
-	  <inertia>
-	    <ixx>0.000250308</ixx>
-	    <ixy>0.0</ixy>
-	    <ixz>0.0</ixz>
-	    <iyy>0.000250308</iyy>
-	    <iyz>0.0</iyz>
-	    <izz>0.0004802</izz>
-	  </inertia>
+        <mass>2.46</mass>
+        <inertia>
+          <ixx>0.0012505</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.0087125</iyy>
+          <iyz>0</iyz>
+          <izz>0.008938</izz>
+        </inertia>
       </inertial>
+
       <collision name="collision">
-        <pose>0 0 0.0175 0 0 0</pose>
         <geometry>
-          <cylinder>
-            <radius>0.098</radius>
-            <length>0.035</length>
-          </cylinder>
+          <box>
+            <size>0.2 0.06 0.05</size>
+          </box>
         </geometry>
         <surface>
           <contact>
@@ -37,11 +36,12 @@
           </friction>
         </surface>
       </collision>
+
       <visual name="visual">
         <geometry>
-          <mesh>
-            <uri>model://bowlAV/meshes/bowl.dae</uri>
-          </mesh>
+          <box>
+            <size>0.2 0.06 0.05</size>
+          </box>
         </geometry>
         <material>
           <ambient>1 0 0 1</ambient>
@@ -50,6 +50,7 @@
           <emissive>0 0 0 0</emissive>
         </material>
       </visual>
+
     </link>
   </model>
 </sdf>

@@ -1,7 +1,8 @@
 #include <ros/ros.h>
 #include <lock_key/SpiralInsertAction.h> // Note: "Action" is appended
 #include <actionlib/server/simple_action_server.h>
-#include "moveit_planner/GetPose.h"
+//#include "moveit_planner/GetPose.h"
+#include "moveit_planner/GetTF.h"
 #include "moveit_planner/MoveCart.h"
 #include "moveit_planner/MovePose.h"
 #include "lock_key/getWrench.h"
@@ -85,30 +86,33 @@ void moveAbs(double x, double y, double z, double qw, double qx, double qy, doub
 void moveRel(double x, double y, double z, double qw, double qx, double qy, double qz){
 	//Waiting for services to be available
 	ros::service::waitForService("move_to_pose",timeout);
-	ros::ServiceClient getPoseClient = n_ptr->serviceClient<moveit_planner::GetPose>("get_pose");
+	//ros::ServiceClient getPoseClient = n_ptr->serviceClient<moveit_planner::GetPose>("get_pose");
+    ros::ServiceClient getTFClient = n_ptr->serviceClient<moveit_planner::GetTF>("get_transform");
 	ros::ServiceClient moveCartClient = n_ptr->serviceClient<moveit_planner::MoveCart>("cartesian_move");
-	moveit_planner::GetPose curPose;
+    moveit_planner::GetTF curTF;
+	//moveit_planner::GetPose curPose;
 	moveit_planner::MoveCart cart;
+    //Get current TF from world to EE
+    curTF.request.from="map";
+    curTF.request.to="end_effector_link";
+    getTFClient.call(curTF);
 	//Get current robot pose
-	getPoseClient.call(curPose);
+	//getPoseClient.call(curPose);
 	geometry_msgs::Pose p;
-    p=curPose.response.pose;
-    //Update position with relative changes (SWITCH Y and Z AXES)
-    ROS_INFO("Currently at: %.3f, %.3f, %.3f.",p.position.x,p.position.y,p.position.z);
+    p=curTF.response.pose;
+    //p=curPose.response.pose;
+    //Update position with relative changes
+    ROS_INFO("Currently at: %.3f, %.3f, %.3f.",p.position.x,p.position.y,p.position.z); //+0.333
 	p.position.x += x;
-	p.position.y = p.position.z+y;
-	p.position.z = p.position.y+z;
-    // p.position.x += x;
-	// p.position.y += y;
-	// p.position.z += z;
+	p.position.y += y;
+    p.position.z += z;//+0.333; // +0.333 offset from CF1 to CF0
+
     ROS_INFO("Going to: %.3f, %.3f, %.3f.",p.position.x,p.position.y,p.position.z);
-	// p.orientation.w += qw;
-	// p.orientation.x += qx;
-	// p.orientation.y += qy;
-	// p.orientation.z += qz;
-	cart.request.val.push_back(p);
+
+    cart.request.val.push_back(p);
     cart.request.execute = true;
     moveCartClient.call(cart);
+    
     //ROS_INFO("Moving to Relative Position");
 }
 

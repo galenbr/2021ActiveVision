@@ -87,29 +87,37 @@ bool exploreRdmStep(environment &env, RouteData &home, int nSteps, RouteData &op
   // Rollback to the parent/home configuration
   env.rollbackConfiguration(opData.parentID);
 
-  srand(time(NULL)); // Randoming the seed used for rand generation
-
   opData.success = false;
-  // Going taking a max of nSteps from thoe parent position
+  // Going taking a max of nSteps from the parent position
 	for (int i = 1; i <= nSteps && opData.success == false; i++){
     // Do until the pose is valid
-    do{
-      curPose = calcExplorationPose(env.lastKinectPoseViewsphere,rand()%((8-1)+1)+1,::mode);
-    }while(checkValidPose(curPose) != true || checkIfNewPose(opData.path,curPose,::mode) != true);
+		std::vector<int> dirs = randomDirection();
+		bool foundNextPose = false;
+    for(int j = 0; j < 7; j++) {
+    	curPose = calcExplorationPose(env.lastKinectPoseViewsphere,dirs[j],::mode);
+			if(checkValidPose(curPose) == true && checkIfNewPose(opData.path,curPose,::mode) == true){
+				foundNextPose = true;
+				break;
+			}
+    }
 
-	  // Saving path taken
-		opData.path.push_back(curPose);
+		if(foundNextPose == true){
+			// Saving path taken
+			opData.path.push_back(curPose);
 
-		// Doing a pass
-		singlePass(env, curPose, false, true);
-		opData.success = (env.selectedGrasp != -1);
+			// Doing a pass
+			singlePass(env, curPose, false, true);
+			opData.success = (env.selectedGrasp != -1);
 
-		// Updating variables used for visualization
-		if(opData.success == true){
-			opData.graspQuality = env.graspsPossible[env.selectedGrasp].quality;
-			env.updateGripper(env.selectedGrasp,0);
-			opData.env = *env.ptrPtCldEnv + *env.ptrPtCldGripper;
-			opData.env += *env.ptrPtCldUnexp;
+			// Updating variables used for visualization
+			if(opData.success == true){
+				opData.graspQuality = env.graspsPossible[env.selectedGrasp].quality;
+				env.updateGripper(env.selectedGrasp,0);
+				opData.env = *env.ptrPtCldEnv + *env.ptrPtCldGripper;
+				opData.env += *env.ptrPtCldUnexp;
+			}
+		}else{
+			break;
 		}
 	}
   return(opData.success);

@@ -30,10 +30,16 @@ to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
           </mesh>
         </geometry>
         <surface>
+          <contact>
+            <ode>
+              <max_vel>0.1</max_vel>
+              <min_depth>0.001</min_depth>
+            </ode>
+          </contact>
           <friction>
             <ode>
-              <mu>0.6</mu>
-              <mu2>0.6</mu2>
+              <mu>1.0</mu>
+              <mu2>1.0</mu2>
             </ode>
           </friction>
         </surface>

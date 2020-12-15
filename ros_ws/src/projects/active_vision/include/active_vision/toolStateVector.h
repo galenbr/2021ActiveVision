@@ -30,11 +30,16 @@ private:
   int gridDim;
   std::vector<float> stateVec = {};
   bool dataSet = false;
+  bool maintainScale = false;
 
 public:
   void setInput(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double> &kinect);
 
-  void setgridDim(int &dim);
+  void setGridDim(int dim);
+
+  void setMaintainScale(bool val);
+
+  std::vector<float> getStateVec();
 
   void print();
 

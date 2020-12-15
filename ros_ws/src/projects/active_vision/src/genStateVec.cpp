@@ -41,12 +41,12 @@ int main(int argc, char** argv){
     int kinColID      = 15;
     int stepType      = 0;
 
-    int gridDim = 5;
     ptCldColor::Ptr ptrPtCldObj{new ptCldColor};
     ptCldColor::Ptr ptrPtCldUnexp{new ptCldColor};
     std::vector<double> kinViewsphere = {0,0,0};
     HAFStVec1 stVecCreator;
-    stVecCreator.setgridDim(gridDim);
+    stVecCreator.setGridDim(5);
+    stVecCreator.setMaintainScale(true);
 
     for(int i = 0; i < data.size(); i++){
       // Generate State Vector only if direction is not -1

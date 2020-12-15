@@ -20,6 +20,40 @@
 // Typedef for convinience
 typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
 
+struct nodeData{
+  int nodeID{-1};
+  int parentID{-1};
+  std::vector<int> childIDs = {};
+  std::string dirs = "";
+  int checked{0};
+  int configID{-1};
+  int allowedSteps{15};
+  int possibleSolChildIndex{-1};
+
+  void reset(){
+    nodeID = -1;
+    parentID = -1;
+    dirs = "";
+    childIDs.clear();
+    checked = 0;
+    configID = -1;
+    allowedSteps = 15;
+    possibleSolChildIndex = -1;
+  }
+
+  void print(){
+    std::cout << std::setw(3) << nodeID;
+    std::cout << " (" << std::setw(3) << parentID << ")";
+    std::cout << " [" << std::setw(3) << configID << "]";
+    std::cout << " <" << checked << "," << std::setw(2) << allowedSteps << ">";
+    std::cout << std::setw(7) << dirs << " : ";
+    for(int i = 0; i < childIDs.size(); i++){
+      std::cout << childIDs[i] << " -> ";
+    }
+    std::cout << "\\" << std::endl;
+  }
+};
+
 struct RouteData{
   int parentID{-1};
   int childID{-1};
@@ -34,6 +68,7 @@ struct RouteData{
   int direction{-1};
   int type{0};
   std::string filename;
+  nodeData nodeInfo;
 
   void reset(){
     parentID = -1; childID = -1;
@@ -45,6 +80,7 @@ struct RouteData{
     direction = -1;
     type = 0;
     filename.clear();
+    nodeInfo.reset();
   }
 };
 
@@ -59,5 +95,7 @@ void savePointCloud(ptCldColor::Ptr cloud, std::string dir, std::string prefix, 
 void readPointCloud(ptCldColor::Ptr cloud, std::string dir, std::string prefix, int type);
 
 std::vector<std::vector<std::string>> readCSV(std::string filename);
+
+std::vector<nodeData> convertToTree(std::vector<std::vector<std::string>> &data);
 
 #endif
