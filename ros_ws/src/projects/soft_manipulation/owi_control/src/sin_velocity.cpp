@@ -23,12 +23,12 @@ int main(int argc, char **argv){
         if(count <=360){
             vel = sin(count*PI);
             
-            vel_msg.data[0] = vel;
+            vel_msg.data[0] = vel/2;
             vel_msg.data[1] = 0;
             
             sin_pub.publish(vel_msg);
             
-            count += 2;
+            count += .5;
         }
         else{
             ROS_INFO("DONE!");
