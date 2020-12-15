@@ -56,6 +56,9 @@ int marker_id4;
 
 void image_callback(const sensor_msgs::ImageConstPtr& msg)
 {
+  ros::Rate r{30};
+
+  while(ros::ok()){
   double ticksBefore = cv::getTickCount();
   static tf::TransformBroadcaster br;
   if (cam_info_received)
@@ -69,7 +72,7 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg)
 
       if (normalizeImageIllumination)
       {
-        ROS_WARN("normalizeImageIllumination is unimplemented!");
+        // ROS_WARN("normalizeImageIllumination is unimplemented!");
 //        cv::Mat inImageNorm;
 //        pal_vision_util::dctNormalization(inImage, inImageNorm, dctComponentsToRemove);
 //        inImage = inImageNorm;
@@ -228,6 +231,9 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg)
       return;
     }
   }
+  ros::spinOnce();
+  r.sleep();
+}
 }
 
 // wait for one camerainfo, then shut down that subscriber
@@ -268,15 +274,15 @@ int main(int argc, char **argv)
   image_pub = it.advertise("result", 1);
   debug_pub = it.advertise("debug", 1);
 
-  pose_pub1 = nh.advertise<geometry_msgs::Pose>("pose", 100);
-  pose_pub2 = nh.advertise<geometry_msgs::Pose>("pose2", 100);
-  pose_pub3 = nh.advertise<geometry_msgs::Pose>("pose3", 100);
-  pose_pub4 = nh.advertise<geometry_msgs::Pose>("pose4", 100);
+  pose_pub1 = nh.advertise<geometry_msgs::Pose>("pose", 1);
+  pose_pub2 = nh.advertise<geometry_msgs::Pose>("pose2", 1);
+  pose_pub3 = nh.advertise<geometry_msgs::Pose>("pose3", 1);
+  pose_pub4 = nh.advertise<geometry_msgs::Pose>("pose4", 1);
 
-  pixel_pub1 = nh.advertise<geometry_msgs::PointStamped>("pixel", 100);
-  pixel_pub2 = nh.advertise<geometry_msgs::PointStamped>("pixel2", 100);
-  pixel_pub3 = nh.advertise<geometry_msgs::PointStamped>("pixel3", 100);
-  pixel_pub4 = nh.advertise<geometry_msgs::PointStamped>("pixel4", 100);
+  pixel_pub1 = nh.advertise<geometry_msgs::PointStamped>("pixel", 1);
+  pixel_pub2 = nh.advertise<geometry_msgs::PointStamped>("pixel2", 1);
+  pixel_pub3 = nh.advertise<geometry_msgs::PointStamped>("pixel3", 1);
+  pixel_pub4 = nh.advertise<geometry_msgs::PointStamped>("pixel4", 1);
   
   nh.param<double>("marker_size", marker_size, 0.05);
   nh.param<int>("marker_id1", marker_id1, 582);

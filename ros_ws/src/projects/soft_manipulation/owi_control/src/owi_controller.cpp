@@ -146,11 +146,20 @@ int main(int argc, char **argv){
     // ros::NodeHandle n;
     nh = new ros::NodeHandle;
 
-    
     ros::Subscriber sub = nh->subscribe("aruco_simple/pixel2",1,get_cur_pose);
     ros::Subscriber theta_sub = nh->subscribe("theta_vals",1,update_Jr);
-    pub = nh->advertise<std_msgs::Float64MultiArray>("pwm",10);
-    err_pub = nh->advertise<std_msgs::Float64MultiArray>("error",10);
+
+    ros::Rate r{30};
+
+    while(ros::ok()){
+
+
+        pub = nh->advertise<std_msgs::Float64MultiArray>("pwm",1);
+        err_pub = nh->advertise<std_msgs::Float64MultiArray>("error",1);
+
+        ros::spinOnce();
+        r.sleep();
+    }
 
     
     ros::spin();
