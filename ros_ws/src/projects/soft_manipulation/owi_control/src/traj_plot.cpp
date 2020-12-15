@@ -34,7 +34,7 @@ void trajPlotCallback(const sensor_msgs::ImageConstPtr& img){
         cv::Point pt1 = cv::Point(traj_points_X[i-1], traj_points_Y[i-1]);
         cv::Point pt2 = cv::Point(traj_points_X[i], traj_points_Y[i]);
 
-        cv::line(cv_ptr->image, pt1, pt2, red, 1, 8, 0);
+        cv::line(cv_ptr->image, pt1, pt2, red, 1, 16, 0);
     }
     // Convert back to ROS Msg and publish
     traj_pub.publish(cv_ptr->toImageMsg());
@@ -48,9 +48,11 @@ int main(int argc, char **argv){
     //subscribe to ee pose
     ros::Subscriber traj_sub = n.subscribe("/aruco_simple/pixel2",1,trajPointsCallback);
     //callback: everytime new pose is received, pushback into a vector
+    
     //subscribe to image
-    ros::Subscriber img_sub = n.subscribe("/a",1,trajPlotCallback);
+    ros::Subscriber img_sub = n.subscribe("/aruco_simple/result",1,trajPlotCallback);
     //callback: draw line between successive pairwise points in the vector
+    
     // publish the new image
     traj_pub = n.advertise<sensor_msgs::Image>("/traj_output",1);
     ros::spin();

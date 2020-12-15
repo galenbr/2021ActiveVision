@@ -13,6 +13,11 @@
 <!-- OWI Control -->
 <node name = "owi_controller" pkg="owi_control" type="owi_controller_node" output="screen"/>
 
+<!-- Trajectory plotter -->
+<node name = "owi_trajectory_plotter" pkg="owi_control" type="owi_trajectory_node"/>
+
+<!-- Record Node -->
+
 <!-- ROSSERIAL -->
 <!-- <node name="serial_node" pkg="rosserial_python" type="serial_node.py">
 <param name="port" type="string" value="/dev/ttyACM0"/>
