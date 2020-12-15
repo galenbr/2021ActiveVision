@@ -1,9 +1,13 @@
 <?xml version="1.0"?>
 <launch>
+  <include file="$(find active_vision)/launch/workspace.launch" />
+
+  <group ns="active_vision">
+    <rosparam file="$(find active_vision)/config/GB_defaults.yaml" />
+  </group>
 
   <arg name="policy" default="NIL" doc="NIL / HEURISTIC / PCA_LDA_LR / PCA_LR" />
 
-  <arg name="policyDir" default="./DataCollected/prismNewVP/" doc="Directory where the .pkl files are there" />
   <arg name="policyCommonName" default="prismNewVP_" doc="Common name or prefix for the .pkl files" />
 
   <arg name="CSV" default="default.csv" doc="csv file name to save the results" />
@@ -20,11 +24,11 @@
     <node name="policyTester" pkg="active_vision" type="policyTester" args="$(arg CSV) $(arg objID) $(arg moveMode) 1" output="screen"/>
   </group>
   <group if="$(eval arg('policy') == 'PCA_LDA_LR')">
-    <node name="trainedPolicyService" pkg="active_vision" type="trainedPolicyService.py" args="$(arg policyDir) $(arg policyCommonName) PCA_LDA_LR" output="screen" launch-prefix="gnome-terminal --" />
+    <node name="trainedPolicyService" pkg="active_vision" type="trainedPolicyService.py" args="$(arg policyCommonName)" output="screen" launch-prefix="gnome-terminal --" />
     <node name="policyTester" pkg="active_vision" type="policyTester" args="$(arg CSV) $(arg objID) $(arg moveMode) 2" output="screen"/>
   </group>
   <group if="$(eval arg('policy') == 'PCA_LR')">
-    <node name="trainedPolicyService" pkg="active_vision" type="trainedPolicyService.py" args="$(arg policyDir) $(arg policyCommonName) PCA_LR" output="screen" launch-prefix="gnome-terminal --" />
+    <node name="trainedPolicyService" pkg="active_vision" type="trainedPolicyService.py" args="$(arg policyCommonName)" output="screen" launch-prefix="gnome-terminal --" />
     <node name="policyTester" pkg="active_vision" type="policyTester" args="$(arg CSV) $(arg objID) $(arg moveMode) 2" output="screen"/>
   </group>
 

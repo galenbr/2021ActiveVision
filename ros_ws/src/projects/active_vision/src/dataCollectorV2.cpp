@@ -381,11 +381,11 @@ int main (int argc, char** argv){
 
  	environment kinectControl(&nh);
 	sleep(1);
-	kinectControl.setPtCldNoise(0);
+	kinectControl.setPtCldNoise(0.0);
 	kinectControl.viewsphereRad = 1;
   kinectControl.loadGripper();
 
-	std::string dir = "./DataRecAV/";
+	std::string dir = "/home/diyogon/Documents/WPI/Berk_Lab/mer_lab/ros_ws/src/projects/active_vision/data/training_data/";
 	std::string time = getCurTime();
 	std::string tempName(argv[1]);
 	std::string csvName;

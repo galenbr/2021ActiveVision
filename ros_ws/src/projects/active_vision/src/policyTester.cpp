@@ -57,29 +57,31 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 
 	// Home Pose
 	home.reset();
-  home.path = {startPose};
-  home.type = 1;
+	home.path = {startPose};
+	home.type = 1;
 	home.direction = 0;
 	home.nSteps = 0;
 	home.objType = kinectControl.objectDict[object][1];
 	home.objPose = {kinectControl.objectPosesDict[object][objPoseCode][1],
 								  kinectControl.objectPosesDict[object][objPoseCode][2],
 									objYaw*(M_PI/180.0)};
-  singlePass(kinectControl, startPose, true, true);
+	printf("Starting first pass.\n");
+	singlePass(kinectControl, startPose, true, true);
 	updateRouteData(kinectControl,home,true,"Home");
 	current = home;
 
 	std::vector<int> vp;
 	setupViewer(viewer, 2, vp);
-  viewer->setPosition(550,20);
-  keyboardEvent keyPress(viewer,2); keyPress.help();
+	viewer->setPosition(550,20);
+	keyboardEvent keyPress(viewer,2); keyPress.help();
 
 	ptCldColor::Ptr tempPtCld{new ptCldColor};
 	ptCldColor::Ptr tempPtCldObj{new ptCldColor};
 	ptCldColor::Ptr tempPtCldUnexp{new ptCldColor};
 	pcl::PointXYZ table,a1,a2;
-  table.x = 1.5; table.y = 0; table.z = 1;
+	table.x = 1.5; table.y = 0; table.z = 1;
 	std::vector<int> nUnexp;
+	printf("Starting while loop.\n");
 
 	while(keyPress.ok){
 		viewer->resetStoppedFlag();
@@ -231,7 +233,8 @@ int main(int argc, char** argv){
 	kinectControl.viewsphereRad = 1.0;
   kinectControl.loadGripper();
 
-	std::string dir = "./policyAV/";
+	std::string dir;
+	nh.getParam("/active_vision/data_dir", dir);
 	std::string time = getCurTime();
 	std::string tempName(argv[1]);
 	std::string csvName;

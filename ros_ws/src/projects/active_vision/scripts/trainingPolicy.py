@@ -13,12 +13,13 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 from sklearn.neighbors import KNeighborsClassifier
 from pickle import dump
+import pickle
+import rospy
 
 def helpDisp(text):
     print(text)
     print('\n-----Policy Training Help-----\n')
-    print('Arguments : [Directory] [CSV filename]')
-    print('Directory : Directory where csv and pcd files are there (./DataRecAV/)')
+    print('Arguments : [CSV filename]')
     print('CSV filename : CSV file name (Data.csv)')
     print('\n-----End Help-----\n')
     sys.exit()
@@ -39,6 +40,14 @@ class methodPipeline(object):
     def applyFunction(self, X):
         return self.ready
 
+    def saveModel(self, name):
+        dump(self, open(name+'_pipeline.pkl', 'wb'))
+
+    def loadModel(self, name):
+        self = pickle.load(open(name+'_pipeline.pkl', 'rb'))
+        self.ready = True
+        return self
+
 class PCALDAPipeline(methodPipeline):
     def __init__(self, n_components):
         methodPipeline.__init__(self)
@@ -55,27 +64,26 @@ class PCALDAPipeline(methodPipeline):
         self.ready = True
         return methodPipeline.calculateFunction(self, X, y)
 
-    def saveModel(self,name):
+    '''def saveModel(self,name):
         dump(self.scaler, open(name+'_scaler.pkl', 'wb'))
         dump(self.pca, open(name+'_pca.pkl', 'wb'))
         dump(self.lda, open(name+'_lda.pkl', 'wb'))
 
+    def loadModel(self, name):
+        self.scaler = pickle.load(open(name+'_scaler.pkl', 'rb'))
+        self.pca = pickle.load(open(name+'_pca.pkl', 'rb'))
+        self.lda = pickle.load(open(name+'_lda.pkl', 'rb'))
+        self.ready = True'''
+
     def applyFunction(self, X):
         if(not self.ready):
+            print("Wrong")
             return methodPipeline.applyFunction(self, X)
         else:
+            print("Right")
             X = self.normalize(X)
             X1 = self.pca.transform(X)
             X2 = self.lda.transform(X1)
-            return X2
-
-    def predictWFunction(self, X):
-        if(not self.ready):
-            return methodPipeline.applyFunction(self, X)
-        else:
-            X = self.normalize(X)
-            X1 = self.pca.transform(X)
-            X2 = self.lda.predict(X1)
             return X2
 
 class PCAPipeline(methodPipeline):
@@ -92,9 +100,17 @@ class PCAPipeline(methodPipeline):
         self.ready = True
         return methodPipeline.calculateFunction(self, X, y)
 
-    def saveModel(self,name):
+    def loadModel(self, name):
+        self = pickle.load(open(name+'_pipeline.pkl', 'rb'))
+
+    '''def saveModel(self,name):
         dump(self.scaler, open(name+'_scaler.pkl', 'wb'))
         dump(self.pca, open(name+'_pca.pkl', 'wb'))
+
+    def loadModel(self, name):
+        self.scaler = pickle.load(open(name+'_scaler.pkl', 'rb'))
+        self.pca = pickle.load(open(name+'_pca.pkl', 'rb'))
+        self.ready = True'''
 
     def applyFunction(self, X):
         if(not self.ready):
@@ -104,20 +120,9 @@ class PCAPipeline(methodPipeline):
             X1 = self.pca.transform(X)
             return X1
 
-    def predictWFunction(self, X):
-        if(not self.ready):
-            return methodPipeline.applyFunction(self, X)
-        else:
-            X = self.normalize(X)
-            X1 = self.pca.predict(X)
-            return X1
-
 class BrickPipeline(methodPipeline):
     def __init__(self):
         super(methodPipeline, self).__init__()
-
-    def predictWFunction(self, X):
-        return np.ones(X.shape[0])
 
 class BrickModel():
     def fit(self, X, y):
@@ -175,24 +180,26 @@ def kFold(filename, pipeline, model, name='na', dim=52, k=5):
 
 def standardRun(file):
     model = LogisticRegression(solver='liblinear', multi_class='auto')
+    PCA_components = rospy.get_param("/active_vision/PCA_component_number")
+    PCALDA_components = rospy.get_param("/active_vision/PCALDA_component_number")
     # model = KNeighborsClassifier(n_neighbors=7)
     print("*****%s*****" % file)
     print("*****PCA-LDA*****")
-    kFold(file, PCALDAPipeline(26), model, file[0:-12]+'PL')
+    kFold(file, PCALDAPipeline(PCALDA_components), model, file[0:-12]+'PL')
     print("*****PCA*****")
-    kFold(file, PCAPipeline(7), model, file[0:-12]+'P')
+    kFold(file, PCAPipeline(PCA_components), model, file[0:-12]+'P')
     print("*****Brick*****")
-    kFold(file, PCAPipeline(7), BrickModel())
+    kFold(file, PCAPipeline(PCA_components), BrickModel(), file[0:-12]+'B')
 
 if __name__ == "__main__":
+    dir = rospy.get_param("/active_vision/data_dir")
     #Galen mode for convenience- feel free to edit for your local files
     if len(sys.argv) == 1:
-        files = ["../DataRecAV/stateVec.csv", "../GitData1/Step1_NormalVP/dataNormalVPStep1_stateVec.csv", "../GitData1/Step2_NormalVP/dataNormalVPStep2_stateVec.csv"]
+        files = ["./DataRecAV/pose0Data1_stateVec.csv", "./GitData1/Step1_NormalVP/dataNormalVPStep1_stateVec.csv", "./GitData1/Step2_NormalVP/dataNormalVPStep2_stateVec.csv"]
         for file in files:
             standardRun(file)
 
-    elif len(sys.argv) != 3: helpDisp("ERROR : Incorrent number of arguments")
+    elif len(sys.argv) != 2: helpDisp("ERROR : Incorrent number of arguments")
     else:
-        dir = sys.argv[1]
-        file = sys.argv[2]
+        file = sys.argv[1]
         standardRun(dir+file)
