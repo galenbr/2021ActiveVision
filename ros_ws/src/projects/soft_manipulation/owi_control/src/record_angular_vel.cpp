@@ -5,16 +5,21 @@
 #include "std_msgs/Float32.h"
 #include "std_msgs/Float64.h"
 #include "std_msgs/Float64MultiArray.h"
-#include <sensor_msgs/Image.h>
+#include "sensor_msgs/Image.h"
+#include "geometry_msgs/PointStamped.h"
+#include "geometry_msgs/Point.h"
 
 std_msgs::Float32 w1;
 std_msgs::Float64 pwm1;
 sensor_msgs::Image img;
+geometry_msgs::Point pose;
+void rec_pos(const geometry_msgs::PointStamped &msg){
+    pose.x = msg.point.x;
+    pose.y = msg.point.y;
+}
 
 void rec_img(const sensor_msgs::Image image){
-
     img = image;
-
 }
 
 void rec_vel(const std_msgs::Float32 &msg){
@@ -36,6 +41,7 @@ int main(int argc, char** argv){
     ros::Subscriber sub1 = n.subscribe("angular_vel",1,rec_vel);
     ros::Subscriber sub2 = n.subscribe("pwm",1,rec_pwm);
     ros::Subscriber sub3 = n.subscribe("usb_cam/image_raw",1,rec_img);
+    ros::Subscriber sub4 = n.subscribe("aruco_simple/pixel3",1,rec_pos);
 
     ros::Rate r{30};
     while(ros::ok()){
@@ -43,7 +49,7 @@ int main(int argc, char** argv){
 
         bag.write("angular_vel", t, w1);
         bag.write("pwm", t, pwm1);
-        // bag.write("err_Z", t, err_Z);
+        bag.write("pixel3", t,pose);
         bag.write("image", t, img);
 
         ros::spinOnce();
