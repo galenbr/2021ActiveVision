@@ -86,23 +86,24 @@ int main(int argc, char **argv)
 
 	ros::NodeHandle n;
 
-	ros::Subscriber sub1 = n.subscribe("/aruco_simple/pixel", 1000, baseCallback);
-	ros::Subscriber sub2 = n.subscribe("/aruco_simple/pixel2", 1000, eeCallback);
-	ros::Subscriber sub3 = n.subscribe("/aruco_simple/pixel3", 1000, elbowCallback);
-	ros::Subscriber sub4 = n.subscribe("/aruco_simple/pixel4", 1000, l2Callback);
-	
+	ros::Subscriber sub1 = n.subscribe("/aruco_simple/pixel", 1, baseCallback);
+	ros::Subscriber sub2 = n.subscribe("/aruco_simple/pixel2", 1, eeCallback);
+	ros::Subscriber sub3 = n.subscribe("/aruco_simple/pixel3", 1, elbowCallback);
+	ros::Subscriber sub4 = n.subscribe("/aruco_simple/pixel4", 1, l2Callback);
+	ros::Publisher theta_pub = n.advertise<geometry_msgs::Point>("/theta_vals", 1);
+
 	// ros::Publisher pub = n.advertise<geometry_msgs::Point>("/object_position", 1000);
 	// ros::Publisher pub1 = n.advertise<std_msgs::Float32>("/object_orientation", 1000);
-	ros::Publisher theta_pub = n.advertise<geometry_msgs::Point>("/theta_vals", 1000);
 	// ros::Publisher elbow_pub = n.advertise<geometry_msgs::Point>("/elbow_position", 1000);
 	
-	ros::Rate r(20);
+	// Computing angles
+	float theta1 = 0;
+	float theta2 = 0;
+	
+	ros::Rate r(30);
 	while(ros::ok())
 	{
 
-		// Computing angles
-		float theta1 = 0;
-		float theta2 = 0;
 
 		if(elbow[0]!= base[0]){
 			if(elbow[0]<base[0]){
