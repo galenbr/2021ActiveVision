@@ -14,6 +14,7 @@
 
 #include <ros/ros.h>
 #include <ros/package.h>
+#include <ros/master.h>
 #include <tf/transform_datatypes.h>
 
 // PCL specific includes
@@ -48,6 +49,8 @@
 // Typedef for convinience
 typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
 typedef pcl::PointCloud<pcl::Normal> ptCldNormal;
+
+bool ROSCheck(std::string type, std::string name);
 
 // Structure to store one grasp related data
 struct graspPoint{

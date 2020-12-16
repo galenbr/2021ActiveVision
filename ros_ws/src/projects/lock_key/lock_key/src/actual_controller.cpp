@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include "moveit_planner/MoveCart.h"
+#include "moveit_planner/MoveJoint.h"
 #include "moveit_planner/SetVelocity.h"
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <moveit/move_group_interface/move_group_interface.h>
@@ -17,8 +18,8 @@ void moveGripper(double Grasp_Width,double gripper_timout){
 
     franka_gripper::GraspGoal goal;
     goal.width = Grasp_Width;   // Distance between fingers [m]
-    goal.speed = 0.1;           //  Closing speed. [m/s]
-    goal.force = 40;            //   Grasping (continuous) force [N]
+    goal.speed = 0.1;           // Closing speed. [m/s]
+    goal.force = 40;            // Grasping (continuous) force [N]
     goal.epsilon.inner = 0.05;  // Maximum tolerated deviation when the actual grasped width is
                                 // smaller than the commanded grasp width.
     goal.epsilon.outer = 0.05;  // Maximum tolerated deviation when the actual grasped width is
@@ -101,8 +102,10 @@ int main(int argc, char ** argv){
 
     ros::ServiceClient cartMoveClient = n.serviceClient<moveit_planner::MoveCart>("cartesian_move");
     ros::ServiceClient velScalingClient = n.serviceClient<moveit_planner::SetVelocity>("set_velocity_scaling");
+    ros::ServiceClient jointSpaceClient = n.serviceClient<moveit_planner::MoveJoint>("move_to_joint_space");
     ros::service::waitForService("cartesian_move",-1);
     ros::service::waitForService("set_velocity_scaling",-1);
+    ros::service::waitForService("move_to_joint_space", -1);
     moveit_planner::SetVelocity velscale;
 
     // moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
@@ -240,18 +243,35 @@ int main(int argc, char ** argv){
     ROS_INFO("Reached post-lock pose!");
 
     // Move to Home (roughly)
-    moveit_planner::MoveCart move5;
-    geometry_msgs::Pose p5;
-    p5.orientation.x = 0.83;
-    p5.orientation.y = -0.55;
-    p5.orientation.z = 0.01;
-    p5.orientation.w = -0.01;
-    p5.position.x = 0.3;
-    p5.position.y = 0.0;
-    p5.position.z = 0.6;
-    move5.request.val.push_back(p5);
-    move5.request.execute = true;
-    cartMoveClient.call(move5);
+    // JOINT SPACE IMPLEMENTATION
+    moveit_planner::MoveJoint jpos;
+    // panda_joint1, panda_joint2, panda_joint3,
+    // panda_joint4, panda_joint5, panda_joint6, panda_joint7
+    jpos.request.execute = true;
+    jpos.request.val.push_back(0.34518408463181594);
+    jpos.request.val.push_back(-0.5886091012133754);
+    jpos.request.val.push_back(-0.23394426883041586);
+    jpos.request.val.push_back(-2.0712576495897927);
+    jpos.request.val.push_back(-0.1384774200436345);
+    jpos.request.val.push_back(1.5505549706586192);
+    jpos.request.val.push_back(0.7042995433536605);
+    jointSpaceClient.call(jpos);
+    // END - JOINT SPACE IMPLEMENTATION
+
+    // TASK SPACE IMPLEMENTATION
+    // moveit_planner::MoveCart move5;
+    // geometry_msgs::Pose p5;
+    // p5.orientation.x = 0.83;
+    // p5.orientation.y = -0.55;
+    // p5.orientation.z = 0.01;
+    // p5.orientation.w = -0.01;
+    // p5.position.x = 0.3;
+    // p5.position.y = 0.0;
+    // p5.position.z = 0.6;
+    // move5.request.val.push_back(p5);
+    // move5.request.execute = true;
+    // cartMoveClient.call(move5);
+    // END - TASK SPACE IMPLEMENTATION
     ROS_INFO("Reached Home!");
 
     // ros::waitForShutdown();

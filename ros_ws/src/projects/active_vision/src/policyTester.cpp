@@ -257,9 +257,11 @@ int main(int argc, char** argv){
     ROS_INFO("Manual Mode Selected.");
   }
   else if(::runMode == 1){
+		while(ROSCheck("SERVICE","/gazebo/set_model_state")){boost::this_thread::sleep(boost::posix_time::seconds(1));}
     policy = nh.serviceClient<active_vision::heuristicPolicySRV>("/active_vision/heuristic_policy");
     ROS_INFO("Heuristic Policy Selected.");
   }else if(::runMode == 2){
+		while(ROSCheck("SERVICE","/active_vision/trained_policy")){boost::this_thread::sleep(boost::posix_time::seconds(1));}
 		policy = nh.serviceClient<active_vision::trainedPolicySRV>("/active_vision/trained_policy");
     ROS_INFO("Trained Policy Selected.");
 	}
