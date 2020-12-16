@@ -2,6 +2,7 @@
 #include <actionlib/server/simple_action_server.h>
 #include "moveit_planner/GetPose.h"
 #include "moveit_planner/MoveCart.h"
+#include "moveit_planner/MoveJoint.h"
 #include "moveit_planner/MovePose.h"
 #include <iostream>
 #include <vector>
@@ -47,11 +48,30 @@ int main(int argc, char ** argv){
     ros::init(argc, argv, "test_move");
     ros::NodeHandle n;
     n_ptr=&n;
+    ros::ServiceClient jointSpaceClient = n.serviceClient<moveit_planner::MoveJoint>("move_to_joint_space");
+    ros::service::waitForService("move_to_joint_space", -1);
 
     double delta_cmd{0.05};
 
     moveRel(0.0,0.0,-delta_cmd,0.0,0.0,0.0,0.0);
 
+    // Move to Home (roughly)
+    // JOINT SPACE IMPLEMENTATION
+    moveit_planner::MoveJoint jpos;
+    // panda_joint1, panda_joint2, panda_joint3,
+    // panda_joint4, panda_joint5, panda_joint6, panda_joint7
+    jpos.request.execute = true;
+    jpos.request.val.push_back(0.34518408463181594);
+    jpos.request.val.push_back(-0.5886091012133754);
+    jpos.request.val.push_back(-0.23394426883041586);
+    jpos.request.val.push_back(-2.0712576495897927);
+    jpos.request.val.push_back(-0.1384774200436345);
+    jpos.request.val.push_back(1.5505549706586192);
+    jpos.request.val.push_back(0.7042995433536605);
+
+    ROS_INFO("Moving to home");
+    jointSpaceClient.call(jpos);
+    // END - JOINT SPACE IMPLEMENTATION
     //ros::spin();
     return 0;
 
