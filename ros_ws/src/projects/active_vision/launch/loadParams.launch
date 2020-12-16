@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<launch>
+
+  <arg name="user" default="$(env USER)" />
+
+  <group if="$(eval arg('user') == 'sabhari')" ns="active_vision">
+    <rosparam file="$(find active_vision)/config/SN_defaults.yaml" />
+  </group>
+  
+  <group if="$(eval arg('user') == 'galen')" ns="active_vision">
+    <rosparam file="$(find active_vision)/config/GB_defaults.yaml" />
+  </group>
+
+</launch>

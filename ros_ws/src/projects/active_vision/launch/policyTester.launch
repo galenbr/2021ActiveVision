@@ -2,10 +2,6 @@
 <launch>
   <include file="$(find active_vision)/launch/workspace.launch" />
 
-  <group ns="active_vision">
-    <rosparam file="$(find active_vision)/config/GB_defaults.yaml" />
-  </group>
-
   <arg name="policy" default="NIL" doc="NIL / HEURISTIC / PCA_LDA_LR / PCA_LR" />
 
   <arg name="policyCommonName" default="prismNewVP_" doc="Common name or prefix for the .pkl files" />
