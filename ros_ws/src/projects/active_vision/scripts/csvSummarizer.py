@@ -4,6 +4,18 @@
 import sys, csv,os, copy
 import numpy as np
 from prettytable import PrettyTable
+import matplotlib.pyplot as plt
+
+SAVE = True
+SAVE_PATH = '/home/diyogon/Documents/WPI/Berk_Lab/mer_lab/ros_ws/src/projects/active_vision/data/'
+
+def helpDisp(text):
+    print(text)
+    print('\n-----BFS Visualization Help-----\n')
+    print('Arguments : [CSV filename]')
+    print('CSV filename : CSV file name (./DataRecAV/Data.csv)')
+    print('\n-----End Help-----\n')
+    sys.exit()
 
 #Function to read the input data file
 def readInput(fileName):
@@ -56,14 +68,38 @@ def genSummary(fileName,nBins):
 def printSummary(summary):
     t = PrettyTable(['Bins(Yaw)', '#Data' , 'Min Steps', 'Avg Steps', 'Max Steps'])
     for each in summary:
+        fig, ax = plt.subplots()
+        degree = []
+        number = []
+        meanGrasp = []
+        titleStr = ''
         t.clear_rows()
-        t.title = each[0] + " - Roll : " + str(round(np.degrees(each[1]),0)) + " , Pitch : " + str(round(np.degrees(each[2]),0))
         for eachYaw in each[3]:
-            if eachYaw[1] > 0:
+            t.title = each[0] + " - Roll : " + str(round(np.degrees(each[1]),0)) + " , Pitch : " + str(round(np.degrees(each[2]),0))
+            if(eachYaw[0] <= 180 and eachYaw[1] > 0):
                 t.add_row([eachYaw[0] ,eachYaw[1], eachYaw[2], eachYaw[3], eachYaw[4]])
-            else:
-                t.add_row([eachYaw[0] ,' ', ' ', ' ', ' '])
+                degree.append(eachYaw[0])
+                number.append(eachYaw[1])
+                meanGrasp.append(eachYaw[3])
+                titleStr = "{}-roll {} pitch {}".format(each[0], str(round(np.degrees(each[1]),0)), str(round(np.degrees(each[2]),0)))
         print(t)
+        color = 'tab:green'
+        ax.set_xlabel('yaw')
+        ax.set_ylabel('number of datapoints', color=color)
+        ax.bar(degree, number, width=8, color=color)
+        ax.tick_params(axis='y', labelcolor=color)
+        ax2 = ax.twinx()
+        color = 'tab:blue'
+        ax2.set_ylabel('mean steps to grasp', color=color)
+        ax2.plot(degree, meanGrasp, color=color)
+        ax2.tick_params(axis='y', labelcolor=color)
+        #fig.tight_layout()
+        fig.suptitle(titleStr)
+        if(SAVE):
+            plt.savefig(SAVE_PATH+titleStr+'.png')
+        else:
+            plt.show()
+        print("---")
 
 def saveToCSV(path,summary):
     newPath = path[:-4] + "_summary.csv"
@@ -78,10 +114,8 @@ def saveToCSV(path,summary):
 if __name__ == "__main__":
     os.chdir(os.path.expanduser("~"))
 
-    # path = './DataCollected/prismData/Prism_10x8x4_2000pts/Prism_10x8x4_2000pts.csv'
-    path = './DataCollected/prismData/Prism_20x6x5_2000pts/Prism_20x6x5_2000pts.csv'
+    path = '/home/diyogon/Documents/WPI/Berk_Lab/mer_lab/ros_ws/src/projects/active_vision/data/2020_12_15_230829_dataRec.csv'
     nBins = 360/10
 
     summary = genSummary(path,nBins)
     printSummary(summary)
-    # saveToCSV(path,summary)

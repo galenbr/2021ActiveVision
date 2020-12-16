@@ -7,7 +7,7 @@
     <rosparam file="$(find active_vision)/config/SN_defaults.yaml" />
   </group>
   
-  <group if="$(eval arg('user') == 'galen')" ns="active_vision">
+  <group if="$(eval arg('user') == 'diyogon')" ns="active_vision">
     <rosparam file="$(find active_vision)/config/GB_defaults.yaml" />
   </group>
 
