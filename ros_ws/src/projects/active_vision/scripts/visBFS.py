@@ -4,12 +4,12 @@
 import sys, csv
 import numpy as np
 from graphviz import Digraph
+import rospy
 
 def helpDisp(text):
     print(text)
     print('\n-----BFS Visualization Help-----\n')
-    print('Arguments : [Directory] [CSV filename]')
-    print('Directory : Directory where csv is there (./DataRecAV/)')
+    print('Arguments : [CSV filename]')
     print('CSV filename : CSV file name (Data.csv)')
     print('\n-----End Help-----\n')
     sys.exit()
@@ -66,10 +66,10 @@ def genGraph(fileName):
     tree.render(fileName[:-4])
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
+    if len(sys.argv) != 2:
         helpDisp("ERROR : Incorrent number of arguments")
     else:
-        dir = sys.argv[1]
+        dir = rospy.get_param("/active_vision/data_dir")
         file = sys.argv[2]
 
     genGraph(dir+file)

@@ -56,7 +56,8 @@ int main(int argc, char** argv){
     help(); return(-1);
   }
 
-  std::string directory = ros::package::getPath("active_vision") + "/misc/";
+  std::string directory;
+  nh.getParam("/active_vision/data_dir", directory);
   std::string csvFile(argv[1]);
   std::vector<std::vector<std::string>> data = readCSV(directory+csvFile);
 

@@ -163,7 +163,8 @@ int main (int argc, char** argv){
 	printf("Enter the object yaw (deg) (0-360) : ");
 	std::cin >> objYaw;
 
-	std::string dir = "./bfsAV/";
+	std::string dir;
+	nh.getParam("/active_vision/data_dir", dir);
 	std::string csvName;
 	std::stringstream ss;
 	ss << "bfs_" <<
