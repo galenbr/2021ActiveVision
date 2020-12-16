@@ -763,7 +763,7 @@ void testReadPCD(std::string filename){
 int main (int argc, char** argv){
 
   // Initialize ROS
-  ros::init (argc, argv, "Testing_Model");
+  ros::init(argc, argv, "Environment_Testing");
   ros::NodeHandle nh;
 
   environment activeVision(&nh);

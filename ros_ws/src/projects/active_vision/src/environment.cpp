@@ -1,5 +1,25 @@
 #include <active_vision/environment.h>
 
+bool ROSCheck(std::string type, std::string name){
+  bool status = true;
+  if(type == "NODE"){
+    std::vector<std::string> nodeList;
+    ros::master::getNodes(nodeList);
+    status = std::find(nodeList.begin(), nodeList.end(), name) != nodeList.end();
+  }else if(type == "TOPIC"){
+    ros::master::V_TopicInfo topicList;
+    ros::master::getTopics(topicList);
+    status = false;
+    for(int i = 0; i < topicList.size(); i++){
+      if(topicList[i].name == name){status = true; break;}
+    }
+  }else if(type == "SERVICE"){
+    status = ros::service::exists(name, false);
+  }
+  if(!status) ROS_INFO_STREAM("Waiting for " << name << "...");
+  return status;
+}
+
 // Struct graspPoint constructor
 graspPoint::graspPoint(){
   quality = 0;
@@ -38,13 +58,25 @@ Eigen::Vector3f getTranslation(const Eigen::Affine3f& tf){
 // Environment class constructor
 environment::environment(ros::NodeHandle *nh){
 
+  // Checking if the required topics and services are running
+  bool allOK = false;
+  while(!allOK){
+    boost::this_thread::sleep(boost::posix_time::seconds(1));
+    allOK  = true;
+    allOK *= ROSCheck("NODE","/gazebo"); if(!allOK) continue;
+    allOK *= ROSCheck("SERVICE","/gazebo/set_model_state"); if(!allOK) continue;  // This a gazebo subscribed topic / gazebo service
+    allOK *= ROSCheck("TOPIC","/camera/depth/points"); if(!allOK) continue;
+    allOK *= ROSCheck("SERVICE","/gazebo/spawn_sdf_model"); if(!allOK) continue;
+    allOK *= ROSCheck("SERVICE","/gazebo/delete_model"); if(!allOK) continue;
+  }
+
   pubObjPose = nh->advertise<gazebo_msgs::ModelState> ("/gazebo/set_model_state", 1);
   subKinectPtCld = nh->subscribe ("/camera/depth/points", 1, &environment::cbPtCld, this);
+  gazeboSpawnModel = nh->serviceClient< gazebo_msgs::SpawnModel> ("/gazebo/spawn_sdf_model");
+  gazeboDeleteModel = nh->serviceClient< gazebo_msgs::DeleteModel> ("/gazebo/delete_model");
   // NOT USED (JUST FOR REFERENCE)
   /*subKinectRGB = nh->subscribe ("/camera/color/image_raw", 1, &environment::cbImgRgb, this);
   subKinectDepth = nh->subscribe ("/camera/depth/image_raw", 1, &environment::cbImgDepth, this);*/
-  gazeboSpawnModel = nh->serviceClient< gazebo_msgs::SpawnModel> ("/gazebo/spawn_sdf_model");
-  gazeboDeleteModel = nh->serviceClient< gazebo_msgs::DeleteModel> ("/gazebo/delete_model");
 
   readFlag[3] = {};           // Flag used to read data from kinect only when needed
   fingerZOffset = 0.0584;     // Z axis offset between gripper hand and finger
