@@ -49,6 +49,7 @@ int main(int argc, char** argv){
     stVecCreator.setMaintainScale(true);
 
     for(int i = 0; i < data.size(); i++){
+      if(i%100 == 0) std::cout << i+1 << "/" << data.size() <<" completed." << std::endl;
       // Generate State Vector only if direction is not -1
       if(std::atoi(data[i][dirColID-1].c_str()) != -1){
         stepType = std::atoi(data[i][stepTypeColID-1].c_str());

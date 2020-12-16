@@ -3,14 +3,7 @@
 # import rospkg
 import sys, csv,os, copy
 import numpy as np
-
-def helpDisp(text):
-    print(text)
-    print('\n-----BFS Visualization Help-----\n')
-    print('Arguments : [CSV filename]')
-    print('CSV filename : CSV file name (./DataRecAV/Data.csv)')
-    print('\n-----End Help-----\n')
-    sys.exit()
+from prettytable import PrettyTable
 
 #Function to read the input data file
 def readInput(fileName):
@@ -61,12 +54,16 @@ def genSummary(fileName,nBins):
     return summary
 
 def printSummary(summary):
+    t = PrettyTable(['Bins(Yaw)', '#Data' , 'Min Steps', 'Avg Steps', 'Max Steps'])
     for each in summary:
+        t.clear_rows()
+        t.title = each[0] + " - Roll : " + str(round(np.degrees(each[1]),0)) + " , Pitch : " + str(round(np.degrees(each[2]),0))
         for eachYaw in each[3]:
             if eachYaw[1] > 0:
-                print("{} , {} , {} : {} - {} , {} , {} , {}".\
-                format(each[0], each[1], each[2], eachYaw[0] ,eachYaw[1], eachYaw[2], eachYaw[3], eachYaw[4]))
-        print("---")
+                t.add_row([eachYaw[0] ,eachYaw[1], eachYaw[2], eachYaw[3], eachYaw[4]])
+            else:
+                t.add_row([eachYaw[0] ,' ', ' ', ' ', ' '])
+        print(t)
 
 def saveToCSV(path,summary):
     newPath = path[:-4] + "_summary.csv"
@@ -81,9 +78,10 @@ def saveToCSV(path,summary):
 if __name__ == "__main__":
     os.chdir(os.path.expanduser("~"))
 
-    path = './DataCollected/prismData/Prism_10x8x4_1000DataPoints/Prism_10x8x4.csv'
+    # path = './DataCollected/prismData/Prism_10x8x4_2000pts/Prism_10x8x4_2000pts.csv'
+    path = './DataCollected/prismData/Prism_20x6x5_2000pts/Prism_20x6x5_2000pts.csv'
     nBins = 360/10
 
     summary = genSummary(path,nBins)
-    # printSummary(summary)
-    saveToCSV(path,summary)
+    printSummary(summary)
+    # saveToCSV(path,summary)

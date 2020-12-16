@@ -385,7 +385,8 @@ int main (int argc, char** argv){
 	kinectControl.viewsphereRad = 1;
   kinectControl.loadGripper();
 
-	std::string dir = "/home/diyogon/Documents/WPI/Berk_Lab/mer_lab/ros_ws/src/projects/active_vision/data/training_data/";
+	// std::string dir = "/home/diyogon/Documents/WPI/Berk_Lab/mer_lab/ros_ws/src/projects/active_vision/data/training_data/";
+	std::string dir = "./DataRecAV/";
 	std::string time = getCurTime();
 	std::string tempName(argv[1]);
 	std::string csvName;
