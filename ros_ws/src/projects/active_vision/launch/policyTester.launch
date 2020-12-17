@@ -1,31 +1,29 @@
 <?xml version="1.0"?>
 <launch>
-  <include file="$(find active_vision)/launch/workspace.launch" />
+  <arg name="config" />
 
-  <arg name="policy" default="NIL" doc="NIL / HEURISTIC / PCA_LDA_LR / PCA_LR" />
+  <include file="$(find active_vision)/launch/workspace.launch">
+    <arg name="config" value="$(arg config)" />
+  </include>
 
-  <arg name="stateVecCSV" default="Prism_10x8x4_20x6x5_stateVec.csv" doc="CSV filename of file to be used for training." />
-
-  <arg name="CSV" default="default.csv" doc="csv file name to save the results" />
-  <arg name="objID" default="1" doc="Object ID from the available ones" />
-  <arg name="moveMode" default="2" doc="1->Normal, 2->New" />
+  <arg name="policy" default="NIL" doc="NIL / HEURISTIC / PCA_LDA / PCA" />
 
   <env name="ROSCONSOLE_FORMAT" value='[${severity}]: ${message}'/>
 
   <group if="$(eval arg('policy') == 'NIL')">
-    <node name="policyTester" pkg="active_vision" type="policyTester" args="$(arg CSV) $(arg objID) $(arg moveMode) 0" output="screen"/>
+    <node name="policyTester" pkg="active_vision" type="policyTester" args="0" output="screen"/>
   </group>
   <group if="$(eval arg('policy') == 'HEURISTIC')">
     <node name="heuristicPolicyService" pkg="active_vision" type="heuristicPolicyService" args="0" output="screen" launch-prefix="gnome-terminal --" />
-    <node name="policyTester" pkg="active_vision" type="policyTester" args="$(arg CSV) $(arg objID) $(arg moveMode) 1" output="screen"/>
+    <node name="policyTester" pkg="active_vision" type="policyTester" args="1" output="screen"/>
   </group>
-  <group if="$(eval arg('policy') == 'PCA_LDA_LR')">
-    <node name="trainedPolicyService" pkg="active_vision" type="trainedPolicyService.py" args="$(arg stateVecCSV)" output="screen" launch-prefix="gnome-terminal --"/>
-    <node name="policyTester" pkg="active_vision" type="policyTester" args="$(arg CSV) $(arg objID) $(arg moveMode) 2" output="screen" launch-prefix="gnome-terminal --"/>
+  <group if="$(eval arg('policy') == 'PCA_LDA')">
+    <node name="trainedPolicyService" pkg="active_vision" type="trainedPolicyService.py" output="screen" launch-prefix="gnome-terminal --"/>
+    <node name="policyTester" pkg="active_vision" type="policyTester" args="2" output="screen" launch-prefix="gnome-terminal --"/>
   </group>
-  <group if="$(eval arg('policy') == 'PCA_LR')">
-    <node name="trainedPolicyService" pkg="active_vision" type="trainedPolicyService.py" args="$(arg stateVecCSV)" output="screen" launch-prefix="gnome-terminal --"/>
-    <node name="policyTester" pkg="active_vision" type="policyTester" args="$(arg CSV) $(arg objID) $(arg moveMode) 2" output="screen" launch-prefix="gnome-terminal --"/>
+  <group if="$(eval arg('policy') == 'PCA')">
+    <node name="trainedPolicyService" pkg="active_vision" type="trainedPolicyService.py" output="screen" launch-prefix="gnome-terminal --"/>
+    <node name="policyTester" pkg="active_vision" type="policyTester" args="2" output="screen" launch-prefix="gnome-terminal --"/>
   </group>
 
 </launch>

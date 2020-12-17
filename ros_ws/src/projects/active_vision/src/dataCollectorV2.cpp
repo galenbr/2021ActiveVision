@@ -371,11 +371,6 @@ int main (int argc, char** argv){
 	ros::init(argc, argv, "Data_Collector_Node");
 	srand(time(NULL)); // Randoming the seed used for rand generation
 
-	if(argc != 4){
-    std::cout << "ERROR. Incorrect number of arguments." << std::endl;
-    help(); return(-1);
-  }
-
  	ros::NodeHandle nh;
 	std::chrono::high_resolution_clock::time_point start,end;
 
@@ -383,28 +378,31 @@ int main (int argc, char** argv){
 	sleep(1);
 	kinectControl.setPtCldNoise(0.0);
 	kinectControl.viewsphereRad = 1;
-  kinectControl.loadGripper();
+  	kinectControl.loadGripper();
 
 	std::string dir;
 	nh.getParam("/active_vision/data_dir", dir);
 	std::string time = getCurTime();
-	std::string tempName(argv[1]);
+	std::string tempName;
+	nh.getParam("/active_vision/run_csv", tempName);
 	std::string csvName;
 	if(tempName == "default.csv") csvName = time+"_dataRec.csv";
-	else	csvName = argv[1];
+	else	csvName = tempName;
 
 	if(csvName.substr(csvName.size() - 4) != ".csv"){
 		std::cout << "ERROR. Incorrect file name." << std::endl;
     help(); return(-1);
 	}
 
-	int objID = std::atoi(argv[2]);
+	int objID;
+	nh.getParam("/active_vision/object_number", objID);
 	if(objID < 0 && objID > 7){
 		std::cout << "ERROR. Incorrect Object ID." << std::endl;
     help(); return(-1);
 	}
 
-	int nDataPoints = std::atoi(argv[3]);
+	int nDataPoints;
+	nh.getParam("/active_vision/points_to_collect", nDataPoints);
 
 	std::string homePosesTreeCSV = ros::package::getPath("active_vision") + "/misc/dataCollectionTreeD2.csv";
 	::mode = 2;

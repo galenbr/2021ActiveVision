@@ -1,6 +1,7 @@
 #include <active_vision/toolDataHandling.h>
 #include <active_vision/toolStateVector.h>
 #include <pcl/common/common.h>
+#include <ros/ros.h>
 
 void help(){
   std::cout << "******* State Vector Generator Help *******" << std::endl;
@@ -12,19 +13,19 @@ void help(){
 }
 
 int main(int argc, char** argv){
-  if(argc != 4){
-    std::cout << "ERROR. Incorrect number of arguments." << std::endl;
-    help(); return(-1);
-  }
+  ros::init(argc, argv, "State_Vector_Generator");
+  ros::NodeHandle nh;
   int type;
-  type = std::atoi(argv[3]);
+  nh.getParam("/active_vision/state_vec_type", type);
   if(type != 1){
     std::cout << "ERROR. Incorrect type." << std::endl;
     help(); return(-1);
   }
 
-  std::string directory(argv[1]);
-  std::string csvFile(argv[2]);
+  std::string directory;
+  nh.getParam("/active_vision/data_dir", directory);
+  std::string csvFile;
+  nh.getParam("/active_vision/run_csv", csvFile);
   std::string newCsvFile;
   newCsvFile = csvFile.substr(0,csvFile.size()-4) + "_stateVec.csv";
   // std::cout << csvFile << "," << newCsvFile << std::endl;

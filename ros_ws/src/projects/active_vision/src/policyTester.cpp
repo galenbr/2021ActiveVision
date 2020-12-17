@@ -6,6 +6,7 @@
 #include "active_vision/heuristicPolicySRV.h"
 #include "active_vision/trainedPolicySRV.h"
 
+
 int mode;
 int runMode;
 int testAll;
@@ -219,38 +220,36 @@ void help(){
 }
 
 int main(int argc, char** argv){
-	if(argc != 5 && argc != 7){
-    ROS_ERROR("Incorrect number of arguments.");
-    help(); return(-1);
-  }
 	chdir(getenv("HOME"));
 
 	ros::init(argc, argv, "Policy_Tester");
  	ros::NodeHandle nh;
-  ros::ServiceClient policy;
+  	ros::ServiceClient policy;
  	environment kinectControl(&nh); sleep(1);
 	kinectControl.setPtCldNoise(0.5);
 	kinectControl.viewsphereRad = 1.0;
-  kinectControl.loadGripper();
+  	kinectControl.loadGripper();
 
 	std::string dir;
 	nh.getParam("/active_vision/data_dir", dir);
 	std::string time = getCurTime();
-	std::string tempName(argv[1]);
+	std::string tempName;
+	nh.getParam("/active_vision/test_output_csv", tempName);
 	std::string csvName;
 	if(tempName == "default.csv") csvName = time+"_dataRec.csv";
-	else	csvName = argv[1];
+	else	csvName = tempName;
 
 	if(csvName.substr(csvName.size() - 4) != ".csv"){
     ROS_ERROR("Incorrect file name.");
     help(); return(-1);
 	}
 
-	int objID = std::atoi(argv[2]);
+	int objID;
+	nh.getParam("/active_vision/object_number", objID);
 	if(objID < 0 && objID > 7) objID = 0;
-	::mode = std::atoi(argv[3]);
+	nh.getParam("/active_vision/move_mode", ::mode);
 	if(::mode < 1 && ::mode > 2) ::mode = 1;
-  ::runMode = std::atoi(argv[4]);
+  	::runMode = std::atoi(argv[1]);
 	if(::runMode < 0 && ::runMode > 2) ::runMode = 0;
 
   if(::runMode == 0){

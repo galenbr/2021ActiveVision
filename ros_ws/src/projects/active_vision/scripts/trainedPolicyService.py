@@ -1,6 +1,4 @@
 #!/usr/bin/env python2
-
-# import rospkg
 import sys, time, random, math, rospy, os, rospkg
 import numpy as np
 from matplotlib import pyplot as plt
@@ -33,7 +31,6 @@ def predictionServer(req):
     return trainedPolicySRVResponse(direction=predDir)
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2 and len(sys.argv) != 4: helpDisp("ERROR : Incorrent number of arguments")
 
     os.chdir(os.path.expanduser("~"))
 
@@ -41,8 +38,8 @@ if __name__ == "__main__":
     PCA_components = rospy.get_param("/active_vision/PCA_component_number")
     PCALDA_components = rospy.get_param("/active_vision/PCALDA_component_number")
 
-    csvDir = rospkg.RosPack().get_path('active_vision') + "/misc/State_Vector/"
-    stVecfile = sys.argv[1]
+    csvDir = rospy.get_param("/active_vision/data_dir")
+    stVecfile = rospy.get_param("/active_vision/state_vec_csv")
     stateVec, dirVec = readInput(csvDir+stVecfile, 52)
     dirVec = dirVec.ravel()
 
@@ -56,7 +53,7 @@ if __name__ == "__main__":
         pipeline = PCAPipeline(PCA_components)
         pipeline.calculateFunction(stateVec, dirVec)
         model.fit(pipeline.applyFunction(stateVec), dirVec)
-    # print(pipeline.ready)
+    print(pipeline.ready)
     s = rospy.Service('/active_vision/trained_policy', trainedPolicySRV, predictionServer)
     rospy.loginfo("Trained policy service ready.")
     rospy.spin()
