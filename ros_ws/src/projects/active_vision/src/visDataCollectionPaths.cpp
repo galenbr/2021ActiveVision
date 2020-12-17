@@ -1,6 +1,7 @@
 #include <active_vision/toolVisualization.h>
 #include <active_vision/toolViewPointCalc.h>
 #include <active_vision/toolDataHandling.h>
+#include <ros/ros.h>
 #include <ros/package.h>
 #include <iostream>
 #include <stdlib.h>
@@ -56,6 +57,7 @@ int main(int argc, char** argv){
     help(); return(-1);
   }
 
+  ros::NodeHandle nh;
   std::string directory;
   nh.getParam("/active_vision/data_dir", directory);
   std::string csvFile(argv[1]);

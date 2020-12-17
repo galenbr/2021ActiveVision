@@ -65,7 +65,7 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 	home.objPose = {kinectControl.objectPosesDict[object][objPoseCode][1],
 								  kinectControl.objectPosesDict[object][objPoseCode][2],
 									objYaw*(M_PI/180.0)};
-	printf("Starting first pass.\n");
+	// printf("Starting first pass.\n");
 	singlePass(kinectControl, startPose, true, true);
 	updateRouteData(kinectControl,home,true,"Home");
 	current = home;
@@ -81,7 +81,7 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 	pcl::PointXYZ table,a1,a2;
 	table.x = 1.5; table.y = 0; table.z = 1;
 	std::vector<int> nUnexp;
-	printf("Starting while loop.\n");
+	// printf("Starting while loop.\n");
 
 	while(keyPress.ok){
 		viewer->resetStoppedFlag();
@@ -257,11 +257,11 @@ int main(int argc, char** argv){
     ROS_INFO("Manual Mode Selected.");
   }
   else if(::runMode == 1){
-		while(ROSCheck("SERVICE","/gazebo/set_model_state")){boost::this_thread::sleep(boost::posix_time::seconds(1));}
+		while(!ROSCheck("SERVICE","/active_vision/heuristic_policy")){boost::this_thread::sleep(boost::posix_time::seconds(1));}
     policy = nh.serviceClient<active_vision::heuristicPolicySRV>("/active_vision/heuristic_policy");
     ROS_INFO("Heuristic Policy Selected.");
   }else if(::runMode == 2){
-		while(ROSCheck("SERVICE","/active_vision/trained_policy")){boost::this_thread::sleep(boost::posix_time::seconds(1));}
+		while(!ROSCheck("SERVICE","/active_vision/trained_policy")){boost::this_thread::sleep(boost::posix_time::seconds(1));}
 		policy = nh.serviceClient<active_vision::trainedPolicySRV>("/active_vision/trained_policy");
     ROS_INFO("Trained Policy Selected.");
 	}

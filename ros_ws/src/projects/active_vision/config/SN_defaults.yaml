@@ -1,4 +1,4 @@
-data_dir: "./DataCollected/prismNewVP/"
+data_dir: "./policyAV/"
 model_type: "PCA_LDA" #[PCA | PCA_LDA], null and heuristic coming soon
 PCALDA_component_number: 26
 PCA_component_number: 7
