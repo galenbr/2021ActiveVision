@@ -1,0 +1,7 @@
+object_number: 2
+points_to_collect: 25
+run_csv: "20x6x5_test.csv"
+state_vec_csv: "20x6x5_test_stateVec.csv"
+test_output_csv: "20x6x5_test_dataRec.csv"
+move_mode: 2
+state_vec_type: 1
