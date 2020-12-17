@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 mode = "GRAPH_SAVE"
 # mode = "PRINT"
 # mode = "CSV"
+minYaw = 0
+maxYaw = 180
 
 #Function to read the input data file
 def readInput(fileName):
@@ -65,10 +67,11 @@ def printSummary(summary):
         t.clear_rows()
         t.title = each[0] + " - Roll : " + str(int(round(np.degrees(each[1]),0))) + " , Pitch : " + str(int(round(np.degrees(each[2]),0)))
         for eachYaw in each[3]:
-            if eachYaw[1] > 0:
-                t.add_row([eachYaw[0] ,eachYaw[1], eachYaw[2], eachYaw[3], eachYaw[4]])
-            else:
-                t.add_row([eachYaw[0] , " ", " " , " " , " "])
+            if eachYaw[0] >= minYaw and eachYaw[0] <= maxYaw:
+                if eachYaw[1] > 0:
+                    t.add_row([eachYaw[0] ,eachYaw[1], eachYaw[2], eachYaw[3], eachYaw[4]])
+                else:
+                    t.add_row([eachYaw[0] , " ", " " , " " , " "])
         print(t)
 
 def graphSummary(path,summary):
@@ -79,11 +82,12 @@ def graphSummary(path,summary):
         minGrasp = []; meanGrasp = []; maxGrasp = []
         titleStr = "{}-Roll_{}_Pitch_{}".format(each[0], str(int(round(np.degrees(each[1]),0))), str(int(round(np.degrees(each[2]),0))))
         for eachYaw in each[3]:
-            degree.append(eachYaw[0])
-            number.append(eachYaw[1])
-            minGrasp.append(float(eachYaw[2]))
-            meanGrasp.append(float(eachYaw[3]))
-            maxGrasp.append(float(eachYaw[4]))
+            if eachYaw[0] >= minYaw and eachYaw[0] <= maxYaw:
+                degree.append(eachYaw[0])
+                number.append(eachYaw[1])
+                minGrasp.append(float(eachYaw[2]))
+                meanGrasp.append(float(eachYaw[3]))
+                maxGrasp.append(float(eachYaw[4]))
 
         ax.set_xticks(degree)
         ax.set_yticks(np.arange(max(maxGrasp)))
@@ -115,7 +119,8 @@ def saveToCSV(path,summary):
         csvwriter = csv.writer(csvfile)
         for each in summary:
             for eachYaw in each[3]:
-                csvwriter.writerow([each[0], each[1], each[2], eachYaw[0] ,eachYaw[1], eachYaw[2], eachYaw[3], eachYaw[4]])
+                if eachYaw[0] >= minYaw and eachYaw[0] <= maxYaw:
+                    csvwriter.writerow([each[0], each[1], each[2], eachYaw[0] ,eachYaw[1], eachYaw[2], eachYaw[3], eachYaw[4]])
 
     print("Data Written to : "+newPath)
 
@@ -123,8 +128,8 @@ if __name__ == "__main__":
     os.chdir(os.path.expanduser("~"))
 
     # path = '/home/diyogon/Documents/WPI/Berk_Lab/mer_lab/ros_ws/src/projects/active_vision/data/2020_12_15_230829_dataRec.csv'
-    # path = './DataCollected/prismData/Prism_20x6x5_2000pts/Prism_20x6x5_2000pts.csv'
-    path = './DataCollected/prismData/Prism_10x8x4_2000pts/Prism_10x8x4_2000pts.csv'
+    path = './DataCollected/prismData/Prism_20x6x5_2000pts/Prism_20x6x5_2000pts.csv'
+    # path = './DataCollected/prismData/Prism_10x8x4_2000pts/Prism_10x8x4_2000pts.csv'
     nBins = 360/10
 
     summary = genSummary(path,nBins)
