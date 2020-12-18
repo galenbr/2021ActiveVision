@@ -26,7 +26,10 @@ def predictionServer(req):
     global pipeline,model
     stateVec = np.asarray(req.stateVec.data)
     stateVec = stateVec.reshape((1,stateVec.shape[0]))
-    predDir = model.predict(pipeline.applyFunction(stateVec))
+    if pipeline != None:
+        predDir = model.predict(pipeline.applyFunction(stateVec))
+    else:
+        predDir = model.predict(stateVec)
     rospy.loginfo("Service called. Direction -> "+str(predDir))
     return trainedPolicySRVResponse(direction=predDir)
 
@@ -45,7 +48,9 @@ if __name__ == "__main__":
     stateVec, dirVec = readInput(csvDir+stVecfile, 52)
     dirVec = dirVec.ravel()
 
-    if type == "PCA_LDA":
+    if type == "AS_IT_IS":
+        model.fit(stateVec, dirVec)
+    elif type == "PCA_LDA":
         pipeline = PCALDAPipeline(PCALDA_components)
         pipeline.calculateFunction(stateVec, dirVec)
         model.fit(pipeline.applyFunction(stateVec), dirVec)

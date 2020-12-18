@@ -1,22 +1,6 @@
 <?xml version="1.0"?>
 <launch>
 
-  <!-- <arg name="user" default="$(env USER)" />
-
-  <arg name="config" />
-
-  <group if="$(eval arg('user') == 'sabhari')" ns="active_vision">
-    <rosparam file="$(find active_vision)/config/SN_defaults.yaml" />
-  </group>
-
-  <group if="$(eval arg('user') == 'diyogon')" ns="active_vision">
-    <rosparam file="$(find active_vision)/config/GB_defaults.yaml" />
-  </group>
-
-  <group ns="active_vision">
-  	<rosparam file="$(find active_vision)/config/$(arg config)" />
-  </group> -->
-
   <group ns="active_vision">
   	<rosparam file="$(find active_vision)/config/parameters.yaml" />
     <rosparam param="package_path" subst_value="True">$(find active_vision)</rosparam>

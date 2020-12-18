@@ -342,7 +342,7 @@ int generateData(environment &kinectControl, int object, std::string homePosesTr
 		// Saving the results to csv
 		for(int poses = 0; poses < dataHomePoses.size() ; poses++){
 			dataFinal[poses].filename = getCurTime()+"_"+std::to_string(nSaved);
-			if(dataFinal[poses].nSteps > 0){
+			if(dataFinal[poses].nSteps > 0 && dataFinal[poses].nSteps <= ::maxRndSteps+1){
 				nSaved++;
 				saveData(dataFinal[poses], fout, dir);
 			}
