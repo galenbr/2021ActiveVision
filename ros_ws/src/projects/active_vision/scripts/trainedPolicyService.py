@@ -34,16 +34,16 @@ if __name__ == "__main__":
 
     os.chdir(os.path.expanduser("~"))
 
-    type = rospy.get_param("/active_vision/model_type")
-    PCA_components = rospy.get_param("/active_vision/PCA_component_number")
-    PCALDA_components = rospy.get_param("/active_vision/PCALDA_component_number")
+    rospy.init_node('trainedPolicyServer')
 
-    csvDir = rospy.get_param("/active_vision/data_dir")
-    stVecfile = rospy.get_param("/active_vision/state_vec_csv")
+    type = rospy.get_param("/active_vision/policyTester/policy")
+    PCA_components = rospy.get_param("/active_vision/policyTester/PCA/PCAcomponents")
+    PCALDA_components = rospy.get_param("/active_vision/policyTester/PCALDA/PCAcomponents")
+
+    csvDir = rospkg.RosPack().get_path('active_vision') + "/misc/State_Vector/"
+    stVecfile = rospy.get_param("/active_vision/policyTester/csvStVec")
     stateVec, dirVec = readInput(csvDir+stVecfile, 52)
     dirVec = dirVec.ravel()
-
-    rospy.init_node('trainedPolicyServer')
 
     if type == "PCA_LDA":
         pipeline = PCALDAPipeline(PCALDA_components)
@@ -53,7 +53,7 @@ if __name__ == "__main__":
         pipeline = PCAPipeline(PCA_components)
         pipeline.calculateFunction(stateVec, dirVec)
         model.fit(pipeline.applyFunction(stateVec), dirVec)
-    print(pipeline.ready)
+    # print(pipeline.ready)
     s = rospy.Service('/active_vision/trained_policy', trainedPolicySRV, predictionServer)
     rospy.loginfo("Trained policy service ready.")
     rospy.spin()

@@ -6,10 +6,10 @@
 #include "active_vision/heuristicPolicySRV.h"
 #include "active_vision/trainedPolicySRV.h"
 
-
 int mode;
 int runMode;
 int testAll;
+int maxSteps;
 
 void updateRouteData(environment &env, RouteData &data, bool save ,std::string name){
 	data.success = (env.selectedGrasp != -1);
@@ -42,7 +42,7 @@ std::vector<int> nearbyDirections(int dir){
 }
 // Function the find the grasp
 void findGrasp(environment &kinectControl, int object, int objPoseCode, int objYaw, std::string dir, std::string saveLocation, ptCldVis::Ptr viewer, ros::ServiceClient &policy){
-	int maxSteps = 10;
+
 	std::fstream fout;
  	fout.open(dir+saveLocation, std::ios::out | std::ios::app);
 
@@ -169,7 +169,7 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 			keyPress.ok = false;
 		}else{
 			// Limiting the steps
-			if(current.nSteps > maxSteps){
+			if(current.nSteps > ::maxSteps){
 				current.filename = getCurTime();
 				saveData(current, fout, dir);
 				keyPress.dir = 0;
@@ -211,10 +211,7 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 
 void help(){
   std::cout << "******* Policy Tester Node Help *******" << std::endl;
-  std::cout << "Arguments : [CSV filename] [Object] [MoveMode] [RunMode]" << std::endl;
-  std::cout << "CSV filename : CSV file name (Eg:data.csv) (Use \"default.csv\" to use time as the file name)" << std::endl;
-	std::cout << "Object : Object ID -> 0(Drill),1(Sq Prism),2(Rect Prism)" << std::endl;
-	std::cout << "MoveMode : 1->Normal, 2->New" << std::endl;
+  std::cout << "Arguments : [RunMode]" << std::endl;
 	std::cout << "RunMode : 0->Manual, 1->Heuristic, 2->Trained Policy" << std::endl;
   std::cout << "*******" << std::endl;
 }
@@ -224,20 +221,27 @@ int main(int argc, char** argv){
 
 	ros::init(argc, argv, "Policy_Tester");
  	ros::NodeHandle nh;
-  	ros::ServiceClient policy;
+  ros::ServiceClient policy;
  	environment kinectControl(&nh); sleep(1);
 	kinectControl.setPtCldNoise(0.5);
 	kinectControl.viewsphereRad = 1.0;
-  	kinectControl.loadGripper();
+  kinectControl.loadGripper();
 
+	bool relativePath; nh.getParam("/active_vision/policyTester/relative_path", relativePath);
+	std::string temp;
+	nh.getParam("/active_vision/policyTester/directory", temp);
 	std::string dir;
-	nh.getParam("/active_vision/data_dir", dir);
+	if(relativePath == true){
+		dir = ros::package::getPath("active_vision") + temp;
+	}else{
+		dir = temp;
+	}
+
 	std::string time = getCurTime();
-	std::string tempName;
-	nh.getParam("/active_vision/test_output_csv", tempName);
+	nh.getParam("/active_vision/policyTester/csvName", temp);
 	std::string csvName;
-	if(tempName == "default.csv") csvName = time+"_dataRec.csv";
-	else	csvName = tempName;
+	if(temp == "default.csv") csvName = time+"_dataRec.csv";
+	else	csvName = temp;
 
 	if(csvName.substr(csvName.size() - 4) != ".csv"){
     ROS_ERROR("Incorrect file name.");
@@ -245,11 +249,18 @@ int main(int argc, char** argv){
 	}
 
 	int objID;
-	nh.getParam("/active_vision/object_number", objID);
-	if(objID < 0 && objID > 7) objID = 0;
-	nh.getParam("/active_vision/move_mode", ::mode);
-	if(::mode < 1 && ::mode > 2) ::mode = 1;
-  	::runMode = std::atoi(argv[1]);
+	nh.getParam("/active_vision/policyTester/objID", objID);
+	if(objID < 0 && objID > 7){
+		std::cout << "ERROR. Incorrect Object ID." << std::endl;
+    return(-1);
+	}
+
+	nh.getParam("/active_vision/kinectMode", ::mode);
+	if(::mode < 1 && ::mode > 2) ::mode = 2;
+
+	nh.getParam("/active_vision/policyTester/maxSteps", ::maxSteps);
+
+  ::runMode = std::atoi(argv[1]);
 	if(::runMode < 0 && ::runMode > 2) ::runMode = 0;
 
   if(::runMode == 0){

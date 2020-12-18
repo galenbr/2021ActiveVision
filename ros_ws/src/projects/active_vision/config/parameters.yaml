@@ -1,0 +1,34 @@
+package_path: 'temp' #Gets the package path in roslaunch
+kinectMode: 2 # Kinect Movement Mode
+
+# Parameters for DataCollectorV2 code
+dataCollectorV2: {
+    relative_path: True, # Whether this is relative to the package_path
+    directory: '/dataCollected/trainingData/', # Directory to which the PCD, CSV will be saved
+    objID: 1, # Object for which data has to be collected
+    csvName: 'default.csv', # CSV file to which the data has to be saved
+    nData: 25, # Number of dataPoints to be recorded
+    homePosesCSV: 'dataCollectionTreeD2.csv', # CSV file in active_vision/misc/ folder to be used to get home poses
+    maxRdmSteps: 4, # Max number of random steps to be taken before restarting
+    nRdmSearch: 3, # Number times a random search is initiated before going to the next direction
+}
+
+# Parameters for policyTester code
+policyTester: {
+    policy: "PCA_LDA", # Policy to be used (This is set in the roslaunch)
+    relative_path: True, # Whether this is relative to the package_path
+    directory: '/dataCollected/testData/', # Directory to which the PCD, CSV will be saved
+    objID: 1, # Object for which data has to be collected
+    csvName: 'default.csv', # CSV file to which the data has to be saved
+    csvStVec: 'Prism_10x8x4_20x6x5_stateVec.csv', # Name of csv inside active_vision/misc/State_Vector/
+    maxSteps: 5, # Max number of steps to be taken before stopping
+
+    # Parameters for PCA->LDA->LR Policy
+    PCALDA: {
+      PCAcomponents: 26,
+    },
+    # Parameters for PCA->LR Policy
+    PCA: {
+      PCAcomponents: 7,
+    },
+}

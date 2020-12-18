@@ -3,7 +3,9 @@
 #include "active_vision/toolViewPointCalc.h"
 #include <active_vision/toolVisualization.h>
 
-int mode = 1;
+int mode;
+int nRdmSearches;
+int maxRndSteps;
 
 std::vector<int> randomDirection(){
 	std::vector<int> dirs = {1,2,3,4,5,6,7,8};
@@ -208,7 +210,6 @@ int generateData(environment &kinectControl, int object, std::string homePosesTr
 	RouteData dataFinalTemp;
 	std::vector<RouteData> dataOneStep,dataHomePoses,dataFinal;
 
-  int maxRndSteps = 4;
   int nHomeConfigs;
 
 	int nSaved=0;
@@ -254,42 +255,42 @@ int generateData(environment &kinectControl, int object, std::string homePosesTr
       printf("8 Dir Search"); std::cout << std::flush;
       dataOneStep.clear();
       graspFound = exploreOneStepAllDir(kinectControl,dataHomePoses[poses],dataOneStep);
-      if(graspFound == true) dataFinal[poses] = dataOneStep.back();
+      if(graspFound == true){
+				dataFinal[poses] = dataOneStep.back();
+			}else{
+				// if(dataHomePoses[poses].nodeInfo.possibleSolChildIndex != -1) ::nRdmSearches = 1;
 
-			int nRDMSearches = 3;
-			if(dataHomePoses[poses].nodeInfo.possibleSolChildIndex != -1) nRDMSearches = 1;
-      // If we dont find a grasp after one step, then check using random searches
-      for (int rdmSearchCtr = 1; rdmSearchCtr <= nRDMSearches && graspFound == false; rdmSearchCtr++){
-        printf(" Random Search #%d",rdmSearchCtr); std::cout << std::flush;
-        int nSteps;
+				// If we dont find a grasp after one step, then check using random searches
+				int nSteps = ::maxRndSteps;
 				if(dataHomePoses[poses].nodeInfo.possibleSolChildIndex != -1){
 					nSteps = dataHomePoses[poses].nodeInfo.allowedSteps-1;
-				}else{
-					nSteps = std::min(maxRndSteps*rdmSearchCtr,dataHomePoses[poses].nodeInfo.allowedSteps-1);
 				}
-        for(int i = 0; i < dataOneStep.size(); i++){
-					dataFinalTemp.reset();
-					std::cout << "." << nSteps << std::flush;
-          bool graspFoundTemp = exploreRdmStep(kinectControl,dataOneStep[i],nSteps,dataFinalTemp);
-          if(graspFoundTemp == true){
-            graspFound = true;
-            // If its the first time entering this, then store this in expRes
-            if(dataFinal[poses].path.size() == 0){
-              dataFinal[poses] = dataFinalTemp;
-            }
-            // If not, check if current result is better than the previous result and update expRes
-            else if((dataFinalTemp.path.size() < dataFinal[poses].path.size()) ||
-                    (dataFinalTemp.path.size() == dataFinal[poses].path.size() &&
-                     dataFinalTemp.graspQuality > dataFinal[poses].graspQuality)){
-              dataFinal[poses] = dataFinalTemp;
-            }
-            // Update nSteps to speed up the process
-            nSteps = std::min(nSteps,int(dataFinal[poses].path.size()-dataOneStep[i].path.size()));
-            // If nSteps goes to 1, then break as the shortest ahs been found
-            if(nSteps == 1) break;
-          }
-        }
-      }
+
+				for (int rdmSearchCtr = 1; rdmSearchCtr <= ::nRdmSearches && nSteps > 0; rdmSearchCtr++){
+	        printf(" Random Search #%d.",rdmSearchCtr); std::cout << std::flush;
+
+	        for(int i = 0; i < dataOneStep.size() && nSteps > 0; i++){
+						dataFinalTemp.reset();
+						std::cout << nSteps << std::flush;
+	          bool graspFoundTemp = exploreRdmStep(kinectControl,dataOneStep[i],nSteps,dataFinalTemp);
+	          if(graspFoundTemp == true){
+	            graspFound = true;
+	            // If its the first time entering this, then store this in expRes
+	            if(dataFinal[poses].path.size() == 0){
+	              dataFinal[poses] = dataFinalTemp;
+	            }
+	            // If not, check if current result is better than the previous result and update expRes
+	            else if((dataFinalTemp.path.size() < dataFinal[poses].path.size()) ||
+	                    (dataFinalTemp.path.size() == dataFinal[poses].path.size() &&
+	                     dataFinalTemp.graspQuality > dataFinal[poses].graspQuality)){
+	              dataFinal[poses] = dataFinalTemp;
+	            }
+	            // Update nSteps to speed up the process
+	            nSteps = std::min(nSteps,int(dataFinal[poses].path.size()-dataOneStep[i].path.size()-1));
+	          }
+	        }
+	      }
+			}
 
       // If no grasp found, select the child which has a grasp
       if(graspFound == false){
@@ -378,34 +379,48 @@ int main (int argc, char** argv){
 	sleep(1);
 	kinectControl.setPtCldNoise(0.0);
 	kinectControl.viewsphereRad = 1;
-  	kinectControl.loadGripper();
+  kinectControl.loadGripper();
 
+	bool relativePath; nh.getParam("/active_vision/dataCollectorV2/relative_path", relativePath);
+
+	std::string temp;
+	nh.getParam("/active_vision/dataCollectorV2/directory", temp);
 	std::string dir;
-	nh.getParam("/active_vision/data_dir", dir);
+	if(relativePath == true){
+		dir = ros::package::getPath("active_vision") + temp;
+	}else{
+		dir = temp;
+	}
+
 	std::string time = getCurTime();
-	std::string tempName;
-	nh.getParam("/active_vision/run_csv", tempName);
+	nh.getParam("/active_vision/dataCollectorV2/csvName", temp);
 	std::string csvName;
-	if(tempName == "default.csv") csvName = time+"_dataRec.csv";
-	else	csvName = tempName;
+	if(temp == "default.csv") csvName = time+"_dataRec.csv";
+	else	csvName = temp;
 
 	if(csvName.substr(csvName.size() - 4) != ".csv"){
 		std::cout << "ERROR. Incorrect file name." << std::endl;
-    help(); return(-1);
+    return(-1);
 	}
 
 	int objID;
-	nh.getParam("/active_vision/object_number", objID);
+	nh.getParam("/active_vision/dataCollectorV2/objID", objID);
 	if(objID < 0 && objID > 7){
 		std::cout << "ERROR. Incorrect Object ID." << std::endl;
-    help(); return(-1);
+    return(-1);
 	}
 
 	int nDataPoints;
-	nh.getParam("/active_vision/points_to_collect", nDataPoints);
+	nh.getParam("/active_vision/dataCollectorV2/nData", nDataPoints);
 
-	std::string homePosesTreeCSV = ros::package::getPath("active_vision") + "/misc/dataCollectionTreeD2.csv";
-	::mode = 2;
+	nh.getParam("/active_vision/dataCollectorV2/homePosesCSV", temp);
+	std::string homePosesTreeCSV = ros::package::getPath("active_vision") + "/misc/" + temp;
+
+	nh.getParam("/active_vision/kinectMode", ::mode);
+	if(::mode < 1 && ::mode > 2) ::mode = 2;
+
+	nh.getParam("/active_vision/dataCollectorV2/nRdmSearch", ::nRdmSearches);
+	nh.getParam("/active_vision/dataCollectorV2/maxRdmSteps", ::maxRndSteps);
 
 	std::cout << "Start Time : " << getCurTime() << std::endl;
 	start = std::chrono::high_resolution_clock::now();

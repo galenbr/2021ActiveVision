@@ -2,11 +2,11 @@
 <launch>
   <arg name="config" />
 
-  <include file="$(find active_vision)/launch/workspace.launch">
-    <arg name="config" value="$(arg config)" />
-  </include>
+  <include file="$(find active_vision)/launch/workspace.launch" />
 
   <arg name="policy" default="NIL" doc="NIL / HEURISTIC / PCA_LDA / PCA" />
+
+  <rosparam param="/active_vision/policyTester/policy" subst_value="True">$(arg policy)</rosparam>
 
   <env name="ROSCONSOLE_FORMAT" value='[${severity}]: ${message}'/>
 
