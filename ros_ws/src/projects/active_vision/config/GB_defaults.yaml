@@ -1,4 +1,0 @@
-data_dir: "/home/diyogon/Documents/WPI/Berk_Lab/mer_lab/ros_ws/src/projects/active_vision/DataRecAV/"
-model_type: "PCA_LDA"
-PCALDA_component_number: 26
-PCA_component_number: 7

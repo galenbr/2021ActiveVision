@@ -38,3 +38,10 @@ ros_ws/.vscode
 #active vision data
 
 ros_ws/src/projects/active_vision/data/*
+ros_ws/src/projects/active_vision/dataCollected/storage/*
+!ros_ws/src/projects/active_vision/dataCollected/storage/ReadMe.txt
+ros_ws/src/projects/active_vision/dataCollected/testData/*
+!ros_ws/src/projects/active_vision/dataCollected/testData/ReadMe.txt
+ros_ws/src/projects/active_vision/dataCollected/trainingData/*
+!ros_ws/src/projects/active_vision/dataCollected/trainingData/ReadMe.txt
+ros_ws/src/projects/soft_manipulation/CATKIN_IGNORE

@@ -9,6 +9,7 @@
 int mode;
 int runMode;
 int testAll;
+int maxSteps;
 
 void updateRouteData(environment &env, RouteData &data, bool save ,std::string name){
 	data.success = (env.selectedGrasp != -1);
@@ -41,7 +42,7 @@ std::vector<int> nearbyDirections(int dir){
 }
 // Function the find the grasp
 void findGrasp(environment &kinectControl, int object, int objPoseCode, int objYaw, std::string dir, std::string saveLocation, ptCldVis::Ptr viewer, ros::ServiceClient &policy){
-	int maxSteps = 10;
+
 	std::fstream fout;
  	fout.open(dir+saveLocation, std::ios::out | std::ios::app);
 
@@ -65,7 +66,7 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 	home.objPose = {kinectControl.objectPosesDict[object][objPoseCode][1],
 								  kinectControl.objectPosesDict[object][objPoseCode][2],
 									objYaw*(M_PI/180.0)};
-	printf("Starting first pass.\n");
+	// printf("Starting first pass.\n");
 	singlePass(kinectControl, startPose, true, true);
 	updateRouteData(kinectControl,home,true,"Home");
 	current = home;
@@ -81,7 +82,7 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 	pcl::PointXYZ table,a1,a2;
 	table.x = 1.5; table.y = 0; table.z = 1;
 	std::vector<int> nUnexp;
-	printf("Starting while loop.\n");
+	// printf("Starting while loop.\n");
 
 	while(keyPress.ok){
 		viewer->resetStoppedFlag();
@@ -168,7 +169,7 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 			keyPress.ok = false;
 		}else{
 			// Limiting the steps
-			if(current.nSteps > maxSteps){
+			if(current.nSteps > ::maxSteps){
 				current.filename = getCurTime();
 				saveData(current, fout, dir);
 				keyPress.dir = 0;
@@ -210,19 +211,12 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 
 void help(){
   std::cout << "******* Policy Tester Node Help *******" << std::endl;
-  std::cout << "Arguments : [CSV filename] [Object] [MoveMode] [RunMode]" << std::endl;
-  std::cout << "CSV filename : CSV file name (Eg:data.csv) (Use \"default.csv\" to use time as the file name)" << std::endl;
-	std::cout << "Object : Object ID -> 0(Drill),1(Sq Prism),2(Rect Prism)" << std::endl;
-	std::cout << "MoveMode : 1->Normal, 2->New" << std::endl;
+  std::cout << "Arguments : [RunMode]" << std::endl;
 	std::cout << "RunMode : 0->Manual, 1->Heuristic, 2->Trained Policy" << std::endl;
   std::cout << "*******" << std::endl;
 }
 
 int main(int argc, char** argv){
-	if(argc != 5 && argc != 7){
-    ROS_ERROR("Incorrect number of arguments.");
-    help(); return(-1);
-  }
 	chdir(getenv("HOME"));
 
 	ros::init(argc, argv, "Policy_Tester");
@@ -233,35 +227,51 @@ int main(int argc, char** argv){
 	kinectControl.viewsphereRad = 1.0;
   kinectControl.loadGripper();
 
+	bool relativePath; nh.getParam("/active_vision/policyTester/relative_path", relativePath);
+	std::string temp;
+	nh.getParam("/active_vision/policyTester/directory", temp);
 	std::string dir;
-	nh.getParam("/active_vision/data_dir", dir);
+	if(relativePath == true){
+		dir = ros::package::getPath("active_vision") + temp;
+	}else{
+		dir = temp;
+	}
+
 	std::string time = getCurTime();
-	std::string tempName(argv[1]);
+	nh.getParam("/active_vision/policyTester/csvName", temp);
 	std::string csvName;
-	if(tempName == "default.csv") csvName = time+"_dataRec.csv";
-	else	csvName = argv[1];
+	if(temp == "default.csv") csvName = time+"_dataRec.csv";
+	else	csvName = temp;
 
 	if(csvName.substr(csvName.size() - 4) != ".csv"){
     ROS_ERROR("Incorrect file name.");
     help(); return(-1);
 	}
 
-	int objID = std::atoi(argv[2]);
-	if(objID < 0 && objID > 7) objID = 0;
-	::mode = std::atoi(argv[3]);
-	if(::mode < 1 && ::mode > 2) ::mode = 1;
-  ::runMode = std::atoi(argv[4]);
+	int objID;
+	nh.getParam("/active_vision/policyTester/objID", objID);
+	if(objID < 0 && objID > 7){
+		std::cout << "ERROR. Incorrect Object ID." << std::endl;
+    return(-1);
+	}
+
+	nh.getParam("/active_vision/kinectMode", ::mode);
+	if(::mode < 1 && ::mode > 2) ::mode = 2;
+
+	nh.getParam("/active_vision/policyTester/maxSteps", ::maxSteps);
+
+  ::runMode = std::atoi(argv[1]);
 	if(::runMode < 0 && ::runMode > 2) ::runMode = 0;
 
   if(::runMode == 0){
     ROS_INFO("Manual Mode Selected.");
   }
   else if(::runMode == 1){
-		while(ROSCheck("SERVICE","/gazebo/set_model_state")){boost::this_thread::sleep(boost::posix_time::seconds(1));}
+		while(!ROSCheck("SERVICE","/active_vision/heuristic_policy")){boost::this_thread::sleep(boost::posix_time::seconds(1));}
     policy = nh.serviceClient<active_vision::heuristicPolicySRV>("/active_vision/heuristic_policy");
     ROS_INFO("Heuristic Policy Selected.");
   }else if(::runMode == 2){
-		while(ROSCheck("SERVICE","/active_vision/trained_policy")){boost::this_thread::sleep(boost::posix_time::seconds(1));}
+		while(!ROSCheck("SERVICE","/active_vision/trained_policy")){boost::this_thread::sleep(boost::posix_time::seconds(1));}
 		policy = nh.serviceClient<active_vision::trainedPolicySRV>("/active_vision/trained_policy");
     ROS_INFO("Trained Policy Selected.");
 	}

@@ -77,10 +77,10 @@ class PCALDAPipeline(methodPipeline):
 
     def applyFunction(self, X):
         if(not self.ready):
-            print("Wrong")
+            # print("Wrong")
             return methodPipeline.applyFunction(self, X)
         else:
-            print("Right")
+            # print("Right")
             X = self.normalize(X)
             X1 = self.pca.transform(X)
             X2 = self.lda.transform(X1)

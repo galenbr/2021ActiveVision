@@ -339,7 +339,8 @@ int main (int argc, char** argv){
 	sleep(1);
   	kinectControl.loadGripper();
 
-	std::string dir = "./DataRecAV/";
+	std::string dir;
+	nh.getParam("/active_vision/data_dir", dir);
 	std::string time = getCurTime();
 	std::string tempName(argv[1]);
 	std::string csvName;

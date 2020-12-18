@@ -3,6 +3,8 @@
 
   <arg name="visual" default="ON" />
 
+  <arg name="config" />
+
   <env name="ROSCONSOLE_FORMAT" value='[${severity}]: ${message}'/>
 
   <include file="$(find active_vision)/launch/loadParams.launch" />
