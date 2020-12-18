@@ -1,5 +1,5 @@
 /**
- * @file simple_triple.cpp
+ * @file simple_quad.cpp
  * @author Abhinav Gandhi
  * @date Novemeber 2020
  * @version 0.1
@@ -21,6 +21,8 @@
 #include <dynamic_reconfigure/server.h>
 #include <aruco_ros/ArucoThresholdConfig.h>
 
+#include "std_msgs/Bool.h"
+
 cv::Mat inImage;
 aruco::CameraParameters camParam;
 bool useRectifiedImages, normalizeImageIllumination;
@@ -31,6 +33,7 @@ ros::Subscriber cam_info_sub;
 bool cam_info_received;
 image_transport::Publisher image_pub;
 image_transport::Publisher debug_pub;
+ros::Publisher flag_pub;
 
 ros::Publisher pose_pub1;
 ros::Publisher pose_pub2;
@@ -56,9 +59,9 @@ int marker_id4;
 
 void image_callback(const sensor_msgs::ImageConstPtr& msg)
 {
-  ros::Rate r{30};
+  // ros::Rate r{30};
 
-  while(ros::ok()){
+  // while(ros::ok()){
   double ticksBefore = cv::getTickCount();
   static tf::TransformBroadcaster br;
   if (cam_info_received)
@@ -130,6 +133,16 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg)
           pixelMsg.point.y = markers[i].getCenter().y;
           pixelMsg.point.z = 0;
           pixel_pub3.publish(pixelMsg);
+          
+          std_msgs::Bool nframe;
+          nframe.data = false;
+          if(pixelMsg.point.x == 0 && pixelMsg.point.y ==0){
+            flag_pub.publish(nframe);
+          }
+          else{
+            nframe.data = true;
+            flag_pub.publish(nframe);
+          }
         }
         else if (markers[i].id == marker_id4)
         {
@@ -231,10 +244,10 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg)
       return;
     }
   }
-  ros::spinOnce();
-  r.sleep();
+  // ros::spinOnce();
+  // r.sleep();
 }
-}
+// }
 
 // wait for one camerainfo, then shut down that subscriber
 void cam_info_callback(const sensor_msgs::CameraInfo &msg)
@@ -284,6 +297,8 @@ int main(int argc, char **argv)
   pixel_pub3 = nh.advertise<geometry_msgs::PointStamped>("pixel3", 1);
   pixel_pub4 = nh.advertise<geometry_msgs::PointStamped>("pixel4", 1);
   
+  flag_pub = nh.advertise<std_msgs::Bool>("newFrame", 1);
+
   nh.param<double>("marker_size", marker_size, 0.05);
   nh.param<int>("marker_id1", marker_id1, 582);
   nh.param<int>("marker_id2", marker_id2, 26);
