@@ -2,7 +2,10 @@
 <launch>
   <!-- If needed, broadcast static tf for robot root -->
   <node pkg="tf2_ros" type="static_transform_publisher" name="virtual_joint_broadcaster_1" args="0 0 0 0 0 0 world panda_link0" />
-  
+   <!-- Map to world -->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="virtual_joint_broadcaster_2" args="0 0 0 0 0 0 map world" /> 
+   <!-- EE -->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="virtual_joint_broadcaster_3" args="0 0 0 0 0 0 panda_EE end_effector_link" /> 
   <!-- Arguments -->
   <arg name="padlock_x" value="0.61" />
   <arg name="padlock_y" value="-0.1875" />
@@ -41,19 +44,22 @@
        spiral_rot: Number of spiral rotations
        ft_samples: Number of FT samples to take before insertion
        ft_sleep: Sleep time between FT samples -->
-  <param name="spiral_Ft" type="double" value="0.5" />
-  <param name="spiral_Fd" type="double" value="0.5" />
-  <param name="spiral_Fi" type="double" value="2.0" />
+  <param name="spiral_Ft" type="double" value="1.5" />
+  <param name="spiral_Fd" type="double" value="4.0" />
+  <param name="spiral_Fi" type="double" value="1.5" />
   <param name="spiral_Tx" type="double" value="0.5" />
   <param name="spiral_Ty" type="double" value="0.5" />
-  <param name="spiral_delta_max" type="double" value="0.1" />
+  <param name="spiral_delta_max" type="double" value="0.2" />
   <param name="spiral_delta_step" type="double" value="0.0005" /> <!-- Should be 0.00025 eventually -->
   <param name="spiral_a"    type="double" value="0.0" />
-  <param name="spiral_b"    type="double" value="0.0005" /> <!-- 0.000025 -->
-  <param name="spiral_nmax" type="int" value="50" />
+  <param name="spiral_b"    type="double" value="0.000005" /> <!-- 0.000025 -->
+  <param name="spiral_nmax" type="double" value="1000.0" />
   <param name="spiral_rot"  type="double" value="10.0" />
-  <param name="ft_samples"  type="int" value="25" />
+  <param name="ft_samples"  type="int" value="50" />
   <param name="ft_sleep"    type="double" value="0.05" />
+  <param name="x_misalignment"  type="double" value="0.005" />
+  <param name="y_misalignment"    type="double" value="0.0" />
+  <param name="min_spiral_force"    type="double" value="-0.6" />
 
   <include file="$(find franka_control)/launch/franka_control.launch" >
     <arg name="robot_ip" value="$(arg robot_ip)" />
@@ -74,5 +80,6 @@
   <node name="constraints" type="arm_constraints_node" pkg="lock_key" />
   <!--Start Spiral Insert Node-->
   <node name="spiral_insert" type="spiral_insert_node" pkg="lock_key" output="screen"/>
-  <include file="$(find panda_moveit_config)/launch/moveit_rviz.launch" if="$(arg launch_rviz)" />
+  <!--Start Rviz-->
+  <!-- <include file="$(find panda_moveit_config)/launch/moveit_rviz.launch" if="$(arg launch_rviz)" /> -->
 </launch>
