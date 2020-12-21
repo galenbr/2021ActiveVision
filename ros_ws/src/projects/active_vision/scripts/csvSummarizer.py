@@ -39,7 +39,7 @@ def PCASummary(fileName):
     h = []
     a = []
     d = []
-    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 
+    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red',
               'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray']
     labels = ['N','NE','E','SE','S','SW','W','NW']
     for i in range(len(data)):
@@ -60,7 +60,7 @@ def PCASummary(fileName):
     plt.legend()
     plt.show()
 
-'''Read file and summarize information about each interval of camera data. 
+'''Read file and summarize information about each interval of camera data.
 summary = [[objName, objRoll, objPitch, [YawData]]]
 YawData = [yawEndAngle, #ofDataPoints, minSteps, avgSteps, maxSteps, #stepsBelownStepsSplit, #stepsAbovenStepsSplit]'''
 def genSummary(fileName,nBins):
@@ -121,15 +121,17 @@ def printSummary(summary):
 
 #Generate a bar graph of the summary
 def graphSummary(path,summary):
-    for each in summary:
-        # Create two subplots and unpack the output array immediately
-        fig, (ax1, ax2) = plt.subplots(2, 1)
-        fig.set_size_inches(13, 10)
+    nPlots = len(summary)
+    rows = min(4,nPlots); cols = int((nPlots-1)/4)+1
+    fig, ax = plt.subplots(rows,cols)
+    ax = np.ravel(ax)
+    fig.set_size_inches(cols*7, 3*rows)
+    fig.suptitle('# Datapoints & Min-Avg-Max Steps for a grasp', fontsize='medium')
+    for idx, each in enumerate(summary):
         degree = []; number = []
         minGrasp = []; meanGrasp = []; maxGrasp = []
         split1 = []; split2 = []
         titleStr = "{}-Roll_{}_Pitch_{}".format(each[0], str(int(round(np.degrees(each[1]),0))), str(int(round(np.degrees(each[2]),0))))
-        fig.suptitle(titleStr)
         for eachYaw in each[3]:
             if eachYaw[0] >= minYaw and eachYaw[0] <= maxYaw:
                 degree.append(int(eachYaw[0]))
@@ -140,40 +142,50 @@ def graphSummary(path,summary):
                 split1.append(float(eachYaw[5]));
                 split2.append(float(eachYaw[6]));
 
-        ax1.set_title('# Datapoints & Min-Avg-Max Steps for a grasp')
-        ax1.set_xticks(degree)
-        ax1.set_xticklabels(["<"+str(s) for s in degree])
-        ax1.set_yticks(np.arange(max(maxGrasp)))
-        ax1.grid(axis='y')
-        ax1.set_xlabel('Yaw')
-        ax1.set_ylabel('Steps to grasp')
-        ax1.tick_params(axis='y', labelcolor="k")
-        ax1.bar(degree, maxGrasp, width=8, color="tab:red", label='Max Steps')
-        ax1.bar(degree, meanGrasp, width=8, color="tab:orange", label='Avg Steps')
-        ax1.bar(degree, minGrasp, width=8, color="tab:green", label='Min Steps')
-        ax1.legend()
-        ax1A = ax1.twinx(); color = 'tab:blue'
-        ax1A.set_ylabel('# Datapoints', color=color)
-        ax1A.plot(degree, number, color=color, marker = "o")
-        ax1A.tick_params(axis='y', labelcolor=color)
+        ax[idx].set_title(titleStr, fontsize='small')
+        ax[idx].set_xticks(degree)
+        ax[idx].set_xticklabels([str(s-1) for s in degree])
+        for n, label in enumerate(ax[idx].xaxis.get_ticklabels()):
+            if n % 10 != 0:
+                label.set_visible(False)
+        ax[idx].set_yticks(np.arange(max(maxGrasp)))
+        ax[idx].grid(axis='y')
+        ax[idx].set_xlabel('Yaw', fontsize='x-small')
+        ax[idx].xaxis.set_tick_params(labelsize=7)
+        ax[idx].yaxis.set_tick_params(labelsize=7)
+        ax[idx].set_ylabel('Steps to grasp', fontsize='x-small')
+        ax[idx].tick_params(axis='y', labelcolor="k")
+        ax[idx].bar(degree, maxGrasp, width=1, color="tab:red", label='Max Steps')
+        ax[idx].bar(degree, meanGrasp, width=1, color="tab:blue", label='Avg Steps')
+        ax[idx].bar(degree, minGrasp, width=1, color="tab:green", label='Min Steps')
+        ax[idx].set_ylim(bottom=0)
+        ax[idx].set_ylim(top=8)
+        ax1A = ax[idx].twinx();
+        ax1A.set_ylabel('# Datapoints', color='k', fontsize='x-small')
+        ax1A.yaxis.set_tick_params(labelsize=7)
+        ax1A.plot(degree, number, linestyle='None', color='k', marker = "o", markersize = '3')
+        ax1A.tick_params(axis='y', labelcolor='k')
+        ax1A.set_ylim(bottom=0)
 
-        ax2.grid(axis='y')
-        ax2.set_title('Split of datapoints based on #Steps')
-        ax2.set_xlabel('Yaw')
-        ax2.set_xticks(degree)
-        ax2.set_xticklabels(["<"+str(s) for s in degree])
-        ax2.set_ylim(0, 100)
-        ax2.set_ylabel('% Datapoints', color='k')
-        ax2.bar(np.asarray(degree)-2, split1, width=4, color="tab:green", label='<= '+ str(nStepsSplit))
-        ax2.bar(np.asarray(degree)+2, split2, width=4, color="tab:red", label='> '+ str(nStepsSplit))
-        ax2.legend()
+        # ax2.grid(axis='y')
+        # ax2.set_title('Split of datapoints based on #Steps')
+        # ax2.set_xlabel('Yaw')
+        # ax2.set_xticks(degree)
+        # ax2.set_xticklabels(["<"+str(s) for s in degree])
+        # ax2.set_ylim(0, 100)
+        # ax2.set_ylabel('% Datapoints', color='k')
+        # ax2.bar(np.asarray(degree)-2, split1, width=4, color="tab:green", label='<= '+ str(nStepsSplit))
+        # ax2.bar(np.asarray(degree)+2, split2, width=4, color="tab:red", label='> '+ str(nStepsSplit))
+        # ax2.legend()
 
-        if(mode == "GRAPH_SAVE"):
-            newPath = path[:path.rfind('/')+1] + titleStr + ".png"
-            plt.savefig(newPath)
-            print("Graph saved to : "+newPath)
-        elif(mode == "GRAPH_VIEW"):
-            plt.show()
+    fig.legend(loc='lower center',ncol=3,fontsize='x-small')
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    if(mode == "GRAPH_SAVE"):
+        newPath = path[:path.rfind('.')] + '_summary' + ".png"
+        plt.savefig(newPath, dpi = 600)
+        print("Graph saved to : "+newPath)
+    elif(mode == "GRAPH_VIEW"):
+        plt.show()
 
 #Save the summary for future use.
 def saveToCSV(path,summary):
@@ -188,12 +200,18 @@ def saveToCSV(path,summary):
     print("Data Written to : "+newPath)
 
 if __name__ == "__main__":
-    os.chdir(os.path.expanduser("~"))
+    if len(sys.argv) != 3:
+        print("Incorrect number of arguments")
+        sys.exit()
 
-    path = '/home/diyogon/Documents/WPI/Berk_Lab/mer_lab/ros_ws/src/projects/active_vision/data/Prism_10x8x4_2000pts.csv'
-    #path = './DataCollected/prismData/Prism_20x6x5_2000pts/Prism_20x6x5_2000pts.csv'
-    # path = './DataCollected/prismData/Prism_10x8x4_2000pts/Prism_10x8x4_2000pts.csv'
+    path = sys.argv[1]
+    mode = sys.argv[2]
+    if mode!='GRAPH_VIEW' and mode!='GRAPH_SAVE' and mode!='PRINT' and mode!='CSV' :
+        mode = 'GRAPH_VIEW'
+
     nBins = 360/10
+    if(mode == "GRAPH_VIEW" or mode == "GRAPH_SAVE"):
+        nBins = 360
 
     summary = genSummary(path,nBins)
     if(mode == "PRINT"):
