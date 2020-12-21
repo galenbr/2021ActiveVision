@@ -1,6 +1,4 @@
 #!/usr/bin/env python2
-
-# import rospkg
 import sys, csv, time, random, math
 import numpy as np
 from os import path
@@ -24,19 +22,26 @@ def helpDisp(text):
     print('\n-----End Help-----\n')
     sys.exit()
 
+'''Base class to handle the entire input->preprocessing->prediction
+pipeline. Must be trained with calculateFunction before using.
+Subclasses are for different specific preprocessing schemes.'''
 class methodPipeline(object):
     def __init__(self):
         self.ready = False
         self.scaler = StandardScaler()
         return self
 
+    #Use X and y to train the preprocessor. TODO:Add model
     def calculateFunction(self, X, y):
         return self.ready
 
+    #Apply the preprocessor to X. Not designed for external
+    # use.
     def normalize(self, X):
         Xscaled = self.scaler.transform(X)
         return Xscaled
 
+    #Apply the entire pipeline to X.
     def applyFunction(self, X):
         return self.ready
 
@@ -64,23 +69,10 @@ class PCALDAPipeline(methodPipeline):
         self.ready = True
         return methodPipeline.calculateFunction(self, X, y)
 
-    '''def saveModel(self,name):
-        dump(self.scaler, open(name+'_scaler.pkl', 'wb'))
-        dump(self.pca, open(name+'_pca.pkl', 'wb'))
-        dump(self.lda, open(name+'_lda.pkl', 'wb'))
-
-    def loadModel(self, name):
-        self.scaler = pickle.load(open(name+'_scaler.pkl', 'rb'))
-        self.pca = pickle.load(open(name+'_pca.pkl', 'rb'))
-        self.lda = pickle.load(open(name+'_lda.pkl', 'rb'))
-        self.ready = True'''
-
     def applyFunction(self, X):
         if(not self.ready):
-            # print("Wrong")
             return methodPipeline.applyFunction(self, X)
         else:
-            # print("Right")
             X = self.normalize(X)
             X1 = self.pca.transform(X)
             X2 = self.lda.transform(X1)
@@ -103,15 +95,6 @@ class PCAPipeline(methodPipeline):
     def loadModel(self, name):
         self = pickle.load(open(name+'_pipeline.pkl', 'rb'))
 
-    '''def saveModel(self,name):
-        dump(self.scaler, open(name+'_scaler.pkl', 'wb'))
-        dump(self.pca, open(name+'_pca.pkl', 'wb'))
-
-    def loadModel(self, name):
-        self.scaler = pickle.load(open(name+'_scaler.pkl', 'rb'))
-        self.pca = pickle.load(open(name+'_pca.pkl', 'rb'))
-        self.ready = True'''
-
     def applyFunction(self, X):
         if(not self.ready):
             return methodPipeline.applyFunction(self, X)
@@ -124,12 +107,21 @@ class BrickPipeline(methodPipeline):
     def __init__(self):
         super(methodPipeline, self).__init__()
 
+#Dummy model that always predicts the same direction.
 class BrickModel():
     def fit(self, X, y):
         return
 
     def predict(self, X):
         return np.ones(X.shape[0])
+
+#Dummy model that randomly returns a direction [1-8].
+class RandomModel():
+    def fit(self, X, y):
+        return
+
+    def predict(self, X):
+        return np.random.choice(range(1,9), X.shape[0])
 
 #Function to read the input data file
 def readInput(fileName,dim):
@@ -149,11 +141,13 @@ def readInput(fileName,dim):
 
 	return np.asarray(states),np.asarray(dir)
 
+#K-fold validation of the given pipeline with the given model.
 def kFold(filename, pipeline, model, name='na', dim=52, k=5):
     stateVec, dirVec = readInput(filename, dim)
     dirVec = dirVec.ravel()
     kFold = KFold(n_splits=k, random_state=None)
     accuracies = []
+    #Split the data, then train and test on the split.
     for train_index, test_index in kFold.split(stateVec):
         X_train, X_test = stateVec[train_index, :], stateVec[test_index, :]
         y_train, y_test = dirVec[train_index], dirVec[test_index]
@@ -162,15 +156,13 @@ def kFold(filename, pipeline, model, name='na', dim=52, k=5):
         X_test_vec = pipeline.applyFunction(X_test)
         model.fit(X_train_vec, y_train)
         pred_values = model.predict(X_test_vec)
-        #print(pred_values, y_test)
-        #pred_values = np.ones(pred_values.shape)
         acc = accuracy_score(pred_values, y_test)
         accuracies.append(acc)
+    #Display results
     avg_accuracy = sum(accuracies)/k
     for acc in accuracies:
         print("%1.2f" % acc)
     print("Overall average: %1.2f" % (avg_accuracy))
-
     # Storing the trained models
     if name != 'na':
         pipeline.calculateFunction(stateVec, dirVec)
@@ -178,8 +170,9 @@ def kFold(filename, pipeline, model, name='na', dim=52, k=5):
         model.fit(pipeline.applyFunction(stateVec), dirVec)
         dump(model, open(name+'_lr.pkl', 'wb'))
 
+#Convenience function to run several tests at once on the same data.
 def standardRun(file):
-    model = LogisticRegression(solver='liblinear', multi_class='auto')
+    model = LogisticRegression(solver='liblinear', multi_class='multinomial')
     PCA_components = rospy.get_param("/active_vision/PCA_component_number")
     PCALDA_components = rospy.get_param("/active_vision/PCALDA_component_number")
     # model = KNeighborsClassifier(n_neighbors=7)

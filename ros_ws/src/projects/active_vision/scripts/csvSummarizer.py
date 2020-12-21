@@ -1,17 +1,19 @@
 #!/usr/bin/env python2
-
-# import rospkg
 import sys, csv,os, copy
 import numpy as np
 from prettytable import PrettyTable
 import matplotlib.pyplot as plt
 
-# mode = "GRAPH_VIEW"
-mode = "GRAPH_SAVE"
-# mode = "PRINT"
-# mode = "CSV"
+#mode = "GRAPH_VIEW"
+#mode = "GRAPH_SAVE"
+mode = "PRINT"
+#mode = "CSV"
+#mode = "PCA"
+
+# Y-limit for histogram
 minYaw = 0
 maxYaw = 180
+# Path length cutoff for analysis
 nStepsSplit = 5
 
 #Function to read the input data file
@@ -26,6 +28,41 @@ def readInput(fileName):
 
 	return np.asarray(data)
 
+#Read file and plot camera angle versus initial direction chosen. TODO:
+# Move to a separate file? Refactor for more general data analysis?
+def PCASummary(fileName):
+    data = readInput(fileName)
+    plt.figure(figsize=(10,9))
+    plt.xlabel('horizontal',fontsize=20)
+    plt.ylabel('azimuthal',fontsize=20)
+    plt.title("Prism_10x8x4_Pose_1.57x1.57 Direction analysis",fontsize=20)
+    h = []
+    a = []
+    d = []
+    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 
+              'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray']
+    labels = ['N','NE','E','SE','S','SW','W','NW']
+    for i in range(len(data)):
+        each = data[i]
+        if(each[1]==each[2]):
+            nSteps = (len(each)-14)/3-1
+            for step in range(nSteps):
+                offset = step*3
+                h.append(np.degrees(float(each[15+offset])))
+                a.append(np.degrees(float(each[16+offset])))
+                d.append(int(each[12])-1)
+    h = np.array(h)
+    a = np.array(a)
+    d = np.array(d)
+    for j in range(8):
+        target_index = d == j
+        plt.scatter(h[target_index], a[target_index], c=colors[j], label=labels[j])
+    plt.legend()
+    plt.show()
+
+'''Read file and summarize information about each interval of camera data. 
+summary = [[objName, objRoll, objPitch, [YawData]]]
+YawData = [yawEndAngle, #ofDataPoints, minSteps, avgSteps, maxSteps, #stepsBelownStepsSplit, #stepsAbovenStepsSplit]'''
 def genSummary(fileName,nBins):
     #Bins based on stepSize for yaw and space for nData,min,avg,max steps, split1, split2
     bins = []
@@ -68,6 +105,7 @@ def genSummary(fileName,nBins):
 
     return summary
 
+#Output neat table of summary.
 def printSummary(summary):
     t = PrettyTable(['Bins(Yaw)', '#Data' , 'Min Steps', 'Avg Steps', 'Max Steps', '% <= '+ str(nStepsSplit) + ' steps', '% > '+ str(nStepsSplit)  + ' steps'])
     for each in summary:
@@ -81,6 +119,7 @@ def printSummary(summary):
                     t.add_row([eachYaw[0] , " ", " " , " " , " " , " ", " "])
         print(t)
 
+#Generate a bar graph of the summary
 def graphSummary(path,summary):
     for each in summary:
         # Create two subplots and unpack the output array immediately
@@ -136,6 +175,7 @@ def graphSummary(path,summary):
         elif(mode == "GRAPH_VIEW"):
             plt.show()
 
+#Save the summary for future use.
 def saveToCSV(path,summary):
     newPath = path[:-4] + "_summary.csv"
     with open(newPath, 'w') as csvfile:
@@ -150,8 +190,8 @@ def saveToCSV(path,summary):
 if __name__ == "__main__":
     os.chdir(os.path.expanduser("~"))
 
-    # path = '/home/diyogon/Documents/WPI/Berk_Lab/mer_lab/ros_ws/src/projects/active_vision/data/2020_12_15_230829_dataRec.csv'
-    path = './DataCollected/prismData/Prism_20x6x5_2000pts/Prism_20x6x5_2000pts.csv'
+    path = '/home/diyogon/Documents/WPI/Berk_Lab/mer_lab/ros_ws/src/projects/active_vision/data/Prism_10x8x4_2000pts.csv'
+    #path = './DataCollected/prismData/Prism_20x6x5_2000pts/Prism_20x6x5_2000pts.csv'
     # path = './DataCollected/prismData/Prism_10x8x4_2000pts/Prism_10x8x4_2000pts.csv'
     nBins = 360/10
 
@@ -162,3 +202,5 @@ if __name__ == "__main__":
         graphSummary(path,summary)
     elif(mode == "CSV"):
         saveToCSV(path,summary)
+    elif(mode == "PCA"):
+        PCASummary(path)
