@@ -79,7 +79,7 @@ environment::environment(ros::NodeHandle *nh){
   subKinectDepth = nh->subscribe ("/camera/depth/image_raw", 1, &environment::cbImgDepth, this);*/
 
   readFlag[3] = {};           // Flag used to read data from kinect only when needed
-  fingerZOffset = 0.0584;     // Z axis offset between gripper hand and finger
+  nh->getParam("/active_vision/environment/fingerZOffset", fingerZOffset); // Z axis offset between gripper hand and finger
 
   // Transform : Kinect Optical Frame to Kinect Gazebo frame
   tfKinOptGaz = pcl::getTransformation(0,0,0,-M_PI/2,0,-M_PI/2);
@@ -99,23 +99,10 @@ environment::environment(ros::NodeHandle *nh){
   for(int i=0; i<tempDict.size(); i+=stepSize){
     std::vector<std::string> tempElement;
     for(int j=0; j<stepSize; j++){
-      std::cout << i << std::endl;
-      std::cout << i+j << std::endl;
       tempElement.push_back(tempDict[i+j]);
     }
     objectDict.push_back(tempElement);
-    std::cout << tempDict.size() << std::endl;
-    std::cout << tempDict[i] << std::endl;
   }
-  /*
-  std::map<std::string, std::string> map;
-  std::vector<std::string> cObj;
-  for(std::map<std::string, std::string>::iterator it = map.begin(); it != map.end(); ++it){
-    cObj.push_back(it->first);
-    cObj.push_back(it->second);
-    objectDict.push_back(cObj);
-    cObj.clear();
-  }*/
 
   // Stores stable poses for the objects (Z(m), Roll(Rad), Pitch(Rad))
   objectPosesDict = {{{0.050,0.000,0.000}},
@@ -128,20 +115,22 @@ environment::environment(ros::NodeHandle *nh){
                      {{0.012,0.000,0.000},{0.084,1.459,-0.751},{0.082,1.398,-0.014},{0.040,0.280,-1.040},{0.249,2.860,-0.400},{0.068,-1.287,-0.477},{0.048,-1.570,1.480}}};
 
   objectPosesYawLimits = {{0,89},{0,179},{0,179},{0,179},{0,1},{0,89},{0,359},{0,179},{0,359}};
+     
+  nh->getParam("/active_vision/environment/voxelGridSizeUnexp", voxelGridSizeUnexp); // Voxel Grid size for unexplored point cloud
+  nh->getParam("/active_vision/environment/voxelGridSize", voxelGridSize); // Voxel Grid size for environment
 
-  voxelGridSize = 0.01;          // Voxel Grid size for environment
-  voxelGridSizeUnexp = 0.01;     // Voxel Grid size for unexplored point cloud
-  viewsphereRad = 1;
-  tableCentre = {1.5,0,1};       // Co-ordinates of table centre
+  nh->getParam("/active_vision/environment/viewsphereRad", viewsphereRad);
+  nh->getParam("/active_vision/environment/tableCentre", tableCentre); // Co-ordinates of table centre
   minUnexp = {0,0,0};
   maxUnexp = {0,0,0};
-  scale = 3;                     // Scale value for unexplored point cloud generation
-  maxGripperWidth = 0.08;        // Gripper max width
-  minGraspQuality = 150;         // Min grasp quality threshold
-  selectedGrasp = -1;            // Index of the selected grasp
+  nh->getParam("/active_vision/environment/scale", scale); // Scale value for unexplored point cloud generation
 
-  addNoise = false;
-  depthNoise = 0;
+  nh->getParam("/active_vision/environment/maxGripperWidth", maxGripperWidth); // Gripper max width
+  nh->getParam("/active_vision/environment/minGraspQuality", minGraspQuality); // Min grasp quality threshold
+  nh->getParam("/active_vision/environment/selectedGrasp", selectedGrasp); // Index of the selected grasp
+
+  nh->getParam("/active_vision/environment/addNoise", addNoise);
+  nh->getParam("/active_vision/environment/depthNoise", depthNoise);
 }
 
 // Function to reset the environment
