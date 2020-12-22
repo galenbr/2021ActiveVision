@@ -32,3 +32,19 @@ policyTester: {
       PCAcomponents: 7,
     },
 }
+
+
+# Parameters for the simulated environment
+environment: {
+    object_dictionary: [
+        "prismAV6x6x6", "Prism 6x6x6",
+        "prismAV10x8x4", "Prism 10x8x4", 
+        "prismAV20x6x5", "Prism 20x6x5", 
+        "bowlAV", "Bowl", 
+        "cinderBlockAV", "Cinder Block", 
+        "handleAV", "Door Handle", 
+        "gasketAV", "Gasket", 
+        "drillAV", "Cordless Drill",
+    ], #List of object codes and human readable names
+    object_junk: 3,
+}

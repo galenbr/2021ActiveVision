@@ -93,14 +93,29 @@ environment::environment(ros::NodeHandle *nh){
   path = ros::package::getPath("active_vision");  // Path to the active_vision package folder
 
   // Dictionary of objects to be spawned
-  objectDict = {{"prismAV6x6x6","Prism 6x6x6"},
-                {"prismAV10x8x4","Prism 10x8x4"},
-                {"prismAV20x6x5","Prism 20x6x5"},
-                {"bowlAV","Bowl"},
-                {"cinderBlockAV","Cinder Block"},
-                {"handleAV","Door Handle"},
-                {"gasketAV","Gasket"},
-                {"drillAV","Cordless Drill"}};
+  std::vector<std::string> tempDict;
+  nh->getParam("/active_vision/environment/object_dictionary", tempDict);
+  int stepSize = 2;
+  for(int i=0; i<tempDict.size(); i+=stepSize){
+    std::vector<std::string> tempElement;
+    for(int j=0; j<stepSize; j++){
+      std::cout << i << std::endl;
+      std::cout << i+j << std::endl;
+      tempElement.push_back(tempDict[i+j]);
+    }
+    objectDict.push_back(tempElement);
+    std::cout << tempDict.size() << std::endl;
+    std::cout << tempDict[i] << std::endl;
+  }
+  /*
+  std::map<std::string, std::string> map;
+  std::vector<std::string> cObj;
+  for(std::map<std::string, std::string>::iterator it = map.begin(); it != map.end(); ++it){
+    cObj.push_back(it->first);
+    cObj.push_back(it->second);
+    objectDict.push_back(cObj);
+    cObj.clear();
+  }*/
 
   // Stores stable poses for the objects (Z(m), Roll(Rad), Pitch(Rad))
   objectPosesDict = {{{0.050,0.000,0.000}},

@@ -11,6 +11,7 @@ import pickle
 from active_vision.srv import trainedPolicySRV,trainedPolicySRVResponse
 from trainingPolicy import PCALDAPipeline, PCAPipeline, readInput
 
+#Currently only 1 model. TODO: add more/incorporate with pipeline class
 model = LogisticRegression(solver='liblinear', multi_class='auto')
 pipeline = None
 
@@ -22,14 +23,12 @@ def helpDisp(text):
     print('\n-----End Help-----\n')
     sys.exit()
 
+#Takes a state vector input and returns a predicted direction
 def predictionServer(req):
     global pipeline,model
     stateVec = np.asarray(req.stateVec.data)
     stateVec = stateVec.reshape((1,stateVec.shape[0]))
-    if pipeline != None:
-        predDir = model.predict(pipeline.applyFunction(stateVec))
-    else:
-        predDir = model.predict(stateVec)
+    predDir = model.predict(pipeline.applyFunction(stateVec))
     rospy.loginfo("Service called. Direction -> "+str(predDir))
     return trainedPolicySRVResponse(direction=predDir)
 
@@ -37,20 +36,24 @@ if __name__ == "__main__":
 
     os.chdir(os.path.expanduser("~"))
 
+    #Load parameters from yaml
     rospy.init_node('trainedPolicyServer')
-
     type = rospy.get_param("/active_vision/policyTester/policy")
     PCA_components = rospy.get_param("/active_vision/policyTester/PCA/PCAcomponents")
     PCALDA_components = rospy.get_param("/active_vision/policyTester/PCALDA/PCAcomponents")
-
-    csvDir = rospkg.RosPack().get_path('active_vision') + "/misc/State_Vector/"
     stVecfile = rospy.get_param("/active_vision/policyTester/csvStVec")
+
+    #Hardcoded state vector location- TODO: look into adding this to
+    # the yaml?
+    csvDir = rospkg.RosPack().get_path('active_vision') + "/misc/State_Vector/"
+
+    #stateVec=List of all raw states
+    #dirVec=List of the direction taken for each state
+    #directions=N(1),NE(2),E(3),SE(4),S(5),SW(6),W(7),NW(8)
     stateVec, dirVec = readInput(csvDir+stVecfile, 52)
     dirVec = dirVec.ravel()
 
-    if type == "AS_IT_IS":
-        model.fit(stateVec, dirVec)
-    elif type == "PCA_LDA":
+    if type == "PCA_LDA":
         pipeline = PCALDAPipeline(PCALDA_components)
         pipeline.calculateFunction(stateVec, dirVec)
         model.fit(pipeline.applyFunction(stateVec), dirVec)
@@ -58,7 +61,6 @@ if __name__ == "__main__":
         pipeline = PCAPipeline(PCA_components)
         pipeline.calculateFunction(stateVec, dirVec)
         model.fit(pipeline.applyFunction(stateVec), dirVec)
-    # print(pipeline.ready)
     s = rospy.Service('/active_vision/trained_policy', trainedPolicySRV, predictionServer)
     rospy.loginfo("Trained policy service ready.")
     rospy.spin()

@@ -12,6 +12,9 @@
 
 typedef actionlib::SimpleActionClient<lock_key::SpiralInsertAction> SpiralClient;
 
+double x_misalignment{0.0};
+double y_misalignment{0.0};
+
 void moveGripper(double Grasp_Width,double gripper_timout){
     actionlib::SimpleActionClient<franka_gripper::GraspAction> ac("franka_gripper/grasp", true);
     ac.waitForServer();
@@ -108,6 +111,10 @@ int main(int argc, char ** argv){
     ros::service::waitForService("move_to_joint_space", -1);
     moveit_planner::SetVelocity velscale;
 
+    //Retrieve parameters
+    n.getParam("x_misalignment",x_misalignment);
+    n.getParam("y_misalignment",y_misalignment);
+
     // moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
     // moveit::planning_interface::MoveGroupInterface group("panda_arm");
     // addCollisionObjects(planning_scene_interface);
@@ -120,9 +127,9 @@ int main(int argc, char ** argv){
     p1.orientation.y = -0.5;
     p1.orientation.z = 0.0;
     p1.orientation.w = 0.0;
-    p1.position.x = 0.52;
-    p1.position.y = 0.2;
-    p1.position.z = 0.15+0.15;
+    p1.position.x = 0.5715;
+    p1.position.y = 0.2623;
+    p1.position.z = 0.1665+0.15;
     move1.request.val.push_back(p1);
     move1.request.execute = true;
     cartMoveClient.call(move1);
@@ -135,9 +142,9 @@ int main(int argc, char ** argv){
     p2.orientation.y = -0.5;
     p2.orientation.z = 0.0;
     p2.orientation.w = 0.0;
-    p2.position.x = 0.52;
-    p2.position.y = 0.2;
-    p2.position.z = 0.17;
+    p2.position.x = p1.position.x;
+    p2.position.y = p1.position.y;
+    p2.position.z = 0.1665;
     move2.request.val.push_back(p2);
     move2.request.execute = true;
     cartMoveClient.call(move2);
@@ -153,9 +160,9 @@ int main(int argc, char ** argv){
     p1a.orientation.y = -0.5;
     p1a.orientation.z = 0.0;
     p1a.orientation.w = 0.0;
-    p1a.position.x = 0.52;
-    p1a.position.y = 0.2;
-    p1a.position.z = 0.15+0.15;
+    p1a.position.x = p1.position.x;
+    p1a.position.y = p1.position.y;
+    p1a.position.z = p1.position.z;
     move1a.request.val.push_back(p1a);
     move1a.request.execute = true;
     cartMoveClient.call(move1a);
@@ -168,13 +175,28 @@ int main(int argc, char ** argv){
     p3.orientation.y = -0.5;
     p3.orientation.z = 0.0;
     p3.orientation.w = 0.0;
-    p3.position.x = 0.52;
-    p3.position.y = -0.16;
-    p3.position.z = 0.15+0.15;
+    p3.position.x = 0.5715+x_misalignment;
+    p3.position.y = 0.1907+y_misalignment;
+    p3.position.z = 0.1665+0.15;
     move3.request.val.push_back(p3);
     move3.request.execute = true;
     cartMoveClient.call(move3);
-    ROS_INFO("Reached pre-lock pose!");
+    ROS_INFO("Reached far pre-lock pose!");
+
+    // Move to above Lock (but closer)
+    moveit_planner::MoveCart move4;
+    geometry_msgs::Pose p4;
+    p4.orientation.x = 1.0;
+    p4.orientation.y = -0.5;
+    p4.orientation.z = 0.0;
+    p4.orientation.w = 0.0;
+    p4.position.x = p3.position.x;
+    p4.position.y = p3.position.y;
+    p4.position.z = 0.1665+0.03;
+    move4.request.val.push_back(p4);
+    move4.request.execute = true;
+    cartMoveClient.call(move4);
+    ROS_INFO("Reached close pre-lock pose!");
 
     // reducing velocity
     velscale.request.velScaling = 0.3;
@@ -234,9 +256,9 @@ int main(int argc, char ** argv){
     p3a.orientation.y = -0.5;
     p3a.orientation.z = 0.0;
     p3a.orientation.w = 0.0;
-    p3a.position.x = 0.52;
-    p3a.position.y = -0.16;
-    p3a.position.z = 0.15+0.15;
+    p3a.position.x = p3.position.x;
+    p3a.position.y = p3.position.y;
+    p3a.position.z = p3.position.z;
     move3a.request.val.push_back(p3a);
     move3a.request.execute = true;
     cartMoveClient.call(move3a);
@@ -245,16 +267,15 @@ int main(int argc, char ** argv){
     // Move to Home (roughly)
     // JOINT SPACE IMPLEMENTATION
     moveit_planner::MoveJoint jpos;
-    // panda_joint1, panda_joint2, panda_joint3,
-    // panda_joint4, panda_joint5, panda_joint6, panda_joint7
+    // panda_joint1 - panda_joint7
     jpos.request.execute = true;
-    jpos.request.val.push_back(0.34518408463181594);
-    jpos.request.val.push_back(-0.5886091012133754);
-    jpos.request.val.push_back(-0.23394426883041586);
-    jpos.request.val.push_back(-2.0712576495897927);
-    jpos.request.val.push_back(-0.1384774200436345);
-    jpos.request.val.push_back(1.5505549706586192);
-    jpos.request.val.push_back(0.7042995433536605);
+    jpos.request.val.push_back(0.0); //0.34518408463181594
+    jpos.request.val.push_back(-0.785); //-0.5886091012133754
+    jpos.request.val.push_back(0.0); //-0.23394426883041586
+    jpos.request.val.push_back(-2.356); //-2.0712576495897927
+    jpos.request.val.push_back(0.0); //-0.1384774200436345
+    jpos.request.val.push_back(1.57); //1.5505549706586192
+    jpos.request.val.push_back(0.784); //0.7042995433536605
     jointSpaceClient.call(jpos);
     // END - JOINT SPACE IMPLEMENTATION
 

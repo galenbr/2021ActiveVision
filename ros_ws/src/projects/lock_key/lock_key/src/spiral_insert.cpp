@@ -18,7 +18,7 @@ double Tx_limit;
 double Ty_limit;
 double Fx_bias{0}, Fy_bias{0}, Fz_bias{0};
 double Tx_bias{0}, Ty_bias{0}, Tz_bias{0};
-
+double minSpiralForce{0.0};
 typedef actionlib::SimpleActionServer<lock_key::SpiralInsertAction> Server;
 
 bool maxDownForce(double force, bool final_insert){
@@ -52,21 +52,24 @@ bool maxSpiralForces(double Fd){
                             currentWrench.response.ty-Ty_bias,
                             currentWrench.response.tz-Tz_bias};
 
-    ROS_INFO("Stop if %f>%f",forces[2],Fd);
+    //ROS_INFO("Stop if %f>%f",forces[2],Fd);
     // ROS_INFO("Stop if (Tx: %f > %f or Ty: %f > %f or Fz: %f > %f)",
     //         sqrt(pow(torques[0],2)),Tx_limit,sqrt(pow(torques[1],2)),Ty_limit,
     //         forces[2],Fd);
 
     //Break spiral if true
- // return ((sqrt(pow(torques[0],2))>Tx_limit) || //tx>0.9 or
- //            (sqrt(pow(torques[1],2))>Ty_limit) || //ty>0.9 or
- //            (forces[2]>Fd));                //fz>Fd
-    return forces[2]>Fd; 
+    // return ((sqrt(pow(torques[0],2))>Tx_limit) || //tx>0.9 or
+    //         (sqrt(pow(torques[1],2))>Ty_limit) || //ty>0.9 or
+    //         (forces[2]>Fd));                //fz>Fd
+    //return forces[2]>Fd; 
+    
+    ROS_INFO("Max Spiral Forces Fz: %.4f > %.4f", forces[2], minSpiralForce);
+    return forces[2]>minSpiralForce; //If true, keep spiralling
 }
 
 void moveAbs(double x, double y, double z, double qw, double qx, double qy, double qz){
 	//Waiting for services to be available
-	ros::service::waitForService("move_to_pose",timeout);
+	ros::service::waitForService("cartesian_move",timeout);
     ros::ServiceClient moveCartClient = n_ptr->serviceClient<moveit_planner::MoveCart>("cartesian_move");
     moveit_planner::MoveCart cart;
     geometry_msgs::Pose p;
@@ -85,7 +88,8 @@ void moveAbs(double x, double y, double z, double qw, double qx, double qy, doub
 
 void moveRel(double x, double y, double z, double qw, double qx, double qy, double qz){
 	//Waiting for services to be available
-	ros::service::waitForService("move_to_pose",timeout);
+	ros::service::waitForService("get_transform",timeout);
+    ros::service::waitForService("cartesian_move",timeout);
 	//ros::ServiceClient getPoseClient = n_ptr->serviceClient<moveit_planner::GetPose>("get_pose");
     ros::ServiceClient getTFClient = n_ptr->serviceClient<moveit_planner::GetTF>("get_transform");
 	ros::ServiceClient moveCartClient = n_ptr->serviceClient<moveit_planner::MoveCart>("cartesian_move");
@@ -93,27 +97,53 @@ void moveRel(double x, double y, double z, double qw, double qx, double qy, doub
 	//moveit_planner::GetPose curPose;
 	moveit_planner::MoveCart cart;
     //Get current TF from world to EE
-    curTF.request.from="map";
-    curTF.request.to="end_effector_link";
+    curTF.request.from="map"; //map
+    curTF.request.to="panda_link8"; //end_effector_link
     getTFClient.call(curTF);
 	//Get current robot pose
 	//getPoseClient.call(curPose);
 	geometry_msgs::Pose p;
     p=curTF.response.pose;
+    p.orientation.x = 1.0;
+    p.orientation.y = -0.5;
+    p.orientation.z = 0.0;
+    p.orientation.w = 0.0;
     //p=curPose.response.pose;
     //Update position with relative changes
-    ROS_INFO("Currently at: %.3f, %.3f, %.3f.",p.position.x,p.position.y,p.position.z); //+0.333
+    //ROS_INFO("Currently at: %.3f, %.3f, %.3f.",p.position.x,p.position.y,p.position.z); //+0.333
 	p.position.x += x;
 	p.position.y += y;
     p.position.z += z;//+0.333; // +0.333 offset from CF1 to CF0
 
-    ROS_INFO("Going to: %.3f, %.3f, %.3f.",p.position.x,p.position.y,p.position.z);
+    //ROS_INFO("Going to: %.3f, %.3f, %.3f.",p.position.x,p.position.y,p.position.z);
 
     cart.request.val.push_back(p);
     cart.request.execute = true;
     moveCartClient.call(cart);
     
     //ROS_INFO("Moving to Relative Position");
+}
+
+void moveAbsSpiral(double x, double y, double z){
+	//Waiting for services to be available
+	ros::service::waitForService("cartesian_move",timeout);;
+	ros::ServiceClient moveCartClient = n_ptr->serviceClient<moveit_planner::MoveCart>("cartesian_move");
+	moveit_planner::MoveCart cart;
+
+	//Get current robot pose
+	geometry_msgs::Pose p;
+    p.orientation.x = 1.0;
+    p.orientation.y = -0.5;
+    p.orientation.z = 0.0;
+    p.orientation.w = 0.0;
+
+	p.position.x = x;
+	p.position.y = y;
+	p.position.z = z;
+
+    cart.request.val.push_back(p);
+    cart.request.execute = true;
+    moveCartClient.call(cart);
 }
 
 void calculateFTBias(){
@@ -151,49 +181,64 @@ void insertPartSpiral(double Ft, double Fd, double Fi, double delta_max){
         // Update delta. TODO: Use actual feedback rather than cmd
         delta+=delta_cmd;
     }
-
+    if (delta>=delta_max){
+        ROS_INFO("Exceeded max insertion plane detection distance.");
+    }
     ROS_INFO("Arrived at insertion plane");
     // 13. MoveSpiral - Perform spiral motion while 
     //                  MaxSpiralForces is true
-    // double x{0}, y{0};           // Current EE position
-    // double prev_x{0}, prev_y{0}; // Previous EE position
-    // int nn{1}; // Iteration Counter
-    // double spiral_a, spiral_b, spiral_rad, spiral_rot, phi;
-    // int spiral_nmax; //Max number of iterations
+    double x{0}, y{0};           // Current EE position
+    double prev_x{0}, prev_y{0}; // Previous EE position
+    double nn{1.0}; // Iteration Counter
+    double spiral_a, spiral_b, spiral_rad, spiral_rot, phi;
+    double spiral_nmax; //Max number of iterations
+    double initial_x, initial_y, initial_z; //initial position for spiral
 
-    // ROS_INFO("Retrieving spiral parameters");
-    // n_ptr->getParam("spiral_Tx",Tx_limit);
-    // n_ptr->getParam("spiral_Ty",Ty_limit);
-    // n_ptr->getParam("spiral_a",spiral_a);
-    // n_ptr->getParam("spiral_b",spiral_b);
-    // n_ptr->getParam("spiral_nmax",spiral_nmax);
-    // n_ptr->getParam("spiral_rot",spiral_rot);
+    ROS_INFO("Retrieving spiral parameters");
+    n_ptr->getParam("spiral_Tx",Tx_limit);
+    n_ptr->getParam("spiral_Ty",Ty_limit);
+    n_ptr->getParam("spiral_a",spiral_a);
+    n_ptr->getParam("spiral_b",spiral_b);
+    n_ptr->getParam("spiral_nmax",spiral_nmax);
+    n_ptr->getParam("spiral_rot",spiral_rot);
+    n_ptr->getParam("min_spiral_force",minSpiralForce);
+    
+    ROS_INFO("Starting Spiral Insertion Motion");
 
-    // ROS_INFO("Starting Spiral Insertion Motion");
+    // Get starting XY position for reference
+    ros::ServiceClient getTFClient_spiral = n_ptr->serviceClient<moveit_planner::GetTF>("get_transform");
+    moveit_planner::GetTF curTF_spiral;
+    curTF_spiral.request.from="map"; //map
+    curTF_spiral.request.to="panda_link8"; //end_effector_link
+    getTFClient_spiral.call(curTF_spiral);
+    initial_x=curTF_spiral.response.pose.position.x;
+    initial_y=curTF_spiral.response.pose.position.y;
+    initial_z=curTF_spiral.response.pose.position.z;
 
-    // while (nn<spiral_nmax && maxSpiralForces(Fd)==0){
-    //     //Calculate new xy
-    //     phi = sqrt(nn/spiral_nmax)*(spiral_rot*2.0*M_PI);
-    //     spiral_rad=(spiral_a-spiral_b*phi);
-    //     x+=spiral_rad*cos(phi);
-    //     y+=spiral_rad*sin(phi);
-    //     ROS_INFO("Spiral X: %.4f, Y: %.4f", x, y);
-    //     //Send relative movement command
-    //     moveRel(x-prev_x,y-prev_y,0.0,0.0,0.0,0.0,0.0);
-    //     //Update parameters
-    //     nn+=1; prev_x=x; prev_y=y;
-    // }
+    while (nn<spiral_nmax && maxSpiralForces(Fd)){
+        //Calculate new xy
+        phi = sqrt(nn/spiral_nmax)*(spiral_rot*2.0*M_PI);
+        spiral_rad=(spiral_a-spiral_b*phi);
+        ROS_INFO("nn: %.4f, phi: %.4f", nn, phi);
+        x+=spiral_rad*cos(phi);
+        y+=spiral_rad*sin(phi);
+        ROS_INFO("Spiral X: %.4f, Y: %.4f", x, y);
+        //Send relative movement command
+        moveAbsSpiral(x+initial_x,y+initial_y,initial_z);
+        //Update parameters
+        nn+=1.0;
+    }
 
-    // ROS_INFO("Performing final insertion");
+    ROS_INFO("Performing final insertion");
 
     // // 14. MoveRel - Finish insertion
-    // while (delta<=delta_max && maxDownForce(Fi,1)==0){
-    //     moveRel(0.0,0.0,-delta_cmd,0.0,0.0,0.0,0.0);
-    //     // Update delta. TODO: Use actual feedback rather than cmd
-    //     delta+=delta_cmd;
-    // }
+    while (delta<=delta_max && maxDownForce(Fi,1)==0){
+        moveRel(0.0,0.0,-delta_cmd,0.0,0.0,0.0,0.0);
+        // Update delta. TODO: Use actual feedback rather than cmd
+        delta+=delta_cmd;
+    }
 
-    // ROS_INFO("Insertion complete!");
+    ROS_INFO("Insertion complete!");
 
 }
 
@@ -205,7 +250,7 @@ void execute(const lock_key::SpiralInsertGoalConstPtr& goal, Server* as){  // No
     // Fi: Max Insertion Force
     // delta_max: acceptable travel in z-axis
 
-    //calculateFTBias();
+    calculateFTBias();
     insertPartSpiral(goal->Ft, goal->Fd, goal->Fi, goal->delta_max);
 
     as->setSucceeded();
