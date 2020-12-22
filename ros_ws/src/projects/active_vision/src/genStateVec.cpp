@@ -82,5 +82,5 @@ int main(int argc, char** argv){
   }
 
   fout.close();
-  std::cout << nSaved << " state vectors saved to " << directory+newCsvFile << ".\n";
+  std::cout << nSaved << " state vectors saved to " << newCsvFile << ".\n";
 }

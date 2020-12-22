@@ -1,0 +1,99 @@
+#!/bin/bash
+
+# Script to collect data, save parameters, generate its summary & move to storage folder.
+cur=$(pwd)
+pkgPath=$(rospack find active_vision)
+src=$pkgPath"/dataCollected/trainingData/"
+
+csvDataRec='dataRec.csv'
+csvParams='parameters.csv'
+objectID=(1 2)
+nData=(5 5)
+
+# Creating two screens to run gazebo and datacollector.cpp
+printf "Starting the sessions...\n"
+gnome-terminal -- bash -c 'screen -d -R -S session-environment' &
+gnome-terminal -- bash -c 'screen -d -R -S session-dataCollection' &
+sleep 5
+
+# Starting the gazebo and loading the parameters
+screen -S session-environment -X stuff $'roslaunch active_vision workspace.launch visual:="OFF"\n'
+printf "Gazebo started.\n"
+sleep 10
+
+# Collecting data
+for ((i=0;i<${#objectID[@]};++i)); do
+		# Setting the rosparams
+		rosparam set /active_vision/dataCollectorV2/objID ${objectID[i]}
+		rosparam set /active_vision/dataCollectorV2/nData ${nData[i]}
+		rosparam set /active_vision/dataCollectorV2/csvName ${csvDataRec}
+
+		# Saving the parameters
+		rosrun active_vision saveParams.sh ${src}${csvParams}
+
+		# Calling dataCollectorV2.cpp
+    printf "Collecting "${nData[i]}" data points for Object ID : "${objectID[i]}".\n"
+		# screen -S session-dataCollection -X stuff $'rosrun active_vision dataCollectorV2.cpp\n'
+		# HOW TO WAIT UNTIL DATA COLLECTION IS OVER?
+
+		sleep 5
+done
+
+# Closing gazebo
+printf "Gazebo closed.\n"
+screen -S session-environment -X stuff "^C"
+sleep 10
+
+screen -XS session-environment quit
+screen -XS session-dataCollection quit
+printf "Sessions ended.\n"
+
+printf "***********\n"
+
+# # Get the list of csv files in source directory
+csvList=()
+csvList+=($src$csvDataRec)
+# for file in $(find $src -name "*.csv"); do
+# 	if [ "$(basename $file)" != "$csvParams" ]; then
+#  		csvList+=($file)
+# 	fi
+# done
+
+# Generate Summary and State Vector
+for csv in ${csvList[@]}; do
+	printf "Using CSV : "$(basename $csv)"\n"
+	printf "Generating Summary...\n"
+	rosrun active_vision csvSummarizer.py $csv GRAPH_SAVE
+	printf "Generating State Vector...\n"
+	rosrun active_vision genStateVec $(dirname $csv)/ $(basename $csv) 1 5
+done
+
+printf "***********\n"
+
+dst=$pkgPath"/dataCollected/storage/"
+
+# Create a new directory
+i="1"
+ok=false
+while [ $ok = false ]; do
+	dstToCheck="$dst""Data_$i""/"
+	if [ ! -d $dstToCheck ]; then
+		mkdir $dstToCheck
+		ok=true
+		printf $(basename $dstToCheck)" folder created.\n"
+	fi
+	i=$[$i+1]
+done
+
+# Copying the files to the created folder
+cd $src
+shopt -s extglob
+mv !(ReadMe.txt) $dstToCheck
+shopt -u extglob
+cd $cur
+printf "Files Moved.\n"
+
+printf "***********\n"
+
+# now="$(date +'%Y_%m_%d_%I_%M_%S')"
+# printf "Current date in dd/mm/yyyy format %s\n" "$now"

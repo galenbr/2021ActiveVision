@@ -183,7 +183,7 @@ def graphSummary(path,summary):
     if(mode == "GRAPH_SAVE"):
         newPath = path[:path.rfind('.')] + '_summary' + ".png"
         plt.savefig(newPath, dpi = 600)
-        print("Graph saved to : "+newPath)
+        print("Graph saved to : "+newPath[newPath.rfind('/')+1:])
     elif(mode == "GRAPH_VIEW"):
         plt.show()
 
