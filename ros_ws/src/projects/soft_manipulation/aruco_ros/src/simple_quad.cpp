@@ -136,7 +136,7 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg)
           
           std_msgs::Bool nframe;
           nframe.data = false;
-          if(pixelMsg.point.x == 0 && pixelMsg.point.y ==0){
+          if(pixelMsg.point.x == 0 && pixelMsg.point.y == 0){
             flag_pub.publish(nframe);
           }
           else{
@@ -297,7 +297,7 @@ int main(int argc, char **argv)
   pixel_pub3 = nh.advertise<geometry_msgs::PointStamped>("pixel3", 1);
   pixel_pub4 = nh.advertise<geometry_msgs::PointStamped>("pixel4", 1);
   
-  flag_pub = nh.advertise<std_msgs::Bool>("newFrame", 1);
+  flag_pub = nh.advertise<std_msgs::Bool>("/newFrame", 1);
 
   nh.param<double>("marker_size", marker_size, 0.05);
   nh.param<int>("marker_id1", marker_id1, 582);

@@ -28,7 +28,7 @@ int main(int argc, char **argv){
             
             sin_pub.publish(vel_msg);
             
-            count += .5;
+            count += 1.5;
         }
         else{
             ROS_INFO("DONE!");
