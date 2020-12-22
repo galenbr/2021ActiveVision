@@ -105,24 +105,40 @@ environment::environment(ros::NodeHandle *nh){
   }
 
   // Stores stable poses for the objects (Z(m), Roll(Rad), Pitch(Rad))
-  objectPosesDict = {{{0.050,0.000,0.000}},
-                     {{0.060,1.570,0.000},{0.070,1.570,1.570}},
-                     {{0.040,0.000,0.000},{0.050,1.570,0.000},{0.120,1.570,1.570}},
-                     {{0.015,0.000,0.000}},
-                     {{0.015,0.000,0.000}},
-                     {{0.015,0.000,0.000}},
-                     {{0.015,0.000,0.000}},
-                     {{0.012,0.000,0.000},{0.084,1.459,-0.751},{0.082,1.398,-0.014},{0.040,0.280,-1.040},{0.249,2.860,-0.400},{0.068,-1.287,-0.477},{0.048,-1.570,1.480}}};
+  stepSize = 3;
+  for(int k=0; k<objectDict.size(); k++){
+    std::string target = "/active_vision/environment/"+objectDict[k][0]+"_poses";
+    std::vector<double> tempDict3;
+    nh->getParam(target, tempDict3);
+    std::vector<std::vector<double>> poseDict;
+    for(int i=0; i<tempDict3.size(); i+=stepSize){
+      std::vector<double> tempElement;
+      for(int j=0; j<stepSize; j++){
+        tempElement.push_back(tempDict3[i+j]);
+      }
+      poseDict.push_back(tempElement);
+    }
+    objectPosesDict.push_back(poseDict);
+  }
 
-  objectPosesYawLimits = {{0,89},{0,179},{0,179},{0,179},{0,1},{0,89},{0,359},{0,179},{0,359}};
+  std::vector<double> tempDict2;
+  nh->getParam("/active_vision/environment/object_yaw_limits", tempDict2);
+  stepSize = 2;
+  for(int i=0; i<tempDict2.size(); i+=stepSize){
+    std::vector<double> tempElement;
+    for(int j=0; j<stepSize; j++){
+      tempElement.push_back(tempDict2[i+j]);
+    }
+    objectPosesYawLimits.push_back(tempElement);
+  }
      
   nh->getParam("/active_vision/environment/voxelGridSizeUnexp", voxelGridSizeUnexp); // Voxel Grid size for unexplored point cloud
   nh->getParam("/active_vision/environment/voxelGridSize", voxelGridSize); // Voxel Grid size for environment
 
   nh->getParam("/active_vision/environment/viewsphereRad", viewsphereRad);
   nh->getParam("/active_vision/environment/tableCentre", tableCentre); // Co-ordinates of table centre
-  minUnexp = {0,0,0};
-  maxUnexp = {0,0,0};
+  nh->getParam("/active_vision/environment/minUnexp", minUnexp);
+  nh->getParam("/active_vision/environment/maxUnexp", maxUnexp);
   nh->getParam("/active_vision/environment/scale", scale); // Scale value for unexplored point cloud generation
 
   nh->getParam("/active_vision/environment/maxGripperWidth", maxGripperWidth); // Gripper max width

@@ -45,9 +45,8 @@ for ((i=0;i<${#objectID[@]};++i)); do
 		# Starting a screen and running dataCollectorV2.cpp
 		printf "Collecting "${nData[i]}" data points for Object ID : "${objectID[i]}" ..."
 		gnome-terminal -- bash -c 'screen -d -R -S session-dataCollection' & sleep 5
-		screen -S session-dataCollection -X stuff $'sleep 7\nexit\n' # Dummy line till codes are cleaned
-		# screen -S session-dataCollection -X stuff $'rosrun active_vision dataCollectorV2.cpp\nexit\n'
-
+		screen -S session-dataCollection -X stuff $'rosrun active_vision dataCollectorV2\nexit\n'
+		
 		# Waiting till datacollection is over
 		screenOK="$(checkScreen session-dataCollection)"
 		while [[ "$screenOK" == "true" ]]; do
