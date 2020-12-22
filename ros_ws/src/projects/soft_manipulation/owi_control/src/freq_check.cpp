@@ -1,6 +1,7 @@
 #include <ros/ros.h>
 #include "std_msgs/Float32.h"
 #include <geometry_msgs/Point.h>
+#include "std_msgs/Bool.h"
 
 #define rad 0.0174533
 
@@ -10,7 +11,11 @@ float prev_angular_vel = 0;
 float cur_angular_vel = 0;
 float cur_angular_acc = 0;
 ros::Publisher pub;
+bool flag;
 
+void frameCallback(const std_msgs::Bool &msg){
+    flag = msg.data;
+}
 
 void diff(const geometry_msgs::Point &msg){
        
@@ -21,7 +26,7 @@ void diff(const geometry_msgs::Point &msg){
 
     float theta1 = msg.x * rad;
 
-    if(theta1 != old_theta1){
+    if(flag == true){
         cur_angular_vel = (theta1 - old_theta1)/dt;
         cur_angular_acc = (cur_angular_vel - prev_angular_vel)/dt;
         old_theta1 = theta1;
@@ -45,7 +50,8 @@ int main(int argc, char **argv){
 
     ros::init(argc, argv, "freq_response");
     ros::NodeHandle n;
-
+    //Check if new frame is available
+    ros::Subscriber flag_sub = n.subscribe("newFrame", 1, frameCallback);
     //subscribe to angles
     ros::Subscriber sub = n.subscribe("theta_vals", 1, diff);
     // callback: (cur angle - old angle)/(timestamp cur - timestamp old)
