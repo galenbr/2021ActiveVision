@@ -62,12 +62,11 @@ def PCASummary(fileName):
 
 '''Read file and summarize information about each interval of camera data.
 summary = [[objName, objRoll, objPitch, [YawData]]]
-YawData = [yawEndAngle, #ofDataPoints, minSteps, avgSteps, maxSteps, #stepsBelownStepsSplit, #stepsAbovenStepsSplit]'''
+YawData = [yawEndAngle, #ofDataPoints, minSteps, avgSteps, maxSteps, #stepsBelownStepsSplit, #stepsAbovenStepsSplit, [dataPoints]]'''
 def genSummary(fileName,nBins):
-    #Bins based on stepSize for yaw and space for nData,min,avg,max steps, split1, split2
     bins = []
     for bin in range(nBins):
-        bins.append([(bin+1)*360/nBins,0,0,0,0,0,0])
+        bins.append([(bin+1)*360/nBins,0,0,0,0,0,0,[]])
 
     #Finding all unique configurations
     data = readInput(fileName)
@@ -94,6 +93,7 @@ def genSummary(fileName,nBins):
             summary[index][3][binIndex][5] += 1
         else:
             summary[index][3][binIndex][6] += 1
+        summary[index][3][binIndex][7].append(nSteps)
 
     #Calculating the average
     for each in summary:
@@ -126,11 +126,12 @@ def graphSummary(path,summary):
     fig, ax = plt.subplots(rows,cols)
     ax = np.ravel(ax)
     fig.set_size_inches(cols*7, 3*rows)
-    fig.suptitle('# Datapoints & Min-Avg-Max Steps for a grasp', fontsize='medium')
+    fig.suptitle('Box plot of #Steps for a grasp & # Datapoints for each bin', fontsize='medium')
     for idx, each in enumerate(summary):
         degree = []; number = []
         minGrasp = []; meanGrasp = []; maxGrasp = []
         split1 = []; split2 = []
+        bxPlt = [];
         titleStr = "{}-Roll_{}_Pitch_{}".format(each[0], str(int(round(np.degrees(each[1]),0))), str(int(round(np.degrees(each[2]),0))))
         for eachYaw in each[3]:
             if eachYaw[0] >= minYaw and eachYaw[0] <= maxYaw:
@@ -139,33 +140,37 @@ def graphSummary(path,summary):
                 minGrasp.append(float(eachYaw[2]))
                 meanGrasp.append(float(eachYaw[3]))
                 maxGrasp.append(float(eachYaw[4]))
-                split1.append(float(eachYaw[5]));
-                split2.append(float(eachYaw[6]));
+                split1.append(float(eachYaw[5]))
+                split2.append(float(eachYaw[6]))
+                bxPlt.append(eachYaw[7])
 
         ax[idx].set_title(titleStr, fontsize='small')
-        ax[idx].set_xticks(degree)
-        ax[idx].set_xticklabels([str(s-1) for s in degree])
-        for n, label in enumerate(ax[idx].xaxis.get_ticklabels()):
-            if n % 10 != 0:
-                label.set_visible(False)
-        ax[idx].set_yticks(np.arange(max(maxGrasp)))
+
+        bp = ax[idx].boxplot(bxPlt,positions=np.arange(len(bxPlt)),patch_artist=True)
+        for median in bp['medians']:
+            median.set(color ='red',linewidth = 2)
+        for patch in bp['boxes']:
+            patch.set_facecolor('lightgreen')
+
         ax[idx].grid(axis='y')
-        ax[idx].set_xlabel('Yaw', fontsize='x-small')
-        ax[idx].xaxis.set_tick_params(labelsize=7)
+        ax[idx].set_yticks(np.arange(max(maxGrasp)))
+        ax[idx].set_ylabel('# Steps to grasp', fontsize='x-small')
         ax[idx].yaxis.set_tick_params(labelsize=7)
-        ax[idx].set_ylabel('Steps to grasp', fontsize='x-small')
         ax[idx].tick_params(axis='y', labelcolor="k")
-        ax[idx].bar(degree, maxGrasp, width=1, color="tab:red", label='Max Steps')
-        ax[idx].bar(degree, meanGrasp, width=1, color="tab:blue", label='Avg Steps')
-        ax[idx].bar(degree, minGrasp, width=1, color="tab:green", label='Min Steps')
         ax[idx].set_ylim(bottom=0)
         ax[idx].set_ylim(top=8)
+
+        ax[idx].set_xlabel('Yaw (Bins)', fontsize='x-small')
+        ax[idx].xaxis.set_tick_params(labelsize=7)
+        ax[idx].set_xticklabels(["<"+str(s) for s in degree])
+
         ax1A = ax[idx].twinx();
+        ax1A.plot(number, linestyle='None', color='k', marker = "o", markersize = '3', label='# Datapoints')
+
         ax1A.set_ylabel('# Datapoints', color='k', fontsize='x-small')
         ax1A.yaxis.set_tick_params(labelsize=7)
-        ax1A.plot(degree, number, linestyle='None', color='k', marker = "o", markersize = '3')
-        ax1A.tick_params(axis='y', labelcolor='k')
         ax1A.set_ylim(bottom=0)
+        ax1A.tick_params(axis='y', labelcolor='k')
 
         # ax2.grid(axis='y')
         # ax2.set_title('Split of datapoints based on #Steps')
@@ -178,6 +183,7 @@ def graphSummary(path,summary):
         # ax2.bar(np.asarray(degree)+2, split2, width=4, color="tab:red", label='> '+ str(nStepsSplit))
         # ax2.legend()
 
+    # fig.legend([bp['medians'][0], bp['means'][0]], ['median', 'mean'])
     fig.legend(loc='lower center',ncol=3,fontsize='x-small')
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     if(mode == "GRAPH_SAVE"):
@@ -210,8 +216,6 @@ if __name__ == "__main__":
         mode = 'GRAPH_VIEW'
 
     nBins = 360/10
-    if(mode == "GRAPH_VIEW" or mode == "GRAPH_SAVE"):
-        nBins = 360
 
     summary = genSummary(path,nBins)
     if(mode == "PRINT"):

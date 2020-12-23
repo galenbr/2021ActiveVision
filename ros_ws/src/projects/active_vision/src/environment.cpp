@@ -131,19 +131,19 @@ environment::environment(ros::NodeHandle *nh){
     }
     objectPosesYawLimits.push_back(tempElement);
   }
-     
+
   nh->getParam("/active_vision/environment/voxelGridSizeUnexp", voxelGridSizeUnexp); // Voxel Grid size for unexplored point cloud
   nh->getParam("/active_vision/environment/voxelGridSize", voxelGridSize); // Voxel Grid size for environment
 
   nh->getParam("/active_vision/environment/viewsphereRad", viewsphereRad);
   nh->getParam("/active_vision/environment/tableCentre", tableCentre); // Co-ordinates of table centre
-  nh->getParam("/active_vision/environment/minUnexp", minUnexp);
-  nh->getParam("/active_vision/environment/maxUnexp", maxUnexp);
+  minUnexp = {0,0,0};
+  maxUnexp = {0,0,0};
   nh->getParam("/active_vision/environment/scale", scale); // Scale value for unexplored point cloud generation
 
   nh->getParam("/active_vision/environment/maxGripperWidth", maxGripperWidth); // Gripper max width
   nh->getParam("/active_vision/environment/minGraspQuality", minGraspQuality); // Min grasp quality threshold
-  nh->getParam("/active_vision/environment/selectedGrasp", selectedGrasp); // Index of the selected grasp
+  selectedGrasp = -1; // Index of the selected grasp
 
   nh->getParam("/active_vision/environment/addNoise", addNoise);
   nh->getParam("/active_vision/environment/depthNoise", depthNoise);

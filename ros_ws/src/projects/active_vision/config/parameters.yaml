@@ -38,12 +38,12 @@ policyTester: {
 environment: {
     object_dictionary: [
         "prismAV6x6x6", "Prism 6x6x6",
-        "prismAV10x8x4", "Prism 10x8x4", 
-        "prismAV20x6x5", "Prism 20x6x5", 
-        "bowlAV", "Bowl", 
-        "cinderBlockAV", "Cinder Block", 
-        "handleAV", "Door Handle", 
-        "gasketAV", "Gasket", 
+        "prismAV10x8x4", "Prism 10x8x4",
+        "prismAV20x6x5", "Prism 20x6x5",
+        "bowlAV", "Bowl",
+        "cinderBlockAV", "Cinder Block",
+        "handleAV", "Door Handle",
+        "gasketAV", "Gasket",
         "drillAV", "Cordless Drill",
     ], #List of object codes and human readable names
     prismAV6x6x6_poses: [0.050,0.000,0.000],
@@ -63,8 +63,6 @@ environment: {
         0,359,
         0,179,
         0,359],
-    minUnexp: [0,0,0],
-    maxUnexp: [0,0,0],
     tableCentre: [1.5,0,1],       # Co-ordinates of table centre
     fingerZOffset: 0.0584,        # Z axis offset between gripper hand and finger
     viewsphereRad: 1,
@@ -73,7 +71,6 @@ environment: {
     scale: 3,                     # Scale value for unexplored point cloud generation
     maxGripperWidth: 0.08,        # Gripper max width
     minGraspQuality: 150,         # Min grasp quality threshold
-    selectedGrasp: -1,            # Index of the selected grasp
 
     addNoise: false,
     depthNoise: 0,
