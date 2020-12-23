@@ -174,7 +174,7 @@ void insertPartSpiral(double Ft, double Fd, double Fi, double delta_max){
     double delta{0.0};
     //Break delta up into smaller steps
     double delta_cmd;
-    n_ptr->getParam("spiral_delta_step",delta_cmd); // Distance to move down per step
+    n_ptr->getParam("spiral/delta_step",delta_cmd); // Distance to move down per step
     while (delta<=delta_max && maxDownForce(Ft,0)){
         moveRel(0.0,0.0,-delta_cmd,0.0,0.0,0.0,0.0);
         ROS_INFO("delta: %f",delta);
@@ -195,13 +195,13 @@ void insertPartSpiral(double Ft, double Fd, double Fi, double delta_max){
     double initial_x, initial_y, initial_z; //initial position for spiral
 
     ROS_INFO("Retrieving spiral parameters");
-    n_ptr->getParam("spiral_Tx",Tx_limit);
-    n_ptr->getParam("spiral_Ty",Ty_limit);
-    n_ptr->getParam("spiral_a",spiral_a);
-    n_ptr->getParam("spiral_b",spiral_b);
-    n_ptr->getParam("spiral_nmax",spiral_nmax);
-    n_ptr->getParam("spiral_rot",spiral_rot);
-    n_ptr->getParam("min_spiral_force",minSpiralForce);
+    n_ptr->getParam("spiral/Tx",Tx_limit);
+    n_ptr->getParam("spiral/Ty",Ty_limit);
+    n_ptr->getParam("spiral/a",spiral_a);
+    n_ptr->getParam("spiral/b",spiral_b);
+    n_ptr->getParam("spiral/nmax",spiral_nmax);
+    n_ptr->getParam("spiral/rot",spiral_rot);
+    n_ptr->getParam("spiral/min_spiral_force",minSpiralForce);
     
     ROS_INFO("Starting Spiral Insertion Motion");
 

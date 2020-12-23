@@ -1,43 +1,60 @@
-  ##### TARGET POSITION PARAMETERS #####
-  # Key goal position in map frame [meters]
-  key_goal_x: 0.55
-  key_goal_y: 0.1
-  key_goal_z: 0.3
-  # Padlock goal position in map frame [meters]
-  padlock_goal_x: 0.61
-  padlock_goal_y: 0.1875
-  padlock_goal_z: 0.35
-  # Intentional misalignment in X for padlock [meters]
-  x_misalignment: 0.005
-  # Intentional misalignment in Y for padlock [meters]
-  y_misalignment: 0.0
+##### Key Position #####
+# Key grasping position in map frame [meters]
+key_goal/x: 0.5715
+key_goal/y: 0.2623
+key_goal/z: 0.1665
+# Distance above key_goal_z for pre-grasp [meters]
+key_goal/z_offset: 0.15
 
-  ##### SPIRAL INSERTION PARAMETERS #####
-  # Max. force when moving to insertion plane [Newtons]
-  spiral_Ft: 1.5
-  # Max. wrist force during spiral [Newtons]
-  spiral_Fd: 4.0
-  # Max. insertion force during final insert phase [Newtons]
-  spiral_Fi: 1.5
-  # Max. torque in X during spiral [Newton-meters]
-  spiral_Tx: 0.5
-  # Max. Torque in Y during spiral [Newton-meters]
-  spiral_Ty: 0.5
-  # Max. distance for EE to move in Z [meters]
-  spiral_delta_max: 0.2
-  # Distance to move EE in Z each step [meters]
-  spiral_delta_step: 0.0005
-  # Initial distance from spiral origin [meters]
-  spiral_a: 0.0
-  # Distance between spiral turns [meters]
-  spiral_b: 0.000005
-  # Number of points in spiral [-]
-  spiral_nmax: 1000.0 #Should be double data type
-  # Number of spiral rotations [-]
-  spiral_rot: 10.0 #Should be double data type
-  # Number of force-torque samples to take before insertion [-]
-  ft_samples: 50
-  # Sleep time between force-torque samples [seconds]
-  ft_sleep: 0.05
-  # Minimum downward (negative) spiral force for detecting padlock/hole [Newtons]
-  min_spiral_force: -0.6
+##### Padlock Position #####
+# Padlock 'inserted' position in map frame [meters]
+padlock_goal/x: 0.5715
+padlock_goal/y: 0.1907
+padlock_goal/z: 0.1665
+# Distances above padlock_goal_z for pre-insert [meters]
+padlock_goal/z_offset_far: 0.15
+padlock_goal/z_offset_close: 0.03
+# Intentional misalignment in X for padlock [meters]
+padlock_goal/x_misalignment: 0.005
+# Intentional misalignment in Y for padlock [meters]
+padlock_goal/y_misalignment: 0.0
+
+##### Home Position #####
+# Home position in joint space [radians]
+home/j1: 0.0
+home/j2: -0.785
+home/j3: 0.0
+home/j4: -2.356
+home/j5: 0.0
+home/j6: 1.57
+home/j7: 0.784
+
+##### Spiral Insertion #####
+# Max. force when moving to insertion plane [Newtons]
+spiral/Ft: 1.5
+# Max. wrist force during spiral [Newtons]
+spiral/Fd: 4.0
+# Max. insertion force during final insert phase [Newtons]
+spiral/Fi: 1.5
+# Max. torque in X during spiral [Newton-meters]
+spiral/Tx: 0.5
+# Max. Torque in Y during spiral [Newton-meters]
+spiral/Ty: 0.5
+# Max. distance for EE to move in Z [meters]
+spiral/delta_max: 0.2
+# Distance to move EE in Z each step [meters]
+spiral/delta_step: 0.0005
+# Initial distance from spiral origin [meters]
+spiral/a: 0.0
+# Distance between spiral turns [meters]
+spiral/b: 0.000005
+# Number of points in spiral [-]
+spiral/nmax: 1000.0 #Should be double data type
+# Number of spiral rotations [-]
+spiral/rot: 10.0 #Should be double data type
+# Number of force-torque samples to take before insertion [-]
+spiral/ft_samples: 50
+# Sleep time between force-torque samples [seconds]
+spiral/ft_sleep: 0.05
+# Minimum downward (negative) spiral force for detecting padlock/hole [Newtons]
+spiral/min_spiral_force: -0.6
