@@ -166,10 +166,10 @@ int main(int argc, char ** argv){
     // Move to above Key
     moveit_planner::MoveCart move1;
     geometry_msgs::Pose p1;
-    p1.orientation.x = 1.0;
-    p1.orientation.y = -0.5;
-    p1.orientation.z = 0.0;
-    p1.orientation.w = 0.0;
+    p1.orientation.x = 0.924; //1.0
+    p1.orientation.y = -0.382; //-0.5
+    p1.orientation.z = 0.0; //0.0
+    p1.orientation.w = 0.0; //0.0
     p1.position.x = key_goal.x;
     p1.position.y = key_goal.y;
     p1.position.z = key_goal.z+key_goal.z_offset_far;
@@ -181,10 +181,10 @@ int main(int argc, char ** argv){
     // Move to Key
     moveit_planner::MoveCart move2;
     geometry_msgs::Pose p2;
-    p2.orientation.x = 1.0;
-    p2.orientation.y = -0.5;
-    p2.orientation.z = 0.0;
-    p2.orientation.w = 0.0;
+    p2.orientation.x = 0.924; //1.0
+    p2.orientation.y = -0.382; //-0.5
+    p2.orientation.z = 0.0; //0.0
+    p2.orientation.w = 0.0; //0.0
     p2.position.x = p1.position.x;
     p2.position.y = p1.position.y;
     p2.position.z = key_goal.z;
@@ -199,10 +199,10 @@ int main(int argc, char ** argv){
     // Move to above Key after grasping it
     moveit_planner::MoveCart move1a;
     geometry_msgs::Pose p1a;
-    p1a.orientation.x = 1.0;
-    p1a.orientation.y = -0.5;
-    p1a.orientation.z = 0.0;
-    p1a.orientation.w = 0.0;
+    p1a.orientation.x = 0.924; //1.0
+    p1a.orientation.y = -0.382; //-0.5
+    p1a.orientation.z = 0.0; //0.0
+    p1a.orientation.w = 0.0; //0.0
     p1a.position.x = p1.position.x;
     p1a.position.y = p1.position.y;
     p1a.position.z = p1.position.z;
@@ -214,10 +214,10 @@ int main(int argc, char ** argv){
     // Move to above Lock
     moveit_planner::MoveCart move3;
     geometry_msgs::Pose p3;
-    p3.orientation.x = 1.0;
-    p3.orientation.y = -0.5;
-    p3.orientation.z = 0.0;
-    p3.orientation.w = 0.0;
+    p3.orientation.x = 0.924; //1.0
+    p3.orientation.y = -0.382; //-0.5
+    p3.orientation.z = 0.0; //0.0
+    p3.orientation.w = 0.0; //0.0
     p3.position.x = padlock_goal.x+x_misalignment;
     p3.position.y = padlock_goal.y+y_misalignment;
     p3.position.z = padlock_goal.z+padlock_goal.z_offset_far;
@@ -229,10 +229,10 @@ int main(int argc, char ** argv){
     // Move to above Lock (but closer)
     moveit_planner::MoveCart move4;
     geometry_msgs::Pose p4;
-    p4.orientation.x = 1.0;
-    p4.orientation.y = -0.5;
-    p4.orientation.z = 0.0;
-    p4.orientation.w = 0.0;
+    p4.orientation.x = 0.924; //1.0
+    p4.orientation.y = -0.382; //-0.5
+    p4.orientation.z = 0.0; //0.0
+    p4.orientation.w = 0.0; //0.0
     p4.position.x = p3.position.x;
     p4.position.y = p3.position.y;
     p4.position.z = padlock_goal.z+padlock_goal.z_offset_close;
@@ -280,10 +280,10 @@ int main(int argc, char ** argv){
     // Move to above Lock after key insertion
     moveit_planner::MoveCart move3a;
     geometry_msgs::Pose p3a;
-    p3a.orientation.x = 1.0;
-    p3a.orientation.y = -0.5;
-    p3a.orientation.z = 0.0;
-    p3a.orientation.w = 0.0;
+    p3a.orientation.x = 0.924; //1.0
+    p3a.orientation.y = -0.382; //-0.5
+    p3a.orientation.z = 0.0; //0.0
+    p3a.orientation.w = 0.0; //0.0
     p3a.position.x = p3.position.x;
     p3a.position.y = p3.position.y;
     p3a.position.z = p3.position.z;
