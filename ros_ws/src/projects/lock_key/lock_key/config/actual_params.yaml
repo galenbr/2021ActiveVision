@@ -2,20 +2,20 @@
 # Key grasping position in map frame [meters]
 key_goal/x: 0.5715
 key_goal/y: 0.2623
-key_goal/z: 0.1665
+key_goal/z: 0.175 #peg: 0.1665, key: 0.175
 # Distance above key_goal_z for pre-grasp [meters]
 key_goal/z_offset: 0.15
 
 ##### Padlock Position #####
 # Padlock 'inserted' position in map frame [meters]
-padlock_goal/x: 0.5715
-padlock_goal/y: 0.1907
-padlock_goal/z: 0.1665
+padlock_goal/x: 0.5095 #pegboard: 0.5715, padlock: 0.5095
+padlock_goal/y: 0.2500 #pegboard: 0.1907, padlock: 0.2500
+padlock_goal/z: 0.2134 #pegboard: 0.1665, padlock: 0.2134
 # Distances above padlock_goal_z for pre-insert [meters]
 padlock_goal/z_offset_far: 0.15
 padlock_goal/z_offset_close: 0.03
 # Intentional misalignment in X for padlock [meters]
-padlock_goal/x_misalignment: 0.005
+padlock_goal/x_misalignment: 0.0
 # Intentional misalignment in Y for padlock [meters]
 padlock_goal/y_misalignment: 0.0
 
@@ -35,7 +35,7 @@ spiral/Ft: 1.5
 # Max. wrist force during spiral [Newtons]
 spiral/Fd: 4.0
 # Max. insertion force during final insert phase [Newtons]
-spiral/Fi: 1.5
+spiral/Fi: 4.5 #pegboard: 1.5, padlock: 4.5
 # Max. torque in X during spiral [Newton-meters]
 spiral/Tx: 0.5
 # Max. Torque in Y during spiral [Newton-meters]
@@ -57,4 +57,4 @@ spiral/ft_samples: 50
 # Sleep time between force-torque samples [seconds]
 spiral/ft_sleep: 0.05
 # Minimum downward (negative) spiral force for detecting padlock/hole [Newtons]
-spiral/min_spiral_force: -0.6
+spiral/min_spiral_force: -2.0 # pegboard: -0.6, padlock: -2.0
