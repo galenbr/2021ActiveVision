@@ -33,6 +33,10 @@
   <node name="constraints" type="arm_constraints_node" pkg="lock_key" />
   <!--Start Spiral Insert Node-->
   <node name="spiral_insert" type="spiral_insert_node" pkg="lock_key" output="screen"/>
+
+  <!-- For SMACH: Start MoveAbs Node -->
+  <node name="move_abs" type="move_abs_node" pkg="lock_key" />
+
   <!--Start Rviz-->
   <!-- <include file="$(find panda_moveit_config)/launch/moveit_rviz.launch" if="$(arg launch_rviz)" /> -->
 </launch>
