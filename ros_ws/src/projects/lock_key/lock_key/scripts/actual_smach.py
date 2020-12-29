@@ -1,12 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Testing python commands for SMACH
-
-roslaunch lock_key sim.launch
-rosrun lock_key move_abs_node
-python test_move.py
-
+SMACH for key insertion procedure
 """
 from __future__ import print_function
 import rospy
@@ -15,7 +10,6 @@ import actionlib
 import lock_key.msg
 import franka_gripper.msg
 import moveit_planner.srv
-from math import pi
 
 class Epsilon:
 	'''Define Epsilon object for gripper function.'''
@@ -82,11 +76,11 @@ class NavigateToPreKey(smach.State):
     def execute(self, userdata):
         rospy.loginfo('Navigating to Pre-Key...')
         # Retrieve goal position from param server
-        goal_x=rospy.get_param("key_goal/x")
-        goal_y=rospy.get_param("key_goal/y")
-        goal_z=rospy.get_param("key_goal/z")+rospy.get_param("key_goal/z_offset")
-		#Gazebo RPY: pi, 0.0, 0.0; Real RPY: pi,0.0,-pi/4
-        move_to_position(goal_x,goal_y,goal_z,pi,0.0,-pi/4)
+        goal=rospy.get_param("key_goal")
+        goal['z']+=goal['z_offset']
+        # Call movement action
+        move_to_position(goal['x'],goal['y'],goal['z'],
+                         goal['roll'],goal['pitch'],goal['yaw'])
         return 'succeeded'
 
 class NavigateToKey(smach.State):
@@ -95,11 +89,10 @@ class NavigateToKey(smach.State):
     def execute(self, userdata):
         rospy.loginfo('Navigating to Key...')
         # Retrieve goal position from param server
-        goal_x=rospy.get_param("key_goal/x")
-        goal_y=rospy.get_param("key_goal/y")
-        goal_z=rospy.get_param("key_goal/z")
-		#Gazebo RPY: pi, 0.0, 0.0; Real RPY: pi,0.0,-pi/4
-        move_to_position(goal_x,goal_y,goal_z,pi,0.0,-pi/4)
+        goal=rospy.get_param("key_goal")
+        # Call movement action
+        move_to_position(goal['x'],goal['y'],goal['z'],
+                         goal['roll'],goal['pitch'],goal['yaw'])
         return 'succeeded'
 
 class NavigateToPostKey(smach.State):
@@ -108,11 +101,11 @@ class NavigateToPostKey(smach.State):
     def execute(self, userdata):
         rospy.loginfo('Navigating to Post-Key...')
         # Retrieve goal position from param server
-        goal_x=rospy.get_param("key_goal/x")
-        goal_y=rospy.get_param("key_goal/y")
-        goal_z=rospy.get_param("key_goal/z")+rospy.get_param("key_goal/z_offset")
-		#Gazebo RPY: pi, 0.0, 0.0; Real RPY: pi,0.0,-pi/4
-        move_to_position(goal_x,goal_y,goal_z,pi,0.0,-pi/4)
+        goal=rospy.get_param("key_goal")
+        goal['z']+=goal['z_offset']
+        # Call movement action
+        move_to_position(goal['x'],goal['y'],goal['z'],
+                         goal['roll'],goal['pitch'],goal['yaw'])
         return 'succeeded'
 
 class CloseGripper(smach.State):
@@ -129,11 +122,11 @@ class NavigateToPreLockFar(smach.State):
     def execute(self, userdata):
         rospy.loginfo('Navigating to Pre-Lock Far...')
         # Retrieve goal position from param server
-        goal_x=rospy.get_param("padlock_goal/x")
-        goal_y=rospy.get_param("padlock_goal/y")
-        goal_z=rospy.get_param("padlock_goal/z")+rospy.get_param("padlock_goal/z_offset_far")
-		#Gazebo RPY: pi, 0.0, 0.0; Real RPY: pi,0.0,-pi/4
-        move_to_position(goal_x,goal_y,goal_z,pi,0.0,-pi/4)
+        goal=rospy.get_param("padlock_goal")
+        goal['z']+=goal['z_offset_far']
+        # Call movement action
+        move_to_position(goal['x'],goal['y'],goal['z'],
+                         goal['roll'],goal['pitch'],goal['yaw'])
         return 'succeeded'
 
 class NavigateToPreLockClose(smach.State):
@@ -142,11 +135,13 @@ class NavigateToPreLockClose(smach.State):
     def execute(self, userdata):
         rospy.loginfo('Navigating to Pre-Lock Close...')
         # Retrieve goal position from param server
-        goal_x=rospy.get_param("padlock_goal/x")+rospy.get_param("padlock_goal/x_misalignment")
-        goal_y=rospy.get_param("padlock_goal/y")+rospy.get_param("padlock_goal/y_misalignment")
-        goal_z=rospy.get_param("padlock_goal/z")+rospy.get_param("padlock_goal/z_offset_close")
-		#Gazebo RPY: pi, 0.0, 0.0; Real RPY: pi,0.0,-pi/4
-        move_to_position(goal_x,goal_y,goal_z,pi,0.0,-pi/4)
+        goal=rospy.get_param("padlock_goal")
+        goal['x']+=goal['x_misalignment']
+        goal['y']+=goal['y_misalignment']
+        goal['z']+=goal['z_offset_close']
+        # Call movement action
+        move_to_position(goal['x'],goal['y'],goal['z'],
+                         goal['roll'],goal['pitch'],goal['yaw'])
         return 'succeeded'
 
 class SpiralInsert(smach.State):
@@ -155,11 +150,9 @@ class SpiralInsert(smach.State):
     def execute(self, userdata):
 		rospy.loginfo('Starting Spiral Insert...')
 		rospy.loginfo('Retrieving parameters')
-		Ft=rospy.get_param("spiral/Ft")
-		Fd=rospy.get_param("spiral/Fd")
-		Fi=rospy.get_param("spiral/Fi")
-		delta_max=rospy.get_param("spiral/delta_max")
-		spiral_insert(Ft, Fd, Fi, delta_max)
+		spiral_params=rospy.get_param("spiral")
+		spiral_insert(spiral_params['Ft'], spiral_params['Fd'], 
+			          spiral_params['Fi'], spiral_params['delta_max'])
 		return 'succeeded'
 
 class NavigateToPostLock(smach.State):
@@ -168,11 +161,11 @@ class NavigateToPostLock(smach.State):
     def execute(self, userdata):
         rospy.loginfo('Navigating to Post-Lock ...')
         # Retrieve goal position from param server
-        goal_x=rospy.get_param("padlock_goal/x")
-        goal_y=rospy.get_param("padlock_goal/y")
-        goal_z=rospy.get_param("padlock_goal/z")+rospy.get_param("padlock_goal/z_offset_far")
-		#Gazebo RPY: pi, 0.0, 0.0; Real RPY: pi,0.0,-pi/4
-        move_to_position(goal_x,goal_y,goal_z,pi,0.0,-pi/4)
+        goal=rospy.get_param("padlock_goal")
+        goal['z']+=goal['z_offset_far']
+        # Call movement action
+        move_to_position(goal['x'],goal['y'],goal['z'],
+                         goal['roll'],goal['pitch'],goal['yaw'])
         return 'succeeded'
 
 class OpenGripper(smach.State):
@@ -189,15 +182,9 @@ class NavigateToHome(smach.State):
     def execute(self, userdata):
         rospy.loginfo('Navigating to Home...')
         # Retrieve goal position from param server
-        goal_j1=rospy.get_param("home/j1")
-        goal_j2=rospy.get_param("home/j2")
-        goal_j3=rospy.get_param("home/j3")
-        goal_j4=rospy.get_param("home/j4")
-        goal_j5=rospy.get_param("home/j5")
-        goal_j6=rospy.get_param("home/j6")
-        goal_j7=rospy.get_param("home/j7")
-        move_to_joint_position(goal_j1,goal_j2,goal_j3,goal_j4,
-							   goal_j5,goal_j6,goal_j7)
+        goal=rospy.get_param("home")
+        move_to_joint_position(goal['j1'],goal['j2'],goal['j3'],goal['j4'],
+        	                   goal['j5'],goal['j6'],goal['j7'])
         return 'succeeded'
 
 def main():

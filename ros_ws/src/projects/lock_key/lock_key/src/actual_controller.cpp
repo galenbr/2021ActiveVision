@@ -16,10 +16,13 @@ double x_misalignment{0.0};
 double y_misalignment{0.0};
 
 //Defines target end-effector point with offsets
-struct point_goal{
+struct pose_goal{
     double x{0.0};
     double y{0.0};
     double z{0.0};
+    double roll{0.0};
+    double pitch{0.0};
+    double yaw{0.0};
 
     double z_offset_far{0.0};
     double z_offset_close{0.0};
@@ -133,19 +136,25 @@ int main(int argc, char ** argv){
     moveit_planner::SetVelocity velscale;
 
     //Initialize goal positions
-    point_goal key_goal;
-    point_goal padlock_goal;
+    pose_goal key_goal;
+    pose_goal padlock_goal;
     joint_space_pos home;
 
     //Retrieve parameters and populate goals
     n.getParam("key_goal/x",key_goal.x);
     n.getParam("key_goal/y",key_goal.y);
     n.getParam("key_goal/z",key_goal.z);
+    n.getParam("key_goal/roll",key_goal.roll);
+    n.getParam("key_goal/pitch",key_goal.pitch);
+    n.getParam("key_goal/yaw",key_goal.yaw);
     n.getParam("key_goal/z_offset",key_goal.z_offset_far);
 
     n.getParam("padlock_goal/x",padlock_goal.x);
     n.getParam("padlock_goal/y",padlock_goal.y);
     n.getParam("padlock_goal/z",padlock_goal.z);
+    n.getParam("padlock_goal/roll",padlock_goal.roll);
+    n.getParam("padlock_goal/pitch",padlock_goal.pitch);
+    n.getParam("padlock_goal/yaw",padlock_goal.yaw);
     n.getParam("padlock_goal/z_offset_far",padlock_goal.z_offset_far);
     n.getParam("padlock_goal/z_offset_close",padlock_goal.z_offset_close);
     n.getParam("padlock_goal/x_misalignment",x_misalignment);
@@ -158,18 +167,23 @@ int main(int argc, char ** argv){
     n.getParam("home/j5", home.j5);
     n.getParam("home/j6", home.j6);
     n.getParam("home/j7", home.j7);
+
+    //Convert RPY orientations to Quaternion
+    tf2::Quaternion q_key_goal, q_padlock_goal;
+    q_key_goal.setRPY(key_goal.roll, key_goal.pitch, key_goal.yaw);
+    q_padlock_goal.setRPY(padlock_goal.roll, padlock_goal.pitch, padlock_goal.yaw);
+    q_key_goal.normalize();
+    q_padlock_goal.normalize();
+
     // moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
     // moveit::planning_interface::MoveGroupInterface group("panda_arm");
     // addCollisionObjects(planning_scene_interface);
-    // ros::WallDuration(1.0).sleep();
+    // ros::WallDuration(1.0).sleep();  
 
     // Move to above Key
     moveit_planner::MoveCart move1;
     geometry_msgs::Pose p1;
-    p1.orientation.x = 0.924; //1.0
-    p1.orientation.y = -0.382; //-0.5
-    p1.orientation.z = 0.0; //0.0
-    p1.orientation.w = 0.0; //0.0
+    tf2::convert(q_key_goal, p1.orientation);
     p1.position.x = key_goal.x;
     p1.position.y = key_goal.y;
     p1.position.z = key_goal.z+key_goal.z_offset_far;
@@ -181,10 +195,7 @@ int main(int argc, char ** argv){
     // Move to Key
     moveit_planner::MoveCart move2;
     geometry_msgs::Pose p2;
-    p2.orientation.x = 0.924; //1.0
-    p2.orientation.y = -0.382; //-0.5
-    p2.orientation.z = 0.0; //0.0
-    p2.orientation.w = 0.0; //0.0
+    p2.orientation=p1.orientation;
     p2.position.x = p1.position.x;
     p2.position.y = p1.position.y;
     p2.position.z = key_goal.z;
@@ -197,48 +208,39 @@ int main(int argc, char ** argv){
     moveGripper(0.02,5.0);
 
     // Move to above Key after grasping it
-    moveit_planner::MoveCart move1a;
-    geometry_msgs::Pose p1a;
-    p1a.orientation.x = 0.924; //1.0
-    p1a.orientation.y = -0.382; //-0.5
-    p1a.orientation.z = 0.0; //0.0
-    p1a.orientation.w = 0.0; //0.0
-    p1a.position.x = p1.position.x;
-    p1a.position.y = p1.position.y;
-    p1a.position.z = p1.position.z;
-    move1a.request.val.push_back(p1a);
-    move1a.request.execute = true;
-    cartMoveClient.call(move1a);
-    ROS_INFO("Reached post-key pose!");
-
-    // Move to above Lock
     moveit_planner::MoveCart move3;
     geometry_msgs::Pose p3;
-    p3.orientation.x = 0.924; //1.0
-    p3.orientation.y = -0.382; //-0.5
-    p3.orientation.z = 0.0; //0.0
-    p3.orientation.w = 0.0; //0.0
-    p3.position.x = padlock_goal.x+x_misalignment;
-    p3.position.y = padlock_goal.y+y_misalignment;
-    p3.position.z = padlock_goal.z+padlock_goal.z_offset_far;
+    p3.orientation=p1.orientation;
+    p3.position.x = p1.position.x;
+    p3.position.y = p1.position.y;
+    p3.position.z = p1.position.z;
     move3.request.val.push_back(p3);
     move3.request.execute = true;
     cartMoveClient.call(move3);
-    ROS_INFO("Reached far pre-lock pose!");
+    ROS_INFO("Reached post-key pose!");
 
-    // Move to above Lock (but closer)
+    // Move to above Lock
     moveit_planner::MoveCart move4;
     geometry_msgs::Pose p4;
-    p4.orientation.x = 0.924; //1.0
-    p4.orientation.y = -0.382; //-0.5
-    p4.orientation.z = 0.0; //0.0
-    p4.orientation.w = 0.0; //0.0
-    p4.position.x = p3.position.x;
-    p4.position.y = p3.position.y;
-    p4.position.z = padlock_goal.z+padlock_goal.z_offset_close;
+    tf2::convert(q_padlock_goal, p4.orientation);
+    p4.position.x = padlock_goal.x+x_misalignment;
+    p4.position.y = padlock_goal.y+y_misalignment;
+    p4.position.z = padlock_goal.z+padlock_goal.z_offset_far;
     move4.request.val.push_back(p4);
     move4.request.execute = true;
     cartMoveClient.call(move4);
+    ROS_INFO("Reached far pre-lock pose!");
+
+    // Move to above Lock (but closer)
+    moveit_planner::MoveCart move5;
+    geometry_msgs::Pose p5;
+    p5.orientation=p4.orientation;
+    p5.position.x = p4.position.x;
+    p5.position.y = p4.position.y;
+    p5.position.z = padlock_goal.z+padlock_goal.z_offset_close;
+    move5.request.val.push_back(p5);
+    move5.request.execute = true;
+    cartMoveClient.call(move5);
     ROS_INFO("Reached close pre-lock pose!");
 
     // reducing velocity
@@ -278,18 +280,15 @@ int main(int argc, char ** argv){
     velScalingClient.call(velscale);
 
     // Move to above Lock after key insertion
-    moveit_planner::MoveCart move3a;
-    geometry_msgs::Pose p3a;
-    p3a.orientation.x = 0.924; //1.0
-    p3a.orientation.y = -0.382; //-0.5
-    p3a.orientation.z = 0.0; //0.0
-    p3a.orientation.w = 0.0; //0.0
-    p3a.position.x = p3.position.x;
-    p3a.position.y = p3.position.y;
-    p3a.position.z = p3.position.z;
-    move3a.request.val.push_back(p3a);
-    move3a.request.execute = true;
-    cartMoveClient.call(move3a);
+    moveit_planner::MoveCart move6;
+    geometry_msgs::Pose p6;
+    p6.orientation=p5.orientation;
+    p6.position.x = p5.position.x;
+    p6.position.y = p5.position.y;
+    p6.position.z = p5.position.z;
+    move6.request.val.push_back(p6);
+    move6.request.execute = true;
+    cartMoveClient.call(move6);
     ROS_INFO("Reached post-lock pose!");
 
     // Move to Home
