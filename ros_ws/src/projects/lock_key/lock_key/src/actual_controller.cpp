@@ -12,9 +12,6 @@
 
 typedef actionlib::SimpleActionClient<lock_key::SpiralInsertAction> SpiralClient;
 
-double x_misalignment{0.0};
-double y_misalignment{0.0};
-
 //Defines target end-effector point with offsets
 struct pose_goal{
     double x{0.0};
@@ -23,6 +20,9 @@ struct pose_goal{
     double roll{0.0};
     double pitch{0.0};
     double yaw{0.0};
+
+    double x_misalignment{0.0};
+    double y_misalignment{0.0};
 
     double z_offset_far{0.0};
     double z_offset_close{0.0};
@@ -63,62 +63,6 @@ void moveGripper(double Grasp_Width,double gripper_timout){
     }
 }
 
-// void addCollisionObjects(moveit::planning_interface::PlanningSceneInterface& planning_scene_interface)
-// {
-//     // BEGIN_SUB_TUTORIAL table1
-//     //
-//     // Creating Environment
-//     // ^^^^^^^^^^^^^^^^^^^^
-//     // Create vector to hold 3 collision objects.
-//     std::vector<moveit_msgs::CollisionObject> collision_objects;
-//     collision_objects.resize(3);
-
-//     // Add the first table where the cube will originally be kept.
-//     collision_objects[0].id = "table1";
-//     collision_objects[0].header.frame_id = "panda_link0";
-
-//     /* Define the primitive and its dimensions. */
-//     collision_objects[0].primitives.resize(1);
-//     collision_objects[0].primitives[0].type = collision_objects[0].primitives[0].BOX;
-//     collision_objects[0].primitives[0].dimensions.resize(3);
-//     collision_objects[0].primitives[0].dimensions[0] = 0.2;
-//     collision_objects[0].primitives[0].dimensions[1] = 0.4;
-//     collision_objects[0].primitives[0].dimensions[2] = 0.4;
-
-//     /* Define the pose of the table. */
-//     collision_objects[0].primitive_poses.resize(1);
-//     collision_objects[0].primitive_poses[0].position.x = 0.5;
-//     collision_objects[0].primitive_poses[0].position.y = 0;
-//     collision_objects[0].primitive_poses[0].position.z = 0.2;
-//     // END_SUB_TUTORIAL
-
-//     collision_objects[0].operation = collision_objects[0].ADD;
-
-//     // BEGIN_SUB_TUTORIAL object
-//     // Define the object that we will be manipulating
-//     collision_objects[1].header.frame_id = "panda_link0";
-//     collision_objects[1].id = "object";
-
-//     /* Define the primitive and its dimensions. */
-//     collision_objects[1].primitives.resize(1);
-//     collision_objects[1].primitives[0].type = collision_objects[1].primitives[0].BOX;
-//     collision_objects[1].primitives[0].dimensions.resize(3);
-//     collision_objects[1].primitives[0].dimensions[0] = 0.02;
-//     collision_objects[1].primitives[0].dimensions[1] = 0.02;
-//     collision_objects[1].primitives[0].dimensions[2] = 0.2;
-
-//     /* Define the pose of the object. */
-//     collision_objects[1].primitive_poses.resize(1);
-//     collision_objects[1].primitive_poses[0].position.x = 0.5;
-//     collision_objects[1].primitive_poses[0].position.y = 0;
-//     collision_objects[1].primitive_poses[0].position.z = 0.5;
-//     // END_SUB_TUTORIAL
-
-//     collision_objects[1].operation = collision_objects[1].ADD;
-
-//     planning_scene_interface.applyCollisionObjects(collision_objects);
-// }
-
 int main(int argc, char ** argv){
     ros::init(argc, argv, "actual_control");
     ros::NodeHandle n;
@@ -157,8 +101,8 @@ int main(int argc, char ** argv){
     n.getParam("padlock_goal/yaw",padlock_goal.yaw);
     n.getParam("padlock_goal/z_offset_far",padlock_goal.z_offset_far);
     n.getParam("padlock_goal/z_offset_close",padlock_goal.z_offset_close);
-    n.getParam("padlock_goal/x_misalignment",x_misalignment);
-    n.getParam("padlock_goal/y_misalignment",y_misalignment);
+    n.getParam("padlock_goal/x_misalignment",padlock_goal.x_misalignment);
+    n.getParam("padlock_goal/y_misalignment",padlock_goal.y_misalignment);
     // Retrieve Joint Values
     n.getParam("home/j1", home.j1);
     n.getParam("home/j2", home.j2);
@@ -174,11 +118,6 @@ int main(int argc, char ** argv){
     q_padlock_goal.setRPY(padlock_goal.roll, padlock_goal.pitch, padlock_goal.yaw);
     q_key_goal.normalize();
     q_padlock_goal.normalize();
-
-    // moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
-    // moveit::planning_interface::MoveGroupInterface group("panda_arm");
-    // addCollisionObjects(planning_scene_interface);
-    // ros::WallDuration(1.0).sleep();  
 
     // Move to above Key
     moveit_planner::MoveCart move1;
@@ -223,8 +162,8 @@ int main(int argc, char ** argv){
     moveit_planner::MoveCart move4;
     geometry_msgs::Pose p4;
     tf2::convert(q_padlock_goal, p4.orientation);
-    p4.position.x = padlock_goal.x+x_misalignment;
-    p4.position.y = padlock_goal.y+y_misalignment;
+    p4.position.x = padlock_goal.x+padlock_goal.x_misalignment;
+    p4.position.y = padlock_goal.y+padlock_goal.y_misalignment;
     p4.position.z = padlock_goal.z+padlock_goal.z_offset_far;
     move4.request.val.push_back(p4);
     move4.request.execute = true;
@@ -282,10 +221,10 @@ int main(int argc, char ** argv){
     // Move to above Lock after key insertion
     moveit_planner::MoveCart move6;
     geometry_msgs::Pose p6;
-    p6.orientation=p5.orientation;
-    p6.position.x = p5.position.x;
-    p6.position.y = p5.position.y;
-    p6.position.z = p5.position.z;
+    p6.orientation=p4.orientation;
+    p6.position.x = p4.position.x;
+    p6.position.y = p4.position.y;
+    p6.position.z = p4.position.z;
     move6.request.val.push_back(p6);
     move6.request.execute = true;
     cartMoveClient.call(move6);

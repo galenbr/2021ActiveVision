@@ -1,13 +1,13 @@
 #include <ros/ros.h>
 #include <lock_key/SpiralInsertAction.h> // Note: "Action" is appended
 #include <actionlib/server/simple_action_server.h>
-//#include "moveit_planner/GetPose.h"
 #include "moveit_planner/GetTF.h"
 #include "moveit_planner/MoveCart.h"
 #include "moveit_planner/MovePose.h"
 #include "lock_key/getWrench.h"
 #include "lock_key/getAveWrench.h"
 #include "std_msgs/Float64.h"
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -23,6 +23,7 @@ double Ty_limit;
 double Fx_bias{0}, Fy_bias{0}, Fz_bias{0};
 double Tx_bias{0}, Ty_bias{0}, Tz_bias{0};
 double minSpiralForce{0.0};
+geometry_msgs::Quaternion padlock_goal_or;
 
 typedef actionlib::SimpleActionServer<lock_key::SpiralInsertAction> Server;
 
@@ -55,20 +56,11 @@ bool maxSpiralForces(double Fd){
 
     fz_msg.data=forces[2];
     fz_pub_ptr->publish(fz_msg);
-    //ROS_INFO("Stop if %f>%f",forces[2],Fd);
-    // ROS_INFO("Stop if (Tx: %f > %f or Ty: %f > %f or Fz: %f > %f)",
-    //         sqrt(pow(torques[0],2)),Tx_limit,sqrt(pow(torques[1],2)),Ty_limit,
-    //         forces[2],Fd);
-
-    //Break spiral if true
-    // return ((sqrt(pow(torques[0],2))>Tx_limit) || //tx>0.9 or
-    //         (sqrt(pow(torques[1],2))>Ty_limit) || //ty>0.9 or
-    //         (forces[2]>Fd));                //fz>Fd
-    //return forces[2]>Fd; 
-    
+   
     ROS_INFO("Spiral. Stop if Fz: %.4f < %.4f", forces[2], minSpiralForce);
     ROS_INFO("Spiral. Stop if Tx: %.4f > %.4f", abs(torques[0]), Tx_limit);
     ROS_INFO("Spiral. Stop if Ty: %.4f > %.4f", abs(torques[1]), Ty_limit);
+
     return ((forces[2]>minSpiralForce) &&
             (sqrt(pow(torques[0],2))<Tx_limit) &&
             (sqrt(pow(torques[1],2))<Ty_limit)); //If true, keep spiralling
@@ -93,42 +85,44 @@ void moveAbs(double x, double y, double z, double qw, double qx, double qy, doub
     ROS_INFO("Moving to Absolute Position");
 }
 
-void moveRel(double x, double y, double z, double qw, double qx, double qy, double qz){
+void setGoalOrientation(){
+    double roll, pitch, yaw;
+    //Retrieve orientation parameters
+    n_ptr->getParam("padlock_goal/roll",roll);
+    n_ptr->getParam("padlock_goal/pitch",pitch);
+    n_ptr->getParam("padlock_goal/yaw",yaw);  
+    //Convert RPY orientations to Quaternion
+    tf2::Quaternion q_padlock_goal;
+    q_padlock_goal.setRPY(roll, pitch, yaw);
+    q_padlock_goal.normalize();
+    //Update global variable
+    tf2::convert(q_padlock_goal, padlock_goal_or);
+}
+
+void moveRel(double x, double y, double z){
 	//Waiting for services to be available
 	ros::service::waitForService("get_transform",timeout);
     ros::service::waitForService("cartesian_move",timeout);
-	//ros::ServiceClient getPoseClient = n_ptr->serviceClient<moveit_planner::GetPose>("get_pose");
     ros::ServiceClient getTFClient = n_ptr->serviceClient<moveit_planner::GetTF>("get_transform");
 	ros::ServiceClient moveCartClient = n_ptr->serviceClient<moveit_planner::MoveCart>("cartesian_move");
+
     moveit_planner::GetTF curTF;
-	//moveit_planner::GetPose curPose;
 	moveit_planner::MoveCart cart;
     //Get current TF from world to EE
     curTF.request.from="map"; //map
     curTF.request.to="panda_link8"; //end_effector_link
     getTFClient.call(curTF);
-	//Get current robot pose
-	//getPoseClient.call(curPose);
 	geometry_msgs::Pose p;
     p=curTF.response.pose;
-    p.orientation.x = 0.924; //1.0
-    p.orientation.y = -0.382; //-0.5
-    p.orientation.z = 0.0; //0.0
-    p.orientation.w = 0.0; //0.0
-    //p=curPose.response.pose;
+    p.orientation=padlock_goal_or;
     //Update position with relative changes
-    //ROS_INFO("Currently at: %.3f, %.3f, %.3f.",p.position.x,p.position.y,p.position.z);
 	p.position.x += x;
 	p.position.y += y;
     p.position.z += z;
 
-    //ROS_INFO("Going to: %.3f, %.3f, %.3f.",p.position.x,p.position.y,p.position.z);
-
     cart.request.val.push_back(p);
     cart.request.execute = true;
     moveCartClient.call(cart);
-    
-    //ROS_INFO("Moving to Relative Position");
 }
 
 void moveAbsSpiral(double x, double y, double z, bool useCurrentZ){
@@ -154,10 +148,7 @@ void moveAbsSpiral(double x, double y, double z, bool useCurrentZ){
     }
 
     //Set remaining orientation/position info
-    p.orientation.x = 0.924;
-    p.orientation.y = -0.382;
-    p.orientation.z = 0.0;
-    p.orientation.w = 0.0;
+    p.orientation=padlock_goal_or;
 	p.position.x = x;
 	p.position.y = y;
 
@@ -184,7 +175,7 @@ void calculateFTBias(){
 }
 
 void insertPartSpiral(double Ft, double Fd, double Fi, double delta_max){
-	// Implement Algorithm 1 from Watson, Miller, and Correll 2020 Paper here.
+	// Implement modified Algorithm 1 from Watson, Miller, and Correll 2020 Paper here.
 
     // 11. MoveAbs - Move to insertion plane. Should already be
     //               accomplished by controller.cpp
@@ -192,12 +183,15 @@ void insertPartSpiral(double Ft, double Fd, double Fi, double delta_max){
     // 12. MoveRel - Move towards goal (xi,yi) until traveled 
     //               delta_max or MaxDownForce==false
     ROS_INFO("Moving to insertion plane");
+    // Retrieve goal orientation
+    setGoalOrientation();
+
     double delta{0.0};
     //Break delta up into smaller steps
     double delta_cmd;
     n_ptr->getParam("spiral/delta_step",delta_cmd); // Distance to move down per step
     while (delta<=delta_max && maxDownForce(Ft)){
-        moveRel(0.0,0.0,-delta_cmd,0.0,0.0,0.0,0.0);
+        moveRel(0.0,0.0,-delta_cmd);
         ROS_INFO("delta: %f",delta);
         // Update delta. TODO: Use actual feedback rather than cmd
         delta+=delta_cmd;
@@ -254,7 +248,7 @@ void insertPartSpiral(double Ft, double Fd, double Fi, double delta_max){
 
     // // 14. MoveRel - Finish insertion
     while (delta<=delta_max && maxDownForce(Fi)){
-        moveRel(0.0,0.0,-delta_cmd,0.0,0.0,0.0,0.0);
+        moveRel(0.0,0.0,-delta_cmd);
         // Update delta. TODO: Use actual feedback rather than cmd
         delta+=delta_cmd;
     }

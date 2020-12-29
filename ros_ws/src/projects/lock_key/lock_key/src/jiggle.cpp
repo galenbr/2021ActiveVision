@@ -1,7 +1,7 @@
 #include <ros/ros.h>
 #include <lock_key/JiggleAction.h> // Note: "Action" is appended
 #include <actionlib/server/simple_action_server.h>
-#include "moveit_planner/GetPose.h"
+#include "moveit_planner/GetTF.h"
 #include "moveit_planner/MoveCart.h"
 #include "moveit_planner/MovePose.h"
 #include "lock_key/getWrench.h"
@@ -19,15 +19,20 @@ typedef actionlib::SimpleActionServer<lock_key::JiggleAction> Server;
 
 void moveRel(double x, double y, double z, double roll, double pitch, double yaw){
 	//Waiting for services to be available
+	ros::service::waitForService("get_transform",timeout);
 	ros::service::waitForService("move_to_pose",timeout);
-	ros::ServiceClient getPoseClient = n_ptr->serviceClient<moveit_planner::GetPose>("get_pose");
+    ros::ServiceClient getTFClient = n_ptr->serviceClient<moveit_planner::GetTF>("get_transform");
 	ros::ServiceClient moveCartClient = n_ptr->serviceClient<moveit_planner::MoveCart>("cartesian_move");
-	moveit_planner::GetPose curPose;
+    moveit_planner::GetTF curTF;
 	moveit_planner::MoveCart cart;
-	//Get current robot pose
-	getPoseClient.call(curPose);
+
+    //Get current TF from world to EE
+    curTF.request.from="map"; //map
+    curTF.request.to="panda_link8"; //end_effector_link
+    getTFClient.call(curTF);
 	geometry_msgs::Pose p;
-    p=curPose.response.pose;
+    p=curTF.response.pose;
+
 	//Convert RPY to quat
 	tf2::Quaternion q_orig, q_change, q_new;
     tf2::convert(p.orientation , q_orig);
@@ -35,6 +40,7 @@ void moveRel(double x, double y, double z, double roll, double pitch, double yaw
 	q_new=q_change*q_orig;
 	q_new.normalize();
 	tf2::convert(q_new, p.orientation);
+	
     //Update position with relative changes
 	p.position.x += x;
 	p.position.y += y;
@@ -42,7 +48,6 @@ void moveRel(double x, double y, double z, double roll, double pitch, double yaw
 	cart.request.val.push_back(p);
     cart.request.execute = true;
     moveCartClient.call(cart);
-    //ROS_INFO("Moving to Relative Position");
 }
 
 void jiggle(double angle, char axis){
