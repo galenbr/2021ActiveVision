@@ -20,7 +20,8 @@ policyTester: {
     directory: '/dataCollected/testData/', # Directory to which the PCD, CSV will be saved
     objID: 1, # Object for which data has to be collected
     csvName: 'default.csv', # CSV file to which the data has to be saved
-    csvStVec: 'Prism_truncated_stateVec.csv', # Name of csv inside active_vision/misc/State_Vector/
+    storageDir: '/dataCollected/storage/Data_1/', # Directory where the state vector has been stored- Data_0 should never be made, so you must replace this default at runtime.
+    csvStVec: 'dataRec_stateVec.csv', # Name of csv inside storageDir
     maxSteps: 5, # Max number of steps to be taken before stopping
 
     # Parameters for PCA->LDA->LR Policy

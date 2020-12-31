@@ -73,6 +73,7 @@ environment::environment(ros::NodeHandle *nh){
   pubObjPose = nh->advertise<gazebo_msgs::ModelState> ("/gazebo/set_model_state", 1);
   subKinectPtCld = nh->subscribe ("/camera/depth/points", 1, &environment::cbPtCld, this);
   gazeboSpawnModel = nh->serviceClient< gazebo_msgs::SpawnModel> ("/gazebo/spawn_sdf_model");
+  gazeboCheckModel = nh->serviceClient< gazebo_msgs::GetModelState> ("/gazebo/get_model_state");
   gazeboDeleteModel = nh->serviceClient< gazebo_msgs::DeleteModel> ("/gazebo/delete_model");
   // NOT USED (JUST FOR REFERENCE)
   /*subKinectRGB = nh->subscribe ("/camera/color/image_raw", 1, &environment::cbImgRgb, this);
@@ -228,6 +229,7 @@ void cbImgDepth (const sensor_msgs::ImageConstPtr& msg){
 // 2A: Spawning objects in gazebo on the table centre for a given pose option and yaw
 void environment::spawnObject(int objectID, int choice, float yaw){
   gazebo_msgs::SpawnModel spawnObj;
+  gazebo_msgs::GetModelState checkObj;
   geometry_msgs::Pose pose;
 
   pose.position.x = 0;
@@ -248,13 +250,20 @@ void environment::spawnObject(int objectID, int choice, float yaw){
   spawnObj.request.reference_frame = "world";
   spawnObj.request.initial_pose = pose;
 
+  checkObj.request.model_name = objectDict[objectID][1];
+
   gazeboSpawnModel.call(spawnObj);
-  boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
+  gazeboCheckModel.call(checkObj);
+  while(not checkObj.response.success){
+    boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+    gazeboCheckModel.call(checkObj);
+  }
   moveObject(objectID,choice,yaw);
 }
 
 // 2B: Function to move the object. Same args as spawnObject
 void environment::moveObject(int objectID, int choice, float yaw){
+  gazebo_msgs::GetModelState checkObj;
 
   if(choice >= objectPosesDict[objectID].size()){
     choice = 0;
@@ -283,8 +292,15 @@ void environment::moveObject(int objectID, int choice, float yaw){
 
   // Publishing it to gazebo
   pubObjPose.publish(ModelState);
+  checkObj.request.model_name = objectDict[objectID][1];
+  gazeboCheckModel.call(checkObj);
   ros::spinOnce();
-  boost::this_thread::sleep(boost::posix_time::milliseconds(500));
+  while((not checkObj.response.success) or (abs(checkObj.response.pose.position.z - (tableCentre[2]+objectPosesDict[objectID][choice][0]) > 0.2))){
+    printf("Object not positioned yet, pose z = %1.4f, not %1.4f, diff of %1.4f\n", checkObj.response.pose.position.z, tableCentre[2]+objectPosesDict[objectID][choice][0], abs(checkObj.response.pose.position.z - (tableCentre[2]+objectPosesDict[objectID][choice][0])));
+    boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+    gazeboCheckModel.call(checkObj);
+    ros::spinOnce();
+  }
 }
 
 // 3: Deleting objects in gazebo

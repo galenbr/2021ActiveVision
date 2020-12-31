@@ -24,7 +24,7 @@ csvDataRec='dataRec.csv'
 csvParams='parameters.csv'
 csvStorageSummary='storageSummary.csv'
 objectID=(1 2)
-nData=(50 50)
+nData=(5 5)
 
 # Creating a screen to run ROS & gazebo
 printf "Starting gazebo ...\n"

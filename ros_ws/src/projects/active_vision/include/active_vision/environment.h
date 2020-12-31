@@ -44,6 +44,7 @@
 //Gazebo specific includes
 #include <gazebo_msgs/SetModelState.h>
 #include <gazebo_msgs/SpawnModel.h>
+#include <gazebo_msgs/GetModelState.h>
 #include <gazebo_msgs/DeleteModel.h>
 
 // Typedef for convinience
@@ -92,6 +93,7 @@ private:
   ros::Publisher pubObjPose;            // Publisher : Kinect/Objects pose
   ros::Subscriber subKinectPtCld;       // Subscriber : Kinect pointcloud
   ros::ServiceClient gazeboSpawnModel;  // Service : Spawn Model
+  ros::ServiceClient gazeboCheckModel;  // Service : Check Model
   ros::ServiceClient gazeboDeleteModel; // Service : Delete Model
 
   pcl::PassThrough<pcl::PointXYZRGB> pass;                  // Passthrough filter

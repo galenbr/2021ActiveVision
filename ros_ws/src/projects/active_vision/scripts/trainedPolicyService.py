@@ -45,7 +45,7 @@ if __name__ == "__main__":
 
     #Hardcoded state vector location- TODO: look into adding this to
     # the yaml?
-    csvDir = rospkg.RosPack().get_path('active_vision') + "/misc/State_Vector/"
+    csvDir = rospkg.RosPack().get_path('active_vision') + rospy.get_param("/active_vision/policyTester/storageDir")
 
     #stateVec=List of all raw states
     #dirVec=List of the direction taken for each state
