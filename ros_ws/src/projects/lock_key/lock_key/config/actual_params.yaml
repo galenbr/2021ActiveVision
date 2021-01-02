@@ -3,7 +3,7 @@ key_goal:
   # Key grasping position in map frame [meters]
   x: 0.5715
   y: 0.2623
-  z: 0.175 #peg: 0.1665, key: 0.175
+  z: 0.165 #peg: 0.1665, key: 0.165
   # Key grasping orientation in [radians]
   roll: 3.1416
   pitch: 0.0
