@@ -50,25 +50,27 @@ void moveRel(double x, double y, double z, double roll, double pitch, double yaw
     moveCartClient.call(cart);
 }
 
-void jiggle(double angle, char axis){
-	switch(axis){
-		case 'x' :
-			ROS_INFO("Jiggle about X");
-			moveRel(0.0,0.0,0.0,-angle,0.0,0.0);
-			moveRel(0.0,0.0,0.0,2*angle,0.0,0.0);
-			moveRel(0.0,0.0,0.0,-angle,0.0,0.0);
-		case 'y' :
-			ROS_INFO("Jiggle about Y");	
-			moveRel(0.0,0.0,0.0,0.0,-angle,0.0);
-			moveRel(0.0,0.0,0.0,0.0,2*angle,0.0);
-			moveRel(0.0,0.0,0.0,0.0,-angle,0.0);
-		case 'z' :
-			ROS_INFO("Jiggle about Z");
-			moveRel(0.0,0.0,0.0,0.0,0.0,-angle);
-			moveRel(0.0,0.0,0.0,0.0,0.0,2*angle);
-			moveRel(0.0,0.0,0.0,0.0,0.0,-angle);
-		default : 
-			ROS_INFO("Unknown axis. Please use x, y, or z.");
+void jiggle(double angle, basic_string<char> axis){
+	if (axis=="x"){
+		ROS_INFO("Jiggle about X");
+		moveRel(0.0,0.0,0.0,-angle,0.0,0.0);
+		moveRel(0.0,0.0,0.0,2*angle,0.0,0.0);
+		moveRel(0.0,0.0,0.0,-angle,0.0,0.0);
+	}
+	else if (axis=="y"){
+		ROS_INFO("Jiggle about Y");	
+		moveRel(0.0,0.0,0.0,0.0,-angle,0.0);
+		moveRel(0.0,0.0,0.0,0.0,2*angle,0.0);
+		moveRel(0.0,0.0,0.0,0.0,-angle,0.0);
+	}
+	else if (axis=="z"){
+		ROS_INFO("Jiggle about Z");
+		moveRel(0.0,0.0,0.0,0.0,0.0,-angle);
+		moveRel(0.0,0.0,0.0,0.0,0.0,2*angle);
+		moveRel(0.0,0.0,0.0,0.0,0.0,-angle);
+	}
+	else {
+		ROS_INFO("Unknown axis. Please use x, y, or z.");
 	}
 }
 
