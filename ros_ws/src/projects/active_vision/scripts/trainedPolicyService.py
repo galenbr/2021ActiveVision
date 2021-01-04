@@ -9,7 +9,7 @@ from sklearn.linear_model import LogisticRegression
 from pickle import dump
 import pickle
 from active_vision.srv import trainedPolicySRV,trainedPolicySRVResponse
-from trainingPolicy import PCALDAPipeline, PCAPipeline, readInput
+from trainingPolicy import PCALDAPipeline, PCAPipeline, readInput, methodPipeline, RandomModel
 
 #Currently only 1 model. TODO: add more/incorporate with pipeline class
 model = LogisticRegression(solver='liblinear', multi_class='auto')
@@ -43,8 +43,7 @@ if __name__ == "__main__":
     PCALDA_components = rospy.get_param("/active_vision/policyTester/PCALDA/PCAcomponents")
     stVecfile = rospy.get_param("/active_vision/policyTester/csvStVec")
 
-    #Hardcoded state vector location- TODO: look into adding this to
-    # the yaml?
+    #State vector location
     csvDir = rospkg.RosPack().get_path('active_vision') + rospy.get_param("/active_vision/policyTester/storageDir")
 
     #stateVec=List of all raw states
@@ -61,6 +60,9 @@ if __name__ == "__main__":
         pipeline = PCAPipeline(PCA_components)
         pipeline.calculateFunction(stateVec, dirVec)
         model.fit(pipeline.applyFunction(stateVec), dirVec)
+    elif type == "RANDOM":
+        pipeline = methodPipeline()
+        model = RandomModel()
     s = rospy.Service('/active_vision/trained_policy', trainedPolicySRV, predictionServer)
     rospy.loginfo("Trained policy service ready.")
     rospy.spin()

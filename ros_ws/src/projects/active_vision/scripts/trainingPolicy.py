@@ -29,7 +29,6 @@ class methodPipeline(object):
     def __init__(self):
         self.ready = False
         self.scaler = StandardScaler()
-        return self
 
     #Use X and y to train the preprocessor. TODO:Add model
     def calculateFunction(self, X, y):
@@ -43,7 +42,7 @@ class methodPipeline(object):
 
     #Apply the entire pipeline to X.
     def applyFunction(self, X):
-        return self.ready
+        return X
 
     def saveModel(self, name):
         dump(self, open(name+'_pipeline.pkl', 'wb'))

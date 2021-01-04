@@ -23,7 +23,7 @@ dataSrc=$pkgPath"/dataCollected/storage/"
 csvDataRec='dataRec.csv'
 csvParams='parameters.csv'
 csvStorageSummary='storageSummary.csv'
-policies=("PCA" "PCA_LDA") #"RANDOM" "HEURISTIC"
+policies=("HEURISTIC" "RANDOM" "PCA" "PCA_LDA")
 
 files=()
 
@@ -74,10 +74,18 @@ for i in ${files[@]}; do
 		sleep 5
 
 		# Start the service and the tester
-		screen -S session-policyService -X stuff $'rosrun active_vision trainedPolicyService.py\n'
+		if [[ "$policy" == "HEURISTIC" ]]; then
+			screen -S session-policyService -X stuff $'rosrun active_vision heuristicPolicyService 0\n'
+			screen -S session-policyTester -X stuff $'rosrun active_vision policyTester 1\n1\n exit\n'
+		else
+			screen -S session-policyService -X stuff $'rosrun active_vision trainedPolicyService.py\n'
+			screen -S session-policyTester -X stuff $'rosrun active_vision policyTester 2\n1\n exit\n'
+		fi
+		sleep 5
+		screen -S session-policyTester -X stuff $'sleep 1\nexit\n'
 		#Debug line
 		#screen -S session-policyTester -X stuff $'sleep 7\nexit\n'
-		screen -S session-policyTester -X stuff $'rosrun active_vision policyTester 2\n1\nexit\n'
+		
 
 		# Waiting till testing is over
 		screenOK="$(checkScreen session-policyTester)"
