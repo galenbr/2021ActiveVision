@@ -1,10 +1,10 @@
-#include "active_vision/environment.h"
-#include "active_vision/toolDataHandling.h"
-#include "active_vision/toolViewPointCalc.h"
-#include "active_vision/toolVisualization.h"
+#include <active_vision/environment.h>
+#include <active_vision/toolDataHandling.h>
+#include <active_vision/toolViewPointCalc.h>
+#include <active_vision/toolVisualization.h>
 #include <active_vision/toolStateVector.h>
-#include "active_vision/heuristicPolicySRV.h"
-#include "active_vision/trainedPolicySRV.h"
+#include <active_vision/heuristicPolicySRV.h>
+#include <active_vision/trainedPolicySRV.h>
 
 int mode;
 int runMode;
@@ -62,9 +62,9 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 	home.type = 1;
 	home.direction = 0;
 	home.nSteps = 0;
-	home.objType = kinectControl.objectDict[object][1];
-	home.objPose = {kinectControl.objectPosesDict[object][objPoseCode][1],
-								  kinectControl.objectPosesDict[object][objPoseCode][2],
+	home.objType = kinectControl.objectDict[object].description;
+	home.objPose = {kinectControl.objectDict[object].poses[objPoseCode][1],
+									kinectControl.objectDict[object].poses[objPoseCode][2],
 									objYaw*(M_PI/180.0)};
 	// printf("Starting first pass.\n");
 	singlePass(kinectControl, startPose, true, true);
@@ -250,7 +250,7 @@ int main(int argc, char** argv){
 
 	int objID;
 	nh.getParam("/active_vision/policyTester/objID", objID);
-	if(objID < 0 && objID > 7){
+	if(kinectControl.objectDict.count(objID) == 0){
 		std::cout << "ERROR. Incorrect Object ID." << std::endl;
     return(-1);
 	}
@@ -288,16 +288,16 @@ int main(int argc, char** argv){
 
 	if(testAll == 0){
 		int objPoseCode, objYaw;
-		printf("Enter the object pose code (0-%d) : ", int(kinectControl.objectPosesDict[objID].size()-1));
+		printf("Enter the object pose code (0-%d) : ", int(kinectControl.objectDict[objID].nPoses-1));
 		std::cin >> objPoseCode;
-		if(objPoseCode < 0 || objPoseCode > kinectControl.objectPosesDict[objID].size()-1) objPoseCode = 0;
+		if(objPoseCode < 0 || objPoseCode > kinectControl.objectDict[objID].nPoses-1) objPoseCode = 0;
 		printf("Enter the object yaw (deg) (0-360) : ");
 		std::cin >> objYaw;
 
 		findGrasp(kinectControl, objID, objPoseCode, objYaw, dir, csvName, viewer, policy);
 	}else{
-		for(int objPoseCode = 0; objPoseCode < kinectControl.objectPosesDict[objID].size(); objPoseCode+=1){
-			for(int objYaw = kinectControl.objectPosesYawLimits[objID][0]; objYaw < kinectControl.objectPosesYawLimits[objID][1]; objYaw+=10){
+		for(int objPoseCode = 0; objPoseCode < kinectControl.objectDict[objID].nPoses; objPoseCode+=1){
+			for(int objYaw = kinectControl.objectDict[objID].poses[objPoseCode][3]; objYaw < kinectControl.objectDict[objID].poses[objPoseCode][4]; objYaw+=10){
 				findGrasp(kinectControl, objID, objPoseCode, objYaw, dir, csvName, viewer, policy);
 			}
 		}

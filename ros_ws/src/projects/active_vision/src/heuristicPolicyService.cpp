@@ -1,9 +1,9 @@
-#include "active_vision/environment.h"
-#include "active_vision/toolViewPointCalc.h"
-#include "active_vision/toolVisualization.h"
+#include <active_vision/environment.h>
+#include <active_vision/toolViewPointCalc.h>
+#include <active_vision/toolVisualization.h>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include "active_vision/heuristicPolicySRV.h"
+#include <active_vision/heuristicPolicySRV.h>
 
 // Typedef for convinience
 typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;

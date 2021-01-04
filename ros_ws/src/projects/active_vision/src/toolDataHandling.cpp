@@ -1,4 +1,4 @@
-#include "active_vision/toolDataHandling.h"
+#include <active_vision/toolDataHandling.h>
 
 void printRouteData(RouteData &in){
 	std::cout << in.objType << std::endl;
@@ -140,3 +140,41 @@ std::vector<nodeData> convertToTree(std::vector<std::vector<std::string>> &data)
   }
   return result;
 }
+
+// ********************OBJECTINFO STRUCT FUNCTIONS START ********************
+void objectInfo::setFromROSParam(ros::NodeHandle &nh, std::string param, int num){
+	ID = num;
+	nh.getParam(param+"Filename", fileName);
+	nh.getParam(param+"Description", description);
+	nh.getParam(param+"nPoses", nPoses);
+	std::vector<double> temp;
+	poses.clear();
+	for(int i = 1; i<=nPoses; i++){
+		nh.getParam(param+"Pose"+std::to_string(i), temp);
+		poses.push_back(temp);
+	}
+}
+
+void objectInfo::printObjectInfo(bool all){
+	printf("ID : %d, Description : %s, nPoses : %d\n",ID, description.c_str(), nPoses);
+	if(all){
+		for(int i = 0; i < nPoses; i++){
+			printf("\tPose %d : %.3f,%.3f,%.3f - Yaw Limit : %.0f,%.0f\n",i+1,poses[i][0],poses[i][1],poses[i][2],poses[i][3],poses[i][4]);
+		}
+	}
+}
+// ********************OBJECTINFO STRUCT FUNCTIONS END ********************
+
+// Function to read all the object info from the objects.yaml file
+void readObjectsList(ros::NodeHandle &nh, std::string param, std::map<int,objectInfo> &res){
+		int nObjects;
+		nh.getParam(param+"nObjects", nObjects);
+		objectInfo temp;
+		for(int i = 1; i<=nObjects; i++){
+			temp.setFromROSParam(nh,param+"ID"+std::to_string(i)+"/",i);
+			res.insert({i,temp});
+		}
+}
+
+// std::map<int,objectInfo> objDict;
+// readObjectsList(nh,"/active_vision/objectsInfo/",objDict);

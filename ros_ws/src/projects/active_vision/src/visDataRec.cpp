@@ -1,5 +1,4 @@
 #include <active_vision/environment.h>
-#include <active_vision/toolDataHandling.h>
 #include <active_vision/toolVisualization.h>
 
 void passThroughFilterZ(ptCldColor::Ptr ptrPtCld,float minZ, float maxZ){

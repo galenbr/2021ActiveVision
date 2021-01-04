@@ -3,7 +3,7 @@
 
   <group ns="active_vision">
   	<rosparam file="$(find active_vision)/config/parameters.yaml" />
-    <rosparam param="package_path" subst_value="True">$(find active_vision)</rosparam>
+    <rosparam file="$(find active_vision)/config/objects.yaml" />
   </group>
 
 </launch>

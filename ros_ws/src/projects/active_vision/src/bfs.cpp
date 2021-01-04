@@ -1,6 +1,5 @@
-#include "active_vision/environment.h"
-#include "active_vision/toolDataHandling.h"
-#include "active_vision/toolViewPointCalc.h"
+#include <active_vision/environment.h>
+#include <active_vision/toolViewPointCalc.h>
 
 bool saveOnlyUsefulData = true;
 int mode = 1;

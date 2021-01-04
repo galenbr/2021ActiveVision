@@ -36,18 +36,18 @@ sleep 10
 # Collecting data
 for ((i=0;i<${#objectID[@]};++i)); do
 		# Setting the rosparams
-		rosparam set /active_vision/dataCollectorV2/objID ${objectID[i]}
-		rosparam set /active_vision/dataCollectorV2/nData ${nData[i]}
-		rosparam set /active_vision/dataCollectorV2/csvName ${csvDataRec}
+		rosparam set /active_vision/dataCollector/objID ${objectID[i]}
+		rosparam set /active_vision/dataCollector/nData ${nData[i]}
+		rosparam set /active_vision/dataCollector/csvName ${csvDataRec}
 
 		# Saving the parameters
 		rosrun active_vision saveParams.sh ${src}${csvParams}
 
-		# Starting a screen and running dataCollectorV2.cpp
+		# Starting a screen and running dataCollector.cpp
 		printf "Collecting "${nData[i]}" data points for Object ID : "${objectID[i]}" ..."
 		gnome-terminal -- bash -c 'screen -d -R -S session-dataCollection' & sleep 5
 		# screen -S session-dataCollection -X stuff $'sleep 7\nexit\n' # Dummy line for debug
-		screen -S session-dataCollection -X stuff $'rosrun active_vision dataCollectorV2\nexit\n'
+		screen -S session-dataCollection -X stuff $'rosrun active_vision dataCollector\nexit\n'
 
 		# Waiting till datacollection is over
 		screenOK="$(checkScreen session-dataCollection)"

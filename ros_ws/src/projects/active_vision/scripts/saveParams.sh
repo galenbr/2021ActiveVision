@@ -5,12 +5,12 @@ prefix="/active_vision/"
 parameters=`rosparam list`
 filename=`basename $dst`
 
-toBeSaved=("dataCollectorV2/objID"
-           "dataCollectorV2/csvName"
-					 "dataCollectorV2/nData"
-					 "dataCollectorV2/homePosesCSV"
-					 "dataCollectorV2/maxRdmSteps"
-					 "dataCollectorV2/nRdmSearch"
+toBeSaved=("dataCollector/objID"
+           "dataCollector/csvName"
+					 "dataCollector/nData"
+					 "dataCollector/homePosesCSV"
+					 "dataCollector/maxRdmSteps"
+					 "dataCollector/nRdmSearch"
 					 "policyTester/policy"
 					 "policyTester/objID"
 					 "policyTester/csvName"

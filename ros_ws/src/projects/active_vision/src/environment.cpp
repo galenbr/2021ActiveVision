@@ -1,12 +1,15 @@
 #include <active_vision/environment.h>
 
+// Function to check if a ROS NODE/TOPIC/SERVICE exists
 bool ROSCheck(std::string type, std::string name){
   bool status = true;
   if(type == "NODE"){
+    // Get the list of available nodes and search in them
     std::vector<std::string> nodeList;
     ros::master::getNodes(nodeList);
     status = std::find(nodeList.begin(), nodeList.end(), name) != nodeList.end();
   }else if(type == "TOPIC"){
+    // Get the list of available topics and search in them
     ros::master::V_TopicInfo topicList;
     ros::master::getTopics(topicList);
     status = false;
@@ -14,24 +17,26 @@ bool ROSCheck(std::string type, std::string name){
       if(topicList[i].name == name){status = true; break;}
     }
   }else if(type == "SERVICE"){
+    // Check if the service is running
     status = ros::service::exists(name, false);
   }
   if(!status) ROS_INFO_STREAM("Waiting for " << name << "...");
   return status;
 }
 
-// Struct graspPoint constructor
+// ***STRUCT : graspPoint***
 graspPoint::graspPoint(){
-  quality = 0;
-  gripperWidth = 0.05;
-  pose = {0,0,0,0,0,0};
-  addnlPitch = 0;
+  quality = 0;              // Quality of the grasp
+  gripperWidth = 0.05;      // Gripper width for the grasp
+  pose = {0,0,0,0,0,0};     // Base pose of the gripper from where additional pitch is used to change its orientation
+  addnlPitch = 0;           // Pitch relative to the Base Pose
 }
 
 // Function to compare grasp point for sorting
 bool compareGrasp(graspPoint A, graspPoint B){
   return(A.quality > B.quality);
 }
+// ***END***
 
 // Funstion to transpose a homogenous matrix
 Eigen::Affine3f homoMatTranspose(const Eigen::Affine3f& tf){
@@ -93,45 +98,7 @@ environment::environment(ros::NodeHandle *nh){
 
   path = ros::package::getPath("active_vision");  // Path to the active_vision package folder
 
-  // Dictionary of objects to be spawned
-  std::vector<std::string> tempDict;
-  nh->getParam("/active_vision/environment/object_dictionary", tempDict);
-  int stepSize = 2;
-  for(int i=0; i<tempDict.size(); i+=stepSize){
-    std::vector<std::string> tempElement;
-    for(int j=0; j<stepSize; j++){
-      tempElement.push_back(tempDict[i+j]);
-    }
-    objectDict.push_back(tempElement);
-  }
-
-  // Stores stable poses for the objects (Z(m), Roll(Rad), Pitch(Rad))
-  stepSize = 3;
-  for(int k=0; k<objectDict.size(); k++){
-    std::string target = "/active_vision/environment/"+objectDict[k][0]+"_poses";
-    std::vector<double> tempDict3;
-    nh->getParam(target, tempDict3);
-    std::vector<std::vector<double>> poseDict;
-    for(int i=0; i<tempDict3.size(); i+=stepSize){
-      std::vector<double> tempElement;
-      for(int j=0; j<stepSize; j++){
-        tempElement.push_back(tempDict3[i+j]);
-      }
-      poseDict.push_back(tempElement);
-    }
-    objectPosesDict.push_back(poseDict);
-  }
-
-  std::vector<double> tempDict2;
-  nh->getParam("/active_vision/environment/object_yaw_limits", tempDict2);
-  stepSize = 2;
-  for(int i=0; i<tempDict2.size(); i+=stepSize){
-    std::vector<double> tempElement;
-    for(int j=0; j<stepSize; j++){
-      tempElement.push_back(tempDict2[i+j]);
-    }
-    objectPosesYawLimits.push_back(tempElement);
-  }
+  readObjectsList(*nh,"/active_vision/objectsInfo/",objectDict);
 
   nh->getParam("/active_vision/environment/voxelGridSizeUnexp", voxelGridSizeUnexp); // Voxel Grid size for unexplored point cloud
   nh->getParam("/active_vision/environment/voxelGridSize", voxelGridSize); // Voxel Grid size for environment
@@ -186,8 +153,10 @@ void environment::cbPtCld(const ptCldColor::ConstPtr& msg){
   if(readFlag[0]==1){
     *ptrPtCldLast = *msg;
     if(addNoise == true){
+      // Looping through all the points
       for(int i = 0; i < ptrPtCldLast->points.size(); i++){
         if(!isnan(ptrPtCldLast->points[i].z)){
+          // if z value is not nan then add noise
           float stdDev = (ptrPtCldLast->points[i].z)*depthNoise/100;
           std::normal_distribution<float> normDistb{0,stdDev};
           float noise = normDistb(generator);
@@ -234,15 +203,15 @@ void environment::spawnObject(int objectID, int choice, float yaw){
 
   pose.position.x = 0;
   pose.position.y = 0;
-  pose.position.z = objectPosesDict[objectID][0][0];
+  pose.position.z = objectDict[objectID].poses[0][0];
   pose.orientation.x = 0;
   pose.orientation.y = 0;
   pose.orientation.z = 0;
   pose.orientation.w = 1;
 
-  spawnObj.request.model_name = objectDict[objectID][1];
+  spawnObj.request.model_name = objectDict[objectID].description;
 
-  std::ifstream ifs(path+"/models/"+objectDict[objectID][0]+"/model.sdf");
+  std::ifstream ifs(path+"/models/"+objectDict[objectID].fileName+"/model.sdf");
   std::string sdfFile( (std::istreambuf_iterator<char>(ifs)),
                        (std::istreambuf_iterator<char>()));
   spawnObj.request.model_xml = sdfFile;
@@ -250,7 +219,7 @@ void environment::spawnObject(int objectID, int choice, float yaw){
   spawnObj.request.reference_frame = "world";
   spawnObj.request.initial_pose = pose;
 
-  checkObj.request.model_name = objectDict[objectID][1];
+  checkObj.request.model_name = objectDict[objectID].description;
 
   gazeboSpawnModel.call(spawnObj);
   gazeboCheckModel.call(checkObj);
@@ -265,14 +234,14 @@ void environment::spawnObject(int objectID, int choice, float yaw){
 void environment::moveObject(int objectID, int choice, float yaw){
   gazebo_msgs::GetModelState checkObj;
 
-  if(choice >= objectPosesDict[objectID].size()){
+  if(choice >= objectDict[objectID].nPoses){
     choice = 0;
     printf("WARNING moveObject: Pose choice invalid. Setting choice to 0.\n");
   }
 
   //Create Matrix3x3 from Euler Angles
   tf::Matrix3x3 m_rot;
-  m_rot.setEulerYPR(yaw, objectPosesDict[objectID][choice][2], objectPosesDict[objectID][choice][1]);
+  m_rot.setEulerYPR(yaw, objectDict[objectID].poses[choice][2], objectDict[objectID].poses[choice][1]);
 
   // Convert into quaternion
   tf::Quaternion quat;
@@ -280,11 +249,11 @@ void environment::moveObject(int objectID, int choice, float yaw){
 
   // Converting it to the required gazebo format
   gazebo_msgs::ModelState ModelState;
-  ModelState.model_name = objectDict[objectID][1];
+  ModelState.model_name = objectDict[objectID].description;
   ModelState.reference_frame = "world";
   ModelState.pose.position.x = tableCentre[0];
   ModelState.pose.position.y = tableCentre[1];
-  ModelState.pose.position.z = tableCentre[2]+objectPosesDict[objectID][choice][0];
+  ModelState.pose.position.z = tableCentre[2]+objectDict[objectID].poses[choice][0];
   ModelState.pose.orientation.x = quat.x();
   ModelState.pose.orientation.y = quat.y();
   ModelState.pose.orientation.z = quat.z();
@@ -292,11 +261,11 @@ void environment::moveObject(int objectID, int choice, float yaw){
 
   // Publishing it to gazebo
   pubObjPose.publish(ModelState);
-  checkObj.request.model_name = objectDict[objectID][1];
+  checkObj.request.model_name = objectDict[objectID].description;
   gazeboCheckModel.call(checkObj);
   ros::spinOnce();
-  while((not checkObj.response.success) or (abs(checkObj.response.pose.position.z - (tableCentre[2]+objectPosesDict[objectID][choice][0]) > 0.2))){
-    printf("Object not positioned yet, pose z = %1.4f, not %1.4f, diff of %1.4f\n", checkObj.response.pose.position.z, tableCentre[2]+objectPosesDict[objectID][choice][0], abs(checkObj.response.pose.position.z - (tableCentre[2]+objectPosesDict[objectID][choice][0])));
+  while((not checkObj.response.success) or (abs(checkObj.response.pose.position.z - (tableCentre[2]+objectDict[objectID].poses[choice][0]) > 0.2))){
+    printf("Object not positioned yet, pose z = %1.4f, not %1.4f, diff of %1.4f\n", checkObj.response.pose.position.z, tableCentre[2]+objectDict[objectID].poses[choice][0], abs(checkObj.response.pose.position.z - (tableCentre[2]+objectDict[objectID].poses[choice][0])));
     boost::this_thread::sleep(boost::posix_time::milliseconds(100));
     gazeboCheckModel.call(checkObj);
     ros::spinOnce();
@@ -306,7 +275,7 @@ void environment::moveObject(int objectID, int choice, float yaw){
 // 3: Deleting objects in gazebo
 void environment::deleteObject(int objectID){
   gazebo_msgs::DeleteModel deleteObj;
-  deleteObj.request.model_name = objectDict[objectID][1];
+  deleteObj.request.model_name = objectDict[objectID].description;
 
   gazeboDeleteModel.call(deleteObj);
 }
@@ -323,9 +292,10 @@ void environment::loadGripper(){
   if (pcl::io::loadPLYFile<pcl::PointXYZRGB>(pathToFinger, *ptrPtCldGrpLfgr) == -1){
     PCL_ERROR ("Couldn't read file finger.ply \n");
   }
-  // Gripper Right Finger
+  // Gripper Right Finger (Mirror of the left one)
   pcl::transformPointCloud(*ptrPtCldGrpLfgr, *ptrPtCldGrpRfgr, pcl::getTransformation(0,0,0,0,0,M_PI));
 
+  // Find the min max 3D coordinates for the three segments
   pcl::getMinMax3D(*ptrPtCldGrpHnd,minPtGrp[0],maxPtGrp[0]);
   pcl::getMinMax3D(*ptrPtCldGrpLfgr,minPtGrp[1],maxPtGrp[1]);
   pcl::getMinMax3D(*ptrPtCldGrpRfgr,minPtGrp[2],maxPtGrp[2]);
@@ -338,6 +308,7 @@ void environment::loadGripper(){
 // 2 -> Gripper Collision Check
 void environment::updateGripper(int index ,int choice){
 
+  // Gripper orientation which is used in cropbox during collision check
   tfGripper = pcl::getTransformation(graspsPossible[index].pose[0],graspsPossible[index].pose[1],
                                      graspsPossible[index].pose[2],graspsPossible[index].pose[3],
                                      graspsPossible[index].pose[4],graspsPossible[index].pose[5])*
@@ -366,6 +337,7 @@ void environment::updateGripper(int index ,int choice){
     minPtCol[3].x = -0.0125; maxPtCol[3].x = 0.0125;
     minPtCol[3].y =  0.0;    maxPtCol[3].y = 0.0250;
     minPtCol[3].z =  0.0322; maxPtCol[3].z = 0.0572;
+    // Applying transformation for the gripper width
     minPtCol[3] = pcl::transformPoint(minPtCol[3],pcl::getTransformation(0,graspsPossible[index].gripperWidth/2,fingerZOffset,0,0,0));
     maxPtCol[3] = pcl::transformPoint(maxPtCol[3],pcl::getTransformation(0,graspsPossible[index].gripperWidth/2,fingerZOffset,0,0,0));
 
@@ -373,6 +345,7 @@ void environment::updateGripper(int index ,int choice){
     minPtCol[4].x = -0.0125; maxPtCol[4].x = 0.0125;
     minPtCol[4].y = -0.0250; maxPtCol[4].y = 0.0;
     minPtCol[4].z =  0.0322; maxPtCol[4].z = 0.0572;
+    // Applying transformation for the gripper width
     minPtCol[4] = pcl::transformPoint(minPtCol[4],pcl::getTransformation(0,-graspsPossible[index].gripperWidth/2,fingerZOffset,0,0,0));
     maxPtCol[4] = pcl::transformPoint(maxPtCol[4],pcl::getTransformation(0,-graspsPossible[index].gripperWidth/2,fingerZOffset,0,0,0));
 
@@ -663,6 +636,8 @@ void environment::graspsynthesis(){
   Eigen::Vector3f vectA, vectB;
   double A,B;
 
+  // Using brute force search
+  // Checking for each pair of points (alternate points skipped to speedup the process)
   for(int i = 0; i < ptrPtCldObject->size()-1; i=i+2){
     for(int j = i+1; j < ptrPtCldObject->size(); j=j+2){
       graspTemp.p1 = ptrPtCldObject->points[i];
@@ -732,10 +707,12 @@ void environment::findGripperPose(int index){
   Eigen::Vector3f xAxis,yAxis,zAxis;
   Eigen::Vector3f xyPlane(0,0,1);
 
+  // Calculating the x,y,z axis which is at the midpoint of the fingers
   yAxis = graspsPossible[index].p1.getVector3fMap() - graspsPossible[index].p2.getVector3fMap(); yAxis.normalize();
   zAxis = yAxis.cross(xyPlane); zAxis.normalize();
   xAxis = yAxis.cross(zAxis);
 
+  // Finding RPY based on the axis directions
   tf::Matrix3x3 rotMat;
   double Roll,Pitch,Yaw;
   rotMat.setValue(xAxis[0],yAxis[0],zAxis[0],
@@ -743,6 +720,7 @@ void environment::findGripperPose(int index){
                   xAxis[2],yAxis[2],zAxis[2]);
   rotMat.getRPY(Roll,Pitch,Yaw);
 
+  // Setting the coordinates as the midpoint between the two fingers i.e. midpoint of the two pointclouds
   std::vector<float> pose = {0,0,0,0,0,0};
   pose[0] = (graspsPossible[index].p1.x + graspsPossible[index].p2.x)/2;
   pose[1] = (graspsPossible[index].p1.y + graspsPossible[index].p2.y)/2;
@@ -776,7 +754,7 @@ void environment::collisionCheck(){
       // If collision detected then exit this loop and check next grasp pair
       if(ptrPtCldCollided->size() > 0) break;
     }
-    // Move to next grasp is collision found
+    // Move to next grasp if collision found
     if(ptrPtCldCollided->size() > 0) continue;
 
     // Do gripper collision check for each orientation
@@ -804,7 +782,7 @@ void environment::collisionCheck(){
   }
 }
 
-// 15: Grasp and Collision check combined
+// 15: Grasp and Collision check combined. After finding each grasp collision check is done
 int environment::graspAndCollisionCheck(){
   // Generating the normals for the object point cloud
   pcl::search::Search<pcl::PointXYZRGB>::Ptr KdTree{new pcl::search::KdTree<pcl::PointXYZRGB>};

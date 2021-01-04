@@ -63,7 +63,7 @@ for i in ${files[@]}; do
 	echo $i
 	for policy in ${policies[@]}; do
 		# Set each object TODO:Allow user to specify/do all?
-		rosparam set /active_vision/dataCollectorV2/objID 1
+		rosparam set /active_vision/dataCollector/objID 1
 		rosparam set /active_vision/policyTester/policy $policy
 
 		printf "Evaluating "$policy" on run "$i" ..."
@@ -76,7 +76,7 @@ for i in ${files[@]}; do
 		# Start the service and the tester
 		screen -S session-policyService -X stuff $'rosrun active_vision trainedPolicyService.py\n'
 		#Debug line
-		#screen -S session-policyTester -X stuff $'sleep 7\nexit\n' 
+		#screen -S session-policyTester -X stuff $'sleep 7\nexit\n'
 		screen -S session-policyTester -X stuff $'rosrun active_vision policyTester 2\n1\nexit\n'
 
 		# Waiting till testing is over
