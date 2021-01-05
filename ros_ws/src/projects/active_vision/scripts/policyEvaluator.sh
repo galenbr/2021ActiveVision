@@ -18,38 +18,20 @@ checkScreen () {
 cur=$(pwd)
 pkgPath=$(rospack find active_vision)
 src=$pkgPath"/dataCollected/trainingData/"
-dataSrc=$pkgPath"/dataCollected/storage/"
 
 csvDataRec='dataRec.csv'
 csvParams='parameters.csv'
 csvStorageSummary='storageSummary.csv'
-policies=("HEURISTIC" "RANDOM" "PCA" "PCA_LDA")
+policies=("RANDOM" "PCA" "PCA_LDA" "HEURISTIC")
 
 files=()
 
-if [[ $# -eq 0 ]]; then
-	#Load all files of format Data_N/dataRec_stateVec.csv by default
-	echo "All mode"
-	dataNo="1"
-	ok=true
-	while [ $ok = true ]; do
-		dstToCheck="$dataSrc""Data_$dataNo""/"
-		if [ ! -d $dstToCheck ]; then
-			ok=false
-		else
-			files+=("$dstToCheck""dataRec_stateVec.csv")
-		fi
-		dataNo=$[$dataNo+1]
-	done
-else
-	#Else load all files in the specified directories
-	echo "List mode"
-	for item in "$@"; do
-		echo "$item"
-		dstToCheck="$dataSrc""$item""/"
-		files+=("$dstToCheck""dataRec_stateVec.csv")
-	done
-fi
+#Load every .csv file in the user suplied directory
+dataSrc=$pkgPath"$1"
+for file in $(ls $dataSrc | grep .csv); do
+	echo "Loaded file $file ... "
+	files+=("$file")
+done
 
 # Creating a screen to run ROS & gazebo
 printf "Starting gazebo ...\n"
@@ -58,16 +40,25 @@ gnome-terminal -- bash -c 'screen -d -R -S session-environment' & sleep 5
 screen -S session-environment -X stuff $'roslaunch active_vision workspace.launch visual:="OFF"\n'
 sleep 10
 
+#If the user supplied an object number, set it, otherwise use the default.
+if [[ $# > 1 ]]; then
+	echo "Using object id $2"
+	rosparam set /active_vision/policyTester/objID $2
+fi
+
 # Looping over the files and testing each policy for each.
 for i in ${files[@]}; do
 	echo $i
 	for policy in ${policies[@]}; do
 		rosparam set /active_vision/policyTester/policy $policy
-		rosparam set /active_vision/policyTester/storageDir $i
-		rosparam set /active_vision/policyTester/csvName $policy+"_result.csv"
+		#All files are found in the user input directory
+		rosparam set /active_vision/policyTester/storageDir $1
+		rosparam set /active_vision/policyTester/csvStVec $i
+		#Save the results to policyfile_dataRec.csv (triming the extra .csv)
+		rosparam set /active_vision/policyTester/csvName "${policy}_${i: 0: -4}_dataRec.csv"
 
 
-		printf "Evaluating "$policy" on run "$i" ..."
+		printf "Evaluating $policy on run ${i: 0: -4} ..."
 
 		# Open a terminal for the service and the tester
 		gnome-terminal -- bash -c 'screen -d -R -S session-policyService'
