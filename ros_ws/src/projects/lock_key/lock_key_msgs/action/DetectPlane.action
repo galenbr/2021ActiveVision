@@ -1,0 +1,7 @@
+# Define the goal
+---
+# Define the result
+bool reached_plane
+---
+# Define a feedback message
+float64 current_delta
