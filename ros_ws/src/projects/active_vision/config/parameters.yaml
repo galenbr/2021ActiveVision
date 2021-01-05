@@ -4,7 +4,7 @@ kinectMode: 2 # Kinect Movement Mode
 dataCollector: {
     relative_path: True, # Whether this is relative to the package_path
     directory: '/dataCollected/trainingData/', # Directory to which the PCD, CSV will be saved
-    objID: 1, # Object for which data has to be collected
+    objID: 2, # Object for which data has to be collected
     csvName: 'default.csv', # CSV file to which the data has to be saved
     nData: 25, # Number of dataPoints to be recorded
     homePosesCSV: 'dataCollectionTreeD2.csv', # CSV file in active_vision/misc/ folder to be used to get home poses
@@ -17,7 +17,7 @@ policyTester: {
     policy: "PCA_LDA", # Policy to be used (This is set in the roslaunch)
     relative_path: True, # Whether this is relative to the package_path
     directory: '/dataCollected/testData/', # Directory to which the PCD, CSV will be saved
-    objID: 1, # Object for which data has to be collected
+    objID: 2, # Object for which data has to be collected
     csvName: 'default.csv', # CSV file to which the data has to be saved
     storageDir: '/dataCollected/storage/Data_1/', # Directory where the state vector has been stored- Data_0 should never be made, so you must replace this default at runtime.
     csvStVec: 'dataRec_stateVec.csv', # Name of csv inside storageDir

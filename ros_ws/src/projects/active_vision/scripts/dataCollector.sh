@@ -23,8 +23,8 @@ src=$pkgPath"/dataCollected/trainingData/"
 csvDataRec='dataRec.csv'
 csvParams='parameters.csv'
 csvStorageSummary='storageSummary.csv'
-objectID=(1 2)
-nData=(5 5)
+objectID=(3)
+nData=(1000)
 
 # Creating a screen to run ROS & gazebo
 printf "Starting gazebo ...\n"

@@ -62,9 +62,10 @@ sleep 10
 for i in ${files[@]}; do
 	echo $i
 	for policy in ${policies[@]}; do
-		# Set each object TODO:Allow user to specify/do all?
-		rosparam set /active_vision/dataCollector/objID 1
 		rosparam set /active_vision/policyTester/policy $policy
+		rosparam set /active_vision/policyTester/storageDir $i
+		rosparam set /active_vision/policyTester/csvName $policy+"_result.csv"
+
 
 		printf "Evaluating "$policy" on run "$i" ..."
 
