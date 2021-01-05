@@ -296,9 +296,43 @@ int main(int argc, char** argv){
 
 		findGrasp(kinectControl, objID, objPoseCode, objYaw, dir, csvName, viewer, policy);
 	}else{
+		// Reading the yawValues csv file
+		std::string yawAnglesCSVDir;
+		nh.getParam("/active_vision/policyTester/yawAnglesCSVDir", yawAnglesCSVDir);
+		yawAnglesCSVDir = ros::package::getPath("active_vision") + yawAnglesCSVDir;
+		std::string yawAnglesCSV;
+		nh.getParam("/active_vision/policyTester/yawAnglesCSV", yawAnglesCSV);
+		std::vector<std::vector<std::string>> yawAngle = readCSV(yawAnglesCSVDir+yawAnglesCSV);
+
+		// Converting it to a dictionary format (First column is the key)
+		std::map<std::string,std::vector<int>> yawAngleDict;
+		for(int row = 0; row < yawAngle.size(); row++){
+			yawAngleDict.insert({yawAngle[row][0],{}});
+			for(int col = 1; col < yawAngle[row].size(); col++){
+				yawAngleDict[yawAngle[row][0]].push_back(std::stoi(yawAngle[row][col]));
+			}
+		}
+
+		int uniformYawStepSize; nh.getParam("/active_vision/policyTester/uniformYawStepSize", uniformYawStepSize);
+		int nDataPoints; nh.getParam("/active_vision/policyTester/nDataPoints", nDataPoints);
 		for(int objPoseCode = 0; objPoseCode < kinectControl.objectDict[objID].nPoses; objPoseCode+=1){
-			for(int objYaw = kinectControl.objectDict[objID].poses[objPoseCode][3]; objYaw < kinectControl.objectDict[objID].poses[objPoseCode][4]; objYaw+=10){
+			int tempNDataPoints = nDataPoints;
+
+			// Checking for the uniform steps
+			for(int objYaw = kinectControl.objectDict[objID].poses[objPoseCode][3]; objYaw < kinectControl.objectDict[objID].poses[objPoseCode][4]; objYaw+=uniformYawStepSize){
 				findGrasp(kinectControl, objID, objPoseCode, objYaw, dir, csvName, viewer, policy);
+				tempNDataPoints--;
+			}
+
+			std::string key = std::to_string(int(kinectControl.objectDict[objID].poses[objPoseCode][3]))+"-"+
+			                  std::to_string(int(kinectControl.objectDict[objID].poses[objPoseCode][4]));
+
+			if(yawAngleDict.count(key) == 0) continue;
+
+			// Checking for the random steps
+			for(int ctr = 0; ctr < yawAngleDict[key].size() && tempNDataPoints > 0; ctr++){
+				findGrasp(kinectControl, objID, objPoseCode, yawAngleDict[key][ctr], dir, csvName, viewer, policy);
+				tempNDataPoints--;
 			}
 		}
 	}

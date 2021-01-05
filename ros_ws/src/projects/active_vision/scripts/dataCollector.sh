@@ -23,8 +23,11 @@ src=$pkgPath"/dataCollected/trainingData/"
 csvDataRec='dataRec.csv'
 csvParams='parameters.csv'
 csvStorageSummary='storageSummary.csv'
-objectID=(1 2)
-nData=(5 5)
+objectID=(2)
+nData=(250)
+
+now="$(date +'%Y/%m/%d %I:%M:%S')"
+printf "Started at yyyy/mm/dd hh:mm:ss format %s\n" "$now"
 
 # Creating a screen to run ROS & gazebo
 printf "Starting gazebo ...\n"
@@ -90,8 +93,8 @@ for csv in ${csvList[@]}; do
 	printf "Using CSV : "$(basename $csv)"\n"
 	printf "Generating Summary...\n"
 	rosrun active_vision csvSummarizer.py $csv GRAPH_SAVE
-	printf "Generating State Vector...\n"
-	rosrun active_vision genStateVec $(dirname $csv)/ $(basename $csv) 1 5
+	# printf "Generating State Vector...\n"
+	# rosrun active_vision genStateVec $(dirname $csv)/ $(basename $csv) 1 5
 done
 
 printf "***********\n"
@@ -138,5 +141,5 @@ printf "Files Moved.\n"
 
 printf "***********\n"
 
-# # now="$(date +'%Y_%m_%d_%I_%M_%S')"
-# # printf "Current date in dd/mm/yyyy format %s\n" "$now"
+now="$(date +'%Y/%m/%d %I:%M:%S')"
+printf "Ended at yyyy/mm/dd hh:mm:ss format %s\n" "$now"

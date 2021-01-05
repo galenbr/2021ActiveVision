@@ -17,11 +17,15 @@ policyTester: {
     policy: "PCA_LDA", # Policy to be used (This is set in the roslaunch)
     relative_path: True, # Whether this is relative to the package_path
     directory: '/dataCollected/testData/', # Directory to which the PCD, CSV will be saved
-    objID: 1, # Object for which data has to be collected
+    objID: 2, # Object for which data has to be collected
     csvName: 'default.csv', # CSV file to which the data has to be saved
-    storageDir: '/dataCollected/storage/Data_1/', # Directory where the state vector has been stored- Data_0 should never be made, so you must replace this default at runtime.
-    csvStVec: 'dataRec_stateVec.csv', # Name of csv inside storageDir
+    storageDir: '/misc/State_Vector/', # Directory where the state vector has been stored- Data_0 should never be made, so you must replace this default at runtime.
+    csvStVec: 'Prism_truncated_stateVec.csv', # Name of csv inside storageDir
     maxSteps: 5, # Max number of steps to be taken before stopping
+    nDataPoints: 10, # Number of data points for each pose to test (Max 200)
+    yawAnglesCSVDir: '/misc/yawValues/',
+    yawAnglesCSV: Seed1.csv, # csv files to choose the yaw angles from
+    uniformYawStepSize: 45, # Step size for yaw angles starting from 0 which will be checked
 
     # Parameters for PCA->LDA->LR Policy
     PCALDA: {
