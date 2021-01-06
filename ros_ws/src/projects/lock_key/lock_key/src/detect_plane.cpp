@@ -64,9 +64,9 @@ public:
   bool maxDownForce(double force){
     getWrenchclient.call(currentWrench);
 
-    vector<double> forces={currentWrench.response.fx-bias.Fx,
-                           currentWrench.response.fy-bias.Fy,
-                           currentWrench.response.fz-bias.Fz};
+    forces={currentWrench.response.fx-bias.Fx,
+            currentWrench.response.fy-bias.Fy,
+            currentWrench.response.fz-bias.Fz};
     ROS_INFO("Stop if (Fz: %f > %f)",forces[2], force);
 
   return forces[2]<force;
@@ -180,6 +180,7 @@ private:
   double current_delta{0.0};
   double delta_max{0.0};
   double delta_step{0.0};
+  vector<double> forces;
   struct FT{
     double Fx{0.0};
     double Fy{0.0};

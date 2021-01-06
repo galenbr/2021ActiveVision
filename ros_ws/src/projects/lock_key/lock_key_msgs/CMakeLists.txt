@@ -32,6 +32,7 @@ find_package(Boost REQUIRED)
    action
    FILES
    DetectPlane.action
+   Spiral.action
 #   Action2.action
  )
 
