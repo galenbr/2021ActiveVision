@@ -133,7 +133,7 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg)
           pixelMsg.point.y = markers[i].getCenter().y;
           pixelMsg.point.z = 0;
           pixel_pub3.publish(pixelMsg);
-          
+          // ROS_INFO_STREAM(pixelMsg);
           std_msgs::Bool nframe;
           nframe.data = false;
           if(pixelMsg.point.x == 0 && pixelMsg.point.y == 0){
