@@ -4,7 +4,7 @@
 
   <include file="$(find active_vision)/launch/workspace.launch" />
 
-  <arg name="policy" default="NIL" doc="NIL / HEURISTIC / PCA_LDA / PCA" />
+  <arg name="policy" default="NIL" doc="NIL / HEURISTIC / PCA_LDA / PCA_LDA_LR / PCA_LR / RANDOM" />
 
   <rosparam param="/active_vision/policyTester/policy" subst_value="True">$(arg policy)</rosparam>
 
@@ -17,17 +17,12 @@
     <node name="heuristicPolicyService" pkg="active_vision" type="heuristicPolicyService" args="0" output="screen" launch-prefix="gnome-terminal --" />
     <node name="policyTester" pkg="active_vision" type="policyTester" args="1" output="screen"/>
   </group>
-  <group if="$(eval arg('policy') == 'AS_IT_IS')">
+  <group if="$(eval arg('policy') == 'PCA_LDA' or
+                    arg('policy') == 'PCA_LDA_LR' or
+                    arg('policy') == 'PCA_LR' or
+                    arg('policy') == 'RANDOM')">
     <node name="trainedPolicyService" pkg="active_vision" type="trainedPolicyService.py" output="screen" launch-prefix="gnome-terminal --"/>
-    <node name="policyTester" pkg="active_vision" type="policyTester" args="2" output="screen" launch-prefix="gnome-terminal --"/>
-  </group>
-  <group if="$(eval arg('policy') == 'PCA_LDA')">
-    <node name="trainedPolicyService" pkg="active_vision" type="trainedPolicyService.py" output="screen" launch-prefix="gnome-terminal --"/>
-    <node name="policyTester" pkg="active_vision" type="policyTester" args="2" output="screen" launch-prefix="gnome-terminal --"/>
-  </group>
-  <group if="$(eval arg('policy') == 'PCA')">
-    <node name="trainedPolicyService" pkg="active_vision" type="trainedPolicyService.py" output="screen" launch-prefix="gnome-terminal --"/>
-    <node name="policyTester" pkg="active_vision" type="policyTester" args="2" output="screen" launch-prefix="gnome-terminal --"/>
+    <node name="policyTester" pkg="active_vision" type="policyTester" args="2" output="screen" />
   </group>
 
 </launch>

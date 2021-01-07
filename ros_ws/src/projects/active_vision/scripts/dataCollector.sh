@@ -22,8 +22,12 @@ src=$pkgPath"/dataCollected/trainingData/"
 
 csvDataRec='dataRec.csv'
 csvParams='parameters.csv'
-objectID=(1 2)
-nData=(5 5)
+csvStorageSummary='storageSummary.csv'
+objectID=(3)
+nData=(1000)
+
+now="$(date +'%Y/%m/%d %I:%M:%S')"
+printf "Started at yyyy/mm/dd hh:mm:ss format %s\n" "$now"
 
 # Creating a screen to run ROS & gazebo
 printf "Starting gazebo ...\n"
@@ -35,23 +39,23 @@ sleep 10
 # Collecting data
 for ((i=0;i<${#objectID[@]};++i)); do
 		# Setting the rosparams
-		rosparam set /active_vision/dataCollectorV2/objID ${objectID[i]}
-		rosparam set /active_vision/dataCollectorV2/nData ${nData[i]}
-		rosparam set /active_vision/dataCollectorV2/csvName ${csvDataRec}
+		rosparam set /active_vision/dataCollector/objID ${objectID[i]}
+		rosparam set /active_vision/dataCollector/nData ${nData[i]}
+		rosparam set /active_vision/dataCollector/csvName ${csvDataRec}
 
 		# Saving the parameters
-		# rosrun active_vision saveParams.sh ${src}${csvParams}
+		rosrun active_vision saveParams.sh ${src}${csvParams}
 
-		# Starting a screen and running dataCollectorV2.cpp
+		# Starting a screen and running dataCollector.cpp
 		printf "Collecting "${nData[i]}" data points for Object ID : "${objectID[i]}" ..."
 		gnome-terminal -- bash -c 'screen -d -R -S session-dataCollection' & sleep 5
-		screen -S session-dataCollection -X stuff $'sleep 7\nexit\n' # Dummy line till codes are cleaned
-		# screen -S session-dataCollection -X stuff $'rosrun active_vision dataCollectorV2.cpp\nexit\n'
+		# screen -S session-dataCollection -X stuff $'sleep 7\nexit\n' # Dummy line for debug
+		screen -S session-dataCollection -X stuff $'rosrun active_vision dataCollector\nexit\n'
 
 		# Waiting till datacollection is over
 		screenOK="$(checkScreen session-dataCollection)"
 		while [[ "$screenOK" == "true" ]]; do
-			printf ".";	sleep 10
+			printf ".";	sleep 60
 			screenOK="$(checkScreen session-dataCollection)"
 		done
 		printf "\n"
@@ -75,51 +79,67 @@ printf "Gazebo closed.\n"; sleep 2
 
 printf "***********\n"
 
-#
-# # Get the list of csv files in source directory
-# csvList=()
-# csvList+=($src$csvDataRec)
-# # for file in $(find $src -name "*.csv"); do
-# # 	if [ "$(basename $file)" != "$csvParams" ]; then
-# #  		csvList+=($file)
-# # 	fi
-# # done
-#
-# # Generate Summary and State Vector
-# for csv in ${csvList[@]}; do
-# 	printf "Using CSV : "$(basename $csv)"\n"
-# 	printf "Generating Summary...\n"
-# 	rosrun active_vision csvSummarizer.py $csv GRAPH_SAVE
-# 	printf "Generating State Vector...\n"
-# 	rosrun active_vision genStateVec $(dirname $csv)/ $(basename $csv) 1 5
-# done
-#
-# printf "***********\n"
-#
-# dst=$pkgPath"/dataCollected/storage/"
-#
-# # Create a new directory
-# i="1"
-# ok=false
-# while [ $ok = false ]; do
-# 	dstToCheck="$dst""Data_$i""/"
-# 	if [ ! -d $dstToCheck ]; then
-# 		mkdir $dstToCheck
-# 		ok=true
-# 		printf $(basename $dstToCheck)" folder created.\n"
+# Get the list of csv files in source directory
+csvList=()
+csvList+=($src$csvDataRec)
+# for file in $(find $src -name "*.csv"); do
+# 	if [ "$(basename $file)" != "$csvParams" ]; then
+#  		csvList+=($file)
 # 	fi
-# 	i=$[$i+1]
 # done
-#
-# # Copying the files to the created folder
-# cd $src
-# shopt -s extglob
-# mv !(ReadMe.txt) $dstToCheck
-# shopt -u extglob
-# cd $cur
-# printf "Files Moved.\n"
-#
-# printf "***********\n"
 
-# # now="$(date +'%Y_%m_%d_%I_%M_%S')"
-# # printf "Current date in dd/mm/yyyy format %s\n" "$now"
+# Generate Summary and State Vector
+for csv in ${csvList[@]}; do
+	printf "Using CSV : "$(basename $csv)"\n"
+	printf "Generating Summary...\n"
+	rosrun active_vision csvSummarizer.py $csv GRAPH_SAVE
+	# printf "Generating State Vector...\n"
+	# rosrun active_vision genStateVec $(dirname $csv)/ $(basename $csv) 1 5
+done
+
+printf "***********\n"
+
+dst=$pkgPath"/dataCollected/storage/"
+
+# Create a new directory
+dataNo="1"
+ok=false
+while [ $ok = false ]; do
+	dstToCheck="$dst""Data_$dataNo""/"
+	if [ ! -d $dstToCheck ]; then
+		mkdir $dstToCheck
+		ok=true
+		printf $(basename $dstToCheck)" folder created.\n"
+	fi
+	dataNo=$[$dataNo+1]
+done
+
+# Copying the parameters to summary folder
+csvToCheck="${dst}""${csvStorageSummary}"
+lineNo="1"
+while IFS= read line; do
+	if [ $lineNo == "1" ]; then
+		if [ ! -f $csvToCheck ]; then
+			echo -n "Folder Name, Description,,,,""$line" >> $csvToCheck
+		fi
+	else
+		echo -n $(basename $dstToCheck)", Collection,,,,""$line" >> $csvToCheck
+	fi
+	echo "" >> $csvToCheck
+	lineNo=$[$lineNo+1]
+done <"${src}${csvParams}"
+
+printf "Folder and parameter details added to "${csvStorageSummary}".\n"
+
+# Copying the files to the created folder
+cd $src
+shopt -s extglob
+mv !(ReadMe.txt) $dstToCheck
+shopt -u extglob
+cd $cur
+printf "Files Moved.\n"
+
+printf "***********\n"
+
+now="$(date +'%Y/%m/%d %I:%M:%S')"
+printf "Ended at yyyy/mm/dd hh:mm:ss format %s\n" "$now"

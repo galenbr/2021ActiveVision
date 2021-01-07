@@ -44,7 +44,10 @@
 //Gazebo specific includes
 #include <gazebo_msgs/SetModelState.h>
 #include <gazebo_msgs/SpawnModel.h>
+#include <gazebo_msgs/GetModelState.h>
 #include <gazebo_msgs/DeleteModel.h>
+
+#include <active_vision/toolDataHandling.h>
 
 // Typedef for convinience
 typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
@@ -92,6 +95,7 @@ private:
   ros::Publisher pubObjPose;            // Publisher : Kinect/Objects pose
   ros::Subscriber subKinectPtCld;       // Subscriber : Kinect pointcloud
   ros::ServiceClient gazeboSpawnModel;  // Service : Spawn Model
+  ros::ServiceClient gazeboCheckModel;  // Service : Check Model
   ros::ServiceClient gazeboDeleteModel; // Service : Delete Model
 
   pcl::PassThrough<pcl::PointXYZRGB> pass;                  // Passthrough filter
@@ -161,9 +165,7 @@ public:
   pcl::PointXYZRGB minPtGrp[3], maxPtGrp[3];        // Min and Max x,y,z co-ordinates of the gripper
   pcl::PointXYZRGB minPtCol[5], maxPtCol[5];        // Min and Max x,y,z co-ordinates of the gripper used for collision check
 
-  std::vector<std::vector<std::string>> objectDict; // List of objects which can be spawned
-  std::vector<std::vector<std::vector<double>>> objectPosesDict; //Stable object poses
-  std::vector<std::vector<double>> objectPosesYawLimits;         //Yaw limits for the objects
+  std::map<int,objectInfo> objectDict;              // Dictionary to store object info
   double voxelGridSize;                             // Voxel Grid size for environment
   double voxelGridSizeUnexp;                        // Voxel Grid size for unexplored point cloud
   std::vector<double> tableCentre;                  // Co-ordinates of table centre

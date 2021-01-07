@@ -1,15 +1,16 @@
-#include "active_vision/environment.h"
-#include "active_vision/toolDataHandling.h"
-#include "active_vision/toolViewPointCalc.h"
-#include "active_vision/toolVisualization.h"
+#include <active_vision/environment.h>
+#include <active_vision/toolDataHandling.h>
+#include <active_vision/toolViewPointCalc.h>
+#include <active_vision/toolVisualization.h>
 #include <active_vision/toolStateVector.h>
-#include "active_vision/heuristicPolicySRV.h"
-#include "active_vision/trainedPolicySRV.h"
+#include <active_vision/heuristicPolicySRV.h>
+#include <active_vision/trainedPolicySRV.h>
 
 int mode;
 int runMode;
 int testAll;
 int maxSteps;
+int nSaved;
 
 void updateRouteData(environment &env, RouteData &data, bool save ,std::string name){
 	data.success = (env.selectedGrasp != -1);
@@ -35,8 +36,8 @@ std::vector<int> nearbyDirections(int dir){
 	dir--;
 	dirs[0] = (8+dir)%8+1;
 	dirs[1] = (8+dir+1)%8+1; dirs[2] = (8+dir-1)%8+1;
-	dirs[3] = (8+dir+2)%8+1; dirs[4] = (8+dir-1)%8+1;
-	dirs[5] = (8+dir+3)%8+1; dirs[5] = (8+dir-1)%8+1;
+	dirs[3] = (8+dir+2)%8+1; dirs[4] = (8+dir-2)%8+1;
+	dirs[5] = (8+dir+3)%8+1; dirs[6] = (8+dir-3)%8+1;
 	dirs[7] = (8+dir+4)%8+1;
 	return dirs;
 }
@@ -45,8 +46,6 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 
 	std::fstream fout;
  	fout.open(dir+saveLocation, std::ios::out | std::ios::app);
-
-  kinectControl.spawnObject(object,0,0);
 
  	std::vector<double> startPose = {kinectControl.viewsphereRad, 180*(M_PI/180.0), 45*(M_PI/180.0)};
 	std::vector<double> nextPose;
@@ -62,9 +61,9 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 	home.type = 1;
 	home.direction = 0;
 	home.nSteps = 0;
-	home.objType = kinectControl.objectDict[object][1];
-	home.objPose = {kinectControl.objectPosesDict[object][objPoseCode][1],
-								  kinectControl.objectPosesDict[object][objPoseCode][2],
+	home.objType = kinectControl.objectDict[object].description;
+	home.objPose = {kinectControl.objectDict[object].poses[objPoseCode][1],
+									kinectControl.objectDict[object].poses[objPoseCode][2],
 									objYaw*(M_PI/180.0)};
 	// printf("Starting first pass.\n");
 	singlePass(kinectControl, startPose, true, true);
@@ -107,8 +106,9 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 		setCamView(viewer,current.path.back(),table);
 		int maxIndex = 0;
 		if(current.success == true){
-			current.filename = getCurTime();
+			current.filename = getCurTime()+"_"+std::to_string(::nSaved);
 			saveData(current, fout, dir);
+			::nSaved++;
 			viewer->addText("GRASP FOUND. Saving and exiting.",4,5,25,1,0,0,"Dir1",vp[0]);
 		}else{
       if(::runMode == 1){
@@ -170,8 +170,9 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 		}else{
 			// Limiting the steps
 			if(current.nSteps > ::maxSteps){
-				current.filename = getCurTime();
+				current.filename = getCurTime()+"_"+std::to_string(::nSaved);
 				saveData(current, fout, dir);
+				::nSaved++;
 				keyPress.dir = 0;
 				keyPress.ok = false;
 			}
@@ -204,7 +205,6 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 	}
 
 	keyPress.ok = true;
-	kinectControl.deleteObject(object);
 	kinectControl.reset();
 	fout.close();
 }
@@ -250,7 +250,7 @@ int main(int argc, char** argv){
 
 	int objID;
 	nh.getParam("/active_vision/policyTester/objID", objID);
-	if(objID < 0 && objID > 7){
+	if(kinectControl.objectDict.count(objID) == 0){
 		std::cout << "ERROR. Incorrect Object ID." << std::endl;
     return(-1);
 	}
@@ -286,22 +286,61 @@ int main(int argc, char** argv){
 		::testAll = 0;
 	}
 
+	kinectControl.spawnObject(objID,0,0);
+	::nSaved = 0;
+
 	if(testAll == 0){
 		int objPoseCode, objYaw;
-		printf("Enter the object pose code (0-%d) : ", int(kinectControl.objectPosesDict[objID].size()-1));
+		printf("Enter the object pose code (0-%d) : ", int(kinectControl.objectDict[objID].nPoses-1));
 		std::cin >> objPoseCode;
-		if(objPoseCode < 0 || objPoseCode > kinectControl.objectPosesDict[objID].size()-1) objPoseCode = 0;
+		if(objPoseCode < 0 || objPoseCode > kinectControl.objectDict[objID].nPoses-1) objPoseCode = 0;
 		printf("Enter the object yaw (deg) (0-360) : ");
 		std::cin >> objYaw;
 
 		findGrasp(kinectControl, objID, objPoseCode, objYaw, dir, csvName, viewer, policy);
 	}else{
-		for(int objPoseCode = 0; objPoseCode < kinectControl.objectPosesDict[objID].size(); objPoseCode+=1){
-			for(int objYaw = kinectControl.objectPosesYawLimits[objID][0]; objYaw < kinectControl.objectPosesYawLimits[objID][1]; objYaw+=10){
+		// Reading the yawValues csv file
+		std::string yawAnglesCSVDir;
+		nh.getParam("/active_vision/policyTester/yawAnglesCSVDir", yawAnglesCSVDir);
+		yawAnglesCSVDir = ros::package::getPath("active_vision") + yawAnglesCSVDir;
+		std::string yawAnglesCSV;
+		nh.getParam("/active_vision/policyTester/yawAnglesCSV", yawAnglesCSV);
+		std::vector<std::vector<std::string>> yawAngle = readCSV(yawAnglesCSVDir+yawAnglesCSV);
+
+		// Converting it to a dictionary format (First column is the key)
+		std::map<std::string,std::vector<int>> yawAngleDict;
+		for(int row = 0; row < yawAngle.size(); row++){
+			yawAngleDict.insert({yawAngle[row][0],{}});
+			for(int col = 1; col < yawAngle[row].size(); col++){
+				yawAngleDict[yawAngle[row][0]].push_back(std::stoi(yawAngle[row][col]));
+			}
+		}
+
+		int uniformYawStepSize; nh.getParam("/active_vision/policyTester/uniformYawStepSize", uniformYawStepSize);
+		int nDataPoints; nh.getParam("/active_vision/policyTester/nDataPoints", nDataPoints);
+		for(int objPoseCode = 0; objPoseCode < kinectControl.objectDict[objID].nPoses; objPoseCode+=1){
+			int tempNDataPoints = nDataPoints;
+
+			// Checking for the uniform steps
+			for(int objYaw = kinectControl.objectDict[objID].poses[objPoseCode][3]; objYaw < kinectControl.objectDict[objID].poses[objPoseCode][4]; objYaw+=uniformYawStepSize){
 				findGrasp(kinectControl, objID, objPoseCode, objYaw, dir, csvName, viewer, policy);
+				tempNDataPoints--;
+			}
+
+			std::string key = std::to_string(int(kinectControl.objectDict[objID].poses[objPoseCode][3]))+"-"+
+			                  std::to_string(int(kinectControl.objectDict[objID].poses[objPoseCode][4]));
+
+			if(yawAngleDict.count(key) == 0) continue;
+
+			// Checking for the random steps
+			for(int ctr = 0; ctr < yawAngleDict[key].size() && tempNDataPoints > 0; ctr++){
+				findGrasp(kinectControl, objID, objPoseCode, yawAngleDict[key][ctr], dir, csvName, viewer, policy);
+				tempNDataPoints--;
 			}
 		}
 	}
+
+	kinectControl.deleteObject(objID);
 
 	printf("Data saved to : %s\n",csvName.c_str());
  }

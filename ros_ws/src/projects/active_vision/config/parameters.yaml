@@ -1,11 +1,10 @@
-package_path: 'temp' #Gets the package path in roslaunch
 kinectMode: 2 # Kinect Movement Mode
 
-# Parameters for DataCollectorV2 code
-dataCollectorV2: {
+# Parameters for DataCollector code
+dataCollector: {
     relative_path: True, # Whether this is relative to the package_path
     directory: '/dataCollected/trainingData/', # Directory to which the PCD, CSV will be saved
-    objID: 1, # Object for which data has to be collected
+    objID: 2, # Object for which data has to be collected
     csvName: 'default.csv', # CSV file to which the data has to be saved
     nData: 25, # Number of dataPoints to be recorded
     homePosesCSV: 'dataCollectionTreeD2.csv', # CSV file in active_vision/misc/ folder to be used to get home poses
@@ -18,33 +17,33 @@ policyTester: {
     policy: "PCA_LDA", # Policy to be used (This is set in the roslaunch)
     relative_path: True, # Whether this is relative to the package_path
     directory: '/dataCollected/testData/', # Directory to which the PCD, CSV will be saved
-    objID: 1, # Object for which data has to be collected
+    objID: 2, # Object for which data has to be collected
     csvName: 'default.csv', # CSV file to which the data has to be saved
-    csvStVec: 'Prism_truncated_stateVec.csv', # Name of csv inside active_vision/misc/State_Vector/
+    csvStVecDir: '/misc/State_Vector/', # Directory where the state vector has been stored
+    csvStVec: 'Prism_truncated_stateVec.csv', # Name of csv inside storageDir
+    HAFstVecDim: 52, # Dimension of the HAF state vector used
     maxSteps: 5, # Max number of steps to be taken before stopping
+    nDataPoints: 10, # Number of data points for each pose to test (Max 200)
+    yawAnglesCSVDir: '/misc/yawValues/',
+    yawAnglesCSV: Seed1.csv, # csv files to choose the yaw angles from
+    uniformYawStepSize: 45, # Step size for yaw angles starting from 0 which will be checked
 
-    # Parameters for PCA->LDA->LR Policy
-    PCALDA: {
-      PCAcomponents: 26,
-    },
-    # Parameters for PCA->LR Policy
-    PCA: {
-      PCAcomponents: 7,
-    },
+    # Parameter for any policy which uses PCA
+    # Use a value from 0-1 to set components based on the explained_variance_ratio cumulative sum
+    PCAcomponents: 0.95,
 }
-
 
 # Parameters for the simulated environment
 environment: {
-    object_dictionary: [
-        "prismAV6x6x6", "Prism 6x6x6",
-        "prismAV10x8x4", "Prism 10x8x4", 
-        "prismAV20x6x5", "Prism 20x6x5", 
-        "bowlAV", "Bowl", 
-        "cinderBlockAV", "Cinder Block", 
-        "handleAV", "Door Handle", 
-        "gasketAV", "Gasket", 
-        "drillAV", "Cordless Drill",
-    ], #List of object codes and human readable names
-    object_junk: 3,
+    tableCentre: [1.5,0,1],       # Co-ordinates of table centre
+    fingerZOffset: 0.0584,        # Z axis offset between gripper hand and finger
+    viewsphereRad: 1,
+    voxelGridSize: 0.01,          # Voxel Grid size for environment
+    voxelGridSizeUnexp: 0.01,     # Voxel Grid size for unexplored point cloud
+    scale: 3,                     # Scale value for unexplored point cloud generation
+    maxGripperWidth: 0.08,        # Gripper max width
+    minGraspQuality: 150,         # Min grasp quality threshold
+
+    addNoise: false,
+    depthNoise: 0,
 }

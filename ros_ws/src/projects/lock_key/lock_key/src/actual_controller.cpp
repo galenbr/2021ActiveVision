@@ -12,8 +12,32 @@
 
 typedef actionlib::SimpleActionClient<lock_key::SpiralInsertAction> SpiralClient;
 
-double x_misalignment{0.0};
-double y_misalignment{0.0};
+//Defines target end-effector point with offsets
+struct pose_goal{
+    double x{0.0};
+    double y{0.0};
+    double z{0.0};
+    double roll{0.0};
+    double pitch{0.0};
+    double yaw{0.0};
+
+    double x_misalignment{0.0};
+    double y_misalignment{0.0};
+
+    double z_offset_far{0.0};
+    double z_offset_close{0.0};
+};
+
+//Defines arm position in joint space
+struct joint_space_pos{
+    double j1{0.0};
+    double j2{0.0};
+    double j3{0.0};
+    double j4{0.0};
+    double j5{0.0};
+    double j6{0.0};
+    double j7{0.0};
+};
 
 void moveGripper(double Grasp_Width,double gripper_timout){
     actionlib::SimpleActionClient<franka_gripper::GraspAction> ac("franka_gripper/grasp", true);
@@ -39,62 +63,6 @@ void moveGripper(double Grasp_Width,double gripper_timout){
     }
 }
 
-// void addCollisionObjects(moveit::planning_interface::PlanningSceneInterface& planning_scene_interface)
-// {
-//     // BEGIN_SUB_TUTORIAL table1
-//     //
-//     // Creating Environment
-//     // ^^^^^^^^^^^^^^^^^^^^
-//     // Create vector to hold 3 collision objects.
-//     std::vector<moveit_msgs::CollisionObject> collision_objects;
-//     collision_objects.resize(3);
-
-//     // Add the first table where the cube will originally be kept.
-//     collision_objects[0].id = "table1";
-//     collision_objects[0].header.frame_id = "panda_link0";
-
-//     /* Define the primitive and its dimensions. */
-//     collision_objects[0].primitives.resize(1);
-//     collision_objects[0].primitives[0].type = collision_objects[0].primitives[0].BOX;
-//     collision_objects[0].primitives[0].dimensions.resize(3);
-//     collision_objects[0].primitives[0].dimensions[0] = 0.2;
-//     collision_objects[0].primitives[0].dimensions[1] = 0.4;
-//     collision_objects[0].primitives[0].dimensions[2] = 0.4;
-
-//     /* Define the pose of the table. */
-//     collision_objects[0].primitive_poses.resize(1);
-//     collision_objects[0].primitive_poses[0].position.x = 0.5;
-//     collision_objects[0].primitive_poses[0].position.y = 0;
-//     collision_objects[0].primitive_poses[0].position.z = 0.2;
-//     // END_SUB_TUTORIAL
-
-//     collision_objects[0].operation = collision_objects[0].ADD;
-
-//     // BEGIN_SUB_TUTORIAL object
-//     // Define the object that we will be manipulating
-//     collision_objects[1].header.frame_id = "panda_link0";
-//     collision_objects[1].id = "object";
-
-//     /* Define the primitive and its dimensions. */
-//     collision_objects[1].primitives.resize(1);
-//     collision_objects[1].primitives[0].type = collision_objects[1].primitives[0].BOX;
-//     collision_objects[1].primitives[0].dimensions.resize(3);
-//     collision_objects[1].primitives[0].dimensions[0] = 0.02;
-//     collision_objects[1].primitives[0].dimensions[1] = 0.02;
-//     collision_objects[1].primitives[0].dimensions[2] = 0.2;
-
-//     /* Define the pose of the object. */
-//     collision_objects[1].primitive_poses.resize(1);
-//     collision_objects[1].primitive_poses[0].position.x = 0.5;
-//     collision_objects[1].primitive_poses[0].position.y = 0;
-//     collision_objects[1].primitive_poses[0].position.z = 0.5;
-//     // END_SUB_TUTORIAL
-
-//     collision_objects[1].operation = collision_objects[1].ADD;
-
-//     planning_scene_interface.applyCollisionObjects(collision_objects);
-// }
-
 int main(int argc, char ** argv){
     ros::init(argc, argv, "actual_control");
     ros::NodeHandle n;
@@ -111,25 +79,53 @@ int main(int argc, char ** argv){
     ros::service::waitForService("move_to_joint_space", -1);
     moveit_planner::SetVelocity velscale;
 
-    //Retrieve parameters
-    n.getParam("x_misalignment",x_misalignment);
-    n.getParam("y_misalignment",y_misalignment);
+    //Initialize goal positions
+    pose_goal key_goal;
+    pose_goal padlock_goal;
+    joint_space_pos home;
 
-    // moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
-    // moveit::planning_interface::MoveGroupInterface group("panda_arm");
-    // addCollisionObjects(planning_scene_interface);
-    // ros::WallDuration(1.0).sleep();
+    //Retrieve parameters and populate goals
+    n.getParam("key_goal/x",key_goal.x);
+    n.getParam("key_goal/y",key_goal.y);
+    n.getParam("key_goal/z",key_goal.z);
+    n.getParam("key_goal/roll",key_goal.roll);
+    n.getParam("key_goal/pitch",key_goal.pitch);
+    n.getParam("key_goal/yaw",key_goal.yaw);
+    n.getParam("key_goal/z_offset",key_goal.z_offset_far);
+
+    n.getParam("padlock_goal/x",padlock_goal.x);
+    n.getParam("padlock_goal/y",padlock_goal.y);
+    n.getParam("padlock_goal/z",padlock_goal.z);
+    n.getParam("padlock_goal/roll",padlock_goal.roll);
+    n.getParam("padlock_goal/pitch",padlock_goal.pitch);
+    n.getParam("padlock_goal/yaw",padlock_goal.yaw);
+    n.getParam("padlock_goal/z_offset_far",padlock_goal.z_offset_far);
+    n.getParam("padlock_goal/z_offset_close",padlock_goal.z_offset_close);
+    n.getParam("padlock_goal/x_misalignment",padlock_goal.x_misalignment);
+    n.getParam("padlock_goal/y_misalignment",padlock_goal.y_misalignment);
+    // Retrieve Joint Values
+    n.getParam("home/j1", home.j1);
+    n.getParam("home/j2", home.j2);
+    n.getParam("home/j3", home.j3);
+    n.getParam("home/j4", home.j4);
+    n.getParam("home/j5", home.j5);
+    n.getParam("home/j6", home.j6);
+    n.getParam("home/j7", home.j7);
+
+    //Convert RPY orientations to Quaternion
+    tf2::Quaternion q_key_goal, q_padlock_goal;
+    q_key_goal.setRPY(key_goal.roll, key_goal.pitch, key_goal.yaw);
+    q_padlock_goal.setRPY(padlock_goal.roll, padlock_goal.pitch, padlock_goal.yaw);
+    q_key_goal.normalize();
+    q_padlock_goal.normalize();
 
     // Move to above Key
     moveit_planner::MoveCart move1;
     geometry_msgs::Pose p1;
-    p1.orientation.x = 1.0;
-    p1.orientation.y = -0.5;
-    p1.orientation.z = 0.0;
-    p1.orientation.w = 0.0;
-    p1.position.x = 0.5715;
-    p1.position.y = 0.2623;
-    p1.position.z = 0.1665+0.15;
+    tf2::convert(q_key_goal, p1.orientation);
+    p1.position.x = key_goal.x;
+    p1.position.y = key_goal.y;
+    p1.position.z = key_goal.z+key_goal.z_offset_far;
     move1.request.val.push_back(p1);
     move1.request.execute = true;
     cartMoveClient.call(move1);
@@ -138,13 +134,10 @@ int main(int argc, char ** argv){
     // Move to Key
     moveit_planner::MoveCart move2;
     geometry_msgs::Pose p2;
-    p2.orientation.x = 1.0;
-    p2.orientation.y = -0.5;
-    p2.orientation.z = 0.0;
-    p2.orientation.w = 0.0;
+    p2.orientation=p1.orientation;
     p2.position.x = p1.position.x;
     p2.position.y = p1.position.y;
-    p2.position.z = 0.1665;
+    p2.position.z = key_goal.z;
     move2.request.val.push_back(p2);
     move2.request.execute = true;
     cartMoveClient.call(move2);
@@ -154,48 +147,39 @@ int main(int argc, char ** argv){
     moveGripper(0.02,5.0);
 
     // Move to above Key after grasping it
-    moveit_planner::MoveCart move1a;
-    geometry_msgs::Pose p1a;
-    p1a.orientation.x = 1.0;
-    p1a.orientation.y = -0.5;
-    p1a.orientation.z = 0.0;
-    p1a.orientation.w = 0.0;
-    p1a.position.x = p1.position.x;
-    p1a.position.y = p1.position.y;
-    p1a.position.z = p1.position.z;
-    move1a.request.val.push_back(p1a);
-    move1a.request.execute = true;
-    cartMoveClient.call(move1a);
-    ROS_INFO("Reached post-key pose!");
-
-    // Move to above Lock
     moveit_planner::MoveCart move3;
     geometry_msgs::Pose p3;
-    p3.orientation.x = 1.0;
-    p3.orientation.y = -0.5;
-    p3.orientation.z = 0.0;
-    p3.orientation.w = 0.0;
-    p3.position.x = 0.5715+x_misalignment;
-    p3.position.y = 0.1907+y_misalignment;
-    p3.position.z = 0.1665+0.15;
+    p3.orientation=p1.orientation;
+    p3.position.x = p1.position.x;
+    p3.position.y = p1.position.y;
+    p3.position.z = p1.position.z;
     move3.request.val.push_back(p3);
     move3.request.execute = true;
     cartMoveClient.call(move3);
-    ROS_INFO("Reached far pre-lock pose!");
+    ROS_INFO("Reached post-key pose!");
 
-    // Move to above Lock (but closer)
+    // Move to above Lock
     moveit_planner::MoveCart move4;
     geometry_msgs::Pose p4;
-    p4.orientation.x = 1.0;
-    p4.orientation.y = -0.5;
-    p4.orientation.z = 0.0;
-    p4.orientation.w = 0.0;
-    p4.position.x = p3.position.x;
-    p4.position.y = p3.position.y;
-    p4.position.z = 0.1665+0.03;
+    tf2::convert(q_padlock_goal, p4.orientation);
+    p4.position.x = padlock_goal.x+padlock_goal.x_misalignment;
+    p4.position.y = padlock_goal.y+padlock_goal.y_misalignment;
+    p4.position.z = padlock_goal.z+padlock_goal.z_offset_far;
     move4.request.val.push_back(p4);
     move4.request.execute = true;
     cartMoveClient.call(move4);
+    ROS_INFO("Reached far pre-lock pose!");
+
+    // Move to above Lock (but closer)
+    moveit_planner::MoveCart move5;
+    geometry_msgs::Pose p5;
+    p5.orientation=p4.orientation;
+    p5.position.x = p4.position.x;
+    p5.position.y = p4.position.y;
+    p5.position.z = padlock_goal.z+padlock_goal.z_offset_close;
+    move5.request.val.push_back(p5);
+    move5.request.execute = true;
+    cartMoveClient.call(move5);
     ROS_INFO("Reached close pre-lock pose!");
 
     // reducing velocity
@@ -207,31 +191,16 @@ int main(int argc, char ** argv){
     SpiralClient client("spiral_insert_key", true); // true -> don't need ros::spin()
     client.waitForServer();
 
-    lock_key::SpiralInsertGoal key_goal;
+    lock_key::SpiralInsertGoal key_spiral_goal;
 
     ROS_INFO("Retrieving spiral parameters");
-    n.getParam("spiral_Ft", key_goal.Ft);
-    n.getParam("spiral_Fd", key_goal.Fd);
-    n.getParam("spiral_Fi", key_goal.Fi);
-    n.getParam("spiral_delta_max", key_goal.delta_max);
+    n.getParam("spiral/Ft", key_spiral_goal.Ft);
+    n.getParam("spiral/Fd", key_spiral_goal.Fd);
+    n.getParam("spiral/Fi", key_spiral_goal.Fi);
+    n.getParam("spiral/delta_max", key_spiral_goal.delta_max);
 
     ROS_INFO("Sending action goal");
-    client.sendGoal(key_goal);
-
-    // // Move to Lock
-    // moveit_planner::MoveCart move4;
-    // geometry_msgs::Pose p4;
-    // p4.orientation.x = 1.0;
-    // p4.orientation.y = -0.5;
-    // p4.orientation.z = 0.0;
-    // p4.orientation.w = 0.0;
-    // p4.position.x = 0.52;
-    // p4.position.y = -0.16;
-    // p4.position.z = 0.15;
-    // move4.request.val.push_back(p4);
-    // move4.request.execute = true;
-    // cartMoveClient.call(move4);
-    // ROS_INFO("Reached lock!");
+    client.sendGoal(key_spiral_goal);
 
     bool insert_finished_before_timeout = client.waitForResult(ros::Duration(insert_timout));
 
@@ -250,52 +219,32 @@ int main(int argc, char ** argv){
     velScalingClient.call(velscale);
 
     // Move to above Lock after key insertion
-    moveit_planner::MoveCart move3a;
-    geometry_msgs::Pose p3a;
-    p3a.orientation.x = 1.0;
-    p3a.orientation.y = -0.5;
-    p3a.orientation.z = 0.0;
-    p3a.orientation.w = 0.0;
-    p3a.position.x = p3.position.x;
-    p3a.position.y = p3.position.y;
-    p3a.position.z = p3.position.z;
-    move3a.request.val.push_back(p3a);
-    move3a.request.execute = true;
-    cartMoveClient.call(move3a);
+    moveit_planner::MoveCart move6;
+    geometry_msgs::Pose p6;
+    p6.orientation=p4.orientation;
+    p6.position.x = p4.position.x;
+    p6.position.y = p4.position.y;
+    p6.position.z = p4.position.z;
+    move6.request.val.push_back(p6);
+    move6.request.execute = true;
+    cartMoveClient.call(move6);
     ROS_INFO("Reached post-lock pose!");
 
-    // Move to Home (roughly)
-    // JOINT SPACE IMPLEMENTATION
+    // Move to Home
     moveit_planner::MoveJoint jpos;
-    // panda_joint1 - panda_joint7
     jpos.request.execute = true;
-    jpos.request.val.push_back(0.0); //0.34518408463181594
-    jpos.request.val.push_back(-0.785); //-0.5886091012133754
-    jpos.request.val.push_back(0.0); //-0.23394426883041586
-    jpos.request.val.push_back(-2.356); //-2.0712576495897927
-    jpos.request.val.push_back(0.0); //-0.1384774200436345
-    jpos.request.val.push_back(1.57); //1.5505549706586192
-    jpos.request.val.push_back(0.784); //0.7042995433536605
+    // Add to request in order
+    jpos.request.val.push_back(home.j1);
+    jpos.request.val.push_back(home.j2);
+    jpos.request.val.push_back(home.j3);
+    jpos.request.val.push_back(home.j4);
+    jpos.request.val.push_back(home.j5);
+    jpos.request.val.push_back(home.j6);
+    jpos.request.val.push_back(home.j7);
+    // Execute
     jointSpaceClient.call(jpos);
-    // END - JOINT SPACE IMPLEMENTATION
-
-    // TASK SPACE IMPLEMENTATION
-    // moveit_planner::MoveCart move5;
-    // geometry_msgs::Pose p5;
-    // p5.orientation.x = 0.83;
-    // p5.orientation.y = -0.55;
-    // p5.orientation.z = 0.01;
-    // p5.orientation.w = -0.01;
-    // p5.position.x = 0.3;
-    // p5.position.y = 0.0;
-    // p5.position.z = 0.6;
-    // move5.request.val.push_back(p5);
-    // move5.request.execute = true;
-    // cartMoveClient.call(move5);
-    // END - TASK SPACE IMPLEMENTATION
     ROS_INFO("Reached Home!");
 
-    // ros::waitForShutdown();
     return 0;
 
 }

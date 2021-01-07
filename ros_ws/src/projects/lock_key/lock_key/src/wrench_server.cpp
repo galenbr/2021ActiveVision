@@ -37,8 +37,8 @@ bool wrenchAveServiceCallback(lock_key::getAveWrench::Request &req,
                               lock_key::getAveWrench::Response &res){
   int ii_max;
   double ft_sleep;
-  n_ptr->getParam("ft_samples",ii_max);
-  n_ptr->getParam("ft_sleep",ft_sleep);
+  n_ptr->getParam("spiral/ft_samples",ii_max);
+  n_ptr->getParam("spiral/ft_sleep",ft_sleep);
 
   ROS_INFO("Getting average wrist wrench over %i samples.", ii_max);
   // Set variables to zero

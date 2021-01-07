@@ -1,6 +1,5 @@
 #include <active_vision/environment.h>
-#include "active_vision/toolDataHandling.h"
-#include "active_vision/toolVisualization.h"
+#include <active_vision/toolVisualization.h>
 
 // ******************** SET OF FUNCTIONS FOR TESTING ENVIRONMENT ********************
 
@@ -8,14 +7,14 @@
 void testSpawnDeleteObj(environment &av){
   std::cout << "*** In object spawn and delete testing function ***" << std::endl;
   int flag = 0;
-  for (int i = 0; i < av.objectDict.size(); i++) {
-    for (int j = 0; j < av.objectPosesDict[i].size(); j++) {
-      av.spawnObject(i,j,0);
+  for(auto data: av.objectDict){
+    for(int j = 0; j < data.second.nPoses; j++) {
+      av.spawnObject(data.second.ID,j,0);
       printf("Object %d/%d with configuration %d/%d spawned. Enter any key to continue. ",
-             i+1,int(av.objectDict.size()),
-             j+1,int(av.objectPosesDict[i].size()));
+             data.second.ID,int(av.objectDict.size()),
+             j+1,int(data.second.nPoses));
       std::cin >> flag;
-      av.deleteObject(i);
+      av.deleteObject(data.second.ID);
       boost::this_thread::sleep(boost::posix_time::milliseconds(500));
     }
   }
@@ -793,14 +792,9 @@ int main (int argc, char** argv){
 
   if (choice >= 5 && choice <= 13) {
     std::cout << "Objects available :" << std::endl;
-    std::cout << "1: Prism 6x6x6" << std::endl;
-    std::cout << "2: Prism 10x8x4" << std::endl;
-    std::cout << "3: Prism 20x6x5" << std::endl;
-    std::cout << "4: Bowl" << std::endl;
-    std::cout << "5: Cinder Block" << std::endl;
-    std::cout << "6: Handle" << std::endl;
-    std::cout << "7: Gasket" << std::endl;
-    std::cout << "8: Drill" << std::endl;
+    for(auto data: activeVision.objectDict){
+        data.second.printObjectInfo();
+    }
     std::cout << "Enter your choice : "; std::cin>>objID;
     if(choice == 11){
       std::cout << "Grasp Modes available :" << std::endl;
@@ -832,17 +826,17 @@ int main (int argc, char** argv){
     case 4:
       testMoveKinectInViewsphere(activeVision);       break;
     case 5:
-      testKinectRead(activeVision,objID-1,1);         break;
+      testKinectRead(activeVision,objID,1);           break;
     case 6:
-      testPtCldFuse(activeVision,objID-1,1);          break;
+      testPtCldFuse(activeVision,objID,1);            break;
     case 7:
-      testDataExtract(activeVision,objID-1,1);        break;
+      testDataExtract(activeVision,objID,1);          break;
     case 8:
-      testGenUnexpPtCld(activeVision,objID-1,1);      break;
+      testGenUnexpPtCld(activeVision,objID,1);        break;
     case 9:
-      testUpdateUnexpPtCld(activeVision,objID-1,1);   break;
+      testUpdateUnexpPtCld(activeVision,objID,1);     break;
     case 10:
-      testGraspsynthesis(activeVision,objID-1,1);     break;
+      testGraspsynthesis(activeVision,objID,1);       break;
     case 11:
       // for (int i = 1; i <= 4; i++) {
       //   for (int j = 0; j <= 5; j++) {
@@ -850,12 +844,12 @@ int main (int argc, char** argv){
       //     activeVision.reset();
       //   }
       // }
-      testComplete(activeVision,objID-1,4,graspMode,1,0);
+      testComplete(activeVision,objID,4,graspMode,1,0);
       break;
     case 12:
-      testSaveRollback(activeVision,objID-1,1);  break;
+      testSaveRollback(activeVision,objID,1);    break;
     case 13:
-      testSavePCD(activeVision,objID-1);         break;
+      testSavePCD(activeVision,objID);           break;
     case 14:
       testReadCSV(filename,colID);               break;
     case 15:

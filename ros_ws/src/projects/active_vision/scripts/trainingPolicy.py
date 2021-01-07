@@ -12,7 +12,6 @@ from sklearn.metrics import accuracy_score
 from sklearn.neighbors import KNeighborsClassifier
 from pickle import dump
 import pickle
-import rospy
 
 def helpDisp(text):
     print(text)
@@ -29,21 +28,18 @@ class methodPipeline(object):
     def __init__(self):
         self.ready = False
         self.scaler = StandardScaler()
-        return self
 
-    #Use X and y to train the preprocessor. TODO:Add model
-    def calculateFunction(self, X, y):
-        return self.ready
-
-    #Apply the preprocessor to X. Not designed for external
-    # use.
+    # Normalizing the data using StandardScaler. Not designed for external use.
     def normalize(self, X):
-        Xscaled = self.scaler.transform(X)
-        return Xscaled
+        return self.scaler.transform(X)
 
-    #Apply the entire pipeline to X.
-    def applyFunction(self, X):
+    # Train the model
+    def train(self, X, y):
         return self.ready
+
+    # Predict with the trained model
+    def predict(self, X):
+        return -1
 
     def saveModel(self, name):
         dump(self, open(name+'_pipeline.pkl', 'wb'))
@@ -53,78 +49,105 @@ class methodPipeline(object):
         self.ready = True
         return self
 
-class PCALDAPipeline(methodPipeline):
+# PCA -> LDA -> LR Model
+class PCA_LDA_LR_Model(methodPipeline):
     def __init__(self, n_components):
         methodPipeline.__init__(self)
         self.n_components = n_components
 
-    def calculateFunction(self, X, y):
+    def train(self, X, y):
         self.scaler.fit(X)
-        X = self.normalize(X)
+
         self.pca = PCA(self.n_components)
-        X_components = self.pca.fit_transform(X)
+        X_PCA = self.pca.fit_transform(self.normalize(X))
 
         self.lda = LDA()
-        self.lda.fit(X_components, y)
-        self.ready = True
-        return methodPipeline.calculateFunction(self, X, y)
+        X_LDA = self.lda.fit_transform(X_PCA, y)
 
-    def applyFunction(self, X):
+        self.lr = LogisticRegression(solver='liblinear', multi_class='auto')
+        self.lr.fit(X_LDA, y)
+
+        self.ready = True
+        return methodPipeline.train(self, X, y)
+
+    def predict(self, X):
         if(not self.ready):
             return methodPipeline.applyFunction(self, X)
         else:
-            X = self.normalize(X)
-            X1 = self.pca.transform(X)
-            X2 = self.lda.transform(X1)
-            return X2
+            return self.lr.predict(self.lda.transform(self.pca.transform(self.normalize(X))))
 
-class PCAPipeline(methodPipeline):
+
+# PCA -> LDA Model
+class PCA_LDA_Model(methodPipeline):
     def __init__(self, n_components):
         methodPipeline.__init__(self)
         self.n_components = n_components
 
-    def calculateFunction(self, X, y):
+    def train(self, X, y):
         self.scaler.fit(X)
-        X = self.normalize(X)
+
         self.pca = PCA(self.n_components)
-        X_components = self.pca.fit_transform(X)
+        X_PCA = self.pca.fit_transform(self.normalize(X))
+
+        self.lda = LDA()
+        self.lda.fit(X_PCA, y)
 
         self.ready = True
-        return methodPipeline.calculateFunction(self, X, y)
+        return methodPipeline.train(self, X, y)
 
-    def loadModel(self, name):
-        self = pickle.load(open(name+'_pipeline.pkl', 'rb'))
-
-    def applyFunction(self, X):
+    def predict(self, X):
         if(not self.ready):
             return methodPipeline.applyFunction(self, X)
         else:
-            X = self.normalize(X)
-            X1 = self.pca.transform(X)
-            return X1
+            return self.lda.predict(self.pca.transform(self.normalize(X)))
 
-class BrickPipeline(methodPipeline):
-    def __init__(self):
-        super(methodPipeline, self).__init__()
+# PCA -> LR Model
+class PCA_LR_Model(methodPipeline):
+    def __init__(self, n_components):
+        methodPipeline.__init__(self)
+        self.n_components = n_components
 
-#Dummy model that always predicts the same direction.
-class BrickModel():
-    def fit(self, X, y):
-        return
+    def train(self, X, y):
+        self.scaler.fit(X)
+
+        self.pca = PCA(self.n_components)
+        X_PCA = self.pca.fit_transform(self.normalize(X))
+
+        self.lr = LogisticRegression(solver='liblinear', multi_class='auto')
+        self.lr.fit(X_PCA, y)
+
+        self.ready = True
+        return methodPipeline.train(self, X, y)
 
     def predict(self, X):
-        return np.ones(X.shape[0])
+        if(not self.ready):
+            return methodPipeline.applyFunction(self, X)
+        else:
+            return self.lr.predict(self.pca.transform(self.normalize(X)))
 
-#Dummy model that randomly returns a direction [1-8].
-class RandomModel():
-    def fit(self, X, y):
-        return
+# Model that randomly returns a direction [1-8].
+class Random_Model(methodPipeline):
+    def train(self, X, y):
+        self.ready = True
+        return methodPipeline.train(self, X, y)
 
     def predict(self, X):
         return np.random.choice(range(1,9), X.shape[0])
 
-#Function to read the input data file
-def readInput(fileName,dim):
+# class BrickPipeline(methodPipeline):
+#     def __init__(self):
+#         super(methodPipeline, self).__init__()
+#
+# #Dummy model that always predicts the same direction.
+# class BrickModel():
+#     def fit(self, X, y):
+#         return
+#
+#     def predict(self, X):
+#         return np.ones(X.shape[0])
+
+#Function to read the HAF state vector csv file
+def readHAFStVec(fileName,dim):
     states = []
     dir = []
     with open(fileName) as csv_file:
@@ -142,57 +165,64 @@ def readInput(fileName,dim):
 	return np.asarray(states),np.asarray(dir)
 
 #K-fold validation of the given pipeline with the given model.
-def kFold(filename, pipeline, model, name='na', dim=52, k=5):
-    stateVec, dirVec = readInput(filename, dim)
-    dirVec = dirVec.ravel()
-    kFold = KFold(n_splits=k, random_state=None)
-    accuracies = []
-    #Split the data, then train and test on the split.
-    for train_index, test_index in kFold.split(stateVec):
-        X_train, X_test = stateVec[train_index, :], stateVec[test_index, :]
-        y_train, y_test = dirVec[train_index], dirVec[test_index]
-        pipeline.calculateFunction(X_train, y_train)
-        X_train_vec = pipeline.applyFunction(X_train)
-        X_test_vec = pipeline.applyFunction(X_test)
-        model.fit(X_train_vec, y_train)
-        pred_values = model.predict(X_test_vec)
-        acc = accuracy_score(pred_values, y_test)
-        accuracies.append(acc)
-    #Display results
-    avg_accuracy = sum(accuracies)/k
-    for acc in accuracies:
-        print("%1.2f" % acc)
-    print("Overall average: %1.2f" % (avg_accuracy))
-    # Storing the trained models
-    if name != 'na':
-        pipeline.calculateFunction(stateVec, dirVec)
-        pipeline.saveModel(name)
-        model.fit(pipeline.applyFunction(stateVec), dirVec)
-        dump(model, open(name+'_lr.pkl', 'wb'))
+# def kFold(filename, pipeline, model, name='na', dim=52, k=5):
+#     stateVec, dirVec = readInput(filename, dim)
+#     dirVec = dirVec.ravel()
+#     kFold = KFold(n_splits=k, random_state=None)
+#     accuracies = []
+#     #Split the data, then train and test on the split.
+#     for train_index, test_index in kFold.split(stateVec):
+#         X_train, X_test = stateVec[train_index, :], stateVec[test_index, :]
+#         y_train, y_test = dirVec[train_index], dirVec[test_index]
+#         pipeline.calculateFunction(X_train, y_train)
+#         X_train_vec = pipeline.applyFunction(X_train)
+#         X_test_vec = pipeline.applyFunction(X_test)
+#         model.fit(X_train_vec, y_train)
+#         pred_values = model.predict(X_test_vec)
+#         acc = accuracy_score(pred_values, y_test)
+#         accuracies.append(acc)
+#     #Display results
+#     avg_accuracy = sum(accuracies)/k
+#     for acc in accuracies:
+#         print("%1.2f" % acc)
+#     print("Overall average: %1.2f" % (avg_accuracy))
+#     # Storing the trained models
+#     if name != 'na':
+#         pipeline.calculateFunction(stateVec, dirVec)
+#         pipeline.saveModel(name)
+#         model.fit(pipeline.applyFunction(stateVec), dirVec)
+#         dump(model, open(name+'_lr.pkl', 'wb'))
 
-#Convenience function to run several tests at once on the same data.
-def standardRun(file):
-    model = LogisticRegression(solver='liblinear', multi_class='multinomial')
-    PCA_components = rospy.get_param("/active_vision/PCA_component_number")
-    PCALDA_components = rospy.get_param("/active_vision/PCALDA_component_number")
-    # model = KNeighborsClassifier(n_neighbors=7)
-    print("*****%s*****" % file)
-    print("*****PCA-LDA*****")
-    kFold(file, PCALDAPipeline(PCALDA_components), model, file[0:-12]+'PL')
-    print("*****PCA*****")
-    kFold(file, PCAPipeline(PCA_components), model, file[0:-12]+'P')
-    print("*****Brick*****")
-    kFold(file, PCAPipeline(PCA_components), BrickModel(), file[0:-12]+'B')
+# #Convenience function to run several tests at once on the same data.
+# def standardRun(file):
+#     model = LogisticRegression(solver='liblinear', multi_class='multinomial')
+#     PCA_components = rospy.get_param("/active_vision/PCA_component_number")
+#     PCALDA_components = rospy.get_param("/active_vision/PCALDA_component_number")
+#     # model = KNeighborsClassifier(n_neighbors=7)
+#     print("*****%s*****" % file)
+#     print("*****PCA-LDA*****")
+#     kFold(file, PCALDAPipeline(PCALDA_components), model, file[0:-12]+'PL')
+#     print("*****PCA*****")
+#     kFold(file, PCAPipeline(PCA_components), model, file[0:-12]+'P')
+#     print("*****Brick*****")
+#     kFold(file, PCAPipeline(PCA_components), BrickModel(), file[0:-12]+'B')
 
-if __name__ == "__main__":
-    dir = rospy.get_param("/active_vision/data_dir")
-    #Galen mode for convenience- feel free to edit for your local files
-    if len(sys.argv) == 1:
-        files = ["./DataRecAV/pose0Data1_stateVec.csv", "./GitData1/Step1_NormalVP/dataNormalVPStep1_stateVec.csv", "./GitData1/Step2_NormalVP/dataNormalVPStep2_stateVec.csv"]
-        for file in files:
-            standardRun(file)
+# if __name__ == "__main__":
+    # dir = rospy.get_param("/active_vision/data_dir")
+    # #Galen mode for convenience- feel free to edit for your local files
+    # if len(sys.argv) == 1:
+    #     files = ["./DataRecAV/pose0Data1_stateVec.csv", "./GitData1/Step1_NormalVP/dataNormalVPStep1_stateVec.csv", "./GitData1/Step2_NormalVP/dataNormalVPStep2_stateVec.csv"]
+    #     for file in files:
+    #         standardRun(file)
+    #
+    # elif len(sys.argv) != 2: helpDisp("ERROR : Incorrent number of arguments")
+    # else:
+    #     file = sys.argv[1]
+    #     standardRun(dir+file)
 
-    elif len(sys.argv) != 2: helpDisp("ERROR : Incorrent number of arguments")
-    else:
-        file = sys.argv[1]
-        standardRun(dir+file)
+    # if len(sys.argv) != 2: helpDisp("ERROR : Incorrent number of arguments")
+    # else:
+    #     stateVec, dirVec = readHAFStVec(sys.argv[1], 52)
+    #     dirVec = dirVec.ravel()
+    #     model = PCA_LDA_LR_Model(0.95)
+    #     model.train(stateVec, dirVec)
