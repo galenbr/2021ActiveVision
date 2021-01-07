@@ -15,6 +15,7 @@ std_msgs::Float64 pwm1;
 sensor_msgs::Image img;
 geometry_msgs::Point pose;
 std_msgs::Bool flag;
+std_msgs::Float64 action_msg;
 
 void flagCheck(const std_msgs::Bool &msg){
     flag.data = msg.data;
@@ -37,6 +38,10 @@ void rec_pwm(const std_msgs::Float64MultiArray &msg){
     pwm1.data = msg.data.at(0);
 }
 
+void rec_action(const std_msgs::Float64 &msg){
+    action_msg.data = msg.data;
+}
+
 int main(int argc, char** argv){
 
     rosbag::Bag bag;
@@ -50,6 +55,7 @@ int main(int argc, char** argv){
     ros::Subscriber sub3 = n.subscribe("usb_cam/image_raw",1,rec_img);
     ros::Subscriber sub4 = n.subscribe("aruco_simple/pixel3",1,rec_pos);
     ros::Subscriber sub5 = n.subscribe("newFrame",1,flagCheck);
+    ros::Subscriber sub6 = n.subscribe("action",1,rec_action);
 
     ros::Rate r{30};
     while(ros::ok()){
@@ -60,6 +66,7 @@ int main(int argc, char** argv){
         bag.write("pixel3", t,pose);
         bag.write("image", t, img);
         bag.write("newFrame", t,flag);
+        bag.write("action", t, action_msg);
 
         ros::spinOnce();
         r.sleep();

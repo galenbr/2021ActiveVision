@@ -12,10 +12,14 @@ int main(int argc, char **argv){
     ros::NodeHandle n;
 
     ros::Publisher sin_pub = n.advertise<std_msgs::Float64MultiArray>("pwm",1);
+    ros::Publisher action_pub = n.advertise<std_msgs::Float64>("action",1);
+
     float count = 0;
     float vel;
     std_msgs::Float64MultiArray vel_msg;
     vel_msg.data.resize(2);
+
+    std_msgs::Float64 action_msg;
 
     ros::Rate r{30};
 
@@ -27,11 +31,22 @@ int main(int argc, char **argv){
             vel_msg.data[1] = 0;
             
             sin_pub.publish(vel_msg);
+            if(vel_msg.data[0] >=0)
+            {
+                action_msg.data = 1.0;
+            }
+            else
+            {
+                action_msg.data = 2.0;
+            }
+            action_pub.publish(action_msg);
             
             count += 1.5;
         }
         else{
             ROS_INFO("DONE!");
+            action_msg.data = -1.0;
+            action_pub.publish(action_msg);
         }
             ros::spinOnce();
             r.sleep();
