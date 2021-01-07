@@ -10,6 +10,7 @@ int mode;
 int runMode;
 int testAll;
 int maxSteps;
+int nSaved;
 
 void updateRouteData(environment &env, RouteData &data, bool save ,std::string name){
 	data.success = (env.selectedGrasp != -1);
@@ -35,8 +36,8 @@ std::vector<int> nearbyDirections(int dir){
 	dir--;
 	dirs[0] = (8+dir)%8+1;
 	dirs[1] = (8+dir+1)%8+1; dirs[2] = (8+dir-1)%8+1;
-	dirs[3] = (8+dir+2)%8+1; dirs[4] = (8+dir-1)%8+1;
-	dirs[5] = (8+dir+3)%8+1; dirs[5] = (8+dir-1)%8+1;
+	dirs[3] = (8+dir+2)%8+1; dirs[4] = (8+dir-2)%8+1;
+	dirs[5] = (8+dir+3)%8+1; dirs[6] = (8+dir-3)%8+1;
 	dirs[7] = (8+dir+4)%8+1;
 	return dirs;
 }
@@ -45,8 +46,6 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 
 	std::fstream fout;
  	fout.open(dir+saveLocation, std::ios::out | std::ios::app);
-
-  kinectControl.spawnObject(object,0,0);
 
  	std::vector<double> startPose = {kinectControl.viewsphereRad, 180*(M_PI/180.0), 45*(M_PI/180.0)};
 	std::vector<double> nextPose;
@@ -107,8 +106,9 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 		setCamView(viewer,current.path.back(),table);
 		int maxIndex = 0;
 		if(current.success == true){
-			current.filename = getCurTime();
+			current.filename = getCurTime()+"_"+std::to_string(::nSaved);
 			saveData(current, fout, dir);
+			::nSaved++;
 			viewer->addText("GRASP FOUND. Saving and exiting.",4,5,25,1,0,0,"Dir1",vp[0]);
 		}else{
       if(::runMode == 1){
@@ -170,8 +170,9 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 		}else{
 			// Limiting the steps
 			if(current.nSteps > ::maxSteps){
-				current.filename = getCurTime();
+				current.filename = getCurTime()+"_"+std::to_string(::nSaved);
 				saveData(current, fout, dir);
+				::nSaved++;
 				keyPress.dir = 0;
 				keyPress.ok = false;
 			}
@@ -204,7 +205,6 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 	}
 
 	keyPress.ok = true;
-	kinectControl.deleteObject(object);
 	kinectControl.reset();
 	fout.close();
 }
@@ -286,6 +286,9 @@ int main(int argc, char** argv){
 		::testAll = 0;
 	}
 
+	kinectControl.spawnObject(objID,0,0);
+	::nSaved = 0;
+
 	if(testAll == 0){
 		int objPoseCode, objYaw;
 		printf("Enter the object pose code (0-%d) : ", int(kinectControl.objectDict[objID].nPoses-1));
@@ -336,6 +339,8 @@ int main(int argc, char** argv){
 			}
 		}
 	}
+
+	kinectControl.deleteObject(objID);
 
 	printf("Data saved to : %s\n",csvName.c_str());
  }

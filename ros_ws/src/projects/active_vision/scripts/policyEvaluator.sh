@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# ARGUMENTS for policyEvaluator.sh
+# [Path] [csv1] [csv2] ...
+# [Path] : Path (relative to active_vision pkg) to folder with state vector (Eg : /misc/State_vector/)
+# [csv1] : Optional - csv file to be used, If not mentioned all files are used
+# [csv2] : Optional - csv file to be used,
+
 # Function to check if a screen is still running
 checkScreen () {
   local result=false
@@ -17,21 +23,51 @@ checkScreen () {
 # Script to test the provided list of policies on the provided data
 cur=$(pwd)
 pkgPath=$(rospack find active_vision)
-src=$pkgPath"/dataCollected/trainingData/"
+src=$pkgPath"/dataCollected/testData/"
 
 csvDataRec='dataRec.csv'
 csvParams='parameters.csv'
 csvStorageSummary='storageSummary.csv'
-policies=("RANDOM" "PCA" "PCA_LDA" "HEURISTIC")
+
+objectID=(2)
+
+# "RANDOM" "PCA_LR" "PCA_LDA" "PCA_LDA_LR" "HEURISTIC")
+# List all the policies to be tested with the prefix "Policy"
+# Policyxxx = ("Policy" "Unique description" "Param 1 name" "Param 1 value" ...)
+Policy1=("PCA_LR" "PCA_LR_95"
+         "/active_vision/policyTester/PCAcomponents" 0.95)
+Policy2=("PCA_LR" "PCA_LR_75"
+         "/active_vision/policyTester/PCAcomponents" 0.75)
+Policy3=("HEURISTIC" "Heuristic")
+# Policy4=("PCA_LDA_LR" "PCA_LDA_LR_75"
+#          "/active_vision/policyTester/PCAcomponents" 0.75)
 
 files=()
 
-#Load every .csv file in the user suplied directory
-dataSrc=$pkgPath"$1"
-for file in $(ls $dataSrc | grep .csv); do
-	echo "Loaded file $file ... "
-	files+=("$file")
-done
+stVecSrc=$pkgPath"$1"
+# If csv file name is specified then use the ones specified else use all
+argc=$#
+argv=("$@")
+
+if [[ "$argc" -eq "0" ]]; then
+  echo "ERROR : No arguments"
+  exit 1
+fi
+
+if [[ "$argc" -gt "1" ]]; then
+  for (( idx=1; idx < argc; idx++)); do
+    echo "Using state vector : ${argv[idx]}."
+  	files+=("${argv[idx]}")
+  done
+else
+  for file in $(ls $stVecSrc | grep .csv); do
+  	echo "Using state vector : $file."
+  	files+=("$file")
+  done
+fi
+
+now="$(date +'%Y/%m/%d %I:%M:%S')"
+printf "Started at yyyy/mm/dd hh:mm:ss format %s\n" "$now"
 
 # Creating a screen to run ROS & gazebo
 printf "Starting gazebo ...\n"
@@ -40,59 +76,118 @@ gnome-terminal -- bash -c 'screen -d -R -S session-environment' & sleep 5
 screen -S session-environment -X stuff $'roslaunch active_vision workspace.launch visual:="OFF"\n'
 sleep 10
 
-#If the user supplied an object number, set it, otherwise use the default.
-if [[ $# > 1 ]]; then
-	echo "Using object id $2"
-	rosparam set /active_vision/policyTester/objID $2
-fi
+# Looping over the objects and testing each policy for each.
+for objID in ${objectID[@]}; do
+  rosparam set /active_vision/dataCollector/objID $objID
+	for vars in ${!Policy*}; do
+    # Setting the policy and its parameters
+    declare -n policy=$vars
+		rosparam set /active_vision/policyTester/policy ${policy[0]}
+    for (( idx=2; idx<${#policy[@]}; idx+=2)); do
+      rosparam set ${policy[idx]} ${policy[idx+1]}
+    done
 
-# Looping over the files and testing each policy for each.
-for i in ${files[@]}; do
-	echo $i
-	for policy in ${policies[@]}; do
-		rosparam set /active_vision/policyTester/policy $policy
-		#All files are found in the user input directory
-		rosparam set /active_vision/policyTester/storageDir $1
-		rosparam set /active_vision/policyTester/csvStVec $i
-		#Save the results to policyfile_dataRec.csv (triming the extra .csv)
-		rosparam set /active_vision/policyTester/csvName "${policy}_${i: 0: -4}_dataRec.csv"
+    nHeuristic=0 # To ensure heuristic is run only once
 
+    for stVec in ${files[@]}; do
+      # Setting the csv state vector to be used
+      rosparam set /active_vision/policyTester/csvStVecDir $1
+      rosparam set /active_vision/policyTester/csvStVec $stVec
 
-		printf "Evaluating $policy on run ${i: 0: -4} ..."
+      #Save the results to policy:stVec:dataRec.csv (triming the extra .csv)
+  		rosparam set /active_vision/policyTester/csvName "${policy[1]}:${stVec: 0: -4}:dataRec.csv"
 
-		# Open a terminal for the service and the tester
-		gnome-terminal -- bash -c 'screen -d -R -S session-policyService'
-		gnome-terminal -- bash -c 'screen -d -R -S session-policyTester'
-		sleep 5
+      printf "Evaluating ${policy[1]} with ${stVec} on object ${objID}...\n"
 
-		# Start the service and the tester
-		if [[ "$policy" == "HEURISTIC" ]]; then
-			screen -S session-policyService -X stuff $'rosrun active_vision heuristicPolicyService 0\n'
-			screen -S session-policyTester -X stuff $'rosrun active_vision policyTester 1\n1\n exit\n'
-		else
-			screen -S session-policyService -X stuff $'rosrun active_vision trainedPolicyService.py\n'
-			screen -S session-policyTester -X stuff $'rosrun active_vision policyTester 2\n1\n exit\n'
-		fi
-		sleep 5
-		screen -S session-policyTester -X stuff $'sleep 1\nexit\n'
-		#Debug line
-		#screen -S session-policyTester -X stuff $'sleep 7\nexit\n'
-		
+      # Saving the parameters
+  		rosrun active_vision saveParams.sh ${src}${csvParams}
 
-		# Waiting till testing is over
-		screenOK="$(checkScreen session-policyTester)"
-		while [[ "$screenOK" == "true" ]]; do
-			printf ".";	sleep 60
-			screenOK="$(checkScreen session-policyTester)"
-		done
-		printf "\n"
-		screen -S session-policyService -X stuff "^C"
-		screen -S session-policyService -X stuff $'sleep 1\nexit\n'
-		printf "Starting next policy...\n"
-		sleep 2
+  		# Open a terminal for the service and the tester
+  		gnome-terminal -- bash -c 'screen -d -R -S session-policyService'
+  		gnome-terminal -- bash -c 'screen -d -R -S session-policyTester'
+  		sleep 5
+
+  		# Start the service and the tester
+      # Heurisic doesnot depend on state vector
+      if [[ "$policy" == "HEURISTIC" ]]; then
+        if [[ "$nHeuristic" -eq "0" ]]; then
+          screen -S session-policyService -X stuff $'rosrun active_vision heuristicPolicyService 0\n'
+          screen -S session-policyTester -X stuff $'rosrun active_vision policyTester 1\n1\n exit\n'
+          # screen -S session-policyTester -X stuff $'sleep 7\n' #Debug line
+          nHeuristic=1
+        fi
+      else
+        screen -S session-policyService -X stuff $'rosrun active_vision trainedPolicyService.py\n'
+  			screen -S session-policyTester -X stuff $'rosrun active_vision policyTester 2\n1\n exit\n'
+        # screen -S session-policyTester -X stuff $'sleep 7\n' #Debug line
+  		fi
+  		sleep 5
+  		screen -S session-policyTester -X stuff $'sleep 1\nexit\n'
+
+  		# Waiting till testing is over
+  		screenOK="$(checkScreen session-policyTester)"
+  		while [[ "$screenOK" == "true" ]]; do
+  			printf ".";	sleep 10
+  			screenOK="$(checkScreen session-policyTester)"
+  		done
+  		printf "\n"
+  		screen -S session-policyService -X stuff "^C"
+  		screen -S session-policyService -X stuff $'sleep 1\nexit\n'
+  		sleep 2
+
+    done
 	done
 done
+
+
 # Closing gazebo
 printf "Closing gazebo ...\n"
 screen -S session-environment -X stuff "^C"
 screen -S session-environment -X stuff $'sleep 1\nexit\n'
+
+printf "***********\n"
+
+dst=$pkgPath"/dataCollected/storage/"
+
+# Create a new directory
+dataNo="1"
+ok=false
+while [ $ok = false ]; do
+	dstToCheck="$dst""Test_$dataNo""/"
+	if [ ! -d $dstToCheck ]; then
+		mkdir $dstToCheck
+		ok=true
+		printf $(basename $dstToCheck)" folder created.\n"
+	fi
+	dataNo=$[$dataNo+1]
+done
+
+# Copying the parameters to summary folder
+csvToCheck="${dst}""${csvStorageSummary}"
+lineNo="1"
+while IFS= read line; do
+	if [ $lineNo == "1" ]; then
+		if [ ! -f $csvToCheck ]; then
+			echo -n "Folder Name, Description,,,,""$line" >> $csvToCheck
+		fi
+	else
+		echo -n $(basename $dstToCheck)", Collection,,,,""$line" >> $csvToCheck
+	fi
+	echo "" >> $csvToCheck
+	lineNo=$[$lineNo+1]
+done <"${src}${csvParams}"
+
+printf "Folder and parameter details added to "${csvStorageSummary}".\n"
+
+# Copying the files to the created folder
+cd $src
+shopt -s extglob
+mv !(ReadMe.txt) $dstToCheck
+shopt -u extglob
+cd $cur
+printf "Files Moved.\n"
+
+printf "***********\n"
+
+now="$(date +'%Y/%m/%d %I:%M:%S')"
+printf "Ended at yyyy/mm/dd hh:mm:ss format %s\n" "$now"
