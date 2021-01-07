@@ -68,3 +68,7 @@ target_link_libraries(owi_freq_node ${catkin_LIBRARIES})
 add_executable(owi_freq_record_node src/record_angular_vel.cpp)
 add_dependencies(owi_freq_record_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(owi_freq_record_node ${catkin_LIBRARIES})
+
+add_executable(owi_const_vel_node src/const_vel.cpp)
+add_dependencies(owi_const_vel_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(owi_const_vel_node ${catkin_LIBRARIES})
