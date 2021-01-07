@@ -1,9 +1,9 @@
 %% Importing data
-Array1=csvread('owi_test_data/final_vel_step1.5/freq_test2a.csv',2,0);
-Array2=csvread('owi_test_data/final_vel_step1.5/freq_test2b.csv',2,0);
-Array3=csvread('owi_test_data/final_vel_step1.5/freq_test2c.csv',2,0);
-Array4=csvread('owi_test_data/final_vel_step1.5/freq_test2d.csv',2,0);
-Array5=csvread('owi_test_data/final_vel_step1.5/freq_test2e.csv',2,0);
+Array1=csvread('freq_test2a.csv',2,0);
+Array2=csvread('freq_test2b.csv',2,0);
+Array3=csvread('freq_test2c.csv',2,0);
+Array4=csvread('freq_test2d.csv',2,0);
+Array5=csvread('freq_test2e.csv',2,0);
 
 %% Storing Relevant data
 input_vel = Array2(:,2);
