@@ -1,9 +1,9 @@
 %% Importing data
-Array1=csvread('freq_test2a.csv',2,0);
-Array2=csvread('freq_test2b.csv',2,0);
-Array3=csvread('freq_test2c.csv',2,0);
-Array4=csvread('freq_test2d.csv',2,0);
-Array5=csvread('freq_test2e.csv',2,0);
+Array1=csvread('freq_test1a.csv',2,0);
+Array2=csvread('freq_test1b.csv',2,0);
+Array3=csvread('freq_test1c.csv',2,0);
+Array4=csvread('freq_test1d.csv',2,0);
+Array5=csvread('freq_test1e.csv',2,0);
 
 %% Storing Relevant data
 input_vel = Array2(:,2);
@@ -68,7 +68,17 @@ for i = 1:size(action)
     elseif(action(i) == -1)
         datapoint_3 = [datapoint_3,i];
         input_vel_3 = [input_vel_3,input_vel(i)];
-        angular_vel_3 = [angular_vel_3,angular_vel(i)];
+        if(abs(angular_vel(i)) <= 10)
+            angular_vel_3 = [angular_vel_3,angular_vel(i)];
+        else
+            %s = size(angular_vel_2)
+            if(angular_vel(i)>0)
+                angular_vel_3 = [angular_vel_3,1];
+                %angular_vel_2 = [angular_vel_2,angular_vel_2(s(2))];
+            else
+                angular_vel_3 = [angular_vel_3,-1];
+            end
+        end
     end
 
 end
@@ -76,8 +86,8 @@ end
         plot(datapoint_1(2:end),angular_vel_1(2:end),'c')
         plot(datapoint_2(2:end),input_vel_2(2:end),'g:')
         plot(datapoint_2(2:end),angular_vel_2(2:end),'m')
-        plot(datapoint_3(2:50),input_vel_3(2:50),'b:')
-        plot(datapoint_3(2:50),angular_vel_3(2:50),'k')
+        plot(datapoint_3(2:end),input_vel_3(2:end),'b:')
+        plot(datapoint_3(2:end),angular_vel_3(2:end),'k')
         %legend({'+ pwm', '- pwm', '0 pwm'})
         legend({'+ pwm','angular vel', '- pwm', 'angular vel','0 pwm', 'angular vel'});
 %% Position Plot
