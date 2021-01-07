@@ -72,14 +72,14 @@ for i = 1:size(action)
     end
 
 end
-        %plot(datapoint_1(2:end),input_vel_1(2:end),'r:')
+        plot(datapoint_1(2:end),input_vel_1(2:end),'r:')
         plot(datapoint_1(2:end),angular_vel_1(2:end),'c')
-        %plot(datapoint_2(2:end),input_vel_2(2:end),'g:')
+        plot(datapoint_2(2:end),input_vel_2(2:end),'g:')
         plot(datapoint_2(2:end),angular_vel_2(2:end),'m')
-        %plot(datapoint_3(2:50),input_vel_3(2:50),'b:')
+        plot(datapoint_3(2:50),input_vel_3(2:50),'b:')
         plot(datapoint_3(2:50),angular_vel_3(2:50),'k')
-        legend({'+ pwm', '- pwm', '0 pwm'})
-        %legend({'+ pwm','angular vel', '- pwm', 'angular vel','0 pwm', 'angular vel'});
+        %legend({'+ pwm', '- pwm', '0 pwm'})
+        legend({'+ pwm','angular vel', '- pwm', 'angular vel','0 pwm', 'angular vel'});
 %% Position Plot
 figure(2)
 hold on
@@ -100,8 +100,8 @@ for i = 1:size(action)
         pos_y_3 = [pos_y_3,pos_y(i)];
     end
 end
-    %plot(pos_x_1(2:end),pos_y_1(2:end),'co')
+    plot(pos_x_1(2:end),pos_y_1(2:end),'co')
     plot(pos_x_2(2:end),pos_y_2(2:end),'mo')
-    %plot(pos_x_3(2:end),pos_y_3(2:end),'ko')
-    legend('- pwm')
-    %legend('+ pwm', '- pwm', '0 pwm')
+    plot(pos_x_3(2:end),pos_y_3(2:end),'ko')
+    %legend('- pwm')
+    legend('+ pwm', '- pwm', '0 pwm')
