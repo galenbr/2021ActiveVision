@@ -1,4 +1,10 @@
 %% Importing data
+% Array1=csvread('owi_test_data\final_vel_step1.5\freq_test1a.csv',2,0);
+% Array2=csvread('owi_test_data\final_vel_step1.5\freq_test1b.csv',2,0);
+% Array3=csvread('owi_test_data\final_vel_step1.5\freq_test1c.csv',2,0);
+% Array4=csvread('owi_test_data\final_vel_step1.5\freq_test1d.csv',2,0);
+% Array5=csvread('owi_test_data\final_vel_step1.5\freq_test1e.csv',2,0);
+
 Array1=csvread('freq_test1a.csv',2,0);
 Array2=csvread('freq_test1b.csv',2,0);
 Array3=csvread('freq_test1c.csv',2,0);
@@ -115,3 +121,23 @@ end
     plot(pos_x_3(2:end),pos_y_3(2:end),'ko')
     %legend('- pwm')
     legend('+ pwm', '- pwm', '0 pwm')
+    
+figure(3)
+s = size(pos_x_1)
+for i= 1:s(2)
+    plot(pos_x_1(i),pos_y_1(i),'ro')
+    pause(1.0)
+    plot(pos_x_1(1:i),pos_y_1(1:i),'co')
+    hold on
+    pause(1.0)
+end
+
+figure(4)
+s = size(pos_x_2)
+for i = 1:s(2)
+    plot(pos_x_2(i),pos_y_2(i),'ro')
+    pause(1.0)
+    plot(pos_x_2(1:i),pos_y_2(1:i),'co')
+    hold on
+    pause(1.0)
+end
