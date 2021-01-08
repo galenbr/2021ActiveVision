@@ -241,6 +241,10 @@ add_executable(visDataRec src/visDataRec.cpp)
 add_dependencies(visDataRec active_vision ${catkin_EXPORTED_TARGETS})
 target_link_libraries(visDataRec active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
+add_executable(visAllPaths src/visAllPaths.cpp)
+add_dependencies(visAllPaths active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(visAllPaths active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
 # add_executable(visViewsphere src/visViewsphere.cpp)
 # add_dependencies(visViewsphere active_vision ${catkin_EXPORTED_TARGETS})
 # target_link_libraries(visViewsphere active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})

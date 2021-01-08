@@ -20,7 +20,7 @@ def readInput(fileName):
             # Going through it line by line as storing it in a list
             data.append([i for i in line[:]])
 
-	return np.asarray(data)
+    return np.asarray(data)
 
 #Read file and plot camera angle versus initial direction chosen. TODO:
 # Move to a separate file? Refactor for more general data analysis?
