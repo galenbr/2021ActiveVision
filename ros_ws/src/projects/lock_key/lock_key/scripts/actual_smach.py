@@ -8,6 +8,7 @@ import rospy
 import smach
 import actionlib
 import lock_key.msg
+import lock_key_msgs.msg
 import franka_gripper.msg
 import moveit_planner.srv
 
@@ -51,20 +52,46 @@ def move_gripper(width, epsilon_inner=0.05, epsilon_outer=0.05, speed=0.1, force
 	rospy.loginfo('Waiting for server')
 	client.wait_for_server()
 	rospy.loginfo('Found Server')
-	goal=franka_gripper.msg.GraspGoal(width, epsilon, speed,force)
+	goal=franka_gripper.msg.GraspGoal(width, epsilon, speed, force)
 	rospy.loginfo('Sending Goal')
 	client.send_goal(goal)
 	rospy.loginfo('Waiting for result')
 	client.wait_for_result()
 
-def spiral_insert(Ft, Fd, Fi, delta_max):
-	'''Calls spiral insert action.'''
-	client = actionlib.SimpleActionClient("spiral_insert_key", 
-										  lock_key.msg.SpiralInsertAction)
+def spiral_motion():
+	'''Calls spiral motion action.'''
+	client = actionlib.SimpleActionClient("spiral_motion", 
+										  lock_key_msgs.msg.SpiralAction)
 	rospy.loginfo('Waiting for server')
 	client.wait_for_server()
 	rospy.loginfo('Found Server')
-	goal=lock_key.msg.SpiralInsertGoal(Ft, Fd, Fi, delta_max)
+	goal=lock_key_msgs.msg.SpiralGoal()
+	rospy.loginfo('Sending Goal')
+	client.send_goal(goal)
+	rospy.loginfo('Waiting for result')
+	client.wait_for_result()
+
+def detect_plane(F_max, recalculate_bias=False):
+	'''Calls plane detection action.'''
+	client = actionlib.SimpleActionClient("plane_detector_node", 
+										  lock_key_msgs.msg.DetectPlaneAction)
+	rospy.loginfo('Waiting for server')
+	client.wait_for_server()
+	rospy.loginfo('Found Server')
+	goal=lock_key_msgs.msg.DetectPlaneGoal(F_max, recalculate_bias)
+	rospy.loginfo('Sending Goal')
+	client.send_goal(goal)
+	rospy.loginfo('Waiting for result')
+	client.wait_for_result()
+
+def rotate_key(d_roll, d_pitch, d_yaw):
+	'''Calls key rotation action.'''
+	client = actionlib.SimpleActionClient("rotate_key", 
+										  lock_key_msgs.msg.RotateKeyAction)
+	rospy.loginfo('Waiting for server')
+	client.wait_for_server()
+	rospy.loginfo('Found Server')
+	goal=lock_key_msgs.msg.RotateKeyGoal(d_roll, d_pitch, d_yaw)
 	rospy.loginfo('Sending Goal')
 	client.send_goal(goal)
 	rospy.loginfo('Waiting for result')
@@ -144,15 +171,44 @@ class NavigateToPreLockClose(smach.State):
                          goal['roll'],goal['pitch'],goal['yaw'])
         return 'succeeded'
 
-class SpiralInsert(smach.State):
+class PlaneDetection(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
     def execute(self, userdata):
-		rospy.loginfo('Starting Spiral Insert...')
+		rospy.loginfo('Starting Plane Detection...')
 		rospy.loginfo('Retrieving parameters')
-		spiral_params=rospy.get_param("spiral")
-		spiral_insert(spiral_params['Ft'], spiral_params['Fd'], 
-			          spiral_params['Fi'], spiral_params['delta_max'])
+		F_max=rospy.get_param("spiral/Ft")
+		detect_plane(F_max,recalculate_bias=True)
+		return 'succeeded'
+
+class SpiralMotion(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['succeeded','failed'])
+    def execute(self, userdata):
+		rospy.loginfo('Starting Spiral Motion...')
+		spiral_motion()
+		return 'succeeded'
+
+class FinalInsert(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['succeeded','failed'])
+    def execute(self, userdata):
+		rospy.loginfo('Starting Final Insertion...')
+		rospy.loginfo('Retrieving parameters')
+		F_max=rospy.get_param("spiral/Fd")
+		detect_plane(F_max,recalculate_bias=False)
+		return 'succeeded'
+
+class RotateKey(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['succeeded','failed'])
+    def execute(self, userdata):
+		rospy.loginfo('Rotating key...')
+		rospy.loginfo('Retrieving parameters')
+		d_roll=rospy.get_param("padlock_goal/key_roll")
+		d_pitch=rospy.get_param("padlock_goal/key_pitch")
+		d_yaw=rospy.get_param("padlock_goal/key_yaw")
+		rotate_key(d_roll,d_pitch,d_yaw)
 		return 'succeeded'
 
 class NavigateToPostLock(smach.State):
@@ -196,34 +252,49 @@ def main():
 	# Open the container
 	with sm:
 	    # Add states to the container
-	    smach.StateMachine.add('NavigateToPreKey', NavigateToPreKey(), 
+		smach.StateMachine.add('NavigateToPreKey', NavigateToPreKey(), 
 	                           transitions={'succeeded':'NavigateToKey',  
 	                                        'failed':'NavigateToPreKey'})
-	    smach.StateMachine.add('NavigateToKey', NavigateToKey(), 
+		smach.StateMachine.add('NavigateToKey', NavigateToKey(), 
 	                           transitions={'succeeded':'CloseGripper',  
 	                                        'failed':'NavigateToKey'})
-	    smach.StateMachine.add('CloseGripper', CloseGripper(), 
+		smach.StateMachine.add('CloseGripper', CloseGripper(), 
 	                           transitions={'succeeded':'NavigateToPostKey',  
 	                                        'failed':'CloseGripper'})
-	    smach.StateMachine.add('NavigateToPostKey', NavigateToPostKey(), 
+		smach.StateMachine.add('NavigateToPostKey', NavigateToPostKey(), 
 	                           transitions={'succeeded':'NavigateToPreLockFar',  
 	                                        'failed':'NavigateToPostKey'})
-	    smach.StateMachine.add('NavigateToPreLockFar', NavigateToPreLockFar(), 
+		smach.StateMachine.add('NavigateToPreLockFar', NavigateToPreLockFar(), 
 	                           transitions={'succeeded':'NavigateToPreLockClose', 
 	                                        'failed':'NavigateToPreLockFar'})
-	    smach.StateMachine.add('NavigateToPreLockClose', NavigateToPreLockClose(), 
-	                           transitions={'succeeded':'SpiralInsert',
+		smach.StateMachine.add('NavigateToPreLockClose', NavigateToPreLockClose(), 
+	                           transitions={'succeeded':'SpiralInsert_SM',
 	                                        'failed':'NavigateToPreLockClose'})
-	    smach.StateMachine.add('SpiralInsert', SpiralInsert(), 
-	                           transitions={'succeeded':'OpenGripper',
-	                                        'failed':'SpiralInsert'})
-	    smach.StateMachine.add('OpenGripper', OpenGripper(), 
+
+		# Create the sub SMACH state machine
+		sm_sub = smach.StateMachine(outcomes=['succeeded','failed'])
+		with sm_sub:
+			smach.StateMachine.add('PlaneDetection', PlaneDetection(), 
+									transitions={'succeeded':'SpiralMotion'})
+			smach.StateMachine.add('SpiralMotion', SpiralMotion(), 
+									transitions={'succeeded':'FinalInsert'})
+			smach.StateMachine.add('FinalInsert', FinalInsert(), 
+									transitions={'succeeded':'RotateKey'})												 
+			smach.StateMachine.add('RotateKey', RotateKey(), 
+									transitions={'succeeded':'succeeded',  
+												 'failed':'failed'})
+
+		smach.StateMachine.add('SpiralInsert_SM', sm_sub, 
+	                           transitions={'succeeded':'OpenGripper',  
+	                                        'failed':'NavigateToPreLockFar'})
+
+		smach.StateMachine.add('OpenGripper', OpenGripper(), 
 	                           transitions={'succeeded':'NavigateToPostLock',  
 	                                        'failed':'OpenGripper'})
-	    smach.StateMachine.add('NavigateToPostLock', NavigateToPostLock(), 
+		smach.StateMachine.add('NavigateToPostLock', NavigateToPostLock(), 
 	                           transitions={'succeeded':'NavigateToHome',
 	                                        'failed':'NavigateToPostLock'})
-	    smach.StateMachine.add('NavigateToHome', NavigateToHome(), 
+		smach.StateMachine.add('NavigateToHome', NavigateToHome(), 
 	                           transitions={'succeeded':'complete',  
 	                                        'failed':'NavigateToHome'})
 
