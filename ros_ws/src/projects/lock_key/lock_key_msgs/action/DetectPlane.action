@@ -1,4 +1,6 @@
 # Define the goal
+float64 F_max
+bool recalculate_bias
 ---
 # Define the result
 bool reached_plane
