@@ -21,7 +21,6 @@ public:
     as.registerGoalCallback(boost::bind(&DetectPlane::goalCB, this));
     as.registerPreemptCallback(boost::bind(&DetectPlane::preemptCB, this));
     //Get parameters
-    nh.getParam("spiral/Ft",Ft_max);
     nh.getParam("spiral/delta_max",delta_max);
     nh.getParam("spiral/delta_step",delta_step);
     //Wait for services
@@ -58,6 +57,15 @@ public:
       bias.Ty=aveWrench.response.ty;
       bias.Tz=aveWrench.response.tz;
       bias.set=1;
+
+      //Set as ROS params
+      nh.setParam("/FT_bias/Fx", bias.Fx);
+      nh.setParam("/FT_bias/Fy", bias.Fy);
+      nh.setParam("/FT_bias/Fz", bias.Fz);
+      nh.setParam("/FT_bias/Tx", bias.Tx);
+      nh.setParam("/FT_bias/Ty", bias.Ty);
+      nh.setParam("/FT_bias/Tz", bias.Tz);
+
       ROS_INFO("Successfully retrieved FT sensor biases.");
   }
 
@@ -92,14 +100,14 @@ public:
     getTFClient.call(curTF);
     p.position=curTF.response.pose.position;
     
-    ROS_INFO("Current: %.6f, %.6f, %.6f.",p.position.x,p.position.y,p.position.z);
+    // ROS_INFO("Current: %.6f, %.6f, %.6f.",p.position.x,p.position.y,p.position.z);
 
     //Update position with relative changes
     p.position.x += x;
     p.position.y += y;
     p.position.z += z;
 
-    ROS_INFO("Target: %.6f, %.6f, %.6f.",p.position.x,p.position.y,p.position.z);
+    // ROS_INFO("Target: %.6f, %.6f, %.6f.",p.position.x,p.position.y,p.position.z);
 
     cart.request.val.clear();
     cart.request.val.push_back(p);
@@ -112,24 +120,23 @@ public:
     //Reset variables
     current_delta=0.0;
     // Update params in case they changed
-    nh.getParam("spiral/Ft",Ft_max);
     nh.getParam("spiral/delta_max",delta_max);
     nh.getParam("spiral/delta_step",delta_step);
 
-    as.acceptNewGoal();
+    auto goal=as.acceptNewGoal();
 
-    if (!bias.set){
+    if (goal->recalculate_bias){ // | !bias.set
       ROS_INFO("Calculating FT sensor bias.");
       calculateFTBias();
     }
 
-    // // make sure that the action hasn't been canceled
-    // if (!as.isActive())
-    //   return;
+    // make sure that the action hasn't been canceled
+    if (!as.isActive())
+      return;
 
     ROS_INFO("Beginning descent to plane.");
     //Perform main task
-    while (current_delta<=delta_max && maxDownForce(Ft_max)){
+    while (current_delta<=delta_max && maxDownForce(goal->F_max)){
         moveRel(0.0,0.0,-delta_step);
         // Update delta. TODO: Use actual position rather than cmd
         current_delta+=delta_step;
@@ -137,8 +144,6 @@ public:
         feedback.current_delta=current_delta;
         as.publishFeedback(feedback);
         ROS_INFO("Current Delta: %.6f",current_delta);
-
-        //ros::Duration(1.0).sleep();
     }
 
     //Set result (whether a plane was detected)
@@ -176,7 +181,6 @@ private:
   geometry_msgs::Quaternion padlock_goal_or;
   geometry_msgs::Pose p;
   int32_t timeout = 1000;
-  double Ft_max{0.0};
   double current_delta{0.0};
   double delta_max{0.0};
   double delta_step{0.0};

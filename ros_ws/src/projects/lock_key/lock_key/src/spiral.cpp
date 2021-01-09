@@ -22,13 +22,19 @@ public:
     as.registerGoalCallback(boost::bind(&Spiral::goalCB, this));
     as.registerPreemptCallback(boost::bind(&Spiral::preemptCB, this));
     //Get parameters...
+    nh.getParam("FT_bias/Fx", bias.Fx);
+    nh.getParam("FT_bias/Fy", bias.Fy);
+    nh.getParam("FT_bias/Fz", bias.Fz);
+    nh.getParam("FT_bias/Tx", bias.Tx);
+    nh.getParam("FT_bias/Ty", bias.Ty);
+    nh.getParam("FT_bias/Tz", bias.Tz);
+    bias.set=1;
     //Wait for services
     ros::service::waitForService("getAveWrench",timeout);
     ros::service::waitForService("getWrench",timeout);
     ros::service::waitForService("get_transform",timeout);
     ros::service::waitForService("cartesian_move",timeout);
     getWrenchclient = nh.serviceClient<lock_key::getWrench>("getWrench");
-    getAveWrenchclient = nh.serviceClient<lock_key::getAveWrench>("getAveWrench");
     getTFClient = nh.serviceClient<moveit_planner::GetTF>("get_transform");
     moveCartClient = nh.serviceClient<moveit_planner::MoveCart>("cartesian_move");
     //Define publisher
@@ -44,20 +50,6 @@ public:
   }
 
   ~Spiral(void){
-  }
-
-  void calculateFTBias(){
-      // Retrieve current FT readings
-      getAveWrenchclient.call(aveWrench);   
-      // Store in global variables
-      bias.Fx=aveWrench.response.fx;
-      bias.Fy=aveWrench.response.fy;
-      bias.Fz=aveWrench.response.fz;
-      bias.Tx=aveWrench.response.tx;
-      bias.Ty=aveWrench.response.ty;
-      bias.Tz=aveWrench.response.tz;
-      bias.set=1;
-      ROS_INFO("Successfully retrieved FT sensor biases.");
   }
 
   bool maxSpiralForces(double Fd){
@@ -135,14 +127,9 @@ public:
 
     as.acceptNewGoal();
 
-    if (!bias.set){
-      ROS_INFO("Calculating FT sensor bias.");
-      calculateFTBias();
-    }
-
-    // // make sure that the action hasn't been canceled
-    // if (!as.isActive())
-    //   return;
+    // make sure that the action hasn't been canceled
+    if (!as.isActive())
+      return;
 
     ROS_INFO("Starting Spiral Insertion Motion");
     //Perform main task
@@ -193,7 +180,6 @@ private:
   lock_key_msgs::SpiralResult result;
   string action_name;
   ros::ServiceClient getWrenchclient;
-  ros::ServiceClient getAveWrenchclient;
   ros::ServiceClient getTFClient;
   ros::ServiceClient moveCartClient;
   ros::Publisher fz_pub;
