@@ -28,6 +28,10 @@ padlock_goal:
   x_misalignment: 0.0
   # Intentional misalignment in Y for padlock [meters]
   y_misalignment: 0.0
+  # Rotation for turning lock [radians]
+  key_roll: 0.0
+  key_pitch: 0.0
+  key_yaw: -1.0472
 
 ##### Home Position #####
 home:
