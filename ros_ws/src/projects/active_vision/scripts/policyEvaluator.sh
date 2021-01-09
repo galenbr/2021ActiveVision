@@ -34,15 +34,19 @@ objectID=(2)
 # "RANDOM" "PCA_LR" "PCA_LDA" "PCA_LDA_LR" "HEURISTIC")
 # List all the policies to be tested with the prefix "Policy"
 # Policyxxx = ("Policy" "Unique description" "Param 1 name" "Param 1 value" ...)
-#Policy1=("PCA_LR" "PCA_LR_95"
-#         "/active_vision/policyTester/PCAcomponents" 0.95)
-#Policy2=("PCA_LR" "PCA_LR_75"
-#         "/active_vision/policyTester/PCAcomponents" 0.75)
-#Policy3=("HEURISTIC" "Heuristic")
-Policy5=("BRICK" "Brick")
-Policy6=("RANDOM" "Random")
-# Policy4=("PCA_LDA_LR" "PCA_LDA_LR_75"
+
+Policy1A=("HEURISTIC" "Heuristic")
+Policy1B=("BRICK" "Brick")
+Policy1C=("RANDOM" "Random")
+Policy2A=("PCA_LR" "PCA_LR_95"
+         "/active_vision/policyTester/PCAcomponents" 0.95)
+Policy2B=("PCA_LR" "PCA_LR_85"
+         "/active_vision/policyTester/PCAcomponents" 0.85)
+Policy2C=("PCA_LR" "PCA_LR_75"
+         "/active_vision/policyTester/PCAcomponents" 0.75)
+# Policy3A=("PCA_LDA_LR" "PCA_LDA_LR_75"
 #          "/active_vision/policyTester/PCAcomponents" 0.75)
+
 
 files=()
 
@@ -148,6 +152,10 @@ screen -S session-environment -X stuff "^C"
 screen -S session-environment -X stuff $'sleep 1\nexit\n'
 
 printf "***********\n"
+
+# Creating the summary
+printf "Generating Summary...\n"
+rosrun active_vision summarizerResults.py $src
 
 dst=$pkgPath"/dataCollected/storage/"
 
