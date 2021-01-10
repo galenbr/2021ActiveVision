@@ -20,6 +20,26 @@ def fig2img(fig):
     img = Image.open(buf)
     return img
 
+#Convert the plots to a jpg format
+def plots2jpg(plots,path,prefix):
+    if len(plots) > 0:
+        dims = plots[0].size
+        nFigures = np.ceil(len(plots)/6.0)
+        ctr = 1
+        for figID in range(len(plots)):
+            idx = figID % 6
+            if idx == 0:
+                remainingPlots = len(plots) - idx
+                rows = min(2,remainingPlots)
+                cols = min(3,(remainingPlots+1)/2)
+                newImg = Image.new('RGB', (cols*dims[0], rows*dims[1]))
+            newImg.paste(plots[idx],((idx/2)%3*dims[0],idx%2*dims[1]))
+            if idx == 5 or figID == len(plots) - 1:
+                newPath = path+prefix+str(ctr)+".jpg"
+                newImg.save(newPath)
+                print("Graph saved to : "+newPath[newPath.rfind('/')+1:])
+                ctr += 1
+
 #Function to read the input data file
 def readInput(fileName):
     data = []
@@ -99,9 +119,9 @@ def genSummary(path,fileNames):
 def graphSummary(path,policyWise,stVecWise):
 
     xAxis = [str(i) for i in range(maxSteps+1)]
-    plots = []
 
     # Creating stVecWise plots i.e. policy comparisons
+    plots = []
     for key, value in stVecWise.items():
         keywords = key.split("*")
         fig, ax = plt.subplots(1,1); ax = np.ravel(ax)
@@ -112,9 +132,10 @@ def graphSummary(path,policyWise,stVecWise):
         for policy, summary in value.items():
             temp = np.cumsum(summary)
             nData = temp[-1]
+            avg = round(np.sum(np.array(summary)*np.array(range(len(summary))))/float(nData),1)
             temp = temp / float(temp[-1])
             # print "\t", policy, "--->" ,temp
-            ax[0].plot(xAxis,temp[0:maxSteps+1]*100,color=graphColors[idx], marker=graphMarkers[idx], label = policy+" ("+str(nData)+")")
+            ax[0].plot(xAxis,temp[0:maxSteps+1]*100,color=graphColors[idx], marker=graphMarkers[idx], label = policy + " (" + str(avg) + ")")
             idx = idx + 1
 
         # Adding the heuristic result if available
@@ -123,9 +144,10 @@ def graphSummary(path,policyWise,stVecWise):
             if policyWise.has_key(keyPolicy):
                 temp = np.cumsum(policyWise[keyPolicy])
                 nData = temp[-1]
+                avg = round(np.sum(np.array(policyWise[keyPolicy])*np.array(range(len(policyWise[keyPolicy]))))/float(nData),1)
                 temp = temp / float(temp[-1])
                 # print "\t", policy, "--->" ,temp
-                ax[0].plot(xAxis,temp[0:maxSteps+1]*100,color=graphColors[idx], marker=graphMarkers[idx], label = policy+" ("+str(nData)+")")
+                ax[0].plot(xAxis,temp[0:maxSteps+1]*100,color=graphColors[idx], marker=graphMarkers[idx], label = policy + " (" + str(avg) + ")")
                 idx = idx + 1
 
         objDetails = keywords[0].split("-")
@@ -139,30 +161,14 @@ def graphSummary(path,policyWise,stVecWise):
         ax[0].grid(axis='y')
         ax[0].set_ylabel('Success percentage', fontsize='small')
 
-        ax[0].set_xlabel('Step number that leads to a successful grasp', fontsize='small')
+        ax[0].set_xlabel('Step number that leads to a successful grasp (Avg. steps in legend)', fontsize='small')
 
         ax[0].legend(fontsize='small')
         fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
         plots.append(fig2img(fig))
 
-    if len(plots) > 0:
-        dims = plots[0].size
-        nFigures = np.ceil(len(plots)/6.0)
-        ctr = 1
-        for figID in range(len(plots)):
-            idx = figID % 6
-            if idx == 0:
-                remainingPlots = len(plots) - idx
-                rows = min(2,remainingPlots)
-                cols = min(3,(remainingPlots+1)/2)
-                newImg = Image.new('RGB', (cols*dims[0], rows*dims[1]))
-            newImg.paste(plots[idx],((idx/2)%3*dims[0],idx%2*dims[1]))
-            if idx == 5 or figID == len(plots) - 1:
-                newPath = path+"policyComparison_"+str(ctr)+".jpg"
-                newImg.save(newPath)
-                print("Graph saved to : "+newPath[newPath.rfind('/')+1:])
-                ctr += 1
+    plots2jpg(plots,path,"policyComparison_")
 
     # Creating policyWise plots i.e. state vector comparisons
     plots = []
@@ -183,9 +189,10 @@ def graphSummary(path,policyWise,stVecWise):
         for stVec, summary in value.items():
             temp = np.cumsum(summary)
             nData = temp[-1]
+            avg = round(np.sum(np.array(summary)*np.array(range(len(summary))))/float(nData),1)
             temp = temp / float(temp[-1])
             # print "\t", policy, "--->" ,temp
-            ax[0].plot(xAxis,temp[0:maxSteps+1]*100,color=graphColors[idx], marker=graphMarkers[idx], label = stVec+" ("+str(nData)+")")
+            ax[0].plot(xAxis,temp[0:maxSteps+1]*100,color=graphColors[idx], marker=graphMarkers[idx], label = stVec + " (" + str(avg) + ")")
             idx = idx + 1
 
         objDetails = keywords[0].split("-")
@@ -199,30 +206,63 @@ def graphSummary(path,policyWise,stVecWise):
         ax[0].grid(axis='y')
         ax[0].set_ylabel('Success percentage', fontsize='small')
 
-        ax[0].set_xlabel('Step number that leads to a successful grasp', fontsize='small')
+        ax[0].set_xlabel('Step number that leads to a successful grasp (Avg. steps in legend)', fontsize='small')
 
         ax[0].legend(fontsize='small')
         fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
         plots.append(fig2img(fig))
 
-    if len(plots) > 0:
-        dims = plots[0].size
-        nFigures = np.ceil(len(plots)/6.0)
-        ctr = 1
-        for figID in range(len(plots)):
-            idx = figID % 6
-            if idx == 0:
-                remainingPlots = len(plots) - idx
-                rows = min(2,remainingPlots)
-                cols = min(3,(remainingPlots+1)/2)
-                newImg = Image.new('RGB', (cols*dims[0], rows*dims[1]))
-            newImg.paste(plots[idx],((idx/2)%3*dims[0],idx%2*dims[1]))
-            if idx == 5 or figID == len(plots) - 1:
-                newPath = path+"stVecComparison_"+str(ctr)+".jpg"
-                newImg.save(newPath)
-                print("Graph saved to : "+newPath[newPath.rfind('/')+1:])
-                ctr += 1
+    plots2jpg(plots,path,"stVecComparison_")
+
+    # Heuristics only comparison
+    plots = []
+    unique = []
+    for key, value in policyWise.items():
+        # Skipping non heuristics
+        if isinstance(value,dict):
+            continue
+
+        keywords = key.split("*")
+        if keywords[0] not in unique:
+            unique.append(keywords[0])
+
+            fig, ax = plt.subplots(1,1); ax = np.ravel(ax)
+            fig.set_size_inches(6, 4)
+            fig.suptitle("Step number distribution - Comparison of various heuristics", fontsize='medium')
+            idx = 0
+
+            # Adding the heuristic result if available
+            for policy in heuristicPolicies:
+                keyPolicy = keywords[0]+"*"+policy
+                if policyWise.has_key(keyPolicy):
+                    temp = np.cumsum(policyWise[keyPolicy])
+                    nData = temp[-1]
+                    avg = round(np.sum(np.array(policyWise[keyPolicy])*np.array(range(len(policyWise[keyPolicy]))))/float(nData),1)
+                    temp = temp / float(temp[-1])
+                    # print "\t", policy, "--->" ,temp
+                    ax[0].plot(xAxis,temp[0:maxSteps+1]*100,color=graphColors[idx], marker=graphMarkers[idx], label = policy + " (" + str(avg) + ")")
+                    idx = idx + 1
+
+            objDetails = keywords[0].split("-")
+            titleStr = "{} : Roll - {} , Pitch - {}".format(
+                        objDetails[0],
+                        str(int(round(np.degrees(float(objDetails[1])),0))),
+                        str(int(round(np.degrees(float(objDetails[2])),0))))
+            ax[0].set_title(titleStr , fontsize='small')
+
+            ax[0].grid(axis='y')
+            ax[0].set_ylabel('Success percentage', fontsize='small')
+
+            ax[0].set_xlabel('Step number that leads to a successful grasp (Avg. steps in legend)', fontsize='small')
+
+            ax[0].legend(fontsize='small')
+            fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+            plots.append(fig2img(fig))
+
+    plots2jpg(plots,path,"heuristicComparison_")
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:

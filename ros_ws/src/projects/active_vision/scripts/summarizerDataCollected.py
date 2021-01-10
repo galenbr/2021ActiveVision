@@ -1,14 +1,50 @@
 #!/usr/bin/env python2
-import sys, csv,os, copy
+import sys, csv,os, copy, io
 import numpy as np
 from prettytable import PrettyTable
 import matplotlib.pyplot as plt
+from PIL import Image
 
 # Y-limit for histogram
 minYaw = 0
 maxYaw = 180
-# Path length cutoff for analysis
+maxSteps = 5
 nStepsSplit = 3
+
+#Convert a Matplotlib figure to a PIL Image and return it
+def fig2img(fig):
+    buf = io.BytesIO()
+    fig.savefig(buf)
+    buf.seek(0)
+    img = Image.open(buf)
+    return img
+
+#Convert the plots to a jpg format
+def plots2jpg(plots,path,type):
+    if len(plots) > 0:
+        dims = plots[0].size
+        nFigures = np.ceil(len(plots)/6.0)
+        ctr = 1
+        for figID in range(len(plots)):
+            idx = figID % 6
+            if idx == 0:
+                remainingPlots = len(plots) - idx
+                if type == 1:
+                    rows = min(2,remainingPlots)
+                    cols = min(3,(remainingPlots+1)/2)
+                else:
+                    rows = min(3,remainingPlots)
+                    cols = min(2,(remainingPlots+1)/3)
+                newImg = Image.new('RGB', (cols*dims[0], rows*dims[1]))
+            if type == 1:
+                newImg.paste(plots[idx],((idx/2)%3*dims[0],idx%2*dims[1]))
+            else:
+                newImg.paste(plots[idx],((idx/3)%2*dims[0],idx%3*dims[1]))
+            if idx == 5 or figID == len(plots) - 1:
+                newPath = path+str(ctr)+".jpg"
+                newImg.save(newPath)
+                print("Graph saved to : "+newPath[newPath.rfind('/')+1:])
+                ctr += 1
 
 #Function to read the input data file
 def readInput(fileName):
@@ -62,6 +98,12 @@ def genSummary(fileName,nBins):
     for bin in range(nBins):
         bins.append([(bin+1)*360/nBins,0,0,0,0,0,0,[]])
 
+    # Min step for each yaw angle
+    bin2 = [99]*360
+
+    # Number of steps for a graph (calculated using bin2 values)
+    bin3 = [0]*(maxSteps+2)
+
     #Finding all unique configurations
     data = readInput(fileName)
     summary = []
@@ -70,10 +112,14 @@ def genSummary(fileName,nBins):
         param = each[0]+"-"+each[1]+"-"+each[2]
         if param not in unique_list:
             unique_list.append(param)
-            summary.append([each[0],float(each[1]),float(each[2]),copy.deepcopy(bins)])
+            summary.append([each[0],float(each[1]),float(each[2]),copy.deepcopy(bins),copy.deepcopy(bin2),copy.deepcopy(bin3)])
         index = unique_list.index(param)
         nSteps = (len(each)-14)/3-1
-        binIndex = int(int(round(np.degrees(float(each[3]))))/(360/nBins))
+
+        yaw = int(round(np.degrees(float(each[3]))))
+        binIndex = int(yaw/(360/nBins))
+
+        summary[index][4][yaw] = min(nSteps,summary[index][4][yaw])
 
         summary[index][3][binIndex][1] += 1
         summary[index][3][binIndex][3] += nSteps  # Will be dividived my nData in the end
@@ -96,6 +142,13 @@ def genSummary(fileName,nBins):
                 eachYaw[3] = round(eachYaw[3]/float(eachYaw[1]),2)
                 eachYaw[5] = round(eachYaw[5]/float(eachYaw[1]),2)*100
                 eachYaw[6] = round(eachYaw[6]/float(eachYaw[1]),2)*100
+        # Updating bin3
+        for nSteps in each[4]:
+            if nSteps != 99:
+                nSteps = min(maxSteps+1,nSteps)
+                each[5][nSteps] += 1
+
+        # print each[0] , "->" , each[1] , "->" , each[2] , "->" , each[5]
 
     return summary
 
@@ -115,90 +168,89 @@ def printSummary(summary):
 
 #Generate a bar graph of the summary
 def graphSummary(path,summary):
-    # Extracting different objects
-    unique_list = []
-    nUnique = []
+
+    # Plotting the different object configurations - box plot
+    plots = []
     for each in summary:
-        if each[0] not in unique_list:
-            unique_list.append(each[0])
-            nUnique.append(1)
-        else:
-            nUnique[unique_list.index(each[0])]+=1
+        fig, ax = plt.subplots(1,1); ax = np.ravel(ax)
+        fig.set_size_inches(7, 3)
+        fig.suptitle(each[0]+' - Box plot of number of steps for a successful grasp', fontsize='medium')
 
-    # Plotting each object in a different graph
-    for obj,nPlots in zip(unique_list,nUnique):
-        rows = min(3,nPlots); cols = int((nPlots-1)/3)+1
-        fig, ax = plt.subplots(rows,cols); ax = np.ravel(ax)
-        fig.set_size_inches(cols*7, 3*rows)
-        fig.suptitle(obj+' - Box plot of number of steps for a successful grasp', fontsize='medium')
-        idx = 0
-        for each in summary:
-            if each[0] == obj:
-                degree = []; number = []
-                minGrasp = []; meanGrasp = []; maxGrasp = []
-                split1 = []; split2 = []
-                bxPlt = [];
-                titleStr = "Config : Roll - {} , Pitch - {}".format(str(int(round(np.degrees(each[1]),0))), str(int(round(np.degrees(each[2]),0))))
-                for eachYaw in each[3]:
-                    if eachYaw[0] >= minYaw and eachYaw[0] <= maxYaw:
-                        degree.append(int(eachYaw[0]))
-                        number.append(eachYaw[1])
-                        minGrasp.append(float(eachYaw[2]))
-                        meanGrasp.append(float(eachYaw[3]))
-                        maxGrasp.append(float(eachYaw[4]))
-                        split1.append(float(eachYaw[5]))
-                        split2.append(float(eachYaw[6]))
-                        bxPlt.append(eachYaw[7])
+        degree = []; number = []
+        minGrasp = []; meanGrasp = []; maxGrasp = []
+        split1 = []; split2 = []
+        bxPlt = [];
+        titleStr = "Config : Roll - {} , Pitch - {}".format(str(int(round(np.degrees(each[1]),0))), str(int(round(np.degrees(each[2]),0))))
+        for eachYaw in each[3]:
+            if eachYaw[0] >= minYaw and eachYaw[0] <= maxYaw:
+                degree.append(int(eachYaw[0]))
+                number.append(eachYaw[1])
+                minGrasp.append(float(eachYaw[2]))
+                meanGrasp.append(float(eachYaw[3]))
+                maxGrasp.append(float(eachYaw[4]))
+                split1.append(float(eachYaw[5]))
+                split2.append(float(eachYaw[6]))
+                bxPlt.append(eachYaw[7])
 
-                ax[idx].set_title(titleStr, fontsize='small')
+        ax[0].set_title(titleStr, fontsize='small')
 
-                bp = ax[idx].boxplot(bxPlt,positions=np.arange(len(bxPlt)),meanline=True,showmeans=True,patch_artist=True)
-                for median in bp['medians']:
-                    median.set(color ='red',linewidth = 2)
-                for mean in bp['means']:
-                    mean.set(color ='blue',linewidth = 1)
-                for patch in bp['boxes']:
-                    patch.set_facecolor('lightgreen')
+        bp = ax[0].boxplot(bxPlt,positions=np.arange(len(bxPlt)),meanline=True,showmeans=True,patch_artist=True)
+        for median in bp['medians']:
+            median.set(color ='red',linewidth = 2)
+        for mean in bp['means']:
+            mean.set(color ='blue',linewidth = 1)
+        for patch in bp['boxes']:
+            patch.set_facecolor('lightgreen')
 
-                ax[idx].grid(axis='y')
-                ax[idx].set_yticks(np.arange(8))
-                ax[idx].set_ylabel('# Steps to grasp', fontsize='x-small')
-                ax[idx].yaxis.set_tick_params(labelsize=7)
-                ax[idx].tick_params(axis='y', labelcolor="k")
-                ax[idx].set_ylim(bottom=0)
-                ax[idx].set_ylim(top=8)
+        ax[0].grid(axis='y')
+        ax[0].set_yticks(np.arange(8))
+        ax[0].set_ylabel('# Steps to grasp', fontsize='x-small')
+        ax[0].yaxis.set_tick_params(labelsize=7)
+        ax[0].tick_params(axis='y', labelcolor="k")
+        ax[0].set_ylim(bottom=0)
+        ax[0].set_ylim(top=8)
 
-                ax[idx].set_xlabel('Yaw bins\n(# Datapoints)', fontsize='x-small')
-                ax[idx].xaxis.set_tick_params(labelsize=7)
-                # ax[idx].set_xticklabels(["<"+str(s) for s in degree])
-                ax[idx].set_xticklabels(["<"+str(s)+"\n("+str(n)+")" for s,n in zip(degree,number)])
-
-                # binSize = degree[1]-degree[0]
-                # ax[idx].set_xticklabels(["["+str(s-binSize)+","+str(s)+")" for s in degree])
-                # ax[idx].xaxis.set_tick_params(rotation=90)
-
-                # ax2.grid(axis='y')
-                # ax2.set_title('Split of datapoints based on #Steps')
-                # ax2.set_xlabel('Yaw')
-                # ax2.set_xticks(degree)
-                # ax2.set_xticklabels(["<"+str(s) for s in degree])
-                # ax2.set_ylim(0, 100)
-                # ax2.set_ylabel('% Datapoints', color='k')
-                # ax2.bar(np.asarray(degree)-2, split1, width=4, color="tab:green", label='<= '+ str(nStepsSplit))
-                # ax2.bar(np.asarray(degree)+2, split2, width=4, color="tab:red", label='> '+ str(nStepsSplit))
-                # ax2.legend()
-
-                idx+=1
+        ax[0].set_xlabel('Yaw bins\n(# Datapoints)', fontsize='x-small')
+        ax[0].xaxis.set_tick_params(labelsize=7)
+        ax[0].set_xticklabels(["<"+str(s)+"\n("+str(n)+")" for s,n in zip(degree,number)])
 
         fig.legend([bp['medians'][0], bp['means'][0]], ['median', 'mean'],loc='lower center',ncol=2,fontsize='x-small')
         # fig.legend()
         fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-        if(mode == "GRAPH_SAVE"):
-            newPath = path[:path.rfind('/')+1] + obj+'_summary' + ".png"
-            plt.savefig(newPath, dpi = 600)
-            print("Graph saved to : "+newPath[newPath.rfind('/')+1:])
-        elif(mode == "GRAPH_VIEW"):
-            plt.show()
+        plots.append(fig2img(fig))
+
+    plots2jpg(plots,path[:path.rfind('/')+1] + each[0] + '_BP_',2)
+
+    xAxis = [str(i) for i in range(maxSteps+1)]
+    # Plotting the different object configurations - Num steps to grasp plot
+    plots = []
+    for each in summary:
+        fig, ax = plt.subplots(1,1); ax = np.ravel(ax)
+        fig.set_size_inches(6, 4)
+
+        temp = np.cumsum(each[5])
+        nData = temp[-1]
+        avg = round(np.sum(np.array(each[5])*np.array(range(len(each[5]))))/float(nData),1)
+        temp = temp / float(temp[-1])
+        ax[0].plot(xAxis,temp[0:maxSteps+1]*100,color='b', marker="o")
+
+        titleStr = "{} : Roll - {} , Pitch - {}".format(
+                    each[0],
+                    str(int(round(np.degrees(float(each[1])),0))),
+                    str(int(round(np.degrees(float(each[2])),0))))
+        ax[0].set_title(titleStr , fontsize='small')
+
+        ax[0].grid(axis='y')
+        ax[0].set_ylabel('Success percentage', fontsize='small')
+
+        ax[0].set_xlabel('Step number that leads to a successful grasp', fontsize='small')
+
+        fig.suptitle("Step number distribution - Training Data : Avg Steps "+str(avg), fontsize='medium')
+        fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+        plots.append(fig2img(fig))
+
+    plots2jpg(plots,path[:path.rfind('/')+1] + each[0] + '_nSteps_',1)
 
 #Save the summary for future use.
 def saveToCSV(path,summary):
@@ -219,15 +271,15 @@ if __name__ == "__main__":
 
     path = sys.argv[1]
     mode = sys.argv[2]
-    if mode!='GRAPH_VIEW' and mode!='GRAPH_SAVE' and mode!='PRINT' and mode!='CSV' :
-        mode = 'GRAPH_VIEW'
+    if mode!='GRAPH_SAVE' and mode!='PRINT' and mode!='CSV' :
+        mode = 'GRAPH_SAVE'
 
     nBins = 360/10
 
     summary = genSummary(path,nBins)
     if(mode == "PRINT"):
         printSummary(summary)
-    elif(mode == "GRAPH_VIEW" or mode == "GRAPH_SAVE"):
+    elif(mode == "GRAPH_SAVE"):
         graphSummary(path,summary)
     elif(mode == "CSV"):
         saveToCSV(path,summary)
