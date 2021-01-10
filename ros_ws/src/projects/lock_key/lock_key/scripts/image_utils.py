@@ -134,17 +134,18 @@ def color_change(img,search_box,min_bgr=[150,0,0],max_bgr=[255,150,150],
     
     # Manual 'Centroid' finding
     try:
-        if len(final_region[0])>200:
-            # Identify mean index and mark with circle
-            # Mean is trimmed on both tails
-            x_ave=int(trim_mean(final_region[1],0.3))
-            y_ave=int(trim_mean(final_region[0],0.4))
-            cv2.circle(img, (x_ave, y_ave), 1, (255, 0, 255), 2)
-            
+        # if len(final_region[0])>200:
+        # Identify mean index and mark with circle
+        # Mean is trimmed on both tails
+        x_ave=int(trim_mean(final_region[1],0.4))
+        y_ave=int(trim_mean(final_region[0],0.4))
+        center=(x_ave, y_ave)
+        cv2.circle(img, center, 1, (255, 0, 255), 6)
     except ValueError:
+        center=(None,None)
         pass
 
-    return img
+    return img, center
 
 def find_color(img,min_hsv,max_hsv):
     '''Identify pixels in image within a color range.'''
@@ -157,12 +158,12 @@ def find_color(img,min_hsv,max_hsv):
     
     return region
 
-def add_box(img,x,y,width,height):
+def add_box(img,x,y,width,height,color=[0,0,255]):
     '''Adds a box box to an image'''
     img=cv2.rectangle(img,
                       (x-int(width/2),y-int(height/2)), #Start
                       (x+int(width/2),y+int(height/2)), #End
-                      (0,0,255), #Font Color (BGR)
+                      color, #Font Color (BGR)
                       2) #thickness
     return img
 
