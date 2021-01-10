@@ -60,16 +60,18 @@ def perform_pca(img,gray=None):
     # Convert image to binary
     _, bw = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
     contours, _ = cv2.findContours(bw, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    # countours_in_box=[]
     for i, c in enumerate(contours):
         # Calculate the area of each contour
         area = cv2.contourArea(c)
         # Ignore contours that are too small or too large
-        if area < 1e3 or 1e4 < area: #Original: 1e2 - 1e5
+        if area < 1e2 or 1e5 < area: #Original: 1e2 - 1e5
             continue
-        # Draw each contour only for visualisation purposes
-        cv2.drawContours(img, contours, i, (0, 0, 255), 2)
-        # Find the orientation of each shape
-        getOrientation(c, img)
+   # for i, c in enumerate(contours_in_box):
+   #       # Draw each contour only for visualisation purposes
+   #      cv2.drawContours(img, contours, i, (0, 0, 255), 2)
+   #      # Find the orientation of each shape
+   #      getOrientation(c, img)
     return img
 
 def draw_circles(img,search_box): 
@@ -131,25 +133,27 @@ def color_change(img,search_box,min_bgr=[150,0,0],max_bgr=[255,150,150],
     img[final_region]=new_pixel
     
     # Manual 'Centroid' finding
-    # try:
-    #     if len(final_region[0])>1200:
-    #         # Identify mean index and mark with circle
-    #         # Mean is trimmed on both tails
-    #         x_ave=int(trim_mean(final_region[1],0.4))
-    #         y_ave=int(trim_mean(final_region[0],0.4))
-    #         cv2.circle(img, (x_ave, y_ave), 1, (255, 0, 255), 9)
+    try:
+        if len(final_region[0])>200:
+            # Identify mean index and mark with circle
+            # Mean is trimmed on both tails
+            x_ave=int(trim_mean(final_region[1],0.3))
+            y_ave=int(trim_mean(final_region[0],0.4))
+            cv2.circle(img, (x_ave, y_ave), 1, (255, 0, 255), 2)
             
-    # except ValueError:
-    #     pass
+    except ValueError:
+        pass
 
     return img
 
-def find_color(img,min_bgr=[150,0,0],max_bgr=[255,150,150]):
+def find_color(img,min_hsv,max_hsv):
     '''Identify pixels in image within a color range.'''
-    #Isolate desired region. Retrieve row and column indices
-    region=np.where((img[:,:,0]>min_bgr[0]) & (img[:,:,0]<max_bgr[0]) & 
-                    (img[:,:,1]>min_bgr[2]) & (img[:,:,1]<max_bgr[1]) & 
-                    (img[:,:,2]>min_bgr[2]) & (img[:,:,2]<max_bgr[2]))
+    #Convert img to HSV
+    img=cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    
+    region=np.where((img[:,:,0]>=min_hsv[0]) & (img[:,:,0]<=max_hsv[0]) & 
+                    (img[:,:,1]>=min_hsv[1]) & (img[:,:,1]<=max_hsv[1]) & 
+                    (img[:,:,2]>=min_hsv[2]) & (img[:,:,2]<=max_hsv[2]))
     
     return region
 
@@ -164,7 +168,7 @@ def add_box(img,x,y,width,height):
 
 def detect_edges(img):
     '''Detects edges in image.'''
-    edges = cv2.Canny(img,10,20) #100, 200
+    edges = cv2.Canny(img,100,200)
     return edges
 
 def depth(left_img,right_img):
@@ -211,3 +215,10 @@ def run_watershed(img,show_center=False):
         thickness = 2
         result = cv2.circle(result, center_coordinates, radius, color, thickness)
     return result
+
+def add_blur(img):
+    img = cv2.blur(img,(3,3))
+    img=cv2.medianBlur(img,3)
+    img= cv2.GaussianBlur(img,(5,5),0)
+    img= cv2.bilateralFilter(img,9,5,5)
+    return img
