@@ -4,6 +4,7 @@ import numpy as np
 from prettytable import PrettyTable
 import matplotlib.pyplot as plt
 from collections import OrderedDict
+from summarizerDataCollected import readInput
 from PIL import Image
 
 heuristicPolicies = ["Heuristic","Random","Brick"]
@@ -39,18 +40,6 @@ def plots2jpg(plots,path,prefix):
                 newImg.save(newPath)
                 print("Graph saved to : "+newPath[newPath.rfind('/')+1:])
                 ctr += 1
-
-#Function to read the input data file
-def readInput(fileName):
-    data = []
-    with open(fileName) as csv_file:
-        # Reading the csv file
-        csv_reader = csv.reader(csv_file, delimiter=',')
-        for line in csv_reader:
-            # Going through it line by line as storing it in a list
-            data.append([i for i in line[:]])
-
-	return np.asarray(data)
 
 '''Read file and summarize information about differnt experiments.
 '''

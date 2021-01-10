@@ -1,7 +1,7 @@
 import sys, csv, os, copy
 import numpy as np
 import matplotlib.pyplot as plt
-from csvSummarizer import readInput
+from summarizerDataCollected import readInput
 
 '''Ugly code that calculates the first direction taken, assuming a direction has been taken- giving it a 0 length path will return -1.'''
 def calcFirstDirection(each):
