@@ -4,7 +4,8 @@ import numpy as np
 from prettytable import PrettyTable
 import matplotlib.pyplot as plt
 from collections import OrderedDict
-from summarizerDataCollected import readInput
+from summarizerDataCollected import readInput,fig2img,plots2jpg
+from toolViewPointCalc import findDirection
 from PIL import Image
 
 heuristicPolicies = ["Heuristic","Random","Brick"]
@@ -13,33 +14,21 @@ maxSteps = 5
 graphColors =  ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
 graphMarkers = ["o", "v", "^", "<", ">", "*", "+", "s"]
 
-#Convert a Matplotlib figure to a PIL Image and return it
-def fig2img(fig):
-    buf = io.BytesIO()
-    fig.savefig(buf)
-    buf.seek(0)
-    img = Image.open(buf)
-    return img
-
-#Convert the plots to a jpg format
-def plots2jpg(plots,path,prefix):
-    if len(plots) > 0:
-        dims = plots[0].size
-        nFigures = np.ceil(len(plots)/6.0)
-        ctr = 1
-        for figID in range(len(plots)):
-            idx = figID % 6
-            if idx == 0:
-                remainingPlots = len(plots) - idx
-                rows = min(2,remainingPlots)
-                cols = min(3,(remainingPlots+1)/2)
-                newImg = Image.new('RGB', (cols*dims[0], rows*dims[1]))
-            newImg.paste(plots[idx],((idx/2)%3*dims[0],idx%2*dims[1]))
-            if idx == 5 or figID == len(plots) - 1:
-                newPath = path+prefix+str(ctr)+".jpg"
-                newImg.save(newPath)
-                print("Graph saved to : "+newPath[newPath.rfind('/')+1:])
-                ctr += 1
+def calcStepsDir(each):
+    bin = [0]*maxSteps
+    i = 14
+    step = 1
+    while i < len(each)-3 and step <= 5:
+        st = [float(each[i]),float(each[i+1]),float(each[i+2])]
+        end = [float(each[i+3]),float(each[i+4]),float(each[i+5])]
+        dir = findDirection(st,end)
+        if dir == -1:
+            print ("Error")
+        else:
+            bin[step-1] = dir
+        i += 3
+        step += 1
+    return bin
 
 '''Read file and summarize information about differnt experiments.
 '''
@@ -48,8 +37,13 @@ def genSummary(path,fileNames):
     # 0,1,2,3...max,>max
     bins = [0]*(maxSteps+2)
 
+    bin2 = []
+    for i in range(maxSteps):
+        bin2.append([0,0,0,0,0,0,0,0])
+
     # Setting up the dictionaries which will store the summaries
     policyWise = {}
+    policyWise2 = {}
     stVecWise = {}
     for file in fileNames:
         data = readInput(path+file)
@@ -69,10 +63,13 @@ def genSummary(path,fileNames):
             keyStVec = obj+"*"+stVec
             if policy in heuristicPolicies:
                 policyWise[keyPolicy] = np.array(bins)
+                policyWise2[keyPolicy] = np.array(bin2)
             else:
                 if policyWise.has_key(keyPolicy) == False:
                     policyWise[keyPolicy] = {}
+                    policyWise2[keyPolicy] = {}
                 policyWise[keyPolicy][stVec] = np.array(bins)
+                policyWise2[keyPolicy][stVec] = np.array(bin2)
                 if stVecWise.has_key(keyStVec) == False:
                     stVecWise[keyStVec] = {}
                 stVecWise[keyStVec][policy] = np.array(bins)
@@ -88,24 +85,35 @@ def genSummary(path,fileNames):
             keyPolicy = obj+"*"+policy
             keyStVec = obj+"*"+stVec
             nSteps = max(1,min((len(each)-14)/3-1,maxSteps+1))
+            temp = calcStepsDir(each)
             if policy in heuristicPolicies:
                 policyWise[keyPolicy][nSteps] += 1
+                for step,dir in zip(range(len(temp)),temp):
+                    if dir != 0:
+                        policyWise2[keyPolicy][step][dir-1] += 1
             else:
                 policyWise[keyPolicy][stVec][nSteps] += 1
                 stVecWise[keyStVec][policy][nSteps] += 1
+                for step,dir in zip(range(len(temp)),temp):
+                    if dir != 0:
+                        policyWise2[keyPolicy][stVec][step][dir-1] += 1
 
     # for k, v in policyWise.items():
     #     print '%60s' % k, ' : ', v
+    # print("-------")
+    # for k, v in policyWise2.items():
+    #     print k, ' : \n', v
     # print("-------")
     # for k, v in stVecWise.items():
     #     print '%60s' % k, ' : ', v
     # print("----------------")
     policyWise =  OrderedDict(sorted(policyWise.items()))
+    policyWise2 =  OrderedDict(sorted(policyWise2.items()))
     stVecWise =  OrderedDict(sorted(stVecWise.items()))
-    return policyWise,stVecWise
+    return policyWise,policyWise2,stVecWise
 
 #Generate a bar graph of the summary
-def graphSummary(path,policyWise,stVecWise):
+def graphSummary(path,policyWise,policyWise2,stVecWise):
 
     xAxis = [str(i) for i in range(maxSteps+1)]
 
@@ -157,7 +165,7 @@ def graphSummary(path,policyWise,stVecWise):
 
         plots.append(fig2img(fig))
 
-    plots2jpg(plots,path,"policyComparison_")
+    plots2jpg(plots,path+"policyComparison_",1)
 
     # Creating policyWise plots i.e. state vector comparisons
     plots = []
@@ -202,7 +210,7 @@ def graphSummary(path,policyWise,stVecWise):
 
         plots.append(fig2img(fig))
 
-    plots2jpg(plots,path,"stVecComparison_")
+    plots2jpg(plots,path+"stVecComparison_",1)
 
     # Heuristics only comparison
     plots = []
@@ -250,8 +258,65 @@ def graphSummary(path,policyWise,stVecWise):
 
             plots.append(fig2img(fig))
 
-    plots2jpg(plots,path,"heuristicComparison_")
+    plots2jpg(plots,path+"heuristicComparison_",1)
 
+    # Stepwise direction radar plots
+    plots = []
+    theta = list(np.linspace(0,np.pi/4*7,8))
+    theta.append(0)
+    for key, value in policyWise2.items():
+        keywords = key.split("*")
+        objDetails = keywords[0].split("-")
+
+        fig = plt.figure()
+        fig.set_size_inches(5, 5)
+        titleStr = "{} : Roll - {} , Pitch - {}".format(
+                    objDetails[0],
+                    str(int(round(np.degrees(float(objDetails[1])),0))),
+                    str(int(round(np.degrees(float(objDetails[2])),0))))
+        fig.suptitle("Test Data - % of time a direction was taken\n"+
+                     titleStr, fontsize='medium')
+        ax=plt.subplot(1, 1, 1, projection='polar')
+
+        ax.set_theta_direction(-1)
+        ax.set_theta_offset(np.pi/2)
+        ax.set_thetagrids(np.degrees(theta), ["N","NE","E","SE","S","SW","W","NW","N"])
+        # Non-Heuristic
+        if isinstance(value,dict):
+            for stVec, summary in value.items():
+                ax.set_title("Policy : "+keywords[1]+", St Vec : "+stVec, fontsize='small')
+                for step,i in zip(summary,range(len(summary))):
+                    if i == 3:
+                        break
+                    if(np.sum(step) > 0):
+                        sum = float(np.sum(step))
+                        temp = list(np.array(step)/sum*100)
+                        temp.append(temp[0])
+                        ax.plot(theta,temp,color = graphColors[i],label="Step "+str(i+1)+" ("+str(int(sum))+")")
+                        ax.fill(theta,temp, facecolor=graphColors[i], alpha=0.25)
+                        ax.set_rmin(0); ax.set_rmax(100)
+                fig.legend(loc="lower right")
+                fig.tight_layout(rect=[0, 0.03, 1, 0.90])
+                plots.append(fig2img(fig))
+                ax.cla()
+        else:
+            ax.set_title("Policy : "+keywords[1], fontsize='small')
+            for step,i in zip(value,range(len(value))):
+                if i == 3:
+                    break
+                if(np.sum(step) > 0):
+                    sum = float(np.sum(step))
+                    temp = list(np.array(step)/sum*100)
+                    temp.append(temp[0])
+                    ax.plot(theta,temp,color = graphColors[i],label="Step "+str(i+1)+" ("+str(int(sum))+")")
+                    ax.fill(theta,temp, facecolor=graphColors[i], alpha=0.25)
+                    ax.set_rmin(0); ax.set_rmax(100)
+            fig.legend(loc="lower right")
+            fig.tight_layout(rect=[0, 0.03, 1, 0.90])
+            plots.append(fig2img(fig))
+            ax.cla()
+
+    plots2jpg(plots,path+'Radar_',1)
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
@@ -266,5 +331,5 @@ if __name__ == "__main__":
            if file.endswith(":dataRec.csv"):
                reqCSVs.append(file)
 
-    policyWise,stVecWise = genSummary(path,reqCSVs)
-    graphSummary(path,policyWise,stVecWise)
+    policyWise,policyWise2,stVecWise = genSummary(path,reqCSVs)
+    graphSummary(path,policyWise,policyWise2,stVecWise)
