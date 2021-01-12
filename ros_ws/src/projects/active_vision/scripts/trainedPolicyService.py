@@ -53,6 +53,8 @@ if __name__ == "__main__":
         model = TP.PCA_LR_Model(PCA_components)
     elif type == "RANDOM":
         model = TP.Random_Model()
+    elif type == "BRICK":
+        model = TP.Brick_Model()
 
     model.train(stateVec, dirVec)
 

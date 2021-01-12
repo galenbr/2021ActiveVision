@@ -44,4 +44,5 @@ ros_ws/src/projects/active_vision/dataCollected/testData/*
 !ros_ws/src/projects/active_vision/dataCollected/testData/ReadMe.txt
 ros_ws/src/projects/active_vision/dataCollected/trainingData/*
 !ros_ws/src/projects/active_vision/dataCollected/trainingData/ReadMe.txt
+ros_ws/src/projects/active_vision/scripts/*.pyc
 ros_ws/src/projects/soft_manipulation/CATKIN_IGNORE

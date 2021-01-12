@@ -134,6 +134,15 @@ class Random_Model(methodPipeline):
     def predict(self, X):
         return np.random.choice(range(1,9), X.shape[0])
 
+# Model that always returns 2.
+class Brick_Model(methodPipeline):
+    def train(self, X, y):
+        self.ready = True
+        return methodPipeline.train(self, X, y)
+
+    def predict(self, X):
+        return np.random.choice(range(2,3), X.shape[0])
+
 # class BrickPipeline(methodPipeline):
 #     def __init__(self):
 #         super(methodPipeline, self).__init__()

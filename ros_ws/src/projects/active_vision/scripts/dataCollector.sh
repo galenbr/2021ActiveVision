@@ -92,7 +92,7 @@ csvList+=($src$csvDataRec)
 for csv in ${csvList[@]}; do
 	printf "Using CSV : "$(basename $csv)"\n"
 	printf "Generating Summary...\n"
-	rosrun active_vision csvSummarizer.py $csv GRAPH_SAVE
+	rosrun active_vision summarizerDataCollected.py $csv GRAPH_SAVE
 	# printf "Generating State Vector...\n"
 	# rosrun active_vision genStateVec $(dirname $csv)/ $(basename $csv) 1 5
 done

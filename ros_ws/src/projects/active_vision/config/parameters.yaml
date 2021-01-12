@@ -23,7 +23,7 @@ policyTester: {
     csvStVec: 'Prism_truncated_stateVec.csv', # Name of csv inside storageDir
     HAFstVecDim: 52, # Dimension of the HAF state vector used
     maxSteps: 5, # Max number of steps to be taken before stopping
-    nDataPoints: 10, # Number of data points for each pose to test (Max 200)
+    nDataPoints: 100, # Number of data points for each pose to test (Max 200)
     yawAnglesCSVDir: '/misc/yawValues/',
     yawAnglesCSV: Seed1.csv, # csv files to choose the yaw angles from
     uniformYawStepSize: 45, # Step size for yaw angles starting from 0 which will be checked
