@@ -80,7 +80,8 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg)
 //        pal_vision_util::dctNormalization(inImage, inImageNorm, dctComponentsToRemove);
 //        inImage = inImageNorm;
       }
-
+      std_msgs::Bool nframe;
+      nframe.data = false;
       // detection results will go into "markers"
       markers.clear();
       // ok, let's detect
@@ -134,15 +135,7 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg)
           pixelMsg.point.z = 0;
           pixel_pub3.publish(pixelMsg);
           // ROS_INFO_STREAM(pixelMsg);
-          std_msgs::Bool nframe;
-          nframe.data = false;
-          if(pixelMsg.point.x == 0 && pixelMsg.point.y == 0){
-            flag_pub.publish(nframe);
-          }
-          else{
             nframe.data = true;
-            flag_pub.publish(nframe);
-          }
         }
         else if (markers[i].id == marker_id4)
         {
@@ -163,7 +156,7 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg)
         // but drawing all the detected markers
         markers[i].draw(inImage, cv::Scalar(0, 0, 255), 2);
       }
-
+      flag_pub.publish(nframe);
       // paint a circle in the center of the image
       cv::circle(inImage, cv::Point(inImage.cols / 2, inImage.rows / 2), 4, cv::Scalar(0, 255, 0), 1);
 
