@@ -21,7 +21,8 @@ int main(int argc, char **argv){
     ros::Rate r{30};
     while(ros::ok()){
         if(count <= 150){        // running experiment for 20s at 30 fps
-            vel = 0.3;          // add from YAML
+            n.getParam("/const_vel_exp/vel", vel);
+            //vel = 0.5;          // add from YAML
             vel_msg.data[0] = vel;
             vel_msg.data[1] = 0;
             sin_pub.publish(vel_msg);

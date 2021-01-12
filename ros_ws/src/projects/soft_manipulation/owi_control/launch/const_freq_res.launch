@@ -1,6 +1,9 @@
 <launch>
 <!-- This file launches the constant velocity performance test for OWI -->
 
+<!-- Loading YAML File -->
+<rosparam file="$(find owi_control)/config/params.yaml" />
+
 <!-- Webcam -->
 <include file = "$(find usb_cam)/launch/usb_cam-test.launch" />
 
