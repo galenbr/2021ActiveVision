@@ -4,11 +4,13 @@ ROS node for lock and key segmentation and centroid finding
 """
 import cv2
 import image_utils
+import numpy as np
 import rospy
+import image_geometry
 from geometry_msgs.msg import PointStamped
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import Header
-from cv_bridge import CvBridge
+from cv_bridge import CvBridge, CvBridgeError
 
 class FinderPub:
     '''Finds lock and key from RGBD data.'''
@@ -18,20 +20,24 @@ class FinderPub:
         self.key_min_hsv=key_min_hsv
         self.key_max_hsv=key_max_hsv
         self.key_center=None
+        self.key_center_depth=None
         self.lock_search_box=lock_search_box
         self.lock_min_hsv=lock_min_hsv
         self.lock_max_hsv=lock_max_hsv
         self.lock_center=None
+        self.lock_center_depth=None
         self.rgb_image=None
         self.rgb_received=False
-        self.depth_image=None
+        self.depth_array=None
         self.depth_received=False
         #ROS
         self.bridge=CvBridge()
         self.rgb_sub=rospy.Subscriber('/camera/color/image_raw',
                                       Image,self.rgb_callback)
-        self.depth_sub=rospy.Subscriber('/camera/depth/image_rect_raw',
+        self.depth_sub=rospy.Subscriber('/depth_registered/image_rect', #/camera/depth/image_rect_raw
                                         Image,self.depth_callback)
+        self.rgb_info=rospy.Subscriber('/camera/color/camera_info',
+                                      Image,self.rgb_callback)
         self.vis_pub = rospy.Publisher('finder_image', Image, queue_size=10)
         self.key_pub = rospy.Publisher('key_point', PointStamped, 
                                        queue_size=10)
@@ -40,23 +46,51 @@ class FinderPub:
     
     def calculate_positions(self):
         '''Calculates centers of lock and key.'''
-        #Get lock and key centers in terms of pixels
+        # Get lock and key centers (in RGB image) in terms of pixels
+        # RGB and Depth are registered so pixel locations are the same
         vis_img=self.get_centers()
-        #*****Get displacement in terms of meters*******
-        #*****Get corresponding depth*****
-        
-        #Publish centers and visualization image
+        # Get corresponding depth values (in meters)       
+        self.lock_center_depth=self.depth_img[self.lock_center[0],
+        									  self.lock_center[1]]
+        self.key_center_depth=self.depth_img[self.key_center[0],
+        									 self.key_center[1]]
+        # Get XYZ displacement in terms of meters (in camera_link)
+		X = Z / fx * (u - cx)
+		Y = Z / fy * (v - cy)
+        # Publish center and visualization image
         self.publish_points(lock_disp,key_disp)
         publish_vis(vis_img)
         
-    def depth_callback(self,raw_depth_img)   
-        #Convert to cv2 format and store image
-        self.depth_img=self.bridge.imgmsg_to_cv2(raw_depth_img,"32FC1")
-        self.depth_received=True
+    def depth_callback(self,raw_depth_img):
+    	'''Converts depth image to np.array with actual depth.'''
+    	try:
+		    #Convert to cv2 format
+		    depth_img=self.bridge.imgmsg_to_cv2(raw_depth_img, 
+		    									desired_encoding="passthrough")
+	        #Convert the depth image to a Numpy array (with actual depth values)
+	        self.depth_array = np.array(depth_img, dtype=np.float32)
+	    	self.depth_received=True
+	    except CvBridgeError, e:
+	        print e
 
     def publish_points(self,lock_disp,key_disp):
         '''Publish lock and key positions in terms of camera_link.'''
-        
+        #Build header
+        h=Header()
+        h.stamp=self.rgb_img.header.stamp
+        h.frame_id='camera_link'
+        #Build lock msg
+        lock_msg=PointStamped()
+        lock_msg.header=h
+        lock_msg.Point=lock_disp
+        #Build key msg
+        key_msg=PointStamped()
+        key_msg.header=h
+        key_msg.Point=key_disp
+        #Publish messages
+        self.lock_pub.publish(lock_msg)
+        self.key_pub.publish(key_msg)
+
     def publish_vis(self,vis_img):
         '''Define and publish visualization image'''
         h=Header()
@@ -66,7 +100,7 @@ class FinderPub:
         vis_img.header=h
         self.vis_pub.publish(vis_img)        
         
-    def rgb_callback(self,raw_rgb_img)   
+    def rgb_callback(self,raw_rgb_img):   
         '''Convert to cv2 format and store image.'''
         self.rgb_img=self.bridge.imgmsg_to_cv2(raw_rgb_img,"bgr8")
         self.rgb_received=True

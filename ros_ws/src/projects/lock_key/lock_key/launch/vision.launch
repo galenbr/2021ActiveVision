@@ -27,6 +27,15 @@
       <arg name="initial_reset"     value="true"/>
     </include>
 
+    <node pkg="nodelet" type="nodelet" name="nodelet_manager" args="manager" />
+
+    <node pkg="nodelet" type="nodelet" name="rgb_depth_align"
+          args="load depth_image_proc/register">
+      <remap from="rgb/camera_info" to="/camera/color/camera_info"/>
+      <remap from="depth/camera_info" to="/camera/depth/camera_info"/>
+      <remap from="depth/image_rect" to="/camera/depth/image_rect_raw"/>
+    </node>
+
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(find realsense2_camera)/rviz/pointcloud.rviz" required="true" />
   </group>
 </launch>
