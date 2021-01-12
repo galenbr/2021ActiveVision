@@ -24,11 +24,12 @@ def plots2jpg(plots,path,type):
     if len(plots) > 0:
         dims = plots[0].size
         nFigures = np.ceil(len(plots)/6.0)
+        nDone = 0
         ctr = 1
         for figID in range(len(plots)):
             idx = figID % 6
             if idx == 0:
-                remainingPlots = len(plots) - idx
+                remainingPlots = len(plots) - nDone
                 if type == 1:
                     rows = min(2,remainingPlots)
                     cols = min(3,(remainingPlots+1)/2)
@@ -37,9 +38,10 @@ def plots2jpg(plots,path,type):
                     cols = min(2,(remainingPlots+1)/3)
                 newImg = Image.new('RGB', (cols*dims[0], rows*dims[1]))
             if type == 1:
-                newImg.paste(plots[idx],((idx/2)%3*dims[0],idx%2*dims[1]))
+                newImg.paste(plots[figID],((idx/2)%3*dims[0],idx%2*dims[1]))
             else:
-                newImg.paste(plots[idx],((idx/3)%2*dims[0],idx%3*dims[1]))
+                newImg.paste(plots[figID],((idx/3)%2*dims[0],idx%3*dims[1]))
+            nDone += 1
             if idx == 5 or figID == len(plots) - 1:
                 newPath = path+str(ctr)+".jpg"
                 newImg.save(newPath)
@@ -91,7 +93,11 @@ def PCASummary(fileName):
     plt.show()
 
 '''Read file and summarize information about each interval of camera data.
-summary = [[objName, objRoll, objPitch, [YawData]]]
+summary = [[objName, objRoll, objPitch,
+            [YawData],
+            [Min Steps for 0-360],
+            [# yaw values with 0,1,... steps],
+            [Direction chosen for each step]]]
 YawData = [yawEndAngle, #ofDataPoints, minSteps, avgSteps, maxSteps, #stepsBelownStepsSplit, #stepsAbovenStepsSplit, [dataPoints]]'''
 def genSummary(fileName,nBins):
     bins = []
@@ -104,6 +110,10 @@ def genSummary(fileName,nBins):
     # Number of steps for a graph (calculated using bin2 values)
     bin3 = [0]*(maxSteps+2)
 
+    bin4 = []
+    for i in range(maxSteps):
+        bin4.append([0,0,0,0,0,0,0,0])
+
     #Finding all unique configurations
     data = readInput(fileName)
     summary = []
@@ -112,9 +122,12 @@ def genSummary(fileName,nBins):
         param = each[0]+"-"+each[1]+"-"+each[2]
         if param not in unique_list:
             unique_list.append(param)
-            summary.append([each[0],float(each[1]),float(each[2]),copy.deepcopy(bins),copy.deepcopy(bin2),copy.deepcopy(bin3)])
+            summary.append([each[0],float(each[1]),float(each[2]),copy.deepcopy(bins),copy.deepcopy(bin2),copy.deepcopy(bin3),copy.deepcopy(bin4)])
         index = unique_list.index(param)
         nSteps = (len(each)-14)/3-1
+        direction = int(each[12])
+        whichStepData = int(each[10])
+        summary[index][6][whichStepData-1][direction-1] += 1
 
         yaw = int(round(np.degrees(float(each[3]))))
         binIndex = int(yaw/(360/nBins))
@@ -221,8 +234,9 @@ def graphSummary(path,summary):
 
     plots2jpg(plots,path[:path.rfind('/')+1] + each[0] + '_BP_',2)
 
-    xAxis = [str(i) for i in range(maxSteps+1)]
+
     # Plotting the different object configurations - Num steps to grasp plot
+    xAxis = [str(i) for i in range(maxSteps+1)]
     plots = []
     for each in summary:
         fig, ax = plt.subplots(1,1); ax = np.ravel(ax)
@@ -251,6 +265,41 @@ def graphSummary(path,summary):
         plots.append(fig2img(fig))
 
     plots2jpg(plots,path[:path.rfind('/')+1] + each[0] + '_nSteps_',1)
+
+    # Plotting the direction charts
+    plots = []
+    graphColors =  ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
+    theta = list(np.linspace(0,np.pi/4*7,8))
+    theta.append(0)
+    for each in summary:
+        fig = plt.figure()
+        fig.set_size_inches(5, 5)
+        titleStr = "{} : Roll - {} , Pitch - {}".format(
+                    each[0],
+                    str(int(round(np.degrees(float(each[1])),0))),
+                    str(int(round(np.degrees(float(each[2])),0))))
+        fig.suptitle("Training Data\n"+
+                     "% of time a direction was taken\n"+
+                     titleStr, fontsize='medium')
+        ax=plt.subplot(1, 1, 1, projection='polar')
+
+        ax.set_theta_direction(-1)
+        ax.set_theta_offset(np.pi/2)
+        ax.set_thetagrids(np.degrees(theta), ["N","NE","E","SE","S","SW","W","NW","N"])
+        for step,i in zip(each[6],range(len(each[6]))):
+            if(np.sum(step) > 0):
+                sum = float(np.sum(step))
+                temp = list(np.array(step)/sum*100)
+                temp.append(temp[0])
+                ax.plot(theta,temp,color = graphColors[i],label="Step "+str(i+1)+" ("+str(int(sum))+")")
+                ax.fill(theta,temp, facecolor=graphColors[i], alpha=0.25)
+                ax.set_rmin(0)
+
+        fig.legend(loc="lower right")
+        fig.tight_layout(rect=[0, 0.03, 1, 0.90])
+        plots.append(fig2img(fig))
+
+    plots2jpg(plots,path[:path.rfind('/')+1] + each[0] + '_Radar_',1)
 
 #Save the summary for future use.
 def saveToCSV(path,summary):
