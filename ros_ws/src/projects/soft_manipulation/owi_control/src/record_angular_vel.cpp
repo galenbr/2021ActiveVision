@@ -59,8 +59,8 @@ int main(int argc, char** argv){
 
     ros::Rate r{30};
     while(ros::ok()){
+        ros::spinOnce();
         ros::Time t = ros::Time::now();
-
         bag.write("angular_vel", t, w1);
         bag.write("pwm", t, pwm1);
         bag.write("pixel3", t,pose);
@@ -68,7 +68,7 @@ int main(int argc, char** argv){
         bag.write("newFrame", t,flag);
         bag.write("action", t, action_msg);
 
-        ros::spinOnce();
+        // ros::spinOnce();
         r.sleep();
     }
 
