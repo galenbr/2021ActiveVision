@@ -58,19 +58,22 @@ class FinderPub:
         									    self.lock_center[0]]
         self.key_center_depth=self.depth_array[self.key_center[1],
         									   self.key_center[0]]
-        # Get normalized XYZ displacement (in camera_link)
-        lock_disp=self.rgb_camera.projectPixelTo3dRay(self.lock_center)
-        key_disp=self.rgb_camera.projectPixelTo3dRay(self.key_center)
-        #Get scale from depth
-        lock_scale=self.lock_center_depth/lock_disp[2]/1000.0
-        key_scale=self.key_center_depth/key_disp[2]/1000.0
-        #Convert to meters
-        lock_disp=lock_scale*np.array(lock_disp)
-        key_disp=key_scale*np.array(key_disp)
-        # Publish center and visualization image
-        self.publish_points(lock_disp,key_disp)
-        self.publish_vis(vis_img)
-        
+        try:
+            # Get normalized XYZ displacement (in camera_link)
+            lock_disp=self.rgb_camera.projectPixelTo3dRay(self.lock_center)
+            key_disp=self.rgb_camera.projectPixelTo3dRay(self.key_center)
+            #Get scale from depth
+            lock_scale=self.lock_center_depth/lock_disp[2]/1000.0
+            key_scale=self.key_center_depth/key_disp[2]/1000.0
+            #Convert to meters
+            lock_disp=lock_scale*np.array(lock_disp)
+            key_disp=key_scale*np.array(key_disp)
+            # Publish center and visualization image
+            self.publish_points(lock_disp,key_disp)
+            self.publish_vis(vis_img)
+        except TypeError:
+            rospy.loginfo('Key or Lock Not Found')
+
     def depth_callback(self,raw_depth_img):
     	'''Converts depth image to np.array with actual depth.'''
         try:
@@ -117,19 +120,15 @@ class FinderPub:
 
     def publish_points(self,lock_disp,key_disp):
         '''Publish lock and key positions in terms of camera_link.'''
-        #Build header
-        h=Header()
-        h.stamp=self.header.stamp
-        h.frame_id='camera_link'
         #Build lock msg
         lock_msg=PointStamped()
-        lock_msg.header=h
+        lock_msg.header=self.header
         lock_msg.point.x=lock_disp[0]
         lock_msg.point.y=lock_disp[1]
         lock_msg.point.z=lock_disp[2]
         #Build key msg
         key_msg=PointStamped()
-        key_msg.header=h
+        key_msg.header=self.header
         key_msg.point.x=key_disp[0]
         key_msg.point.y=key_disp[1]
         key_msg.point.z=key_disp[2]
@@ -139,11 +138,8 @@ class FinderPub:
 
     def publish_vis(self,vis_img):
         '''Define and publish visualization image'''
-        h=Header()
-        h.stamp=self.header.stamp
-        h.frame_id='camera_link'
         vis_img=self.bridge.cv2_to_imgmsg(vis_img,"bgr8")
-        vis_img.header=h
+        vis_img.header=self.header
         self.vis_pub.publish(vis_img)        
 
     def rgb_callback(self,raw_rgb_img):   
@@ -168,6 +164,8 @@ def main():
     #Define input parameters
     search_box={'lock':{'x':225,'y':100,'width':180,'height':180},
                 'key':{'x':525,'y':100,'width':180,'height':180}}
+    # search_box={'lock':{'x':320,'y':240,'width':640,'height':480},
+    #             'key':{'x':320,'y':240,'width':640,'height':480}}
     hsv={'lock':{'min':[40,int(0.3*255),int(0.6*255)],
                  'max':[150,int(0.9*255),int(0.8*255)]},
          'key':{'min':[95,int(0.18*255),int(0.6*255)],
