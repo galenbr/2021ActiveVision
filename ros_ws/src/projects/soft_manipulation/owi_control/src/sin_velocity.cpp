@@ -13,9 +13,13 @@ int main(int argc, char **argv){
 
     ros::Publisher sin_pub = n.advertise<std_msgs::Float64MultiArray>("pwm",1);
     ros::Publisher action_pub = n.advertise<std_msgs::Float64>("action",1);
+    ros::Publisher shutdown_pub = n.advertise<std_msgs::Float64>("shutdown",1);
 
     float count = 0;
     float vel;
+    float shutdown_counter = 0;;
+    std_msgs::Float64 shutdown_msg;
+    shutdown_msg.data = 0;
     std_msgs::Float64MultiArray vel_msg;
     vel_msg.data.resize(2);
 
@@ -40,13 +44,20 @@ int main(int argc, char **argv){
                 action_msg.data = 2.0;
             }
             action_pub.publish(action_msg);
-            
+            shutdown_pub.publish(shutdown_msg);
             count += 1.5;
         }
         else{
             ROS_INFO("DONE!");
             action_msg.data = -1.0;
             action_pub.publish(action_msg);
+            shutdown_counter += 1;
+            if(shutdown_counter >= 50){
+                shutdown_msg.data = 1.0;
+                shutdown_pub.publish(shutdown_msg);
+                
+                ros::shutdown();
+            }
         }
             ros::spinOnce();
             r.sleep();

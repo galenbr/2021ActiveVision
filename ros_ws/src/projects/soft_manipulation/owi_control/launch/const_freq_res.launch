@@ -20,5 +20,5 @@
 <node name = "freq_check_node" pkg="owi_control" type="owi_freq_node" output="screen"/>
 
 <!-- Record Angular velocity -->
-<node name ="record_angular_vel_node" pkg="owi_control" type="owi_freq_record_node" />
+<node name ="record_angular_vel_node" pkg="owi_control" type="owi_freq_record_node" output="screen"/>
 </launch> 
