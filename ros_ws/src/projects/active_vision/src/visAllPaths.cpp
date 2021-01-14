@@ -62,6 +62,8 @@ int main(int argc, char** argv){
 
 
   int i = 0;
+  //Controls the decimal to round values to- 100=2 places, 10=1, etc..
+  int precision = 10;
   for (int i = 0; i < data.size(); ++i)
   {
     type = std::atoi(data[i][typeColID-1].c_str());
@@ -75,6 +77,11 @@ int main(int argc, char** argv){
       a1.x = table.x+pose[0]*sin(pose[2])*cos(pose[1]+yaw);
       a1.y = table.y+pose[0]*sin(pose[2])*sin(pose[1]+yaw);
       a1.z = table.z+pose[0]*cos(pose[2]);
+      if(stepColID != j){
+        a1.x = floor(a1.x*precision+.5)/precision;
+        a1.y = floor(a1.y*precision+.5)/precision;
+        a1.z = floor(a1.z*precision+.5)/precision;
+      }
 
       pose[0] = std::atof(data[i][j-1+3].c_str());
       pose[1] = std::atof(data[i][j-1+4].c_str());
@@ -82,6 +89,9 @@ int main(int argc, char** argv){
       a2.x = table.x+pose[0]*sin(pose[2])*cos(pose[1]+yaw);
       a2.y = table.y+pose[0]*sin(pose[2])*sin(pose[1]+yaw);
       a2.z = table.z+pose[0]*cos(pose[2]);
+      a2.x = floor(a2.x*precision+.5)/precision;
+      a2.y = floor(a2.y*precision+.5)/precision;
+      a2.z = floor(a2.z*precision+.5)/precision;
       std::cout << "**********" << std::endl;
       std::cout << a1 << std::endl;
       std::cout << a2 << std::endl;
@@ -89,7 +99,7 @@ int main(int argc, char** argv){
       if(j-1 < stepColID+(type-1)*3-1){
         viewer->addArrow(a2,a1,1,0,0,false,std::to_string(i)+"_"+std::to_string(j),vp.back());
       }else{
-        viewer->addArrow(a2,a1,0,1,0,false,std::to_string(i)+"_"+std::to_string(j),vp.back());
+        viewer->addArrow(a2,a1,1-.2*((j-stepColID)/3),1,1-.2*((j-stepColID)/3),false,std::to_string(i)+"_"+std::to_string(j),vp.back());
       }
     }
 

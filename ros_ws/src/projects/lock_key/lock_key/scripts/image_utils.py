@@ -111,7 +111,7 @@ def draw_circles(img,search_box):
     return img
 
 def color_change(img,search_box,min_bgr=[150,0,0],max_bgr=[255,150,150],
-                 new_pixel=[255,0,0]):
+                 new_pixel=[255,0,0],centroid_pixel=[255,0,255]):
     '''Change pixels within a certain color range to a new color.'''
     #Convert input to arrays
     min_bgr=np.array(min_bgr)
@@ -142,7 +142,7 @@ def color_change(img,search_box,min_bgr=[150,0,0],max_bgr=[255,150,150],
         x_ave=int(trim_mean(final_region[1],0.4))
         y_ave=int(trim_mean(final_region[0],0.4))
         center=(x_ave, y_ave)
-        cv2.circle(new_img, center, 1, (255, 0, 255), 6)
+        cv2.circle(new_img, center, 1, centroid_pixel, 6)
     except ValueError:
         center=(None,None)
         pass

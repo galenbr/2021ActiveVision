@@ -53,26 +53,38 @@ class FinderPub:
         # Get lock and key centers (in RGB image) in terms of pixels
         # RGB and Depth are registered so pixel locations are the same
         vis_img=self.get_centers(img)
-        # Get corresponding depth values (in meters)       
-        self.lock_center_depth=self.depth_array[self.lock_center[1],
-        									    self.lock_center[0]]
-        self.key_center_depth=self.depth_array[self.key_center[1],
-        									   self.key_center[0]]
+        #Lock
         try:
+            # Get corresponding depth values (in meters)       
+            self.lock_center_depth=self.depth_array[self.lock_center[1],
+            									    self.lock_center[0]]
             # Get normalized XYZ displacement (in camera_link)
             lock_disp=self.rgb_camera.projectPixelTo3dRay(self.lock_center)
-            key_disp=self.rgb_camera.projectPixelTo3dRay(self.key_center)
             #Get scale from depth
             lock_scale=self.lock_center_depth/lock_disp[2]/1000.0
-            key_scale=self.key_center_depth/key_disp[2]/1000.0
             #Convert to meters
             lock_disp=lock_scale*np.array(lock_disp)
-            key_disp=key_scale*np.array(key_disp)
-            # Publish center and visualization image
-            self.publish_points(lock_disp,key_disp)
-            self.publish_vis(vis_img)
+            # Publish center
+            self.publish_lock_point(lock_disp)
         except TypeError:
-            rospy.loginfo('Key or Lock Not Found')
+            rospy.loginfo('Lock Not Found in Frame')
+        #Key
+        try:
+            self.key_center_depth=self.depth_array[self.key_center[1],
+                                                   self.key_center[0]]
+            # Get normalized XYZ displacement (in camera_link)
+            key_disp=self.rgb_camera.projectPixelTo3dRay(self.key_center)
+            #Get scale from depth
+            key_scale=self.key_center_depth/key_disp[2]/1000.0
+            #Convert to meters
+            key_disp=key_scale*np.array(key_disp)
+            # Publish center
+            self.publish_key_point(key_disp)
+        except TypeError:
+            rospy.loginfo('Key Not Found in Frame')
+
+        #Publish visualization image
+        self.publish_vis(vis_img)
 
     def depth_callback(self,raw_depth_img):
     	'''Converts depth image to np.array with actual depth.'''
@@ -93,13 +105,15 @@ class FinderPub:
                                                      self.key_search_box,
                                                      self.key_min_hsv,
                                                      self.key_max_hsv,
-                                                     new_pixel=[255,0,0])
+                                                     new_pixel=[255,0,0],
+                                                     centroid_pixel=[0,0,255])
         #Update img for lock
         img,self.lock_center=image_utils.color_change(img,
                                                      self.lock_search_box,
                                                      self.lock_min_hsv,
                                                      self.lock_max_hsv,
-                                                     new_pixel=[0,255,0])
+                                                     new_pixel=[0,255,0],
+                                                     centroid_pixel=[255,0,255])
         
         #Add search box to img for key
         img=image_utils.add_box(img,
@@ -114,27 +128,31 @@ class FinderPub:
                                 self.lock_search_box['y'],
                                 self.lock_search_box['width'],
                                 self.lock_search_box['height'],
-                                color=[0,200,200])
+                                color=[255,0,255])
         
         return img
 
-    def publish_points(self,lock_disp,key_disp):
-        '''Publish lock and key positions in terms of camera_link.'''
-        #Build lock msg
-        lock_msg=PointStamped()
-        lock_msg.header=self.header
-        lock_msg.point.x=lock_disp[0]
-        lock_msg.point.y=lock_disp[1]
-        lock_msg.point.z=lock_disp[2]
+    def publish_key_point(self,key_disp):
+        '''Publish key position in terms of camera_color_optical_frame.'''
         #Build key msg
         key_msg=PointStamped()
         key_msg.header=self.header
         key_msg.point.x=key_disp[0]
         key_msg.point.y=key_disp[1]
         key_msg.point.z=key_disp[2]
-        #Publish messages
-        self.lock_pub.publish(lock_msg)
+        #Publish message
         self.key_pub.publish(key_msg)
+
+    def publish_lock_point(self,lock_disp):
+        '''Publish lock position in terms of camera_color_optical_frame.'''
+        #Build lock msg
+        lock_msg=PointStamped()
+        lock_msg.header=self.header
+        lock_msg.point.x=lock_disp[0]
+        lock_msg.point.y=lock_disp[1]
+        lock_msg.point.z=lock_disp[2]
+        #Publish message
+        self.lock_pub.publish(lock_msg)
 
     def publish_vis(self,vis_img):
         '''Define and publish visualization image'''
