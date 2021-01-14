@@ -121,7 +121,7 @@ for objID in ${objectID[@]}; do
       # Heurisic doesnot depend on state vector
       if [[ "$policy" == "HEURISTIC" ]]; then
         if [[ "$nHeuristic" -eq "0" ]]; then
-          screen -S session-policyService -X stuff $'rosrun active_vision BFSHeuristicPolicyService 0\n'
+          screen -S session-policyService -X stuff $'rosrun active_vision heuristicPolicyService 0\n'
           screen -S session-policyTester -X stuff $'rosrun active_vision policyTester 1\n1\n exit\n'
           # screen -S session-policyTester -X stuff $'sleep 7\n' #Debug line
           nHeuristic=1
