@@ -17,7 +17,7 @@ policyTester: {
     policy: "PCA_LDA", # Policy to be used (This is set in the roslaunch)
     relative_path: True, # Whether this is relative to the package_path
     directory: '/dataCollected/testData/', # Directory to which the PCD, CSV will be saved
-    objID: 2, # Object for which data has to be collected
+    objID: 7, # Object for which data has to be collected
     csvName: 'default.csv', # CSV file to which the data has to be saved
     csvStVecDir: '/misc/State_Vector/', # Directory where the state vector has been stored
     csvStVec: 'Prism_truncated_stateVec.csv', # Name of csv inside storageDir
