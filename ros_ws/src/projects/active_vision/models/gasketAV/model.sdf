@@ -43,6 +43,7 @@
          <geometry>
            <mesh>
              <uri>model://gasketAV/meshes/gasket.dae</uri>
+             <scale>1.0 1.0 2.0</scale>
            </mesh>
          </geometry>
         <material>
