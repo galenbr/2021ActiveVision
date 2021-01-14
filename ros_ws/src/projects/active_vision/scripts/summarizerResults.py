@@ -157,6 +157,7 @@ def graphSummary(path,policyWise,policyWise2,stVecWise):
 
         ax[0].grid(axis='y')
         ax[0].set_ylabel('Success percentage', fontsize='small')
+        ax[0].set_ylim(0,110)
 
         ax[0].set_xlabel('Step number that leads to a successful grasp (Avg. steps in legend)', fontsize='small')
 
@@ -202,6 +203,7 @@ def graphSummary(path,policyWise,policyWise2,stVecWise):
 
         ax[0].grid(axis='y')
         ax[0].set_ylabel('Success percentage', fontsize='small')
+        ax[0].set_ylim(0,110)
 
         ax[0].set_xlabel('Step number that leads to a successful grasp (Avg. steps in legend)', fontsize='small')
 
@@ -250,6 +252,7 @@ def graphSummary(path,policyWise,policyWise2,stVecWise):
 
             ax[0].grid(axis='y')
             ax[0].set_ylabel('Success percentage', fontsize='small')
+            ax[0].set_ylim(0,110)
 
             ax[0].set_xlabel('Step number that leads to a successful grasp (Avg. steps in legend)', fontsize='small')
 
@@ -278,13 +281,13 @@ def graphSummary(path,policyWise,policyWise2,stVecWise):
                      titleStr, fontsize='medium')
         ax=plt.subplot(1, 1, 1, projection='polar')
 
-        ax.set_theta_direction(-1)
-        ax.set_theta_offset(np.pi/2)
-        ax.set_thetagrids(np.degrees(theta), ["N","NE","E","SE","S","SW","W","NW","N"])
         # Non-Heuristic
         if isinstance(value,dict):
             for stVec, summary in value.items():
                 ax.set_title("Policy : "+keywords[1]+", St Vec : "+stVec, fontsize='small')
+                ax.set_theta_direction(-1)
+                ax.set_theta_offset(np.pi/2)
+                ax.set_thetagrids(np.degrees(theta), ["N","NE","E","SE","S","SW","W","NW","N"])
                 for step,i in zip(summary,range(len(summary))):
                     if i == 3:
                         break
@@ -301,6 +304,9 @@ def graphSummary(path,policyWise,policyWise2,stVecWise):
                 ax.cla()
         else:
             ax.set_title("Policy : "+keywords[1], fontsize='small')
+            ax.set_theta_direction(-1)
+            ax.set_theta_offset(np.pi/2)
+            ax.set_thetagrids(np.degrees(theta), ["N","NE","E","SE","S","SW","W","NW","N"])
             for step,i in zip(value,range(len(value))):
                 if i == 3:
                     break

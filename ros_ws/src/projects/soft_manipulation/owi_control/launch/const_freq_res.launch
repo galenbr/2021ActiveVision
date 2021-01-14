@@ -1,6 +1,9 @@
 <launch>
 <!-- This file launches the constant velocity performance test for OWI -->
 
+<!-- Loading YAML File -->
+<rosparam file="$(find owi_control)/config/params.yaml" />
+
 <!-- Webcam -->
 <include file = "$(find usb_cam)/launch/usb_cam-test.launch" />
 
@@ -17,5 +20,5 @@
 <node name = "freq_check_node" pkg="owi_control" type="owi_freq_node" output="screen"/>
 
 <!-- Record Angular velocity -->
-<node name ="record_angular_vel_node" pkg="owi_control" type="owi_freq_record_node" />
+<node name ="record_angular_vel_node" pkg="owi_control" type="owi_freq_record_node" output="screen"/>
 </launch> 

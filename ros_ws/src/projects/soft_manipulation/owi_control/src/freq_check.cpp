@@ -27,11 +27,11 @@ void diff(const geometry_msgs::Point &msg){
     float theta1 = msg.x * rad;
 
     if((theta1 - old_theta1) != 0){
-        ROS_INFO("DIFF");
-        ROS_INFO_STREAM(theta1 - old_theta1);
+        // ROS_INFO("DIFF");
+        // ROS_INFO_STREAM(theta1 - old_theta1);
         cur_angular_vel = (theta1 - old_theta1)/dt;
-        ROS_INFO("VEL");
-        ROS_INFO_STREAM(cur_angular_vel);
+        // ROS_INFO("VEL");
+        // ROS_INFO_STREAM(cur_angular_vel);
         cur_angular_acc = (cur_angular_vel - prev_angular_vel)/dt;
         old_theta1 = theta1;
     }

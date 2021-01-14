@@ -5,3 +5,8 @@ th2: 0
 lam: 1
 kp: 0.1
 z: 0.1
+
+
+const_vel_exp: {
+  vel: 0.3,
+}

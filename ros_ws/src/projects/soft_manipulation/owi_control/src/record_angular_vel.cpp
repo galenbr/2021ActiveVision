@@ -16,6 +16,7 @@ sensor_msgs::Image img;
 geometry_msgs::Point pose;
 std_msgs::Bool flag;
 std_msgs::Float64 action_msg;
+geometry_msgs::Point base_px;
 
 void flagCheck(const std_msgs::Bool &msg){
     flag.data = msg.data;
@@ -42,6 +43,18 @@ void rec_action(const std_msgs::Float64 &msg){
     action_msg.data = msg.data;
 }
 
+void rec_base(const geometry_msgs::PointStamped &msg){
+    base_px.x = msg.point.x;
+    base_px.y = msg.point.y;
+}
+
+void shut_down(const std_msgs::Float64 &msg){
+    if(msg.data == 1){
+        ROS_INFO("RECORDING COMPLETE");
+        ros::shutdown();
+    }
+}
+
 int main(int argc, char** argv){
 
     rosbag::Bag bag;
@@ -56,19 +69,23 @@ int main(int argc, char** argv){
     ros::Subscriber sub4 = n.subscribe("aruco_simple/pixel3",1,rec_pos);
     ros::Subscriber sub5 = n.subscribe("newFrame",1,flagCheck);
     ros::Subscriber sub6 = n.subscribe("action",1,rec_action);
+    ros::Subscriber sub7 = n.subscribe("aruco_simple/pixel",1,rec_base);
+
+    ros::Subscriber shutdown_sub = n.subscribe("shutdown",1,shut_down);
 
     ros::Rate r{30};
     while(ros::ok()){
+        ros::spinOnce();
         ros::Time t = ros::Time::now();
-
         bag.write("angular_vel", t, w1);
         bag.write("pwm", t, pwm1);
         bag.write("pixel3", t,pose);
         bag.write("image", t, img);
         bag.write("newFrame", t,flag);
         bag.write("action", t, action_msg);
+        bag.write("base_pos",t, base_px);
 
-        ros::spinOnce();
+        // ros::spinOnce();
         r.sleep();
     }
 

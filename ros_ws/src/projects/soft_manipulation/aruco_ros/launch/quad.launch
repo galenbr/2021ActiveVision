@@ -18,7 +18,7 @@
     <arg name="marker4_frame"     default="marker_object_frame3" />
 
 
-    <node pkg="aruco_ros" type="quad" name="aruco_simple" output="screen">    
+    <node pkg="aruco_ros" type="quad" name="aruco_simple" >    
         
         <remap from="/camera_info" to="/usb_cam/camera_info" />
         <remap from="/image" to="/usb_cam/image_raw" />

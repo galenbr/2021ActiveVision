@@ -71,10 +71,13 @@ def findDirection(start, end):
     diff = []
     for i in range(1,9):
         temp = np.asarray(calcExplorationPoseB(start,i))
-        diff.append(round(np.sum(abs(end-temp)),2))
-    min = np.amin(diff)
+        tempDiff = abs(end[0]-temp[0]) + \
+                   min(abs(end[1]-temp[1]),abs(abs(end[1]-temp[1])-2*np.pi)) + \
+                   min(abs(end[2]-temp[2]),abs(abs(end[2]-temp[2])-2*np.pi))
+        diff.append(round(tempDiff,2))
+    minimum = np.amin(diff)
     idx = np.argmin(diff)
-    if(min != 0):
+    if(minimum != 0):
         return -1
     else:
         return idx+1

@@ -20,7 +20,7 @@ policyTester: {
     objID: 7, # Object for which data has to be collected
     csvName: 'default.csv', # CSV file to which the data has to be saved
     csvStVecDir: '/misc/State_Vector/', # Directory where the state vector has been stored
-    csvStVec: 'Prism_truncated_stateVec.csv', # Name of csv inside storageDir
+    csvStVec: 'obj_2_3_g5.csv', # Name of csv inside storageDir
     HAFstVecDim: 52, # Dimension of the HAF state vector used
     maxSteps: 5, # Max number of steps to be taken before stopping
     nDataPoints: 100, # Number of data points for each pose to test (Max 200)
@@ -30,7 +30,7 @@ policyTester: {
 
     # Parameter for any policy which uses PCA
     # Use a value from 0-1 to set components based on the explained_variance_ratio cumulative sum
-    PCAcomponents: 0.95,
+    PCAcomponents: 0.85,
 }
 
 # Parameters for the simulated environment
