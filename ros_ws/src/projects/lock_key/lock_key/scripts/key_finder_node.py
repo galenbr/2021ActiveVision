@@ -37,7 +37,9 @@ class FinderPub:
         self.bridge=CvBridge()
         self.rgb_sub=rospy.Subscriber('/camera/color/image_raw',
                                       Image,self.rgb_callback)
-        self.depth_sub=rospy.Subscriber('/camera/depth/image_rect_raw', #/depth_registered/image_rect
+        self.depth_sub=rospy.Subscriber('/camera/aligned_depth_to_color/image_raw',
+                                        #/camera/depth/image_rect_raw
+                                        #/depth_registered/image_rect
                                         Image,self.depth_callback)
         self.rgb_info=rospy.Subscriber('/camera/color/camera_info',
                                        CameraInfo,self.rgb_info_callback)
@@ -179,6 +181,7 @@ class FinderPub:
             rospy.loginfo('RGB Camera Info. Received')
         
 def main():
+    rospy.init_node('lock_key_finder_pub',anonymous=True)
     #Define input parameters
     search_box={'lock':{'x':225,'y':100,'width':180,'height':180},
                 'key':{'x':525,'y':100,'width':180,'height':180}}
@@ -191,7 +194,6 @@ def main():
     finder=FinderPub(search_box['key'], hsv['key']['min'], hsv['key']['max'], 
                      search_box['lock'], hsv['lock']['min'], 
                      hsv['lock']['max'])
-    rospy.init_node('lock_key_finder_pub',anonymous=True)
     try:
         rospy.spin()
     except KeyboardInterrupt:
