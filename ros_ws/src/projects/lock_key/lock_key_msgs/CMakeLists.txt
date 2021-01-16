@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   actionlib_msgs
   geometry_msgs
+  sensor_msgs
 )
 
 find_package(Boost REQUIRED)
@@ -24,7 +25,7 @@ find_package(Boost REQUIRED)
  add_service_files(
    FILES
    GetLockKeyPoses.srv
-#   Service2.srv
+   FindPlanes.srv
  )
 
 ## Generate actions in the 'action' folder
@@ -43,6 +44,7 @@ find_package(Boost REQUIRED)
    std_msgs
    actionlib_msgs
    geometry_msgs
+   sensor_msgs
  )
 
 catkin_package(
