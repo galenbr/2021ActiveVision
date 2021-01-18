@@ -105,6 +105,56 @@ int findVisibleUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<dou
   return(s);
 }
 
+std::vector<int> findVisibleUnexp8DirM(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<std::vector<double>> &pose, int &mode){
+  std::vector<int> res, subPose;
+  int temp, temp2, subDirection;
+  std::vector<double> newPose, newPose2;
+  std::vector<std::vector<double>> why;
+  cv::Mat single, sub, final;
+  for(int i = 1; i <= 8; i++){
+    newPose = calcExplorationPose(pose.back(),i,mode);
+    if(checkValidPose(newPose) == true && checkIfNewPose(pose,newPose,mode) == true){
+      temp = findVisibleUnexp(obj,unexp,newPose,single);
+      subPose.clear();
+      for(int j = 1; j <= 8; j++){
+        newPose2 = calcExplorationPose(newPose, j, mode);
+        why.clear();
+        why.push_back(newPose);
+        if(checkValidPose(newPose2) == true && checkIfNewPose(why,newPose2,mode) == true){
+          temp2 = findVisibleUnexp(obj, unexp, newPose2, sub);
+          //ROS_INFO_STREAM("In direction "<< dirLookup[i] << " checking " << dirLookup[j] << " found value " << temp2);
+        } else {
+          temp2 = 0;
+        }
+        subPose.push_back(temp2);
+      }
+      subDirection = std::max_element(subPose.begin(),subPose.end()) - subPose.begin();
+      cv::Size s = single.size();
+      // std::cout << s.height << "," << s.width << std::endl;
+      cv::putText(single, //target image
+            dirLookup[i]+"->"+dirLookup[subDirection+1]+":"+std::to_string(temp)+","+std::to_string(temp+subPose[subDirection]), //text
+            cv::Point(5, 20), //top-left position
+            cv::FONT_HERSHEY_DUPLEX,
+            0.5,
+            cv::Scalar(255), //font color
+            1);
+    }else{
+      temp = 0;
+      single = cv::Mat::zeros(116,453,CV_8UC1);
+    }
+    if(i > 1) cv::vconcat(final, single, final);
+    else final = single;
+
+    res.push_back(temp);
+  }
+  if(::visualize == 1){
+    cv::imshow("Projection",final);
+  	cv::moveWindow("Projection",20,20);
+  	cv::waitKey(200);
+  }
+  return(res);
+}
+
 std::vector<int> findVisibleUnexp8Dir(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<std::vector<double>> &pose, int &mode){
   std::vector<int> res;
   int temp;
@@ -134,8 +184,8 @@ std::vector<int> findVisibleUnexp8Dir(ptCldColor::Ptr obj, ptCldColor::Ptr unexp
   }
   if(::visualize == 1){
     cv::imshow("Projection",final);
-  	cv::moveWindow("Projection",20,20);
-  	cv::waitKey(200);
+    cv::moveWindow("Projection",20,20);
+    cv::waitKey(200);
   }
   return(res);
 }
@@ -161,8 +211,14 @@ bool heuristicPolicy(active_vision::heuristicPolicySRV::Request  &req,
   cleanUnexp(obj,unexp);
   nUnexp = findVisibleUnexp8Dir(obj,unexp,path,mode);
   res.direction = std::max_element(nUnexp.begin(),nUnexp.end()) - nUnexp.begin();
+  nUnexp = findVisibleUnexp8DirM(obj,unexp,path,mode);
+  int direction2 = std::max_element(nUnexp.begin(),nUnexp.end()) - nUnexp.begin();
 
-  ROS_INFO_STREAM("Heuristic Policy Service Called. Direction -> "<< dirLookup[res.direction+1]);
+  if(res.direction != direction2){
+    ROS_INFO_STREAM("2nd search changed predicted direction from "<< dirLookup[res.direction+1] << " to " << dirLookup[direction2+1]);
+  }
+
+  //ROS_INFO_STREAM("Heuristic Policy Service Called. Direction -> "<< dirLookup[res.direction+1]);
 
   return true;
 }
