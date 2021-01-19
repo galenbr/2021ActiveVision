@@ -89,7 +89,7 @@ sleep 10
 
 # Looping over the objects and testing each policy for each.
 for objID in ${objectID[@]}; do
-  rosparam set /active_vision/dataCollector/objID $objID
+  rosparam set /active_vision/policyTester/objID $objID
 	for vars in ${!Policy*}; do
     # Setting the policy and its parameters
     declare -n policy=$vars
