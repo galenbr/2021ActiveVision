@@ -8,7 +8,7 @@ from lock_key_msgs.srv import GetLockKeyPoses
 from geometry_msgs.msg import PointStamped
 from std_msgs.msg import Header
 import rospy
-from tf import transformPoint
+import tf
 
 key_point={'x':[],'y':[],'z':[]}
 lock_point={'x':[],'y':[],'z':[]}
@@ -36,13 +36,13 @@ def get_poses(req):
 	ii=0
 	#Get average point for each
 	while ii<=nsamples:
-	    rospy.Subscriber("/lock_point", PointStamped, lock_callback)
-	    rospy.Subscriber("/key_point", PointStamped, key_callback)
+		rospy.Subscriber("/lock_point", PointStamped, lock_callback)
+		rospy.Subscriber("/key_point", PointStamped, key_callback)
 		for idx in ['x','y','z']:
 			key_point_samples[idx].append(key_point[idx])
 			lkey_point_samples[idx].append(lock_point[idx])
-	    ii+=1
-	    rospy.sleep(1/30)
+		ii+=1
+		rospy.sleep(1/30)
 
 	#Build PointStamped Messaged for lock and Key
 	key_response=PointStamped()
@@ -59,19 +59,19 @@ def get_poses(req):
 	key_response.header=h
 	lock_response.header=h
 	#Transform msgs to /map frame
-	key_response=transformPoint('/map',key_response)
-	lock_response=transformPoint('/map',lock_response)
+	key_response=tf.TransformerROS.transformPoint('/map',key_response)
+	lock_response=tf.TransformerROS.transformPoint('/map',lock_response)
 	#Define response
 	response=GetLockKeyPosesResponse()
 	response.key_point=key_response
 	response.lock_point=lock_response
-    return response
+	return response
 
 def lock_key_pose_server():
-    rospy.init_node('lock_and_key_poses_server')
-    s = rospy.Service('lock_and_key_poses', GetLockKeyPoses, get_poses)
-    print("Ready to retrieve poses.")
-    rospy.spin()
+	rospy.init_node('lock_and_key_poses_server')
+	s = rospy.Service('lock_and_key_poses', GetLockKeyPoses, get_poses)
+	print("Ready to retrieve poses.")
+	rospy.spin()
 
 if __name__ == "__main__":
-    lock_key_pose_server()
+	lock_key_pose_server()

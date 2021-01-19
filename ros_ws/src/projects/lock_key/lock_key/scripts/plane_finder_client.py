@@ -46,16 +46,12 @@ class CloudClient:
         rospy.set_param('bounds',bounds)
         
         #Publish point clouds
-        ii=0
-        while ii<50:
-            try:
-                self.key_cloud_pub.publish(response.key_cloud)
-                self.lock_cloud_pub.publish(response.lock_cloud)
-            except:
-                print 'Error publishing key or lock point cloud'
-            rospy.sleep(0.2)
-            ii+=1
-        rospy.loginfo('End publishing of key and lock clouds.')
+        try:
+            self.key_cloud_pub.publish(response.key_cloud)
+            self.lock_cloud_pub.publish(response.lock_cloud)
+        except:
+            print 'Error publishing key or lock point cloud'
+        rospy.sleep(0.2)
 
     def pc2_callback(self,pc2_msg):
     	'''PointCloud2 Message Callback passthrough function.'''
