@@ -13,11 +13,11 @@
   <group if="$(eval arg('policy') == 'NIL')">
     <node name="policyTester" pkg="active_vision" type="policyTester" args="0" output="screen"/>
   </group>
-  <group if="$(eval arg('policy') == 'HEURISTIC')">
-    <node name="3DheuristicPolicyService" pkg="active_vision" type="3DheuristicPolicyService" output="screen" launch-prefix="gnome-terminal --" />
+  <group if="$(eval arg('policy') == '3DHEURISTIC')">
+    <node name="ThreeDheuristicPolicyService" pkg="active_vision" type="3DheuristicPolicyService" output="screen" launch-prefix="gnome-terminal --" />
     <node name="policyTester" pkg="active_vision" type="policyTester" args="1" output="screen"/>
   </group>
-  <group if="$(eval arg('policy') == '3DHEURISTIC')">
+  <group if="$(eval arg('policy') == 'HEURISTIC')">
     <node name="heuristicPolicyService" pkg="active_vision" type="heuristicPolicyService" args="0" output="screen" launch-prefix="gnome-terminal --" />
     <node name="policyTester" pkg="active_vision" type="policyTester" args="1" output="screen"/>
   </group>
