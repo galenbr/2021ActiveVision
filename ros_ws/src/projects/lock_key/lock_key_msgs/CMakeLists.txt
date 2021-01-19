@@ -8,6 +8,8 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   actionlib_msgs
+  geometry_msgs
+  sensor_msgs
 )
 
 find_package(Boost REQUIRED)
@@ -20,11 +22,11 @@ find_package(Boost REQUIRED)
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+ add_service_files(
+   FILES
+   GetLockKeyPoses.srv
+   FindPlanes.srv
+ )
 
 ## Generate actions in the 'action' folder
  add_action_files(
@@ -41,6 +43,8 @@ find_package(Boost REQUIRED)
    DEPENDENCIES
    std_msgs
    actionlib_msgs
+   geometry_msgs
+   sensor_msgs
  )
 
 catkin_package(

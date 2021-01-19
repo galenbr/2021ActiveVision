@@ -14,15 +14,14 @@ from cv_bridge import CvBridge, CvBridgeError
 
 class FinderPub:
     '''Finds lock and key from RGBD data.'''
-    def __init__(self, key_search_box, key_min_hsv, key_max_hsv, 
-                 lock_search_box, lock_min_hsv, lock_max_hsv):
+    def __init__(self, key_min_hsv, key_max_hsv, lock_min_hsv, lock_max_hsv):
         self.header=None
-        self.key_search_box=key_search_box
+        self.key_search_box=None
         self.key_min_hsv=key_min_hsv
         self.key_max_hsv=key_max_hsv
         self.key_center=None
         self.key_center_depth=None
-        self.lock_search_box=lock_search_box
+        self.lock_search_box=None
         self.lock_min_hsv=lock_min_hsv
         self.lock_max_hsv=lock_max_hsv
         self.lock_center=None
@@ -37,7 +36,9 @@ class FinderPub:
         self.bridge=CvBridge()
         self.rgb_sub=rospy.Subscriber('/camera/color/image_raw',
                                       Image,self.rgb_callback)
-        self.depth_sub=rospy.Subscriber('/camera/depth/image_rect_raw', #/depth_registered/image_rect
+        self.depth_sub=rospy.Subscriber('/camera/aligned_depth_to_color/image_raw',
+                                        #/camera/depth/image_rect_raw
+                                        #/depth_registered/image_rect
                                         Image,self.depth_callback)
         self.rgb_info=rospy.Subscriber('/camera/color/camera_info',
                                        CameraInfo,self.rgb_info_callback)
@@ -57,7 +58,7 @@ class FinderPub:
         try:
             # Get corresponding depth values (in meters)       
             self.lock_center_depth=self.depth_array[self.lock_center[1],
-            									    self.lock_center[0]]
+                                                    self.lock_center[0]]
             # Get normalized XYZ displacement (in camera_link)
             lock_disp=self.rgb_camera.projectPixelTo3dRay(self.lock_center)
             #Get scale from depth
@@ -87,11 +88,11 @@ class FinderPub:
         self.publish_vis(vis_img)
 
     def depth_callback(self,raw_depth_img):
-    	'''Converts depth image to np.array with actual depth.'''
+        '''Converts depth image to np.array with actual depth.'''
         try:
             #Convert to cv2 format
             depth_img=self.bridge.imgmsg_to_cv2(raw_depth_img, 
-            									desired_encoding="passthrough")
+                                                desired_encoding="passthrough")
             #Convert the depth image to a Numpy array (with actual depth values)
             self.depth_array = np.array(depth_img, dtype=np.float32)
             self.depth_received=True
@@ -105,30 +106,20 @@ class FinderPub:
                                                      self.key_search_box,
                                                      self.key_min_hsv,
                                                      self.key_max_hsv,
-                                                     new_pixel=[255,0,0],
-                                                     centroid_pixel=[0,0,255])
+                                                     new_pixel=[255,0,0], #Blue
+                                                     centroid_pixel=[0,0,255]) #Red 
         #Update img for lock
         img,self.lock_center=image_utils.color_change(img,
                                                      self.lock_search_box,
                                                      self.lock_min_hsv,
                                                      self.lock_max_hsv,
-                                                     new_pixel=[0,255,0],
-                                                     centroid_pixel=[255,0,255])
+                                                     new_pixel=[0,255,0], #Green
+                                                     centroid_pixel=[255,0,255]) #Pink
         
         #Add search box to img for key
-        img=image_utils.add_box(img,
-                                self.key_search_box['x'],
-                                self.key_search_box['y'],
-                                self.key_search_box['width'],
-                                self.key_search_box['height'],
-                                color=[0,0,255])
+        img=image_utils.add_quad(img,self.key_search_box,color=[0,0,255]) #Red
         #Add search box to img for lock
-        img=image_utils.add_box(img,
-                                self.lock_search_box['x'],
-                                self.lock_search_box['y'],
-                                self.lock_search_box['width'],
-                                self.lock_search_box['height'],
-                                color=[255,0,255])
+        img=image_utils.add_quad(img,self.lock_search_box,color=[255,0,255]) #Pink
         
         return img
 
@@ -177,21 +168,49 @@ class FinderPub:
             self.rgb_camera.fromCameraInfo(rgb_cam_info)
             self.rgb_camera_info_received=True
             rospy.loginfo('RGB Camera Info. Received')
+
+        # Convert object bounds from meters (in /camera_color_optical_frame)
+        # to pixels using Pinhole model
+        bounds=rospy.get_param('bounds')
+
+        # This is for troublshooting
+        # bounds={'key':{'min':{'x':0.1,'y':-0.08,'z':0.4},
+        #                'max':{'x':0.2,'y':0.0,'z':0.45}},
+        #        'lock':{'min':{'x':-0.12,'y':-0.08,'z':0.4},
+        #                'max':{'x':-0.05,'y':0.0,'z':0.45}},
+        #        'frame':'/camera_color_optical_frame'}
+        key_min=(bounds['key']['min']['x'],
+                 bounds['key']['min']['y'],
+                 bounds['key']['min']['z'])
+        key_max=(bounds['key']['max']['x'],
+                 bounds['key']['max']['y'],
+                 bounds['key']['max']['z'])
+        lock_min=(bounds['lock']['min']['x'],
+                  bounds['lock']['min']['y'],
+                  bounds['lock']['min']['z'])
+        lock_max=(bounds['lock']['max']['x'],
+                  bounds['lock']['max']['y'],
+                  bounds['lock']['max']['z'])
+        key_min_pix=self.rgb_camera.project3dToPixel(key_min)
+        key_max_pix=self.rgb_camera.project3dToPixel(key_max)
+        lock_min_pix=self.rgb_camera.project3dToPixel(lock_min)
+        lock_max_pix=self.rgb_camera.project3dToPixel(lock_max)
+
+        self.key_search_box={'min':{'x':int(key_min_pix[0]),'y':int(key_min_pix[1])},
+                             'max':{'x':int(key_max_pix[0]),'y':int(key_max_pix[1])}}
+
+        self.lock_search_box={'min':{'x':int(lock_min_pix[0]),'y':int(lock_min_pix[1])},
+                              'max':{'x':int(lock_max_pix[0]),'y':int(lock_max_pix[1])}}
         
 def main():
+    rospy.init_node('lock_key_finder_pub',anonymous=True)
     #Define input parameters
-    search_box={'lock':{'x':225,'y':100,'width':180,'height':180},
-                'key':{'x':525,'y':100,'width':180,'height':180}}
-    # search_box={'lock':{'x':320,'y':240,'width':640,'height':480},
-    #             'key':{'x':320,'y':240,'width':640,'height':480}}
     hsv={'lock':{'min':[40,int(0.3*255),int(0.6*255)],
                  'max':[150,int(0.9*255),int(0.8*255)]},
          'key':{'min':[95,int(0.18*255),int(0.6*255)],
                 'max':[110,int(0.3*255),int(0.85*255)]}}
-    finder=FinderPub(search_box['key'], hsv['key']['min'], hsv['key']['max'], 
-                     search_box['lock'], hsv['lock']['min'], 
-                     hsv['lock']['max'])
-    rospy.init_node('lock_key_finder_pub',anonymous=True)
+    finder=FinderPub(hsv['key']['min'], hsv['key']['max'], 
+                     hsv['lock']['min'], hsv['lock']['max'])
     try:
         rospy.spin()
     except KeyboardInterrupt:

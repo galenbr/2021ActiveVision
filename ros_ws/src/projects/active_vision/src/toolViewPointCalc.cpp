@@ -37,17 +37,17 @@ double disBtwSpherical(std::vector<double> &poseA,std::vector<double> &poseB){
 	return(sqrt(pow(poseAcart.x-poseBcart.x,2)+pow(poseAcart.y-poseBcart.y,2)+pow(poseAcart.z-poseBcart.z,2)));
 }
 
-std::vector<double> calcExplorationPoseA(std::vector<double> &startPose, int dir){
+std::vector<double> calcExplorationPoseA(std::vector<double> &startPose, int dir, double step){
 	double azimuthalOffset, polarOffset;
 	switch(dir){
-		case 1: azimuthalOffset = 0; 				 polarOffset = -minAngle; break;	//N
-		case 2: azimuthalOffset = minAngle;  polarOffset = -minAngle; break;	//NE
-		case 3: azimuthalOffset = minAngle;  polarOffset = 0; 				break;	//E
-		case 4: azimuthalOffset = minAngle;  polarOffset = minAngle;  break;	//SE
-		case 5: azimuthalOffset = 0; 				 polarOffset = minAngle;  break;	//S
-		case 6: azimuthalOffset = -minAngle; polarOffset = minAngle;  break;	//SW
-		case 7: azimuthalOffset = -minAngle; polarOffset = 0; 				break;	//W
-		case 8: azimuthalOffset = -minAngle; polarOffset = -minAngle; break;	//NW
+		case 1: azimuthalOffset = 0; 		 polarOffset = -step; break;	//N
+		case 2: azimuthalOffset = step;  polarOffset = -step; break;	//NE
+		case 3: azimuthalOffset = step;  polarOffset = 0; 		break;	//E
+		case 4: azimuthalOffset = step;  polarOffset = step;  break;	//SE
+		case 5: azimuthalOffset = 0; 		 polarOffset = step;  break;	//S
+		case 6: azimuthalOffset = -step; polarOffset = step;  break;	//SW
+		case 7: azimuthalOffset = -step; polarOffset = 0; 		break;	//W
+		case 8: azimuthalOffset = -step; polarOffset = -step; break;	//NW
 		default: printf("ERROR in calcExplorationPose\n");
 	}
 
@@ -72,7 +72,7 @@ std::vector<double> calcExplorationPoseA(std::vector<double> &startPose, int dir
 	return(potentialPose);
 }
 
-std::vector<double> calcExplorationPoseB(std::vector<double> &startPose, int dir){
+std::vector<double> calcExplorationPoseB(std::vector<double> &startPose, int dir, double step){
 
   Eigen::Vector3f xAxis,yAxis,zAxis,rotAxis,tempVec;
   Eigen::Vector3f xyPlane(0,0,1);
@@ -104,7 +104,7 @@ std::vector<double> calcExplorationPoseB(std::vector<double> &startPose, int dir
   matB << 0,-rotAxis[2],rotAxis[1],rotAxis[2],0,-rotAxis[0],-rotAxis[1],rotAxis[0],0;
   matC = rotAxis*rotAxis.transpose();
 
-  tempMat = cos(minAngle)*matA + sin(minAngle)*matB + (1-cos(minAngle))*matC;
+  tempMat = cos(step)*matA + sin(step)*matB + (1-cos(step))*matC;
   tempVec = tempMat*stPoint.getVector3fMap();
   endPoint.x = tempVec[0]; endPoint.y = tempVec[1]; endPoint.z = tempVec[2];
 
@@ -123,10 +123,10 @@ std::vector<double> calcExplorationPoseB(std::vector<double> &startPose, int dir
 	return end;
 }
 
-std::vector<double> calcExplorationPose(std::vector<double> &startPose, int dir, int mode){
+std::vector<double> calcExplorationPose(std::vector<double> &startPose, int dir, int mode, double step){
   switch(mode){
-    case 1: return calcExplorationPoseA(startPose,dir); break;
-    case 2: return calcExplorationPoseB(startPose,dir); break;
+    case 1: return calcExplorationPoseA(startPose,dir,step); break;
+    case 2: return calcExplorationPoseB(startPose,dir,step); break;
     default: return calcExplorationPoseA(startPose,dir);
   }
 }

@@ -273,6 +273,10 @@ add_executable(BFSHeuristicPolicyService src/BFSHeuristicPolicyService.cpp)
 add_dependencies(BFSHeuristicPolicyService active_vision ${catkin_EXPORTED_TARGETS})
 target_link_libraries(BFSHeuristicPolicyService active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
 
+add_executable(3DheuristicPolicyService src/3DheuristicPolicyService.cpp)
+add_dependencies(3DheuristicPolicyService active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(3DheuristicPolicyService active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
 # add_executable(bfs src/bfs.cpp)
 # add_dependencies(bfs active_vision ${catkin_EXPORTED_TARGETS})
 # target_link_libraries(bfs active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})

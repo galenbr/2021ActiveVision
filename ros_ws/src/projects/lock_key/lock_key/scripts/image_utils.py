@@ -118,14 +118,9 @@ def color_change(img,search_box,min_bgr=[150,0,0],max_bgr=[255,150,150],
     max_bgr=np.array(max_bgr)
     #Isolate desired pixel indices
     region=np.array(find_color(img,min_bgr,max_bgr))
-    #Define bounds from search_box arg
-    xmin=search_box['x']-int(search_box['width']/2)
-    xmax=search_box['x']+int(search_box['width']/2)
-    ymin=search_box['y']-int(search_box['height']/2)
-    ymax=search_box['y']+int(search_box['height']/2)
     #Create boolean filter for indexing
-    x_filt=np.array((region[1]>=xmin) & (region[1]<=xmax),dtype=bool)
-    y_filt=np.array((region[0]>=ymin) & (region[0]<=ymax),dtype=bool)
+    x_filt=np.array((region[1]>=int(search_box['min']['x'])) & (region[1]<=int(search_box['max']['x'])),dtype=bool)
+    y_filt=np.array((region[0]>=int(search_box['min']['y'])) & (region[0]<=int(search_box['max']['y'])),dtype=bool)
     region_filter=x_filt & y_filt
     #Build final type of pixel indices
     final_region=(region[0][region_filter],
@@ -161,12 +156,24 @@ def find_color(img,min_hsv,max_hsv):
     return region
 
 def add_box(img,x,y,width,height,color=[0,0,255]):
-    '''Adds a box box to an image'''
+    '''Adds a box to an image'''
     img=cv2.rectangle(img,
                       (x-int(width/2),y-int(height/2)), #Start
                       (x+int(width/2),y+int(height/2)), #End
                       color, #Font Color (BGR)
                       2) #thickness
+    return img
+
+def add_quad(img,search_box,color=[0,0,255]):
+    '''Adds a quadrilateral to an image'''
+    p1=(int(search_box['min']['x']),int(search_box['max']['y']))
+    p2=(int(search_box['min']['x']),int(search_box['min']['y']))
+    p3=(int(search_box['max']['x']),int(search_box['min']['y']))
+    p4=(int(search_box['max']['x']),int(search_box['max']['y']))
+    img=cv2.line(img, p1, p2, color, 2, cv2.LINE_AA)
+    img=cv2.line(img, p2, p3, color, 2, cv2.LINE_AA)
+    img=cv2.line(img, p3, p4, color, 2, cv2.LINE_AA)
+    img=cv2.line(img, p4, p1, color, 2, cv2.LINE_AA)
     return img
 
 def detect_edges(img):

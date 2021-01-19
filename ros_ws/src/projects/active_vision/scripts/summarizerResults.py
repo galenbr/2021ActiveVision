@@ -8,7 +8,7 @@ from summarizerDataCollected import readInput,fig2img,plots2jpg
 from toolViewPointCalc import findDirection
 from PIL import Image
 
-heuristicPolicies = ["Heuristic","Random","Brick"]
+heuristicPolicies = ["Heuristic","3D Heuristic","Random","Brick"]
 maxSteps = 5
 
 graphColors =  ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']

@@ -21,10 +21,10 @@ bool checkIfNewPose(std::vector<std::vector<double>> &oldPoses, std::vector<doub
 
 double disBtwSpherical(std::vector<double> &poseA,std::vector<double> &poseB);
 
-std::vector<double> calcExplorationPoseA(std::vector<double> &startPose, int dir);
+std::vector<double> calcExplorationPoseA(std::vector<double> &startPose, int dir, double step=minAngle);
 
-std::vector<double> calcExplorationPoseB(std::vector<double> &startPose, int dir);
+std::vector<double> calcExplorationPoseB(std::vector<double> &startPose, int dir, double step=minAngle);
 
-std::vector<double> calcExplorationPose(std::vector<double> &startPose, int dir, int mode);
+std::vector<double> calcExplorationPose(std::vector<double> &startPose, int dir, int mode, double step=minAngle);
 
 #endif

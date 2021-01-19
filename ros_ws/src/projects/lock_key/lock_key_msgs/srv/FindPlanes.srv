@@ -1,0 +1,4 @@
+sensor_msgs/PointCloud2 pc2
+---
+sensor_msgs/PointCloud2 key_cloud
+sensor_msgs/PointCloud2 lock_cloud

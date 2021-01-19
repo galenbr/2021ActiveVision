@@ -29,15 +29,16 @@ csvDataRec='dataRec.csv'
 csvParams='parameters.csv'
 csvStorageSummary='storageSummary.csv'
 
-objectID=(7)
+objectID=(2)
 
 # "RANDOM" "PCA_LR" "PCA_LDA" "PCA_LDA_LR" "HEURISTIC")
 # List all the policies to be tested with the prefix "Policy"
 # Policyxxx = ("Policy" "Unique description" "Param 1 name" "Param 1 value" ...)
 
-Policy1A=("HEURISTIC" "Heuristic")
+# Policy1A=("HEURISTIC" "Heuristic")
 #Policy1B=("BRICK" "Brick")
 #Policy1C=("RANDOM" "Random")
+Policy1D=("3DHEURISTIC" "3D Heuristic")
 #Policy2A=("PCA_LR" "PCA_LR_95"
 #          "/active_vision/policyTester/PCAcomponents" 0.95)
 #Policy2B=("PCA_LR" "PCA_LR_85"
@@ -88,7 +89,7 @@ sleep 10
 
 # Looping over the objects and testing each policy for each.
 for objID in ${objectID[@]}; do
-  rosparam set /active_vision/dataCollector/objID $objID
+  rosparam set /active_vision/policyTester/objID $objID
 	for vars in ${!Policy*}; do
     # Setting the policy and its parameters
     declare -n policy=$vars
@@ -98,6 +99,7 @@ for objID in ${objectID[@]}; do
     done
 
     nHeuristic=0 # To ensure heuristic is run only once
+    n3DHeuristic=0 # To ensure heuristic is run only once
 
     for stVec in ${files[@]}; do
       # Setting the csv state vector to be used
@@ -125,6 +127,13 @@ for objID in ${objectID[@]}; do
           screen -S session-policyTester -X stuff $'rosrun active_vision policyTester 1\n1\n exit\n'
           # screen -S session-policyTester -X stuff $'sleep 7\n' #Debug line
           nHeuristic=1
+        fi
+      elif [[ "$policy" == "3DHEURISTIC" ]]; then
+        if [[ "$n3DHeuristic" -eq "0" ]]; then
+          screen -S session-policyService -X stuff $'rosrun active_vision 3DheuristicPolicyService\n'
+          screen -S session-policyTester -X stuff $'rosrun active_vision policyTester 1\n1\n exit\n'
+          # screen -S session-policyTester -X stuff $'sleep 7\n' #Debug line
+          n3DHeuristic=1
         fi
       else
         screen -S session-policyService -X stuff $'rosrun active_vision trainedPolicyService.py\n'
