@@ -4,7 +4,7 @@
 
   <include file="$(find active_vision)/launch/workspace.launch" />
 
-  <arg name="policy" default="NIL" doc="NIL / HEURISTIC / PCA_LDA / PCA_LDA_LR / PCA_LR / RANDOM" />
+  <arg name="policy" default="NIL" doc="NIL / HEURISTIC / 3DHEURISTIC / PCA_LDA / PCA_LDA_LR / PCA_LR / RANDOM" />
 
   <rosparam param="/active_vision/policyTester/policy" subst_value="True">$(arg policy)</rosparam>
 
@@ -14,6 +14,10 @@
     <node name="policyTester" pkg="active_vision" type="policyTester" args="0" output="screen"/>
   </group>
   <group if="$(eval arg('policy') == 'HEURISTIC')">
+    <node name="3DheuristicPolicyService" pkg="active_vision" type="3DheuristicPolicyService" output="screen" launch-prefix="gnome-terminal --" />
+    <node name="policyTester" pkg="active_vision" type="policyTester" args="1" output="screen"/>
+  </group>
+  <group if="$(eval arg('policy') == '3DHEURISTIC')">
     <node name="heuristicPolicyService" pkg="active_vision" type="heuristicPolicyService" args="0" output="screen" launch-prefix="gnome-terminal --" />
     <node name="policyTester" pkg="active_vision" type="policyTester" args="1" output="screen"/>
   </group>
