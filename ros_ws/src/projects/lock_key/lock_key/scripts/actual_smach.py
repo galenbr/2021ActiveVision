@@ -104,7 +104,9 @@ class NavigateToPreKey(smach.State):
         rospy.loginfo('Navigating to Pre-Key...')
         # Retrieve goal position from param server
         goal=rospy.get_param("key_goal")
-        goal['z']+=goal['z_offset']
+		goal['x']+=goal['pre_x_offset']
+        goal['y']+=goal['pre_y_offset']
+        goal['z']+=goal['pre_z_offset']
         # Call movement action
         move_to_position(goal['x'],goal['y'],goal['z'],
                          goal['roll'],goal['pitch'],goal['yaw'])
@@ -129,7 +131,9 @@ class NavigateToPostKey(smach.State):
         rospy.loginfo('Navigating to Post-Key...')
         # Retrieve goal position from param server
         goal=rospy.get_param("key_goal")
-        goal['z']+=goal['z_offset']
+        goal['x']+=goal['post_x_offset']
+        goal['y']+=goal['post_y_offset']
+        goal['z']+=goal['post_z_offset']
         # Call movement action
         move_to_position(goal['x'],goal['y'],goal['z'],
                          goal['roll'],goal['pitch'],goal['yaw'])
@@ -150,7 +154,9 @@ class NavigateToPreLockFar(smach.State):
         rospy.loginfo('Navigating to Pre-Lock Far...')
         # Retrieve goal position from param server
         goal=rospy.get_param("padlock_goal")
-        goal['z']+=goal['z_offset_far']
+        goal['x']+=goal['pre_x_offset_far']
+        goal['y']+=goal['pre_y_offset_far']
+        goal['z']+=goal['pre_z_offset_far']
         # Call movement action
         move_to_position(goal['x'],goal['y'],goal['z'],
                          goal['roll'],goal['pitch'],goal['yaw'])
@@ -163,9 +169,11 @@ class NavigateToPreLockClose(smach.State):
         rospy.loginfo('Navigating to Pre-Lock Close...')
         # Retrieve goal position from param server
         goal=rospy.get_param("padlock_goal")
+        goal['x']+=goal['pre_x_offset_close']
+        goal['y']+=goal['pre_y_offset_close']
+        goal['z']+=goal['pre_z_offset_close']
         goal['x']+=goal['x_misalignment']
         goal['y']+=goal['y_misalignment']
-        goal['z']+=goal['z_offset_close']
         # Call movement action
         move_to_position(goal['x'],goal['y'],goal['z'],
                          goal['roll'],goal['pitch'],goal['yaw'])
@@ -218,7 +226,9 @@ class NavigateToPostLock(smach.State):
         rospy.loginfo('Navigating to Post-Lock ...')
         # Retrieve goal position from param server
         goal=rospy.get_param("padlock_goal")
-        goal['z']+=goal['z_offset_far']
+        goal['x']+=goal['post_x_offset']
+        goal['y']+=goal['post_y_offset']
+        goal['z']+=goal['post_z_offset']
         # Call movement action
         move_to_position(goal['x'],goal['y'],goal['z'],
                          goal['roll'],goal['pitch'],goal['yaw'])

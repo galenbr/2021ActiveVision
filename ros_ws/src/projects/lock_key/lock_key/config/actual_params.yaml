@@ -8,8 +8,14 @@ key_goal:
   roll: 3.1416
   pitch: 0.0
   yaw: -0.7854 #Gazebo:0.0, Panda: -0.7854
-  # Distance above key_goal_z for pre-grasp [meters]
-  z_offset: 0.15
+  # Distance offsets for pre-grasp [meters]
+  pre_x_offset: 0.0
+  pre_y_offset: 0.0
+  pre_z_offset: 0.15
+  # Distance offsets for post-grasp [meters]
+  post_x_offset: 0.0
+  post_y_offset: 0.0
+  post_z_offset: 0.15
 
 ##### Padlock Position #####
 padlock_goal:
@@ -21,9 +27,17 @@ padlock_goal:
   roll: 3.1416
   pitch: 0.0
   yaw: -0.7854 #Gazebo:0.0, Panda: -0.7854
-  # Distances above padlock_goal_z for pre-insert [meters]
-  z_offset_far: 0.15
-  z_offset_close: 0.03
+  # Distances offsets for pre-insert [meters]
+  pre_x_offset_far: 0.0
+  pre_y_offset_far: 0.0
+  pre_z_offset_far: 0.15
+  pre_y_offset_close: 0.0
+  pre_x_offset_close: 0.0
+  pre_z_offset_close: 0.03
+  # Distance offsets for post-insert [meters]
+  post_x_offset: 0.0
+  post_y_offset: 0.0
+  post_z_offset: 0.03
   # Intentional misalignment in X for padlock [meters]
   x_misalignment: 0.0
   # Intentional misalignment in Y for padlock [meters]
