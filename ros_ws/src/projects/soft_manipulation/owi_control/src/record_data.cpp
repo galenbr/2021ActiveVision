@@ -11,7 +11,7 @@
 #include "std_msgs/Bool.h"
 
 std_msgs::Float32 w1;
-std_msgs::Float64 pwm1;
+geometry_msgs::Point pwm;
 sensor_msgs::Image img;
 geometry_msgs::Point pose;
 std_msgs::Bool flag;
@@ -38,7 +38,8 @@ void rec_vel(const std_msgs::Float32 &msg){
 }
 
 void rec_pwm(const std_msgs::Float64MultiArray &msg){
-    pwm1.data = msg.data.at(0);
+    pwm.x = msg.data.at(0);
+    pwm.y = msg.data.at(1);
 }
 
 void rec_action(const std_msgs::Float64 &msg){
@@ -93,7 +94,7 @@ int main(int argc, char** argv){
         ros::Time t = ros::Time::now();
         // bag.write("angular_vel", t, w1);
         // bag.write("action", t, action_msg);
-        bag.write("pwm", t, pwm1);
+        bag.write("pwm", t, pwm);
         bag.write("pixel3", t,pose);
         bag.write("image", t, img);
         bag.write("newFrame", t,flag);
