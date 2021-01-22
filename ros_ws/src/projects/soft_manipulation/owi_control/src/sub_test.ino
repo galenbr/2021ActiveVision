@@ -32,6 +32,8 @@ void pwmCb(std_msgs::Float64MultiArray& msg){
     digitalWrite(in1, LOW);
     digitalWrite(in2, HIGH);
   }
+
+// Setting PWM with Impulse
   if(v>=0){
     digitalWrite(in3, HIGH);
     digitalWrite(in4, LOW);
@@ -40,10 +42,25 @@ void pwmCb(std_msgs::Float64MultiArray& msg){
     digitalWrite(in3, LOW);
     digitalWrite(in4, HIGH);
   }
-
+  if(u < abs(78) && u!=0){
+    analogWrite(enA,255);
+    delay(2);
+    analogWrite(enA,abs(u));
+  }
+  else{
+    analogWrite(enA,abs(u));
+  }
+  if(v < abs(78) && v!=0){
+    analogWrite(enB,255);
+    delay(2);
+    analogWrite(enB,abs(v));
+  }
+  else{
+    analogWrite(enB,abs(v));
+  }
 //    Setting pwm
-  analogWrite(enA,abs(u));
-  analogWrite(enB,abs(v));
+//  analogWrite(enA,abs(u));
+//  analogWrite(enB,abs(v));
   
 }
 
