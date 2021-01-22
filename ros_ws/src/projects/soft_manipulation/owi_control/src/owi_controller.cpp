@@ -50,8 +50,8 @@ void get_cur_pose(const geometry_msgs::PointStamped &msg){
     
     // Send robot joint velocities if error is greater than 1 px in either direction
     std_msgs::Float64 shutdown_msg;
-
-    if(abs(err(1))>= 5 || abs(err(0)>= 5)){
+    float err_norm = sqrt((err(0)*err(0)) + (err(1)*err(1)));
+    if(err_norm >= 5){
 
         Eigen::MatrixXd Kp(2,2); //Gains matrix, this incorporates the image Jacobian since it is constant for a 2D case
         Kp << k, 0,
