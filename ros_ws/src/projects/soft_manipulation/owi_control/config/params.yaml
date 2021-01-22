@@ -8,5 +8,10 @@ z: 0.1
 
 
 const_vel_exp: {
-  vel: 0.3,
+  vel: 0.5,
+}
+
+owi_controller: {
+  goal_x: 200,
+  goal_y: 300,
 }

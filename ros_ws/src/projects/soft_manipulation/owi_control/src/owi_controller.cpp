@@ -20,9 +20,8 @@ geometry_msgs::Point curPose_;
 geometry_msgs::Point get_goal_pose(){
 
     geometry_msgs::Point goalPose;
-    
-    goalPose.x = 200;  //Read from YAML
-    goalPose.y = 300;
+    nh->getParam("owi_controller/goal_x",goalPose.x);
+    nh->getParam("owi_controller/goal_y",goalPose.y);
     goalPose.z = 0;
 
     return goalPose;
@@ -36,17 +35,15 @@ void get_cur_pose(const geometry_msgs::PointStamped &msg){
 
     geometry_msgs::Point goal = get_goal_pose();
     
-    Eigen::Vector3d f(curPose_.x, curPose_.y, curPose_.z);
-    Eigen::Vector3d f_d(goal.x, goal.y, goal.z);
+    Eigen::Vector3d f(curPose_.x, curPose_.y, curPose_.z); // cur pose vector
+    Eigen::Vector3d f_d(goal.x, goal.y, goal.z);  // goal pose vector
     Eigen::Vector2d err;
     Eigen::Vector2d t_dot;      // velocity in task space
     Eigen::Vector2d j_dot;      // velocity in joint space
-
+    Eigen::Vector2d j_dot_fit;  // joint velocities fit to range
     err(0) = f_d(0) - f(0);
     err(1) = f_d(1) - f(1);
 
-    float lam = 1.95; // in m
-    float z = 0.4;
     int k = 1;
     
     // Send robot joint velocities if error is greater than 1 px in either direction
@@ -67,29 +64,32 @@ void get_cur_pose(const geometry_msgs::PointStamped &msg){
     t_dot = -Kp * err;
 
     j_dot = Jr_inv * t_dot;
-    j_dot /= 2400;        //normalization
-    printf("%f\n",j_dot(1));
+    // printf("%f\n",j_dot(1));
 
-    // Piecewise function
-    if(j_dot(0)>0.35){
-        j_dot(0) = 0.35;
-    }
-    if(j_dot(0)<-0.35){
-        j_dot(0) = -0.35;
-    }
+    // Fix joint velocities to be between (-0.5 : 0.5) while preserving their ratio
+    j_dot_fit(0) = j_dot(0)/(2*(abs(j_dot(0)) + abs(j_dot(1))));
+    j_dot_fit(1) = j_dot(1)/(2*(abs(j_dot(0)) + abs(j_dot(1))));
 
-    if(j_dot(1)>0.35){
-        j_dot(1) = 0.35;
-    }
-    if(j_dot(1)<-0.35){
-        j_dot(1) = -0.35;
-    }
+    // // Piecewise function
+    // if(j_dot(0)>0.35){
+    //     j_dot(0) = 0.35;
+    // }
+    // if(j_dot(0)<-0.35){
+    //     j_dot(0) = -0.35;
+    // }
+
+    // if(j_dot(1)>0.35){
+    //     j_dot(1) = 0.35;
+    // }
+    // if(j_dot(1)<-0.35){
+    //     j_dot(1) = -0.35;
+    // }
 
     std_msgs::Float64MultiArray vel_msg;    //Velocity Message for Pub
     vel_msg.data.resize(2);
     
-    vel_msg.data[0] = j_dot(0);
-    vel_msg.data[1] = j_dot(1);
+    vel_msg.data[0] = j_dot_fit(0);
+    vel_msg.data[1] = j_dot_fit(1);
 
     pub.publish(vel_msg);
 
@@ -106,7 +106,7 @@ void get_cur_pose(const geometry_msgs::PointStamped &msg){
             std_msgs::Float64MultiArray vel_msg;    //Velocity Message for Pub
             vel_msg.data.resize(2);
     
-            vel_msg.data[0] = 0;//j_dot(0);
+            vel_msg.data[0] = 0;
             vel_msg.data[1] = 0;
 
             pub.publish(vel_msg);
@@ -126,8 +126,8 @@ void update_Jr(const geometry_msgs::Point &msg){
     float th1 = msg.x;
     float th2 = msg.y;
 
-    float l1 = 0.092;    // in m
-    float l2 = 0.09;   // in m
+    float l1 = 0.092;    // length of link1 in m
+    float l2 = 0.09;   // length of link2 in m
 
     float jr1 = - l1*sin(th1*PI) - l2*sin((th1+th2)*PI);
     float jr2 = - l2*sin((th1 + th2)*PI);
