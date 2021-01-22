@@ -19,13 +19,18 @@ ee_marker = csvread('~/owi_data/vs_data/exp1/ee.csv',2,0);
 
 figure(1)
 
-subplot(3,1,1)
+subplot(4,1,1)
 plot(err_x)
 
-subplot(3,1,2)
+subplot(4,1,2)
 plot(err_y)
 
-subplot(3,1,3)
+subplot(4,1,3)
 plot(ee_marker(:,2),-ee_marker(:,3),'ro')
 hold on
 line([start(1),goal(1)],[-start(2),-goal(2)])
+
+subplot(4,1,4)
+plot(input_vel(:,2))
+hold on
+plot(input_vel(:,3))
