@@ -110,14 +110,14 @@ def draw_circles(img,search_box):
 
     return img
 
-def color_change(img,search_box,min_bgr=[150,0,0],max_bgr=[255,150,150],
+def color_change(img,search_box,min_hsv=[150,0,0],max_hsv=[255,150,150],
                  new_pixel=[255,0,0],centroid_pixel=[255,0,255]):
     '''Change pixels within a certain color range to a new color.'''
     #Convert input to arrays
-    min_bgr=np.array(min_bgr)
-    max_bgr=np.array(max_bgr)
+    min_hsv=np.array(min_hsv)
+    max_hsv=np.array(max_hsv)
     #Isolate desired pixel indices
-    region=np.array(find_color(img,min_bgr,max_bgr))
+    region=np.array(find_color(img,min_hsv,max_hsv))
     #Create boolean filter for indexing
     x_filt=np.array((region[1]>=int(search_box['min']['x'])) & (region[1]<=int(search_box['max']['x'])),dtype=bool)
     y_filt=np.array((region[0]>=int(search_box['min']['y'])) & (region[0]<=int(search_box['max']['y'])),dtype=bool)
@@ -149,9 +149,9 @@ def find_color(img,min_hsv,max_hsv):
     #Convert img to HSV
     img=cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     
-    region=np.where((img[:,:,0]>=min_hsv[0]) & (img[:,:,0]<=max_hsv[0]) & 
-                    (img[:,:,1]>=min_hsv[1]) & (img[:,:,1]<=max_hsv[1]) & 
-                    (img[:,:,2]>=min_hsv[2]) & (img[:,:,2]<=max_hsv[2]))
+    region=np.where((img[:,:,0]>=int(min_hsv[0])) & (img[:,:,0]<=int(max_hsv[0])) & 
+                    (img[:,:,1]>=int(min_hsv[1])) & (img[:,:,1]<=int(max_hsv[1])) & 
+                    (img[:,:,2]>=int(min_hsv[2])) & (img[:,:,2]<=int(max_hsv[2])))
     
     return region
 

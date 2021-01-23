@@ -72,7 +72,7 @@ def spiral_motion():
 	client.wait_for_result()
 
 def detect_plane(F_max, recalculate_bias=False):
-	'''Calls plane detection action.'''
+	'''Calls insertion plane contact detection action.'''
 	client = actionlib.SimpleActionClient("plane_detector_node", 
 										  lock_key_msgs.msg.DetectPlaneAction)
 	rospy.loginfo('Waiting for server')
@@ -104,7 +104,7 @@ class NavigateToPreKey(smach.State):
         rospy.loginfo('Navigating to Pre-Key...')
         # Retrieve goal position from param server
         goal=rospy.get_param("key_goal")
-		goal['x']+=goal['pre_x_offset']
+        goal['x']+=goal['pre_x_offset']
         goal['y']+=goal['pre_y_offset']
         goal['z']+=goal['pre_z_offset']
         # Call movement action
