@@ -95,7 +95,7 @@ struct RouteData{
 void printRouteData(RouteData &in);
 
 // Function to save the RouteData
-void saveData(RouteData &in, std::fstream &saveTo, std::string &dir);
+void saveData(RouteData &in, std::fstream &saveTo, std::string &dir, bool all=true);
 
 // Function to get the current time
 std::string getCurTime();

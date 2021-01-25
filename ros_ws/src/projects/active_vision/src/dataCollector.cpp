@@ -378,8 +378,6 @@ int main (int argc, char** argv){
 
  	environment kinectControl(&nh);
 	sleep(1);
-	kinectControl.setPtCldNoise(0.0);
-	kinectControl.viewsphereRad = 1;
   kinectControl.loadGripper();
 
 	bool relativePath; nh.getParam("/active_vision/dataCollector/relative_path", relativePath);

@@ -51,7 +51,7 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 	std::vector<double> nextPose;
 	RouteData home, current;
 
-	printf("*** Obj #%d : Pose #%d with Yaw %d ***\n",object,objPoseCode,objYaw);
+	// printf("*** Obj #%d : Pose #%d with Yaw %d ***\n",object,objPoseCode,objYaw);
 
 	kinectControl.moveObject(object,objPoseCode,objYaw*(M_PI/180.0));
 
@@ -107,7 +107,7 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 		int maxIndex = 0;
 		if(current.success == true){
 			current.filename = getCurTime()+"_"+std::to_string(::nSaved);
-			saveData(current, fout, dir);
+			saveData(current, fout, dir, false);
 			::nSaved++;
 			viewer->addText("GRASP FOUND. Saving and exiting.",4,5,25,1,0,0,"Dir1",vp[0]);
 		}else{
@@ -223,8 +223,6 @@ int main(int argc, char** argv){
  	ros::NodeHandle nh;
   ros::ServiceClient policy;
  	environment kinectControl(&nh); sleep(1);
-	kinectControl.setPtCldNoise(0.5);
-	kinectControl.viewsphereRad = 1.0;
   kinectControl.loadGripper();
 
 	bool relativePath; nh.getParam("/active_vision/policyTester/relative_path", relativePath);
@@ -323,6 +321,7 @@ int main(int argc, char** argv){
 
 			// Checking for the uniform steps
 			for(int objYaw = kinectControl.objectDict[objID].poses[objPoseCode][3]; objYaw < kinectControl.objectDict[objID].poses[objPoseCode][4]; objYaw+=uniformYawStepSize){
+				printf("%d - Obj #%d, Pose #%d, Yaw %d ***\n",nDataPoints-tempNDataPoints+1,objID,objPoseCode,objYaw);
 				findGrasp(kinectControl, objID, objPoseCode, objYaw, dir, csvName, viewer, policy);
 				tempNDataPoints--;
 			}
@@ -334,6 +333,7 @@ int main(int argc, char** argv){
 
 			// Checking for the random steps
 			for(int ctr = 0; ctr < yawAngleDict[key].size() && tempNDataPoints > 0; ctr++){
+				printf("%d - Obj #%d, Pose #%d, Yaw %d ***\n",nDataPoints-tempNDataPoints+1,objID,objPoseCode,yawAngleDict[key][ctr]);
 				findGrasp(kinectControl, objID, objPoseCode, yawAngleDict[key][ctr], dir, csvName, viewer, policy);
 				tempNDataPoints--;
 			}

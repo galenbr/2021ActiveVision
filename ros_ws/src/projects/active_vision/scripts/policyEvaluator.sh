@@ -29,26 +29,26 @@ csvDataRec='dataRec.csv'
 csvParams='parameters.csv'
 csvStorageSummary='storageSummary.csv'
 
-objectID=(2)
+objectID=(10)
 
 # "RANDOM" "PCA_LR" "PCA_LDA" "PCA_LDA_LR" "HEURISTIC")
 # List all the policies to be tested with the prefix "Policy"
 # Policyxxx = ("Policy" "Unique description" "Param 1 name" "Param 1 value" ...)
 
-# Policy1A=("HEURISTIC" "Heuristic")
-#Policy1B=("BRICK" "Brick")
-#Policy1C=("RANDOM" "Random")
+Policy1A=("HEURISTIC" "Heuristic")
+Policy1B=("BRICK" "Brick")
+Policy1C=("RANDOM" "Random")
 Policy1D=("3DHEURISTIC" "3D Heuristic")
-#Policy2A=("PCA_LR" "PCA_LR_95"
+# Policy2A=("PCA_LR" "PCA_LR_95"
 #          "/active_vision/policyTester/PCAcomponents" 0.95)
-#Policy2B=("PCA_LR" "PCA_LR_85"
-#          "/active_vision/policyTester/PCAcomponents" 0.85)
-#Policy2C=("PCA_LR" "PCA_LR_75"
+Policy2B=("PCA_LR" "PCA_LR_85"
+         "/active_vision/policyTester/PCAcomponents" 0.85)
+# Policy2C=("PCA_LR" "PCA_LR_75"
 #          "/active_vision/policyTester/PCAcomponents" 0.75)
 # Policy3A=("PCA_LDA" "PCA_LDA_95"
 #           "/active_vision/policyTester/PCAcomponents" 0.95)
-#Policy3B=("PCA_LDA" "PCA_LDA_85"
-#           "/active_vision/policyTester/PCAcomponents" 0.85)
+Policy3B=("PCA_LDA" "PCA_LDA_85"
+          "/active_vision/policyTester/PCAcomponents" 0.85)
 # Policy3C=("PCA_LDA" "PCA_LDA_75"
 #           "/active_vision/policyTester/PCAcomponents" 0.75)
 

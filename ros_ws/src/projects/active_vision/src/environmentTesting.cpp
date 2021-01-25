@@ -766,8 +766,6 @@ int main (int argc, char** argv){
   ros::NodeHandle nh;
 
   environment activeVision(&nh);
-  activeVision.setPtCldNoise(0.5);
-  activeVision.viewsphereRad = 1;
   // Delay to ensure all publishers and subscribers are connected
   boost::this_thread::sleep(boost::posix_time::milliseconds(500));
 

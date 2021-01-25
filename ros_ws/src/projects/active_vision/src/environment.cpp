@@ -599,7 +599,7 @@ void environment::updateUnexploredPtCld(){
         projIndex = proj[1]*(ptrPtCldLast->width)+proj[0];
         // If the z value of unexplored pt is greater than the corresponding
         // projected point in Kinect Raw data then that point is occluded.
-        if(ptrPtCldLast->points[projIndex].z <= ptTemp[2]){
+        if(ptrPtCldLast->points[projIndex].z <= ptTemp[2]*0.99){
           occludedIndices->indices.push_back(i);
         }
       }

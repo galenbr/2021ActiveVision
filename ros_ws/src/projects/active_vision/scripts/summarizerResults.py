@@ -53,7 +53,7 @@ def genSummary(path,fileNames):
         # Extracting the unique objects
         objects = []
         for each in data:
-            obj = each[0]+"-"+each[1]+"-"+each[2]
+            obj = each[0]+"&"+each[1]+"&"+each[2]
             objects.append(obj)
         objects = list(dict.fromkeys(objects))
 
@@ -81,7 +81,7 @@ def genSummary(path,fileNames):
         stVec = file.split(":")[1]
 
         for each in data:
-            obj = each[0]+"-"+each[1]+"-"+each[2]
+            obj = each[0]+"&"+each[1]+"&"+each[2]
             keyPolicy = obj+"*"+policy
             keyStVec = obj+"*"+stVec
             nSteps = max(1,min((len(each)-14)/3-1,maxSteps+1))
@@ -147,7 +147,7 @@ def graphSummary(path,policyWise,policyWise2,stVecWise):
                 ax[0].plot(xAxis,temp[0:maxSteps+1]*100,color=graphColors[idx], marker=graphMarkers[idx], label = policy + " (" + str(avg) + ")")
                 idx = idx + 1
 
-        objDetails = keywords[0].split("-")
+        objDetails = keywords[0].split("&")
         titleStr = "{} : Roll - {} , Pitch - {} \n State Vec : {}".format(
                     objDetails[0],
                     str(int(round(np.degrees(float(objDetails[1])),0))),
@@ -193,7 +193,7 @@ def graphSummary(path,policyWise,policyWise2,stVecWise):
             ax[0].plot(xAxis,temp[0:maxSteps+1]*100,color=graphColors[idx], marker=graphMarkers[idx], label = stVec + " (" + str(avg) + ")")
             idx = idx + 1
 
-        objDetails = keywords[0].split("-")
+        objDetails = keywords[0].split("&")
         titleStr = "{} : Roll - {} , Pitch - {} \n Policy : {}".format(
                     objDetails[0],
                     str(int(round(np.degrees(float(objDetails[1])),0))),
@@ -243,7 +243,7 @@ def graphSummary(path,policyWise,policyWise2,stVecWise):
                     ax[0].plot(xAxis,temp[0:maxSteps+1]*100,color=graphColors[idx], marker=graphMarkers[idx], label = policy + " (" + str(avg) + ")")
                     idx = idx + 1
 
-            objDetails = keywords[0].split("-")
+            objDetails = keywords[0].split("&")
             titleStr = "{} : Roll - {} , Pitch - {}".format(
                         objDetails[0],
                         str(int(round(np.degrees(float(objDetails[1])),0))),
@@ -269,7 +269,7 @@ def graphSummary(path,policyWise,policyWise2,stVecWise):
     theta.append(0)
     for key, value in policyWise2.items():
         keywords = key.split("*")
-        objDetails = keywords[0].split("-")
+        objDetails = keywords[0].split("&")
 
         fig = plt.figure()
         fig.set_size_inches(5, 5)

@@ -15,7 +15,7 @@ void printRouteData(RouteData &in){
 	}
 }
 
-void saveData(RouteData &in, std::fstream &saveTo, std::string &dir){
+void saveData(RouteData &in, std::fstream &saveTo, std::string &dir, bool all){
 	// Saving with some blank spaces to add information later if needed
 	saveTo  << in.objType << ","
 			<< in.objPose[0] << "," << in.objPose[1] << "," << in.objPose[2] << ","
@@ -40,8 +40,10 @@ void saveData(RouteData &in, std::fstream &saveTo, std::string &dir){
 	}
 
 	ptCldColor::Ptr temp{new ptCldColor};
-	*temp = in.obj; 	savePointCloud(temp,dir,in.filename,1);
-	*temp = in.unexp; savePointCloud(temp,dir,in.filename,2);
+	if(all){
+		*temp = in.obj; 	savePointCloud(temp,dir,in.filename,1);
+		*temp = in.unexp; savePointCloud(temp,dir,in.filename,2);
+	}
 	*temp = in.env; 	savePointCloud(temp,dir,in.filename,3);
 }
 
