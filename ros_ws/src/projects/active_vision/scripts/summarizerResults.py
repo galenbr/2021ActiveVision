@@ -8,7 +8,7 @@ from summarizerDataCollected import readInput,fig2img,plots2jpg
 from toolViewPointCalc import findDirection
 from PIL import Image
 
-heuristicPolicies = ["Heuristic","3D Heuristic","Random","Brick"]
+heuristicPolicies = ["Heuristic","3D_Heuristic","Random","Brick"]
 maxSteps = 5
 
 graphColors =  ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
@@ -84,7 +84,7 @@ def genSummary(path,fileNames):
             obj = each[0]+"&"+each[1]+"&"+each[2]
             keyPolicy = obj+"*"+policy
             keyStVec = obj+"*"+stVec
-            nSteps = max(1,min((len(each)-14)/3-1,maxSteps+1))
+            nSteps = min((len(each)-14)/3-1,maxSteps+1)
             temp = calcStepsDir(each)
             if policy in heuristicPolicies:
                 policyWise[keyPolicy][nSteps] += 1

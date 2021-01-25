@@ -11,6 +11,7 @@ int runMode;
 int testAll;
 int maxSteps;
 int nSaved;
+int HAFstVecGridSize;
 
 void updateRouteData(environment &env, RouteData &data, bool save ,std::string name){
 	data.success = (env.selectedGrasp != -1);
@@ -66,7 +67,7 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 									kinectControl.objectDict[object].poses[objPoseCode][2],
 									objYaw*(M_PI/180.0)};
 	// printf("Starting first pass.\n");
-	singlePass(kinectControl, startPose, true, true);
+	singlePass(kinectControl, startPose, true, true, 2);
 	updateRouteData(kinectControl,home,true,"Home");
 	current = home;
 
@@ -127,7 +128,7 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
   			viewer->addText("Best direction calculated : " + std::to_string(maxIndex+1) + "(" + dirLookup[maxIndex+1] + ").\nPress any key to continue.",5,30,25,1,0,0,"Dir1",vp[0]);
       }else if(::runMode == 2){
 				static HAFStVec1 stVec;
-				stVec.setGridDim(5);
+				stVec.setGridDim(::HAFstVecGridSize);
 		    stVec.setMaintainScale(true);
 				*tempPtCldObj = *kinectControl.ptrPtCldObject;
 				*tempPtCldUnexp = *kinectControl.ptrPtCldUnexp;
@@ -196,7 +197,7 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 			if(prfID!=0){
 				printf("Direction modified from %d -> %d.\n", dirPref[0],dirPref[prfID]);
 			}
-			singlePass(kinectControl, nextPose, false, true);
+			singlePass(kinectControl, nextPose, false, true, 2);
 			updateRouteData(kinectControl,current,false,"dummy");
 			current.path.push_back(nextPose);
 			current.nSteps++;
@@ -257,6 +258,7 @@ int main(int argc, char** argv){
 	if(::mode < 1 && ::mode > 2) ::mode = 2;
 
 	nh.getParam("/active_vision/policyTester/maxSteps", ::maxSteps);
+	nh.getParam("/active_vision/policyTester/HAFstVecGridSize", ::HAFstVecGridSize);
 
   ::runMode = std::atoi(argv[1]);
 	if(::runMode < 0 && ::runMode > 2) ::runMode = 0;
