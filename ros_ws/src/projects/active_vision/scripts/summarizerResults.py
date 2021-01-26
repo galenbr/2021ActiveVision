@@ -7,8 +7,12 @@ from collections import OrderedDict
 from summarizerDataCollected import readInput,fig2img,plots2jpg
 from toolViewPointCalc import findDirection
 from PIL import Image
+import rospkg
 
-heuristicPolicies = ["Heuristic","3D Heuristic","Random","Brick"]
+baseDir = rospkg.RosPack().get_path('active_vision')
+BFSDir = baseDir+"/misc/BFS_Results/"
+BFSObjs = []
+heuristicPolicies = ["Heuristic","3D Heuristic","Random","Brick","BFS"]
 maxSteps = 5
 
 graphColors =  ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
@@ -18,7 +22,7 @@ def calcStepsDir(each):
     bin = [0]*maxSteps
     i = 14
     step = 1
-    while i < len(each)-3 and step <= 5:
+    while i < len(each)-3 and step <= 5 and each[i+3] != '':
         st = [float(each[i]),float(each[i+1]),float(each[i+2])]
         end = [float(each[i+3]),float(each[i+4]),float(each[i+5])]
         dir = findDirection(st,end)
@@ -30,6 +34,22 @@ def calcStepsDir(each):
         step += 1
     return bin
 
+def updateSummary(policyWise, policyWise2, obj):
+    if obj in BFSObjs:
+        pass
+    else:
+        BFSObjs.append(obj)
+        BFSData = readInput(BFSDir + "BFS_results.csv")
+        for each in BFSData:
+            obj2 = each[0]+"-"+each[1]+"-"+each[2]
+            if(obj==obj2):
+                keyPolicy = obj2+"*BFS"
+                nSteps = int(each[13])
+                temp = calcStepsDir(each)
+                policyWise[keyPolicy][nSteps] += 1
+                for step,dir in zip(range(len(temp)),temp):
+                    if dir != 0:
+                        policyWise2[keyPolicy][step][dir-1] += 1
 '''Read file and summarize information about differnt experiments.
 '''
 def genSummary(path,fileNames):
@@ -45,7 +65,8 @@ def genSummary(path,fileNames):
     policyWise = {}
     policyWise2 = {}
     stVecWise = {}
-    for file in fileNames:
+    for i in range(len(fileNames)):
+        file = fileNames[i]
         data = readInput(path+file)
         policy = file.split(":")[0]
         stVec = file.split(":")[1]
@@ -70,6 +91,8 @@ def genSummary(path,fileNames):
                     policyWise2[keyPolicy] = {}
                 policyWise[keyPolicy][stVec] = np.array(bins)
                 policyWise2[keyPolicy][stVec] = np.array(bin2)
+                policyWise[obj+"*BFS"] = np.array(bins)
+                policyWise2[obj+"*BFS"] = np.array(bin2)
                 if stVecWise.has_key(keyStVec) == False:
                     stVecWise[keyStVec] = {}
                 stVecWise[keyStVec][policy] = np.array(bins)
@@ -92,6 +115,7 @@ def genSummary(path,fileNames):
                     if dir != 0:
                         policyWise2[keyPolicy][step][dir-1] += 1
             else:
+                updateSummary(policyWise, policyWise2, obj)
                 policyWise[keyPolicy][stVec][nSteps] += 1
                 stVecWise[keyStVec][policy][nSteps] += 1
                 for step,dir in zip(range(len(temp)),temp):
@@ -110,6 +134,9 @@ def genSummary(path,fileNames):
     policyWise =  OrderedDict(sorted(policyWise.items()))
     policyWise2 =  OrderedDict(sorted(policyWise2.items()))
     stVecWise =  OrderedDict(sorted(stVecWise.items()))
+    print(policyWise)
+    print(policyWise2)
+    print(stVecWise)
     return policyWise,policyWise2,stVecWise
 
 #Generate a bar graph of the summary
@@ -326,15 +353,16 @@ def graphSummary(path,policyWise,policyWise2,stVecWise):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Incorrect number of arguments")
+        print("Incorrect number of arguments ", len(sys.argv))
         sys.exit()
 
     path = sys.argv[1]
+    print(BFSDir)
 
     reqCSVs = []
     for root,dirs,files in os.walk(path):
         for file in files:
-           if file.endswith(":dataRec.csv"):
+            if file.endswith(":dataRec.csv"):
                reqCSVs.append(file)
 
     policyWise,policyWise2,stVecWise = genSummary(path,reqCSVs)

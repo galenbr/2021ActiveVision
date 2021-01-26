@@ -23,8 +23,8 @@ src=$pkgPath"/dataCollected/trainingData/"
 csvDataRec='dataRec.csv'
 csvParams='parameters.csv'
 csvStorageSummary='storageSummary.csv'
-objectID=(3)
-nData=(1000)
+objectID=(5)
+nData=(100)
 
 now="$(date +'%Y/%m/%d %I:%M:%S')"
 printf "Started at yyyy/mm/dd hh:mm:ss format %s\n" "$now"
@@ -33,7 +33,7 @@ printf "Started at yyyy/mm/dd hh:mm:ss format %s\n" "$now"
 printf "Starting gazebo ...\n"
 gnome-terminal -- bash -c 'screen -d -R -S session-environment' & sleep 5
 # Starting the gazebo and loading the parameters
-screen -S session-environment -X stuff $'roslaunch active_vision workspace.launch visual:="OFF"\n'
+screen -S session-environment -X stuff $'roslaunch active_vision workspace.launch visual:="ON"\n'
 sleep 10
 
 # Collecting data
@@ -49,8 +49,14 @@ for ((i=0;i<${#objectID[@]};++i)); do
 		# Starting a screen and running dataCollector.cpp
 		printf "Collecting "${nData[i]}" data points for Object ID : "${objectID[i]}" ..."
 		gnome-terminal -- bash -c 'screen -d -R -S session-dataCollection' & sleep 5
-		# screen -S session-dataCollection -X stuff $'sleep 7\nexit\n' # Dummy line for debug
-		screen -S session-dataCollection -X stuff $'rosrun active_vision dataCollector\nexit\n'
+		# Dummy line for debug
+		# screen -S session-dataCollection -X stuff $'sleep 7\nexit\n' 
+
+		# Standard data collection
+		# screen -S session-dataCollection -X stuff $'rosrun active_vision dataCollector\nexit\n'
+
+		# BFS collection
+		screen -S session-dataCollection -X stuff $'rosrun active_vision dataCollector 1\nexit\n'
 
 		# Waiting till datacollection is over
 		screenOK="$(checkScreen session-dataCollection)"
