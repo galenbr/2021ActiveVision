@@ -33,6 +33,16 @@
 
     <node pkg="nodelet" type="nodelet" name="nodelet_manager" args="manager" />
 
-    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find realsense2_camera)/rviz/pointcloud.rviz" required="true" />
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find lock_key)/config/vision.rviz" required="true" />
   </group>
+
+  <!-- Starts PCL find_planes service server (Returns lock and key point clouds.) -->
+  <node pkg="lock_key" type="find_planes_node" name="find_clouds_server"/>
+  <!-- Start plane_finder_client (Calls find_planes, publishes point clouds, and sets lock/key parameters.) -->
+  <node pkg="lock_key" type="plane_finder_client.py" name="plane_finder_client"/>
+  <!-- Starts key_finder pub/sub node (Publishes key_point, lock_point, and finder_image.) -->
+  <node pkg="lock_key" type="key_finder_node.py" name="lock_and_key_points_node" output="screen"/>
+  <!-- Start lock_and_key_poses service server (Average 30 samples and convert to map frame) -->
+  <node pkg="lock_key" type="lockkey_finder_srv.py" name="lock_and_key_poses_server" output="screen"/>
+
 </launch>

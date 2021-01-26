@@ -7,7 +7,7 @@ std::map<int, std::string> dirLookup = {{0, "Nil"},
 																	 	    {7, "W"}, {8, "NW"}};
 
 void setupViewer(ptCldVis::Ptr viewer, int nVps, std::vector<int> &vp){
-  if(nVps < 1 || nVps > 4) nVps = 1;
+  if(!(nVps==1 || nVps==2 || nVps==3 || nVps==4 || nVps==9)) nVps = 1;
   viewer->initCameraParameters();
   vp.clear(); vp.resize(nVps);
   switch(nVps){
@@ -28,6 +28,19 @@ void setupViewer(ptCldVis::Ptr viewer, int nVps, std::vector<int> &vp){
       viewer->createViewPort(0.5,0.5,1.0,1.0,vp[1]);
       viewer->createViewPort(0.0,0.0,0.5,0.5,vp[2]);
       viewer->createViewPort(0.5,0.0,1.0,0.5,vp[3]);
+      break;
+    case 9:
+      viewer->createViewPort(0.00,0.00,0.33,0.33,vp[6]); viewer->createViewPortCamera(vp[6]);
+      viewer->createViewPort(0.33,0.00,0.66,0.33,vp[5]); viewer->createViewPortCamera(vp[5]);
+      viewer->createViewPort(0.66,0.00,1.00,0.33,vp[4]); viewer->createViewPortCamera(vp[4]);
+
+      viewer->createViewPort(0.00,0.33,0.33,0.66,vp[7]); viewer->createViewPortCamera(vp[7]);
+      viewer->createViewPort(0.33,0.33,0.66,0.66,vp[0]); viewer->createViewPortCamera(vp[0]);
+      viewer->createViewPort(0.66,0.33,1.00,0.66,vp[3]); viewer->createViewPortCamera(vp[3]);
+
+      viewer->createViewPort(0.00,0.66,0.33,1.00,vp[8]); viewer->createViewPortCamera(vp[8]);
+      viewer->createViewPort(0.33,0.66,0.66,1.00,vp[1]); viewer->createViewPortCamera(vp[1]);
+      viewer->createViewPort(0.66,0.66,1.00,1.00,vp[2]); viewer->createViewPortCamera(vp[2]);
       break;
   }
   for(int i = 0; i < nVps; i++){
@@ -60,6 +73,15 @@ void setCamView(ptCldVis::Ptr viewer, std::vector<double> pose, pcl::PointXYZ &c
   temp.y = centre.y+pose[0]*sin(pose[2])*sin(pose[1]);
   temp.z = centre.z+pose[0]*cos(pose[2]);
 	viewer->setCameraPosition(temp.x,temp.y,temp.z,centre.x,centre.y,centre.z,0,0,1);
+}
+
+void setCamView(ptCldVis::Ptr viewer, std::vector<double> pose, pcl::PointXYZ &centre, int vp){
+	pose[0]*=1.5;
+	pcl::PointXYZ temp;
+  temp.x = centre.x+pose[0]*sin(pose[2])*cos(pose[1]);
+  temp.y = centre.y+pose[0]*sin(pose[2])*sin(pose[1]);
+  temp.z = centre.z+pose[0]*cos(pose[2]);
+	viewer->setCameraPosition(temp.x,temp.y,temp.z,centre.x,centre.y,centre.z,0,0,1,vp);
 }
 
 void addViewsphere(ptCldVis::Ptr viewer, int vp, pcl::PointXYZ centre, double &rad, bool all){

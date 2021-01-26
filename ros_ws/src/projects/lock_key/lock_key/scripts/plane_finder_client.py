@@ -11,11 +11,12 @@ class CloudClient:
     '''Calls Find Planes Service.'''
     def __init__(self):
         self.pc2_sub=rospy.Subscriber('/camera/depth/color/points',
-                                      PointCloud2,self.pc2_callback)
+                                      PointCloud2,self.pc2_callback,
+                                      queue_size=1)
         self.key_cloud_pub = rospy.Publisher('key_cloud', PointCloud2, 
-                                            queue_size=10)
+                                            queue_size=1)
         self.lock_cloud_pub = rospy.Publisher('lock_cloud', PointCloud2, 
-                                            queue_size=10)
+                                            queue_size=1)
         rospy.loginfo('Running plane finder client.')
 
     def call_find_planes(self,pc2_msg):

@@ -65,7 +65,7 @@ add_executable(owi_freq_node src/freq_check.cpp)
 add_dependencies(owi_freq_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(owi_freq_node ${catkin_LIBRARIES})
 
-add_executable(owi_freq_record_node src/record_angular_vel.cpp)
+add_executable(owi_freq_record_node src/record_data.cpp)
 add_dependencies(owi_freq_record_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(owi_freq_record_node ${catkin_LIBRARIES})
 

@@ -37,15 +37,17 @@ class NavigateToKey(smach.State):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
     def execute(self, userdata):
         rospy.loginfo('Navigating to Key...')
-        move_to_position(0.3,0.1,0.5,pi,0.0,0.0)
+        move_to_position(0.4,-0.2,0.25,-pi/2,pi/4,0.0)
+        rospy.sleep(4.0)
         return 'succeeded'
 
 class NavigateToLock(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes=['succeeded','failed'])
+        smach.State.__init__(self, outcomes=['succeeded'])
     def execute(self, userdata):
         rospy.loginfo('Navigating to Lock...')
-        move_to_position(0.3,-0.1,0.6,pi,0.0,0.0)
+        move_to_position(0.3,0.0,0.59,pi,0.0,-0.7854)
+        rospy.sleep(4.0)
         return 'succeeded'
 
 def main():
@@ -61,8 +63,7 @@ def main():
 	                           transitions={'succeeded':'NavigateToLock',  
 	                                        'failed':'NavigateToKey'})
 	    smach.StateMachine.add('NavigateToLock', NavigateToLock(), 
-	                           transitions={'succeeded':'complete', 
-	                                        'failed':'NavigateToLock'})
+	                           transitions={'succeeded':'complete'})
 
 	# Execute the state machine
 	outcome = sm.execute()

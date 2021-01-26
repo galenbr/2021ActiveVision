@@ -11,12 +11,14 @@
 #include "std_msgs/Bool.h"
 
 std_msgs::Float32 w1;
-std_msgs::Float64 pwm1;
+geometry_msgs::Point pwm;
 sensor_msgs::Image img;
 geometry_msgs::Point pose;
 std_msgs::Bool flag;
 std_msgs::Float64 action_msg;
 geometry_msgs::Point base_px;
+geometry_msgs::Point ee_px;
+geometry_msgs::Point elbow_px;
 
 void flagCheck(const std_msgs::Bool &msg){
     flag.data = msg.data;
@@ -36,7 +38,8 @@ void rec_vel(const std_msgs::Float32 &msg){
 }
 
 void rec_pwm(const std_msgs::Float64MultiArray &msg){
-    pwm1.data = msg.data.at(0);
+    pwm.x = msg.data.at(0);
+    pwm.y = msg.data.at(1);
 }
 
 void rec_action(const std_msgs::Float64 &msg){
@@ -55,6 +58,16 @@ void shut_down(const std_msgs::Float64 &msg){
     }
 }
 
+void rec_ee(const geometry_msgs::PointStamped &msg){
+    ee_px.x = msg.point.x;
+    ee_px.y = msg.point.y;
+}
+
+void rec_elbow(const geometry_msgs::PointStamped &msg){
+    elbow_px.x = msg.point.x;
+    elbow_px.y = msg.point.y;
+}
+
 int main(int argc, char** argv){
 
     rosbag::Bag bag;
@@ -63,13 +76,15 @@ int main(int argc, char** argv){
     ros::init(argc, argv, "record_freq");
     ros::NodeHandle n;
 
-    ros::Subscriber sub1 = n.subscribe("angular_vel",1,rec_vel);
+    // ros::Subscriber sub1 = n.subscribe("angular_vel",1,rec_vel);
+    // ros::Subscriber sub6 = n.subscribe("action",1,rec_action);
     ros::Subscriber sub2 = n.subscribe("pwm",1,rec_pwm);
     ros::Subscriber sub3 = n.subscribe("usb_cam/image_raw",1,rec_img);
     ros::Subscriber sub4 = n.subscribe("aruco_simple/pixel3",1,rec_pos);
     ros::Subscriber sub5 = n.subscribe("newFrame",1,flagCheck);
-    ros::Subscriber sub6 = n.subscribe("action",1,rec_action);
     ros::Subscriber sub7 = n.subscribe("aruco_simple/pixel",1,rec_base);
+    ros::Subscriber sub8 = n.subscribe("aruco_simple/pixel2",1,rec_ee);
+    ros::Subscriber sub9 = n.subscribe("aruco_simple/pixel4",1,rec_elbow);
 
     ros::Subscriber shutdown_sub = n.subscribe("shutdown",1,shut_down);
 
@@ -77,22 +92,21 @@ int main(int argc, char** argv){
     while(ros::ok()){
         ros::spinOnce();
         ros::Time t = ros::Time::now();
-        bag.write("angular_vel", t, w1);
-        bag.write("pwm", t, pwm1);
+        // bag.write("angular_vel", t, w1);
+        // bag.write("action", t, action_msg);
+        bag.write("pwm", t, pwm);
         bag.write("pixel3", t,pose);
         bag.write("image", t, img);
         bag.write("newFrame", t,flag);
-        bag.write("action", t, action_msg);
         bag.write("base_pos",t, base_px);
+        bag.write("end_effector",t,ee_px);
+        bag.write("pixel4",t,elbow_px);
 
-        // ros::spinOnce();
         r.sleep();
     }
 
     bag.close();
 
     ros::spin();
-
-
     return 0;
 }

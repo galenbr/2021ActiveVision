@@ -2,5 +2,6 @@ sensor_msgs/PointCloud2 object
 sensor_msgs/PointCloud2 unexplored
 std_msgs/Float64MultiArray path
 int64 mode
+int64 minPtsVis
 ---
 int64 direction

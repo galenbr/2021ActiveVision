@@ -164,18 +164,42 @@ void testDataExtract(environment &av, int objID, int flag){
 
   av.dataExtract();
 
+  ptCldNormal::Ptr normal{new ptCldNormal};
+  pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;  // Normal Estimation
+  pcl::search::Search<pcl::PointXYZRGB>::Ptr KdTree{new pcl::search::KdTree<pcl::PointXYZRGB>};
+  ne.setInputCloud(av.cPtrPtCldObject);
+  ne.setSearchMethod(KdTree);
+  ne.setKSearch(10);
+  ne.compute(*normal);
+
   if(flag==1){
     // Setting up the point cloud visualizer
     ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer")); std::vector<int> vp;
     setupViewer(viewer, 2, vp);
     viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
 
+    // addRGBN(viewer,av.cPtrPtCldObject,normal,"Object",vp[1]);
+    std::cout << "Showing the table and object extacted. Close viewer to continue" << std::endl;
+    std::vector<float> curvatures = {};
+    for(int i = 0; i < av.cPtrPtCldObject->points.size(); i++) curvatures.push_back(normal->points[i].curvature);
+    std::sort(curvatures.begin(), curvatures.end());
+    float avgCurvature = std::accumulate(curvatures.begin(), curvatures.end(), 0.0)/av.cPtrPtCldObject->points.size();
+    float minCurvature = *std::min_element(curvatures.begin(), curvatures.end());
+    float maxCurvature = *std::max_element(curvatures.begin(), curvatures.end());
+    // std::cout << minCurvature << "," << avgCurvature << "," << maxCurvature << "," << std::endl;
+
+    for(int i = 0; i < av.cPtrPtCldObject->points.size(); i++){
+      if(normal->points[i].curvature > 2*avgCurvature) continue;
+      av.ptrPtCldObject->points[i].r = 0;
+      av.ptrPtCldObject->points[i].g = 255;
+      av.ptrPtCldObject->points[i].b = 0;
+    }
+
     // ADding the point clouds
     addRGB(viewer,av.cPtrPtCldTable,"Table",vp[0]);
     addRGB(viewer,av.cPtrPtCldObject,"Object",vp[1]);
-    std::cout << "Showing the table and object extacted. Close viewer to continue" << std::endl;
 
-    while (!viewer->wasStopped ()){
+    while(!viewer->wasStopped()){
       viewer->spinOnce(100);
       boost::this_thread::sleep (boost::posix_time::microseconds(100000));
     }
@@ -766,8 +790,6 @@ int main (int argc, char** argv){
   ros::NodeHandle nh;
 
   environment activeVision(&nh);
-  activeVision.setPtCldNoise(0.5);
-  activeVision.viewsphereRad = 1;
   // Delay to ensure all publishers and subscribers are connected
   boost::this_thread::sleep(boost::posix_time::milliseconds(500));
 

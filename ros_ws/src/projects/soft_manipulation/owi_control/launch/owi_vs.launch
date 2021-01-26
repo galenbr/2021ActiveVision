@@ -17,7 +17,7 @@
 <node name = "owi_trajectory_plotter" pkg="owi_control" type="owi_trajectory_node"/>
 
 <!-- Record Node -->
-
+<node name ="record_data_node" pkg="owi_control" type="owi_freq_record_node" output="screen" />
 <!-- ROSSERIAL -->
 <!-- <node name="serial_node" pkg="rosserial_python" type="serial_node.py">
 <param name="port" type="string" value="/dev/ttyACM0"/>

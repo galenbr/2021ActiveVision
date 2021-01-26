@@ -11,6 +11,7 @@ int runMode;
 int testAll;
 int maxSteps;
 int nSaved;
+int HAFstVecGridSize;
 
 void updateRouteData(environment &env, RouteData &data, bool save ,std::string name){
 	data.success = (env.selectedGrasp != -1);
@@ -51,7 +52,7 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 	std::vector<double> nextPose;
 	RouteData home, current;
 
-	printf("*** Obj #%d : Pose #%d with Yaw %d ***\n",object,objPoseCode,objYaw);
+	// printf("*** Obj #%d : Pose #%d with Yaw %d ***\n",object,objPoseCode,objYaw);
 
 	kinectControl.moveObject(object,objPoseCode,objYaw*(M_PI/180.0));
 
@@ -66,7 +67,8 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 									kinectControl.objectDict[object].poses[objPoseCode][2],
 									objYaw*(M_PI/180.0)};
 	// printf("Starting first pass.\n");
-	singlePass(kinectControl, startPose, true, true);
+	singlePass(kinectControl, startPose, true, true, 2);
+	int minPtsVis = 0.025*(3*kinectControl.ptrPtCldObject->points.size()); // Only for 3D Heuristic
 	updateRouteData(kinectControl,home,true,"Home");
 	current = home;
 
@@ -107,7 +109,7 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 		int maxIndex = 0;
 		if(current.success == true){
 			current.filename = getCurTime()+"_"+std::to_string(::nSaved);
-			saveData(current, fout, dir);
+			saveData(current, fout, dir, false);
 			::nSaved++;
 			viewer->addText("GRASP FOUND. Saving and exiting.",4,5,25,1,0,0,"Dir1",vp[0]);
 		}else{
@@ -122,12 +124,13 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
           srv.request.path.data.push_back(current.path[i][2]);
         }
         srv.request.mode = ::mode;
+				srv.request.minPtsVis = minPtsVis; // Only used for 3D Heuristic
         policy.call(srv);
   			maxIndex = srv.response.direction;
   			viewer->addText("Best direction calculated : " + std::to_string(maxIndex+1) + "(" + dirLookup[maxIndex+1] + ").\nPress any key to continue.",5,30,25,1,0,0,"Dir1",vp[0]);
       }else if(::runMode == 2){
 				static HAFStVec1 stVec;
-				stVec.setGridDim(5);
+				stVec.setGridDim(::HAFstVecGridSize);
 		    stVec.setMaintainScale(true);
 				*tempPtCldObj = *kinectControl.ptrPtCldObject;
 				*tempPtCldUnexp = *kinectControl.ptrPtCldUnexp;
@@ -196,7 +199,7 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 			if(prfID!=0){
 				printf("Direction modified from %d -> %d.\n", dirPref[0],dirPref[prfID]);
 			}
-			singlePass(kinectControl, nextPose, false, true);
+			singlePass(kinectControl, nextPose, false, true, 2);
 			updateRouteData(kinectControl,current,false,"dummy");
 			current.path.push_back(nextPose);
 			current.nSteps++;
@@ -223,8 +226,6 @@ int main(int argc, char** argv){
  	ros::NodeHandle nh;
   ros::ServiceClient policy;
  	environment kinectControl(&nh); sleep(1);
-	kinectControl.setPtCldNoise(0.5);
-	kinectControl.viewsphereRad = 1.0;
   kinectControl.loadGripper();
 
 	bool relativePath; nh.getParam("/active_vision/policyTester/relative_path", relativePath);
@@ -259,6 +260,7 @@ int main(int argc, char** argv){
 	if(::mode < 1 && ::mode > 2) ::mode = 2;
 
 	nh.getParam("/active_vision/policyTester/maxSteps", ::maxSteps);
+	nh.getParam("/active_vision/policyTester/HAFstVecGridSize", ::HAFstVecGridSize);
 
   ::runMode = std::atoi(argv[1]);
 	if(::runMode < 0 && ::runMode > 2) ::runMode = 0;
@@ -323,6 +325,7 @@ int main(int argc, char** argv){
 
 			// Checking for the uniform steps
 			for(int objYaw = kinectControl.objectDict[objID].poses[objPoseCode][3]; objYaw < kinectControl.objectDict[objID].poses[objPoseCode][4]; objYaw+=uniformYawStepSize){
+				printf("%d - Obj #%d, Pose #%d, Yaw %d ***\n",nDataPoints-tempNDataPoints+1,objID,objPoseCode,objYaw);
 				findGrasp(kinectControl, objID, objPoseCode, objYaw, dir, csvName, viewer, policy);
 				tempNDataPoints--;
 			}
@@ -334,6 +337,7 @@ int main(int argc, char** argv){
 
 			// Checking for the random steps
 			for(int ctr = 0; ctr < yawAngleDict[key].size() && tempNDataPoints > 0; ctr++){
+				printf("%d - Obj #%d, Pose #%d, Yaw %d ***\n",nDataPoints-tempNDataPoints+1,objID,objPoseCode,yawAngleDict[key][ctr]);
 				findGrasp(kinectControl, objID, objPoseCode, yawAngleDict[key][ctr], dir, csvName, viewer, policy);
 				tempNDataPoints--;
 			}

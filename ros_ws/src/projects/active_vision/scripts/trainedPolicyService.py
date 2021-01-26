@@ -37,12 +37,12 @@ if __name__ == "__main__":
     # State vector location
     csvStVecDir = rospkg.RosPack().get_path('active_vision') + rospy.get_param("/active_vision/policyTester/csvStVecDir")
     csvStVec = rospy.get_param("/active_vision/policyTester/csvStVec")
-    HAFstVecDim = rospy.get_param("/active_vision/policyTester/HAFstVecDim")
+    HAFstVecGridSize = rospy.get_param("/active_vision/policyTester/HAFstVecGridSize")
 
     # stateVec=List of all raw states
     # dirVec=List of the direction taken for each state
     # directions=N(1),NE(2),E(3),SE(4),S(5),SW(6),W(7),NW(8)
-    stateVec, dirVec = TP.readHAFStVec(csvStVecDir+csvStVec, HAFstVecDim)
+    stateVec, dirVec = TP.readHAFStVec(csvStVecDir+csvStVec, (pow(HAFstVecGridSize,2)*2)+2)
     dirVec = dirVec.ravel()
 
     if type == "PCA_LDA_LR":

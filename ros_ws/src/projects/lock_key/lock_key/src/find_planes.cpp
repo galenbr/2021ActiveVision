@@ -27,7 +27,7 @@ bool plane_service_callback(lock_key_msgs::FindPlanes::Request &req, lock_key_ms
     // Convert sensor_msgs to pcl pointcloud2
     // TO DO: Put in a function
     pcl::PCLPointCloud2::Ptr pcl_pc2 (new pcl::PCLPointCloud2 ());
-    std::string frameID = "/camera_color_optical_frame"; //camera_color_optical_frame
+    std::string frameID = "/camera_depth_optical_frame"; //camera_color_optical_frame
     pcl_conversions::toPCL(req.pc2, *pcl_pc2);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::fromPCLPointCloud2(*pcl_pc2, *cloud);
