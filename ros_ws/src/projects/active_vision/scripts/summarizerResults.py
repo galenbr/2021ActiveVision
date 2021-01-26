@@ -12,7 +12,7 @@ import rospkg
 baseDir = rospkg.RosPack().get_path('active_vision')
 BFSDir = baseDir+"/misc/BFS_Results/"
 BFSObjs = []
-heuristicPolicies = ["Heuristic","3D Heuristic","Random","Brick","BFS"]
+heuristicPolicies = ["Heuristic","3D_Heuristic","Random","Brick","BFS"]
 maxSteps = 5
 
 graphColors =  ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
@@ -41,7 +41,7 @@ def updateSummary(policyWise, policyWise2, obj):
         BFSObjs.append(obj)
         BFSData = readInput(BFSDir + "BFS_results.csv")
         for each in BFSData:
-            obj2 = each[0]+"-"+each[1]+"-"+each[2]
+            obj2 = each[0]+"&"+each[1]+"&"+each[2]
             if(obj==obj2):
                 keyPolicy = obj2+"*BFS"
                 nSteps = int(each[13])
@@ -50,6 +50,7 @@ def updateSummary(policyWise, policyWise2, obj):
                 for step,dir in zip(range(len(temp)),temp):
                     if dir != 0:
                         policyWise2[keyPolicy][step][dir-1] += 1
+
 '''Read file and summarize information about differnt experiments.
 '''
 def genSummary(path,fileNames):
