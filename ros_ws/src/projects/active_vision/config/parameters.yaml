@@ -38,8 +38,8 @@ environment: {
     tableCentre: [1.5,0,1],       # Co-ordinates of table centre
     fingerZOffset: 0.0584,        # Z axis offset between gripper hand and finger
     viewsphereRad: 1,
-    voxelGridSize: 0.01,          # Voxel Grid size for environment
-    voxelGridSizeUnexp: 0.01,     # Voxel Grid size for unexplored point cloud
+    voxelGridSize: 0.008,          # Voxel Grid size for environment
+    voxelGridSizeUnexp: 0.008,     # Voxel Grid size for unexplored point cloud
     scale: 3,                     # Scale value for unexplored point cloud generation
     maxGripperWidth: 0.08,        # Gripper max width
     minGraspQuality: 150,         # Min grasp quality threshold

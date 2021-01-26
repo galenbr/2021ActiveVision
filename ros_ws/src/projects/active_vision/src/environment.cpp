@@ -630,8 +630,7 @@ void environment::graspsynthesis(){
   pcl::search::Search<pcl::PointXYZRGB>::Ptr KdTree{new pcl::search::KdTree<pcl::PointXYZRGB>};
   ne.setInputCloud(cPtrPtCldObject);
   ne.setSearchMethod(KdTree);
-  // ne.setKSearch(10);
-  ne.setRadiusSearch(voxelGridSize*2);
+  ne.setKSearch(10);
   ne.compute(*ptrObjNormal);
 
   graspsPossible.clear();   // Clear the vector
@@ -652,8 +651,8 @@ void environment::graspsynthesis(){
   centroidObj.x = temp1[0]; centroidObj.y = temp1[1]; centroidObj.z = temp1[2];
   // Using brute force search
   // Checking for each pair of points (alternate points skipped to speedup the process)
-  for(int i = 0; i < ptrPtCldObject->size()-1; i=i+2){
-    for(int j = i+1; j < ptrPtCldObject->size(); j=j+2){
+  for(int i = 0; i < ptrPtCldObject->size()-1; i++){
+    for(int j = i+1; j < ptrPtCldObject->size(); j++){
       graspTemp.p1 = ptrPtCldObject->points[i];
       graspTemp.p2 = ptrPtCldObject->points[j];
 
@@ -661,7 +660,7 @@ void environment::graspsynthesis(){
       if(graspTemp.p1.z <= tableCentre[2]+0.01 || graspTemp.p2.z <= tableCentre[2]+0.01) continue;
 
       // Curvature check : If any one point is greater than average curvature then skip
-      if(graspCurvatureConstraint && (ptrObjNormal->points[i].curvature > avgCurvature || ptrObjNormal->points[j].curvature > avgCurvature)) continue;
+      if(graspCurvatureConstraint && (ptrObjNormal->points[i].curvature > 2*avgCurvature || ptrObjNormal->points[j].curvature > 2*avgCurvature)) continue;
 
       // Vector connecting the two grasp points and its distance
       vectA = graspTemp.p1.getVector3fMap() - graspTemp.p2.getVector3fMap();
@@ -707,7 +706,7 @@ void environment::graspsynthesis(){
     }
 
     // Curvature check : If any one point is greater than average curvature then skip
-    if(graspCurvatureConstraint && ptrObjNormal->points[i].curvature > avgCurvature) continue;
+    if(graspCurvatureConstraint && ptrObjNormal->points[i].curvature > 2*avgCurvature) continue;
 
     graspTemp.p1 = ptrPtCldObject->points[i];
     // Translating it along the +ve normal vector
@@ -820,8 +819,7 @@ int environment::graspAndCollisionCheck(){
   pcl::search::Search<pcl::PointXYZRGB>::Ptr KdTree{new pcl::search::KdTree<pcl::PointXYZRGB>};
   ne.setInputCloud(cPtrPtCldObject);
   ne.setSearchMethod(KdTree);
-  // ne.setKSearch(10);
-  ne.setRadiusSearch(voxelGridSize*2);
+  ne.setKSearch(10);
   ne.compute(*ptrObjNormal);
 
   graspsPossible.clear();   // Clear the vector
@@ -853,7 +851,7 @@ int environment::graspAndCollisionCheck(){
       if(graspTemp.p1.z <= tableCentre[2]+0.01 || graspTemp.p2.z <= tableCentre[2]+0.01) continue;
 
       // Curvature check : If any one point is greater than average curvature then skip
-      if(graspCurvatureConstraint && (ptrObjNormal->points[i].curvature > avgCurvature || ptrObjNormal->points[j].curvature > avgCurvature)) continue;
+      if(graspCurvatureConstraint && (ptrObjNormal->points[i].curvature > 2*avgCurvature || ptrObjNormal->points[j].curvature > 2*avgCurvature)) continue;
 
       // Vector connecting the two grasp points and its distance
       vectA = graspTemp.p1.getVector3fMap() - graspTemp.p2.getVector3fMap();
@@ -909,7 +907,7 @@ int environment::graspAndCollisionCheck(){
     }
 
     // Curvature check : If any one point is greater than average curvature then skip
-    if(graspCurvatureConstraint && ptrObjNormal->points[i].curvature > avgCurvature) continue;
+    if(graspCurvatureConstraint && ptrObjNormal->points[i].curvature > 2*avgCurvature) continue;
 
     graspTemp.p1 = ptrPtCldObject->points[i];
     // Translating it along the +ve normal vector

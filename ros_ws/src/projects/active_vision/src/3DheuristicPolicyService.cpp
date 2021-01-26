@@ -5,6 +5,8 @@
 // #include <pcl/filters/voxel_grid_occlusion_estimation.h>
 #include <set>
 
+float voxelGridSize;
+
 Eigen::Affine3f tfKinect(std::vector<double> &pose){
   std::vector<double> cartesian = {0,0,0,0,0,0};
   cartesian[0] = 1.5+pose[0]*sin(pose[2])*cos(pose[1]);
@@ -176,8 +178,7 @@ std::set<int> findVisibleUsefulUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr useful
 
   // float coneAngle = calcConeAngle(pose[1],pose[2]);
 
-  float gridDim = 0.01;
-  float radius = gridDim/sqrt(2)*1.1;
+  float radius = ::voxelGridSize/sqrt(2)*1.1;
   pcl::PointXYZRGB min,max;
   min.y = -radius;  max.y = radius;
   min.z = -radius;  max.z = radius;
@@ -220,7 +221,7 @@ std::set<int> findVisibleUsefulUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr useful
       float disI = pcl::euclideanDistance(cam,tempUsefulUnexp->points[i]);
       float disJ = pcl::euclideanDistance(cam,tempUsefulUnexp->points[j]);
       // J in in front of I
-      if(disJ < disI)  notOccluded = unexpCheckIfNotOccluded(tempUsefulUnexp->points[i],tempUsefulUnexp->points[j],gridDim);
+      if(disJ < disI)  notOccluded = unexpCheckIfNotOccluded(tempUsefulUnexp->points[i],tempUsefulUnexp->points[j],::voxelGridSize);
       if(!notOccluded) break;
     }
     if(notOccluded) finalIndices.insert(i);
@@ -229,8 +230,8 @@ std::set<int> findVisibleUsefulUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr useful
   return finalIndices;
 }
 
-// int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double> &pose, int mode, ptCldVis::Ptr viewer){
-int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double> &pose, int mode){
+// int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double> &pose, int mode, int minVis, ptCldVis::Ptr viewer){
+int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double> &pose, int mode, int minVis){
 
   ptCldColor::Ptr usefulUnexp{new ptCldColor};
   extractUsefulUnexpPts(obj,unexp,usefulUnexp);
@@ -252,7 +253,7 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
   for(int i = 0 ; i < 8; i++) res[i] = indices[i].size();
   maxRes = *std::max_element(res.begin(), res.end());
 
-  if(maxRes < obj->points.size()/4){
+  if(maxRes < minVis){
     // std::cout << "Two Check" << std::endl;
     threshold = 80;
     for(int i = 1 ; i <= 8; i++){
@@ -269,7 +270,7 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
     maxRes = *std::max_element(res.begin(), res.end());
   }
 
-  if(maxRes < obj->points.size()/4){
+  if(maxRes < minVis){
     // std::cout << "Three Check" << std::endl;
     threshold = 85;
     for(int i = 1 ; i <= 8; i++){
@@ -374,9 +375,7 @@ bool heuristicPolicy(active_vision::heuristicPolicySRV::Request  &req,
   }
   mode = req.mode;
 
-  // ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
-  // res.direction = findDirection(obj,unexp,path.back(),mode,viewer)-1;
-  res.direction = findDirection(obj,unexp,path.back(),mode)-1;
+  res.direction = findDirection(obj,unexp,path.back(),mode,req.minPtsVis)-1;
 
   ROS_INFO_STREAM("Heuristic Policy Service Called. Direction -> "<< dirLookup[res.direction+1]);
 
@@ -387,6 +386,7 @@ int main(int argc, char** argv){
 	ros::init(argc, argv, "HeuristicPolicyServer");
 
  	ros::NodeHandle nh;
+  nh.getParam("/active_vision/environment/voxelGridSize", ::voxelGridSize);
   ros::ServiceServer service = nh.advertiseService("/active_vision/heuristic_policy", heuristicPolicy);
   ROS_INFO("3D Heuristic policy service ready.");
   ros::spin();
@@ -397,10 +397,8 @@ int main(int argc, char** argv){
 //   // Initialize ROS
 //   ros::init(argc, argv, "Test");
 //   ros::NodeHandle nh;
-//
+//   nh.getParam("/active_vision/environment/voxelGridSize", ::voxelGridSize);
 //   environment activeVision(&nh);
-//   activeVision.setPtCldNoise(0);
-//   activeVision.viewsphereRad = 1;
 //
 //   // 4 kinect position to capture and fuse
 //   std::vector<std::vector<double>> kinectPoses = {{1.0,M_PI,M_PI/4},
@@ -422,28 +420,20 @@ int main(int argc, char** argv){
 //   int dir;
 //   std::vector<double> newPose = kinectPoses[0];
 //   activeVision.spawnObject(objID,pose,yaw*M_PI/180);
-//   activeVision.moveKinectViewsphere(kinectPoses[0]);
-//   activeVision.readKinect();
-//   activeVision.fuseLastData();
-//   activeVision.dataExtract();
-//   activeVision.genUnexploredPtCld();
-//   activeVision.updateUnexploredPtCld();
-//   activeVision.graspAndCollisionCheck();
+//
+//   singlePass(activeVision,newPose,true,true,2);
+//   int minPtsVis = 0.025*(3*activeVision.ptrPtCldObject->points.size());
 //
 //   ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
 //   int nSteps = 0;
 //   while(activeVision.selectedGrasp == -1 && nSteps <= 5){
-//    dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,newPose,2);
-//    // dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,newPose,2,viewer);
+//     dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,newPose,2,minPtsVis,viewer);
+//     // dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,newPose,2,minPtsVis);
 //     std::cout << "Direction selected : " << dir << std::endl;
 //
 //     newPose = calcExplorationPose(newPose,dir,2);
-//     activeVision.moveKinectViewsphere(newPose); nSteps++;
-//     activeVision.readKinect();
-//     activeVision.fuseLastData();
-//     activeVision.dataExtract();
-//     activeVision.updateUnexploredPtCld();
-//     activeVision.graspAndCollisionCheck();
+//     singlePass(activeVision,newPose,false,true,2);
+//     nSteps++;
 //   }
 //
 //   activeVision.deleteObject(objID);

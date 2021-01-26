@@ -169,12 +169,8 @@ void testDataExtract(environment &av, int objID, int flag){
   pcl::search::Search<pcl::PointXYZRGB>::Ptr KdTree{new pcl::search::KdTree<pcl::PointXYZRGB>};
   ne.setInputCloud(av.cPtrPtCldObject);
   ne.setSearchMethod(KdTree);
-  // ne.setKSearch(10);
-  ne.setRadiusSearch(0.01*2);
+  ne.setKSearch(10);
   ne.compute(*normal);
-
-  // pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr xyzRgbNormal(new pcl::PointCloud<pcl::PointXYZRGBNormal>);
-  // pcl::concatenateFields(*av.cPtrPtCldObject, *normal, *xyzRgbNormal);
 
   if(flag==1){
     // Setting up the point cloud visualizer
@@ -186,13 +182,14 @@ void testDataExtract(environment &av, int objID, int flag){
     std::cout << "Showing the table and object extacted. Close viewer to continue" << std::endl;
     std::vector<float> curvatures = {};
     for(int i = 0; i < av.cPtrPtCldObject->points.size(); i++) curvatures.push_back(normal->points[i].curvature);
+    std::sort(curvatures.begin(), curvatures.end());
     float avgCurvature = std::accumulate(curvatures.begin(), curvatures.end(), 0.0)/av.cPtrPtCldObject->points.size();
     float minCurvature = *std::min_element(curvatures.begin(), curvatures.end());
     float maxCurvature = *std::max_element(curvatures.begin(), curvatures.end());
-    std::cout << minCurvature << "," << avgCurvature << "," << maxCurvature << std::endl;
+    // std::cout << minCurvature << "," << avgCurvature << "," << maxCurvature << "," << std::endl;
 
     for(int i = 0; i < av.cPtrPtCldObject->points.size(); i++){
-      if(normal->points[i].curvature > avgCurvature) continue;
+      if(normal->points[i].curvature > 2*avgCurvature) continue;
       av.ptrPtCldObject->points[i].r = 0;
       av.ptrPtCldObject->points[i].g = 255;
       av.ptrPtCldObject->points[i].b = 0;
