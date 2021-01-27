@@ -58,7 +58,7 @@ def get_poses(req):
 			lock_response.header=h
 			#Transform msgs to map frame
 			transformer=tf.TransformListener()
-			transformer.waitForTransform(h.frame_id, "map", rospy.Time.now(), rospy.Duration(5.0))
+			transformer.waitForTransform(h.frame_id, "map", rospy.Time(0), rospy.Duration(5.0))
 			key_response=transformer.transformPoint('map',key_response)
 			lock_response=transformer.transformPoint('map',lock_response)
 			#Define response
