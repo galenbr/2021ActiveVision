@@ -95,39 +95,9 @@ void get_cur_pose(const geometry_msgs::PointStamped &msg){
         shutdown_pub.publish(shutdown_msg);
     }
     else{
-        // count += 1;
-        // printf("Shutting down!\n");
-        
-        // Eigen::MatrixXd Jr_inv(2,2);
-        // Jr_inv = Jr.inverse();
-        // Eigen::MatrixXd Kp(2,2); //Gains matrix, this incorporates the image Jacobian since it is constant for a 2D case
-        // Kp << k, 0,
-        //       0, k;
-        // t_dot = -Kp * err;
-
-        // j_dot = Jr_inv * t_dot;
-
-        // j_dot_fit(0) = j_dot(0)/(2*(abs(j_dot(0)) + abs(j_dot(1))));
-        // j_dot_fit(1) = j_dot(1)/(2*(abs(j_dot(0)) + abs(j_dot(1))));
         
         std_msgs::Float64MultiArray vel_msg;    //Velocity Message for Pub
-        // vel_msg.data.resize(2);
-    
-        // vel_msg.data[0] = j_dot_fit(0);
-        // vel_msg.data[1] = j_dot_fit(1);
-
-        // pub.publish(vel_msg);
-        // std_msgs::Float64MultiArray err_msg;
-        // err_msg.data.resize(3);
-    
-        // err_msg.data[0] = err(0);
-        // err_msg.data[1] = err(1);
-        // err_msg.data[2] = 0;
-
-        // err_pub.publish(err_msg);
-        
-        // // Shutdown condition
-        // if(count >= 1){
+        vel_msg.data.resize(2);
 
             vel_msg.data[0] = 0;
             vel_msg.data[1] = 0;
@@ -136,8 +106,8 @@ void get_cur_pose(const geometry_msgs::PointStamped &msg){
             shutdown_msg.data = 1.0;
             shutdown_pub.publish(shutdown_msg);
 
+            ros::Duration(2.0).sleep(); // waiting for record note to shutdown
             ros::shutdown();
-        // }
     }
 }
 
