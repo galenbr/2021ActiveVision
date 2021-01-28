@@ -23,47 +23,6 @@ Eigen::Affine3f tfKinect(std::vector<double> &pose){
   return(tfGazWorld * tfKinOptGaz);
 }
 
-Eigen::Affine3f calcTfFromNormal(pcl::Normal normal, pcl::PointXYZRGB point){
-  Eigen::Matrix3f rot;
-  Eigen::Vector3f trans;
-
-  Eigen::Matrix4f tfMat; tfMat.setIdentity();
-  Eigen::Affine3f tf;
-
-  Eigen::Vector3f xAxis,yAxis,zAxis,xyPlane(0,0,1);
-
-  xAxis = {normal.normal_x,normal.normal_y,normal.normal_z}; xAxis.normalize();
-  yAxis = xAxis.cross(xyPlane); yAxis.normalize();
-  zAxis = xAxis.cross(yAxis);
-
-  rot << xAxis[0], yAxis[0], zAxis[0],
-         xAxis[1], yAxis[1], zAxis[1],
-         xAxis[2], yAxis[2], zAxis[2];
-  trans = point.getVector3fMap();
-
-  tfMat.block<3,3>(0,0) = rot;
-  tfMat.block<3,1>(0,3) = trans;
-  tf.matrix() = tfMat;
-
-  return tf;
-}
-
-void calcTfFromNormal(pcl::Normal normal, pcl::PointXYZRGB point, Eigen::Matrix3f &rot, Eigen::Vector3f &trans){
-  Eigen::Matrix4f tfMat; tfMat.setIdentity();
-  Eigen::Affine3f tf;
-
-  Eigen::Vector3f xAxis,yAxis,zAxis,xyPlane(0,0,1);
-
-  xAxis = {normal.normal_x,normal.normal_y,normal.normal_z}; xAxis.normalize();
-  yAxis = xAxis.cross(xyPlane); yAxis.normalize();
-  zAxis = xAxis.cross(yAxis);
-
-  rot << xAxis[0], yAxis[0], zAxis[0],
-         xAxis[1], yAxis[1], zAxis[1],
-         xAxis[2], yAxis[2], zAxis[2];
-  trans = point.getVector3fMap();
-}
-
 // For object point cloud
 bool objCheckIfNotOccluded(pcl::PointXYZRGB home, pcl::PointXYZRGB check, pcl::Normal normal, float radius){
 
@@ -109,7 +68,7 @@ void extractUsefulUnexpPts(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, ptCldColo
   res->clear();
 
   // Calculating the normal vectors
-  ptCldNormal::Ptr normal{new ptCldNormal};
+  static ptCldNormal::Ptr normal{new ptCldNormal};
   pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;  // Normal Estimation
   pcl::search::Search<pcl::PointXYZRGB>::Ptr KdTree{new pcl::search::KdTree<pcl::PointXYZRGB>};
   ptCldColor::ConstPtr cObj{obj};
@@ -163,11 +122,11 @@ void extractUsefulUnexpPts(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, ptCldColo
 
 std::set<int> findVisibleUsefulUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr usefulUnexp, std::vector<double> &pose){
   Eigen::Affine3f tf = tfKinect(pose);
-  ptCldColor::Ptr tempObj{new ptCldColor};          pcl::transformPointCloud(*obj, *tempObj, homoMatTranspose(tf));
-  ptCldColor::Ptr tempUsefulUnexp{new ptCldColor};  pcl::transformPointCloud(*usefulUnexp, *tempUsefulUnexp, homoMatTranspose(tf));
+  static ptCldColor::Ptr tempObj{new ptCldColor};          pcl::transformPointCloud(*obj, *tempObj, homoMatTranspose(tf));
+  static ptCldColor::Ptr tempUsefulUnexp{new ptCldColor};  pcl::transformPointCloud(*usefulUnexp, *tempUsefulUnexp, homoMatTranspose(tf));
 
   // Calculating the transoformed normal vectors
-  ptCldNormal::Ptr tempNormal{new ptCldNormal};
+  static ptCldNormal::Ptr tempNormal{new ptCldNormal};
   pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;  // Normal Estimation
   pcl::search::Search<pcl::PointXYZRGB>::Ptr KdTree{new pcl::search::KdTree<pcl::PointXYZRGB>};
   ptCldColor::ConstPtr ctempObj{tempObj};
@@ -233,7 +192,7 @@ std::set<int> findVisibleUsefulUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr useful
 // int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double> &pose, int mode, int minVis, ptCldVis::Ptr viewer){
 int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double> &pose, int mode, int minVis){
 
-  ptCldColor::Ptr usefulUnexp{new ptCldColor};
+  static ptCldColor::Ptr usefulUnexp{new ptCldColor};
   extractUsefulUnexpPts(obj,unexp,usefulUnexp);
 
   int threshold = 75;

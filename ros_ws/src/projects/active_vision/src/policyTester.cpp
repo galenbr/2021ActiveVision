@@ -43,7 +43,7 @@ std::vector<int> nearbyDirections(int dir){
 	return dirs;
 }
 // Function the find the grasp
-void findGrasp(environment &kinectControl, int object, int objPoseCode, int objYaw, std::string dir, std::string saveLocation, ptCldVis::Ptr viewer, ros::ServiceClient &policy){
+void findGrasp(environment &kinectControl, int object, int objPoseCode, int objYaw, std::string dir, std::string saveLocation, ros::ServiceClient &policy){
 
 	std::fstream fout;
  	fout.open(dir+saveLocation, std::ios::out | std::ios::app);
@@ -52,7 +52,10 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 	std::vector<double> nextPose;
 	RouteData home, current;
 
-	// printf("*** Obj #%d : Pose #%d with Yaw %d ***\n",object,objPoseCode,objYaw);
+	static ptCldVis::Ptr viewer(new ptCldVis("PCL Viewer"));
+	static std::vector<int> vp;
+	setupViewer(viewer, 2, vp);
+	static keyboardEvent keyPress(viewer,2);
 
 	kinectControl.moveObject(object,objPoseCode,objYaw*(M_PI/180.0));
 
@@ -72,46 +75,44 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 	updateRouteData(kinectControl,home,true,"Home");
 	current = home;
 
-	std::vector<int> vp;
-	setupViewer(viewer, 2, vp);
-	viewer->setPosition(550,20);
-	keyboardEvent keyPress(viewer,2); keyPress.help();
-
-	ptCldColor::Ptr tempPtCld{new ptCldColor};
-	ptCldColor::Ptr tempPtCldObj{new ptCldColor};
-	ptCldColor::Ptr tempPtCldUnexp{new ptCldColor};
+	static ptCldColor::Ptr tempPtCld{new ptCldColor};
+	static ptCldColor::Ptr tempPtCldObj{new ptCldColor};
+	static ptCldColor::Ptr tempPtCldUnexp{new ptCldColor};
 	pcl::PointXYZ table,a1,a2;
 	table.x = 1.5; table.y = 0; table.z = 1;
 	std::vector<int> nUnexp;
 	// printf("Starting while loop.\n");
 
 	while(keyPress.ok){
-		viewer->resetStoppedFlag();
-		viewer->removeAllPointClouds();
-		viewer->removeAllShapes();
+		if(!(::runMode != 0 && ::testAll == 1)){
+			viewer->resetStoppedFlag();
+			viewer->removeAllPointClouds();
+			viewer->removeAllShapes();
 
-		addRGB(viewer,kinectControl.ptrPtCldObject,"Obj",vp[0]);
-		addRGB(viewer,kinectControl.ptrPtCldUnexp,"Unexp",vp[0]);
-		*tempPtCld = current.env; addRGB(viewer,tempPtCld,"Env",vp[1]);
+			addRGB(viewer,kinectControl.ptrPtCldObject,"Obj",vp[0]);
+			addRGB(viewer,kinectControl.ptrPtCldUnexp,"Unexp",vp[0]);
+			*tempPtCld = current.env; addRGB(viewer,tempPtCld,"Env",vp[1]);
 
-    addViewsphere(viewer,vp.back(),table,current.path[0][0],false);
-		a1 = sphericalToCartesian(current.path[0],table);
-		viewer->addSphere(a1,0.04,1,0,0,"Start",vp[1]);
-		viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_REPRESENTATION,pcl::visualization::PCL_VISUALIZER_REPRESENTATION_WIREFRAME,"Start");
+			addViewsphere(viewer,vp.back(),table,current.path[0][0],false);
+			a1 = sphericalToCartesian(current.path[0],table);
+			viewer->addSphere(a1,0.04,1,0,0,"Start",vp[1]);
+			viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_REPRESENTATION,pcl::visualization::PCL_VISUALIZER_REPRESENTATION_WIREFRAME,"Start");
 
-    for(int i = 0; i < current.path.size()-1; i++){
-			a1 = sphericalToCartesian(current.path[i],table);
-			a2 = sphericalToCartesian(current.path[i+1],table);
-			viewer->addArrow(a2,a1,0,1,0,false,std::to_string(i),vp[1]);
+			for(int i = 0; i < current.path.size()-1; i++){
+				a1 = sphericalToCartesian(current.path[i],table);
+				a2 = sphericalToCartesian(current.path[i+1],table);
+				viewer->addArrow(a2,a1,0,1,0,false,std::to_string(i),vp[1]);
+			}
+
+			setCamView(viewer,current.path.back(),table);
 		}
 
-		setCamView(viewer,current.path.back(),table);
 		int maxIndex = 0;
 		if(current.success == true){
 			current.filename = getCurTime()+"_"+std::to_string(::nSaved);
 			saveData(current, fout, dir, false);
 			::nSaved++;
-			viewer->addText("GRASP FOUND. Saving and exiting.",4,5,25,1,0,0,"Dir1",vp[0]);
+			if(::testAll != 1) viewer->addText("GRASP FOUND. Saving and exiting.",4,5,25,1,0,0,"Dir1",vp[0]);
 		}else{
       if(::runMode == 1){
         static active_vision::heuristicPolicySRV srv;
@@ -127,7 +128,7 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 				srv.request.minPtsVis = minPtsVis; // Only used for 3D Heuristic
         policy.call(srv);
   			maxIndex = srv.response.direction;
-  			viewer->addText("Best direction calculated : " + std::to_string(maxIndex+1) + "(" + dirLookup[maxIndex+1] + ").\nPress any key to continue.",5,30,25,1,0,0,"Dir1",vp[0]);
+  			if(::testAll != 1) viewer->addText("Best direction calculated : " + std::to_string(maxIndex+1) + "(" + dirLookup[maxIndex+1] + ").\nPress any key to continue.",5,30,25,1,0,0,"Dir1",vp[0]);
       }else if(::runMode == 2){
 				static HAFStVec1 stVec;
 				stVec.setGridDim(::HAFstVecGridSize);
@@ -140,32 +141,20 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 				srv.request.stateVec.data = stVec.getStateVec();
 				policy.call(srv);
 				maxIndex = srv.response.direction-1;
-  			viewer->addText("Best direction calculated : " + std::to_string(maxIndex+1) + "(" + dirLookup[maxIndex+1] + ").\nPress any key to continue.",5,30,25,1,0,0,"Dir1",vp[0]);
+				if(::testAll != 1) viewer->addText("Best direction calculated : " + std::to_string(maxIndex+1) + "(" + dirLookup[maxIndex+1] + ").\nPress any key to continue.",5,30,25,1,0,0,"Dir1",vp[0]);
 			}else{
         viewer->addText("Manual Mode.\nEnter the direction.",5,30,25,1,0,0,"Dir1",vp[0]);
       }
 		}
 
-		if(::runMode == 0){
+		if(!(::runMode != 0 && ::testAll == 1)){
 			keyPress.called = false;
 			while(!viewer->wasStopped() && keyPress.called==false){
 				viewer->spinOnce(100);
 				boost::this_thread::sleep (boost::posix_time::microseconds(100000));
 			}
 		}
-    else{
-      keyPress.called = false;
-			if(::testAll == 1){
-				viewer->spinOnce(100);
-				boost::this_thread::sleep (boost::posix_time::microseconds(100000));
-			}else{
-				while(!viewer->wasStopped() && keyPress.called==false){
-					viewer->spinOnce(100);
-					boost::this_thread::sleep (boost::posix_time::microseconds(100000));
-				}
-			}
-  		keyPress.dir = maxIndex+1;
-		}
+		if(::runMode != 0) keyPress.dir = maxIndex+1;
 
 		if(current.success == true){
 			keyPress.dir = 0;
@@ -199,6 +188,7 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 			if(prfID!=0){
 				printf("Direction modified from %d -> %d.\n", dirPref[0],dirPref[prfID]);
 			}
+			std::cout << dirLookup[dirPref[prfID]] << ",";
 			singlePass(kinectControl, nextPose, false, true, 2);
 			updateRouteData(kinectControl,current,false,"dummy");
 			current.path.push_back(nextPose);
@@ -278,8 +268,6 @@ int main(int argc, char** argv){
     ROS_INFO("Trained Policy Selected.");
 	}
 
-	ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
-
 	if(::runMode != 0){
 		printf("Do you want to test for all possible poses (0->No, 1->Yes) : ");
 		std::cin >> ::testAll;
@@ -290,7 +278,8 @@ int main(int argc, char** argv){
 
 	kinectControl.spawnObject(objID,0,0);
 	::nSaved = 0;
-
+	std::chrono::high_resolution_clock::time_point start, end;
+	double elapsed;
 	if(testAll == 0){
 		int objPoseCode, objYaw;
 		printf("Enter the object pose code (0-%d) : ", int(kinectControl.objectDict[objID].nPoses-1));
@@ -299,7 +288,7 @@ int main(int argc, char** argv){
 		printf("Enter the object yaw (deg) (0-360) : ");
 		std::cin >> objYaw;
 
-		findGrasp(kinectControl, objID, objPoseCode, objYaw, dir, csvName, viewer, policy);
+		findGrasp(kinectControl, objID, objPoseCode, objYaw, dir, csvName, policy);
 	}else{
 		// Reading the yawValues csv file
 		std::string yawAnglesCSVDir;
@@ -325,8 +314,12 @@ int main(int argc, char** argv){
 
 			// Checking for the uniform steps
 			for(int objYaw = kinectControl.objectDict[objID].poses[objPoseCode][3]; objYaw < kinectControl.objectDict[objID].poses[objPoseCode][4]; objYaw+=uniformYawStepSize){
-				printf("%d - Obj #%d, Pose #%d, Yaw %d ***\n",nDataPoints-tempNDataPoints+1,objID,objPoseCode,objYaw);
-				findGrasp(kinectControl, objID, objPoseCode, objYaw, dir, csvName, viewer, policy);
+				printf("%d - Obj #%d, Pose #%d, Yaw %d \t",nDataPoints-tempNDataPoints+1,objID,objPoseCode,objYaw);
+				start = std::chrono::high_resolution_clock::now();
+				findGrasp(kinectControl, objID, objPoseCode, objYaw, dir, csvName, policy);
+				end = std::chrono::high_resolution_clock::now();
+				elapsed = (std::chrono::duration_cast<std::chrono::milliseconds>(end - start)).count();
+				std::cout << "\tTime(ms) : " << elapsed << std::endl;
 				tempNDataPoints--;
 			}
 
@@ -337,8 +330,12 @@ int main(int argc, char** argv){
 
 			// Checking for the random steps
 			for(int ctr = 0; ctr < yawAngleDict[key].size() && tempNDataPoints > 0; ctr++){
-				printf("%d - Obj #%d, Pose #%d, Yaw %d ***\n",nDataPoints-tempNDataPoints+1,objID,objPoseCode,yawAngleDict[key][ctr]);
-				findGrasp(kinectControl, objID, objPoseCode, yawAngleDict[key][ctr], dir, csvName, viewer, policy);
+				printf("%d - Obj #%d, Pose #%d, Yaw %d \t",nDataPoints-tempNDataPoints+1,objID,objPoseCode,yawAngleDict[key][ctr]);
+				start = std::chrono::high_resolution_clock::now();
+				findGrasp(kinectControl, objID, objPoseCode, yawAngleDict[key][ctr], dir, csvName, policy);
+				end = std::chrono::high_resolution_clock::now();
+				elapsed = (std::chrono::duration_cast<std::chrono::milliseconds>(end - start)).count();
+				std::cout << "\tTime(ms) : " << elapsed << std::endl;
 				tempNDataPoints--;
 			}
 		}
