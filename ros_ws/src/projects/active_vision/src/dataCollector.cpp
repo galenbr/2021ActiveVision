@@ -5,6 +5,7 @@
 int mode;
 int nRdmSearches;
 int maxRndSteps;
+int maxOptStep = 2.0;
 
 std::vector<int> randomDirection(){
 	std::vector<int> dirs = {1,2,3,4,5,6,7,8};
@@ -25,16 +26,16 @@ bool exploreOneStepAllDir(environment &env, RouteData &home, std::vector<RouteDa
 	std::vector<double> curPose;
 	RouteData temp;                // Used to record the iteration details
 
-  // Sanity check
-  if(home.childID == -1 || home.success == true){
-    printf("ERROR exploreOneStepAllDir: Invalid child ID / Grasp already found.\n");
-    return(false);
-  }
+	// Sanity check
+	if(home.childID == -1 || home.success == true){
+	printf("ERROR exploreOneStepAllDir: Invalid child ID / Grasp already found.\n");
+	return(false);
+	}
 
 	temp.parentID = home.childID;
-  temp.success = false;
+  	temp.success = false;
 	// Going to each direction for a step and saving their configurations
-  std::vector<int> dirs = randomDirection();
+  	std::vector<int> dirs = randomDirection();
 	for (int i = 1; i <= 8 && temp.success == false; i++){
 		// Rollback to the parent/home configuration
 		env.rollbackConfiguration(temp.parentID);
@@ -145,12 +146,12 @@ void updateTemp(environment &env, RouteData &data, std::string &name){
 // Generating the home poses from which we need to search
 void genHomePoses(environment &env, std::vector<double> &stPose, std::string &csvName, std::vector<RouteData> &opHomePoses){
 	std::vector<std::vector<std::string>> data = readCSV(csvName);
-  std::vector<nodeData> tree = convertToTree(data);
+  	std::vector<nodeData> tree = convertToTree(data);
 	std::vector<double> nextPose;
 
 	std::string name;
 	int dir = 0;
-  RouteData temp; temp.reset();
+  	RouteData temp; temp.reset();
 
 	if(tree[0].parentID != -1) return;
 
@@ -176,6 +177,7 @@ void genHomePoses(environment &env, std::vector<double> &stPose, std::string &cs
 		updateTemp(env,temp,name);
 		// No need to add the children as home poses if current pose is successful
 		if(temp.success == true){
+			printf("found grasp at %d\n",i);
 			tree[i].checked = 2;
 			env.configurations.pop_back();
 			for(int j = i; j < tree.size(); j++){
@@ -196,20 +198,106 @@ void genHomePoses(environment &env, std::vector<double> &stPose, std::string &cs
   // }
 }
 
-// Function the generate the daa for training
+// Function to save optimal paths for the given position.
+int findOptimalPaths(environment &kinectControl, int object, std::string homePosesTree, std::string dir, std::string saveLocation, int currentPoseCode, int currentYaw){
+	std::fstream fout;
+ 	fout.open(dir+saveLocation, std::ios::out | std::ios::app);
+
+  	kinectControl.spawnObject(object,0,0);
+
+ 	std::vector<double> startPose = {kinectControl.viewsphereRad, 180*(M_PI/180.0), 45*(M_PI/180.0)};
+
+  	bool graspFound = false;
+	RouteData dataFinalTemp, cData;
+	std::vector<RouteData> dataOneStep,dataTemp;
+
+  	int nHomeConfigs;
+
+	int nSaved=0;
+	int nZeroHomePoses = 0;
+	printf("BFS  *** Pose #%d/%d with Yaw %d ***\n",currentPoseCode+1,int(kinectControl.objectDict[object].nPoses),currentYaw);
+	//Set up the start pose
+	kinectControl.moveObject(object,currentPoseCode,currentYaw*(M_PI/180.0));
+	RouteData start; 
+	start.reset();
+	singlePass(kinectControl, startPose, true, true); 
+	std::string name = "H_"+std::to_string(currentPoseCode)+"_"+std::to_string(currentYaw);
+	start.childID = kinectControl.saveConfiguration(name);
+	start.path = {startPose};
+	updateTemp(kinectControl, start, name);
+	// Check the start pose:
+	int iteration = 0;
+	printf("BFS      ***Testing step %d\n", iteration);
+	graspFound = start.success;
+	// If no grasp was found, begin the BFS.
+	if(not graspFound){
+		iteration++;
+		printf("BFS      ***Testing step %d\n", iteration);
+    	graspFound = exploreOneStepAllDir(kinectControl,start,dataOneStep);
+    	iteration++;
+    } else {
+    	dataOneStep.push_back(start);
+    }
+    while((not graspFound) and (iteration < pow(8,::maxOptStep))){
+    	printf("BFS      ***Testing step %d\n", iteration);
+    	cData = dataOneStep[0];
+    	dataTemp.clear();
+    	dataOneStep.erase(dataOneStep.begin());
+    	graspFound = exploreOneStepAllDir(kinectControl,cData,dataTemp);
+    	for (int i = 0; i < dataTemp.size(); ++i){
+    		dataOneStep.push_back(dataTemp[i]);
+    	}
+    	iteration++;
+    }
+
+	printf("BFS    %d\n",dataOneStep.size());
+	for (int i = 0; i < dataOneStep.size(); ++i)
+	{
+		printf("Item %d, passed=%d\n", i, dataOneStep[i].success);
+	}
+	// Iterate over the last 8 poses to find the successful one
+	for (int i = 1; i < 9; ++i) {
+		dataFinalTemp.reset();
+		dataFinalTemp = dataOneStep[dataOneStep.size()-i];
+		dataFinalTemp.nodeInfo = start.nodeInfo;
+      	dataFinalTemp.objType = kinectControl.objectDict[object].description;
+      	dataFinalTemp.objPose = {kinectControl.objectDict[object].poses[currentPoseCode][1],
+                           			  kinectControl.objectDict[object].poses[currentPoseCode][2],
+                           			  currentYaw*(M_PI/180.0)};
+      	dataFinalTemp.type = start.type;
+      	// Don't count the start position for path length
+      	dataFinalTemp.nSteps = dataFinalTemp.path.size()-1;
+      	dataFinalTemp.obj = start.obj;
+      	dataFinalTemp.unexp = start.unexp;
+		if(dataFinalTemp.success){
+			printf("Trying direction %d.... success\n", i);
+			dataFinalTemp.filename = getCurTime()+"_"+std::to_string(nSaved);
+			saveData(dataFinalTemp, fout, dir, false);
+			break;
+		} else {
+			printf("Trying direction %d.... failed\n", i);
+		}
+	}
+    kinectControl.deleteObject(object);
+    kinectControl.reset();
+	fout.close();
+	return(nSaved);
+}
+
+// Function the generate the data for training
 int generateData(environment &kinectControl, int object, std::string homePosesTree, std::string dir, std::string saveLocation, int nDataPoints){
 	std::fstream fout;
  	fout.open(dir+saveLocation, std::ios::out | std::ios::app);
 
-  kinectControl.spawnObject(object,0,0);
+  	kinectControl.spawnObject(object,0,0);
 
  	std::vector<double> startPose = {kinectControl.viewsphereRad, 180*(M_PI/180.0), 45*(M_PI/180.0)};
 
-  bool graspFound = false;
+  	bool graspFound = false;
 	RouteData dataFinalTemp;
 	std::vector<RouteData> dataOneStep,dataHomePoses,dataFinal;
 
-  int nHomeConfigs;
+  	int nHomeConfigs;
 
 	int nSaved=0;
 	int currentPoseCode;
@@ -219,48 +307,44 @@ int generateData(environment &kinectControl, int object, std::string homePosesTr
 	while(nSaved < nDataPoints && nZeroHomePoses <= 5){
 
 		currentPoseCode = rand()%(kinectControl.objectDict[object].nPoses);
-		currentYaw = rand()%(int(kinectControl.objectDict[object].poses[currentPoseCode][4]) -
-		                     int(kinectControl.objectDict[object].poses[currentPoseCode][3]) + 1) +
-												 int(kinectControl.objectDict[object].poses[currentPoseCode][3]);
+		currentYaw = rand()%(int(kinectControl.objectDict[object].poses[currentPoseCode][4]) -int(kinectControl.objectDict[object].poses[currentPoseCode][3]) + 1) + int(kinectControl.objectDict[object].poses[currentPoseCode][3]);
 
-    printf("  *** Pose #%d/%d with Yaw %d ***\n",currentPoseCode+1,int(kinectControl.objectDict[object].nPoses),currentYaw);
+    	printf("  *** Pose #%d/%d with Yaw %d ***\n",currentPoseCode+1,int(kinectControl.objectDict[object].nPoses),currentYaw);
 		kinectControl.moveObject(object,currentPoseCode,currentYaw*(M_PI/180.0));
 
-    // Get the homes poses to collect data for based on the step count
-    dataHomePoses.clear();
+    	// Get the homes poses to collect data for based on the step count
+    	dataHomePoses.clear();
 		printf("    * Generating Home Configs"); std::cout << std::flush;
-    genHomePoses(kinectControl,startPose,homePosesTree,dataHomePoses);
+	    genHomePoses(kinectControl,startPose,homePosesTree,dataHomePoses);
 		dataFinal.resize(dataHomePoses.size());
-    nHomeConfigs = kinectControl.configurations.size();
+	    nHomeConfigs = kinectControl.configurations.size();
 		if(nHomeConfigs == 0) nZeroHomePoses++;
 
 		std::cout << " " << dataHomePoses.size() << " configs." << std::endl;
 
-		// for (int j = 0; j < kinectControl.configurations.size(); j++){
-		//   printf("%d,%s\n",j,kinectControl.configurations[j].description.c_str());
-		// }
-		// std::cout << std::endl;
-		// for(int poses = dataHomePoses.size()-1; poses >= 0 ; poses--){
-		// 	dataHomePoses[poses].nodeInfo.print();
-		// }
+			// for (int j = 0; j < kinectControl.configurations.size(); j++){
+			//   printf("%d,%s\n",j,kinectControl.configurations[j].description.c_str());
+			// }
+			// std::cout << std::endl;
+			// for(int poses = dataHomePoses.size()-1; poses >= 0 ; poses--){
+			// 	dataHomePoses[poses].nodeInfo.print();
+			// }
 
-    for(int poses = dataHomePoses.size()-1; poses >= 0 ; poses--){
-      dataFinal[poses].reset();
+	    for(int poses = dataHomePoses.size()-1; poses >= 0 ; poses--){
+	      	dataFinal[poses].reset();
 
-      printf("      Home #%d/%d : ",poses+1,int(dataHomePoses.size())); std::cout << std::flush;
-      graspFound = dataHomePoses[poses].success;
-      // If home pose has a successful grasp
-      if(graspFound == true) std::cout << "How ???" << std::endl;
+	      	printf("      Home #%d/%d : ",poses+1,int(dataHomePoses.size())); std::cout << std::flush;
+	      	graspFound = dataHomePoses[poses].success;
+	      	// If home pose has a successful grasp
+	      	if(graspFound == true) std::cout << "How ???" << std::endl;
 
-      // If we do not find a grasp at home, then check for one step in each direction
-      printf("8 Dir Search"); std::cout << std::flush;
-      dataOneStep.clear();
-      graspFound = exploreOneStepAllDir(kinectControl,dataHomePoses[poses],dataOneStep);
-      if(graspFound == true){
+	      	// If we do not find a grasp at home, then check for one step in each direction
+	      	printf("8 Dir Search"); std::cout << std::flush;
+	      	dataOneStep.clear();
+	      	graspFound = exploreOneStepAllDir(kinectControl,dataHomePoses[poses],dataOneStep);
+	      	if(graspFound == true){
 				dataFinal[poses] = dataOneStep.back();
-			}else{
-				// if(dataHomePoses[poses].nodeInfo.possibleSolChildIndex != -1) ::nRdmSearches = 1;
-
+			} else {
 				// If we dont find a grasp after one step, then check using random searches
 				int nSteps = ::maxRndSteps;
 				if(dataHomePoses[poses].nodeInfo.possibleSolChildIndex != -1){
@@ -268,33 +352,33 @@ int generateData(environment &kinectControl, int object, std::string homePosesTr
 				}
 
 				for (int rdmSearchCtr = 1; rdmSearchCtr <= ::nRdmSearches && nSteps > 0; rdmSearchCtr++){
-	        printf(" Random Search #%d.",rdmSearchCtr); std::cout << std::flush;
+			        printf(" Random Search #%d.",rdmSearchCtr); std::cout << std::flush;
 
-	        for(int i = 0; i < dataOneStep.size() && nSteps > 0; i++){
+			        for(int i = 0; i < dataOneStep.size() && nSteps > 0; i++){
 						dataFinalTemp.reset();
 						std::cout << nSteps << std::flush;
-	          bool graspFoundTemp = exploreRdmStep(kinectControl,dataOneStep[i],nSteps,dataFinalTemp);
-	          if(graspFoundTemp == true){
-	            graspFound = true;
-	            // If its the first time entering this, then store this in expRes
-	            if(dataFinal[poses].path.size() == 0){
-	              dataFinal[poses] = dataFinalTemp;
-	            }
-	            // If not, check if current result is better than the previous result and update expRes
-	            else if((dataFinalTemp.path.size() < dataFinal[poses].path.size()) ||
-	                    (dataFinalTemp.path.size() == dataFinal[poses].path.size() &&
-	                     dataFinalTemp.graspQuality > dataFinal[poses].graspQuality)){
-	              dataFinal[poses] = dataFinalTemp;
-	            }
-	            // Update nSteps to speed up the process
-	            nSteps = std::min(nSteps,int(dataFinal[poses].path.size()-dataOneStep[i].path.size()-1));
-	          }
-	        }
-	      }
+			          	bool graspFoundTemp = exploreRdmStep(kinectControl,dataOneStep[i],nSteps,dataFinalTemp);
+			          	if(graspFoundTemp == true){
+			            	graspFound = true;
+			            	// If its the first time entering this, then store this in expRes
+			            	if(dataFinal[poses].path.size() == 0){
+			              		dataFinal[poses] = dataFinalTemp;
+			            	}
+			            	// If not, check if current result is better than the previous result and update expRes
+			            	else if((dataFinalTemp.path.size() < dataFinal[poses].path.size()) ||
+			                (dataFinalTemp.path.size() == dataFinal[poses].path.size() &&
+			                dataFinalTemp.graspQuality > dataFinal[poses].graspQuality)){
+			              		dataFinal[poses] = dataFinalTemp;
+			            	}
+			            	// Update nSteps to speed up the process
+			            	nSteps = std::min(nSteps,int(dataFinal[poses].path.size()-dataOneStep[i].path.size()-1));
+			          	}
+			        }
+		      	}
 			}
 
-      // If no grasp found, select the child which has a grasp
-      if(graspFound == false){
+	      	// If no grasp found, select the child which has a grasp
+	      	if(graspFound == false){
 				int index = dataHomePoses[poses].nodeInfo.possibleSolChildIndex;
 				if(index != -1){
 					graspFound = true;
@@ -304,25 +388,25 @@ int generateData(environment &kinectControl, int object, std::string homePosesTr
 					dataFinal[poses].env = dataFinal[index].env;
 					dataFinal[poses].direction = dataFinal[index].nodeInfo.dirs[dataHomePoses[poses].type-1]-'0';
 				}
-      }
+	      	}
 
-			// If still no grasp found, good luck
-      if(graspFound == false){
+				// If still no grasp found, good luck
+	      	if(graspFound == false){
 				printf(" Not OK.\n");
 				dataFinal[poses] = dataHomePoses[poses]; // Storing dummy data
 			}
 
 			dataFinal[poses].nodeInfo = dataHomePoses[poses].nodeInfo;
-      dataFinal[poses].objType = kinectControl.objectDict[object].description;
-      dataFinal[poses].objPose = {kinectControl.objectDict[object].poses[currentPoseCode][1],
-                           			  kinectControl.objectDict[object].poses[currentPoseCode][2],
-                           			  currentYaw*(M_PI/180.0)};
-      dataFinal[poses].type = dataHomePoses[poses].type;
-      dataFinal[poses].nSteps = dataFinal[poses].path.size()-dataFinal[poses].type;
-      dataFinal[poses].obj = dataHomePoses[poses].obj;
-      dataFinal[poses].unexp = dataHomePoses[poses].unexp;
+	      	dataFinal[poses].objType = kinectControl.objectDict[object].description;
+	      	dataFinal[poses].objPose = {kinectControl.objectDict[object].poses[currentPoseCode][1],
+	                           			  kinectControl.objectDict[object].poses[currentPoseCode][2],
+	                           			  currentYaw*(M_PI/180.0)};
+	      	dataFinal[poses].type = dataHomePoses[poses].type;
+	      	dataFinal[poses].nSteps = dataFinal[poses].path.size()-dataFinal[poses].type;
+	      	dataFinal[poses].obj = dataHomePoses[poses].obj;
+	      	dataFinal[poses].unexp = dataHomePoses[poses].unexp;
 
-      if(graspFound == true) printf(" OK. %d Steps, Dir : %d.\n",dataFinal[poses].nSteps,dataFinal[poses].direction);
+	      	if(graspFound == true) printf(" OK. %d Steps, Dir : %d.\n",dataFinal[poses].nSteps,dataFinal[poses].direction);
 
 			// Setting max steps for the parent based on the child results
 			for(int index = 0; index < dataHomePoses.size(); index++){
@@ -337,8 +421,8 @@ int generateData(environment &kinectControl, int object, std::string homePosesTr
 			}
 
 			// Deleting the new configs saved
-      kinectControl.configurations.resize(nHomeConfigs);
-    }
+	      	kinectControl.configurations.resize(nHomeConfigs);
+	    }
 
 		// Saving the results to csv
 		for(int poses = 0; poses < dataHomePoses.size() ; poses++){
@@ -353,19 +437,17 @@ int generateData(environment &kinectControl, int object, std::string homePosesTr
 		// for(int poses = dataHomePoses.size()-1; poses >= 0 ; poses--){
 		// 	dataHomePoses[poses].nodeInfo.print();
 		// }
-    kinectControl.reset();
+    	kinectControl.reset();
 	}
-  kinectControl.deleteObject(object);
+  	kinectControl.deleteObject(object);
 	fout.close();
 	return(nSaved);
 }
 
 void help(){
   std::cout << "******* Data Collector Node Help *******" << std::endl;
-  std::cout << "Arguments : [CSV filename] [Object] [nDataPoints]" << std::endl;
-  std::cout << "CSV filename : CSV file name (Eg:data.csv) (Use \"default.csv\" to use time as the file name)" << std::endl;
-	std::cout << "Object : Object ID" << std::endl;
-	std::cout << "nDataPoints : Minimum number of data points to be collected" << std::endl;
+  std::cout << "Arguments : [mode]" << std::endl;
+  std::cout << "mode: 0 (default)=data collection, 1=BFS" << std::endl;
   std::cout << "*******" << std::endl;
 }
 
@@ -378,9 +460,10 @@ int main (int argc, char** argv){
 
  	environment kinectControl(&nh);
 	sleep(1);
+
 	kinectControl.setPtCldNoise(0.0);
 	kinectControl.viewsphereRad = 1;
-  kinectControl.loadGripper();
+  	kinectControl.loadGripper();
 
 	bool relativePath; nh.getParam("/active_vision/dataCollector/relative_path", relativePath);
 
@@ -425,10 +508,62 @@ int main (int argc, char** argv){
 
 	std::cout << "Start Time : " << getCurTime() << std::endl;
 	start = std::chrono::high_resolution_clock::now();
-
-	printf("***** Object #%d *****\n",objID);
 	int ctrData;
-	ctrData = generateData(kinectControl, objID, homePosesTreeCSV, dir, csvName, nDataPoints);
+
+	if(argc <= 1 or std::atoi(argv[1]) == 0){
+		printf("***** Object #%d *****\n",objID);
+		ctrData = generateData(kinectControl, objID, homePosesTreeCSV, dir, csvName, nDataPoints);
+	} else if(std::atoi(argv[1]) == 1){
+		// Reading the yawValues csv file
+		int objPoseCode, objYaw;
+		std::string yawAnglesCSVDir;
+		nh.getParam("/active_vision/policyTester/yawAnglesCSVDir", yawAnglesCSVDir);
+		yawAnglesCSVDir = ros::package::getPath("active_vision") + yawAnglesCSVDir;
+		std::string yawAnglesCSV;
+		nh.getParam("/active_vision/policyTester/yawAnglesCSV", yawAnglesCSV);
+		std::vector<std::vector<std::string>> yawAngle = readCSV(yawAnglesCSVDir+yawAnglesCSV);
+		nh.getParam("/active_vision/dataCollector/objID", objID);
+		if(kinectControl.objectDict.count(objID) == 0){
+			std::cout << "ERROR. Incorrect Object ID." << std::endl;
+	    return(-1);
+		}
+		printf("BFS***** Object #%d *****\n",objID);
+
+		// Converting it to a dictionary format (First column is the key)
+		std::map<std::string,std::vector<int>> yawAngleDict;
+		for(int row = 0; row < yawAngle.size(); row++){
+			yawAngleDict.insert({yawAngle[row][0],{}});
+			for(int col = 1; col < yawAngle[row].size(); col++){
+				yawAngleDict[yawAngle[row][0]].push_back(std::stoi(yawAngle[row][col]));
+			}
+		}
+
+		int uniformYawStepSize; nh.getParam("/active_vision/policyTester/uniformYawStepSize", uniformYawStepSize);
+		for(int objPoseCode = 0; objPoseCode < kinectControl.objectDict[objID].nPoses; objPoseCode+=1){
+			int tempNDataPoints = nDataPoints;
+
+			// Checking for the uniform steps
+			for(int objYaw = kinectControl.objectDict[objID].poses[objPoseCode][3]; objYaw < kinectControl.objectDict[objID].poses[objPoseCode][4]; objYaw+=uniformYawStepSize){
+				findOptimalPaths(kinectControl, objID, homePosesTreeCSV, dir, csvName, objPoseCode, objYaw);
+				tempNDataPoints--;
+				ctrData++;
+			}
+
+			std::string key = std::to_string(int(kinectControl.objectDict[objID].poses[objPoseCode][3]))+"-"+
+			                  std::to_string(int(kinectControl.objectDict[objID].poses[objPoseCode][4]));
+
+			if(yawAngleDict.count(key) == 0) continue;
+
+			// Checking for the random steps
+			for(int ctr = 0; ctr < yawAngleDict[key].size() && tempNDataPoints > 0; ctr++){
+				findOptimalPaths(kinectControl, objID, homePosesTreeCSV, dir, csvName, objPoseCode, yawAngleDict[key][ctr]);
+				tempNDataPoints--;
+				ctrData++;
+			}
+		}
+	} else {
+		printf("Error: unknown mode %d\n", mode);
+	}
 
 	end = std::chrono::high_resolution_clock::now();
 	std::cout << "End Time : " << getCurTime() << std::endl;

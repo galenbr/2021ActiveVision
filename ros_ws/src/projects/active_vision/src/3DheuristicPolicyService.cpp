@@ -2,7 +2,10 @@
 #include <active_vision/toolViewPointCalc.h>
 #include <active_vision/toolVisualization.h>
 #include <active_vision/heuristicPolicySRV.h>
+// #include <pcl/filters/voxel_grid_occlusion_estimation.h>
 #include <set>
+
+float voxelGridSize;
 
 Eigen::Affine3f tfKinect(std::vector<double> &pose){
   std::vector<double> cartesian = {0,0,0,0,0,0};
@@ -147,7 +150,7 @@ void extractUsefulUnexpPts(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, ptCldColo
 
   // Extracting the indices
   for(auto idx : usefulIndices){
-    if(unexp->points[idx].z >= minPtObj.z-0.005){
+    if(unexp->points[idx].z >= minPtObj.z*1.01){
       res->points.push_back(unexp->points[idx]);
       res->points.back().r = 0;
       res->points.back().g = 200;
@@ -175,8 +178,7 @@ std::set<int> findVisibleUsefulUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr useful
 
   // float coneAngle = calcConeAngle(pose[1],pose[2]);
 
-  float gridDim = 0.01;
-  float radius = gridDim/sqrt(2)*1.1;
+  float radius = ::voxelGridSize/sqrt(2)*1.1;
   pcl::PointXYZRGB min,max;
   min.y = -radius;  max.y = radius;
   min.z = -radius;  max.z = radius;
@@ -219,7 +221,7 @@ std::set<int> findVisibleUsefulUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr useful
       float disI = pcl::euclideanDistance(cam,tempUsefulUnexp->points[i]);
       float disJ = pcl::euclideanDistance(cam,tempUsefulUnexp->points[j]);
       // J in in front of I
-      if(disJ < disI)  notOccluded = unexpCheckIfNotOccluded(tempUsefulUnexp->points[i],tempUsefulUnexp->points[j],gridDim);
+      if(disJ < disI)  notOccluded = unexpCheckIfNotOccluded(tempUsefulUnexp->points[i],tempUsefulUnexp->points[j],::voxelGridSize);
       if(!notOccluded) break;
     }
     if(notOccluded) finalIndices.insert(i);
@@ -228,39 +230,21 @@ std::set<int> findVisibleUsefulUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr useful
   return finalIndices;
 }
 
-int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double> &pose, int mode){
+// int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double> &pose, int mode, int minVis, ptCldVis::Ptr viewer){
+int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double> &pose, int mode, int minVis){
 
   ptCldColor::Ptr usefulUnexp{new ptCldColor};
   extractUsefulUnexpPts(obj,unexp,usefulUnexp);
-
-  // ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer")); std::vector<int> vp;
-  // setupViewer(viewer, 1, vp);
-  // ptCldColor::Ptr resultA{new ptCldColor}; resultA->clear();
-  // for(auto idx : visibleIndices){
-  //   resultA->points.push_back(usefulUnexp->points[idx]);
-  //   resultA->points.back().r = 255;
-  //   resultA->points.back().g = 255;
-  //   resultA->points.back().b = 255;
-  // }
-  // addRGB(viewer,obj,"obj",vp[0]);
-  // addRGB(viewer,usefulUnexp,"usefulUnexp",vp[0]);
-  // addRGB(viewer,resultA,"resultA",vp[0]);
-  // std::cout << i << "," << res.back() << std::endl;
-  // while(!viewer->wasStopped()){
-  //   viewer->spinOnce(100);
-  //   boost::this_thread::sleep (boost::posix_time::microseconds(100000));
-  // }
-  // viewer->resetStoppedFlag();
-  // viewer->removeAllPointClouds();
 
   int threshold = 75;
   std::set<int> visibleIndices;
   std::vector<std::set<int>> indices;
   std::vector<int> res = {0,0,0,0,0,0,0,0};
+  std::vector<int> step = {0,0,0,0,0,0,0,0};
   int maxRes = 0;
 
   for(int i = 1 ; i <= 8; i++){
-    std::vector<double> newPose = calcExplorationPose(pose,i,mode);
+    std::vector<double> newPose = calcExplorationPose(pose,i,mode); step[i-1] = 20;
 
     if(checkValidPose(newPose)) visibleIndices = findVisibleUsefulUnexp(obj,usefulUnexp,newPose);
     else                        visibleIndices.clear();
@@ -269,12 +253,14 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
   for(int i = 0 ; i < 8; i++) res[i] = indices[i].size();
   maxRes = *std::max_element(res.begin(), res.end());
 
-  if(maxRes < obj->points.size()/5){
+  if(maxRes < minVis){
     // std::cout << "Two Check" << std::endl;
     threshold = 80;
     for(int i = 1 ; i <= 8; i++){
-      std::vector<double> newPose = calcExplorationPose(pose,i,mode,40*(M_PI/180.0));
-      if(!checkValidPose(newPose)) newPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0));
+      std::vector<double> newPose = calcExplorationPose(pose,i,mode,40*(M_PI/180.0)); step[i-1] = 40;
+      if(!checkValidPose(newPose)){
+        newPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0)); step[i-1] = 20;
+      }
 
       if(checkValidPose(newPose)) visibleIndices = findVisibleUsefulUnexp(obj,usefulUnexp,newPose);
       else                        visibleIndices.clear();
@@ -284,13 +270,17 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
     maxRes = *std::max_element(res.begin(), res.end());
   }
 
-  if(maxRes < obj->points.size()/5){
+  if(maxRes < minVis){
     // std::cout << "Three Check" << std::endl;
     threshold = 85;
     for(int i = 1 ; i <= 8; i++){
-      std::vector<double> newPose = calcExplorationPose(pose,i,mode,60*(M_PI/180.0));
-      if(!checkValidPose(newPose)) newPose = calcExplorationPose(pose,i,mode,40*(M_PI/180.0));
-      if(!checkValidPose(newPose)) newPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0));
+      std::vector<double> newPose = calcExplorationPose(pose,i,mode,60*(M_PI/180.0)); step[i-1] = 60;
+      if(!checkValidPose(newPose)){
+        newPose = calcExplorationPose(pose,i,mode,40*(M_PI/180.0)); step[i-1] = 40;
+      }
+      if(!checkValidPose(newPose)){
+        newPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0)); step[i-1] = 20;
+      }
 
       if(checkValidPose(newPose)) visibleIndices = findVisibleUsefulUnexp(obj,usefulUnexp,newPose);
       else                        visibleIndices.clear();
@@ -310,26 +300,61 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
     }
   }
 
-  std::vector<int> temp = res;
+  /***/
+  // std::vector<int> vp;
+  // setupViewer(viewer, 9, vp);
+  // pcl::PointXYZ table;
+	// table.x = 1.5; table.y = 0; table.z = 1;
+  // setCamView(viewer,{pose[0]/2,pose[1],pose[2]},table,vp[0]);
+  // addRGB(viewer,obj,"obj0",vp[0]);
+  // addRGB(viewer,unexp,"unexp",vp[0]);
+  // addRGB(viewer,usefulUnexp,"usefulUnexp",vp[0]);
+  // viewer->removeCoordinateSystem();
+  //
+  // ptCldColor::Ptr result{new ptCldColor};
+  // for(int i = 1 ; i <= 8; i++){
+  //   result->clear();
+  //   for(auto idx : indices[i-1]){
+  //     result->points.push_back(usefulUnexp->points[idx]);
+  //     result->points.back().r = 255;
+  //     result->points.back().g = 255;
+  //     result->points.back().b = 255;
+  //   }
+  //   std::vector<double> newPose = calcExplorationPose(pose,i,mode,step[i-1]*(M_PI/180.0));
+  //   setCamView(viewer,{newPose[0]/2,newPose[1],newPose[2]},table,vp[i]);
+  //   addRGB(viewer,obj,"obj"+std::to_string(i),vp[i]);
+  //   addRGB(viewer,result,"result"+std::to_string(i),vp[i]);
+  //   viewer->addText(std::to_string(step[i-1])+","+std::to_string(res[i-1]),2,2,20,1,0,0,"data"+std::to_string(i),vp[i]);
+  // }
+  // while(!viewer->wasStopped()){
+  //   viewer->spinOnce(100);
+  //   boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+  // }
+  // viewer->resetStoppedFlag();
+  // viewer->removeAllPointClouds();
+  // viewer->removeAllShapes();
+  /***/
+
+  return std::distance(res.begin(), std::max_element(res.begin(), res.end())) + 1;
 
   // DIrection pref order 1,(2,8),(3,7),(4,6),5
-  if(res[1-1] >= threshold){
-    return 1;
-  }else if(res[2-1] >= threshold || res[8-1] >= threshold){
-    if(res[2-1] > res[8-1]) return 2;
-    else return 8;
-  }else if(res[3-1] >= threshold || res[7-1] >= threshold){
-    if(res[3-1] > res[7-1]) return 3;
-    else return 7;
-  }else if(res[4-1] >= threshold || res[6-1] >= threshold){
-    if(res[4-1] > res[6-1]) return 4;
-    else return 6;
-  }else if(res[5-1] >= threshold){
-    return 5;
-  }else{
-    std::cout << "ERROR in direction calculation" << std::endl;
-    return 1;
-  }
+  // if(res[1-1] >= threshold){
+  //   return 1;
+  // }else if(res[2-1] >= threshold || res[8-1] >= threshold){
+  //   if(res[2-1] > res[8-1]) return 2;
+  //   else return 8;
+  // }else if(res[3-1] >= threshold || res[7-1] >= threshold){
+  //   if(res[3-1] > res[7-1]) return 3;
+  //   else return 7;
+  // }else if(res[4-1] >= threshold || res[6-1] >= threshold){
+  //   if(res[4-1] > res[6-1]) return 4;
+  //   else return 6;
+  // }else if(res[5-1] >= threshold){
+  //   return 5;
+  // }else{
+  //   std::cout << "ERROR in direction calculation" << std::endl;
+  //   return 1;
+  // }
 }
 
 bool heuristicPolicy(active_vision::heuristicPolicySRV::Request  &req,
@@ -350,7 +375,7 @@ bool heuristicPolicy(active_vision::heuristicPolicySRV::Request  &req,
   }
   mode = req.mode;
 
-  res.direction = findDirection(obj,unexp,path.back(),mode)-1;
+  res.direction = findDirection(obj,unexp,path.back(),mode,req.minPtsVis)-1;
 
   ROS_INFO_STREAM("Heuristic Policy Service Called. Direction -> "<< dirLookup[res.direction+1]);
 
@@ -361,6 +386,7 @@ int main(int argc, char** argv){
 	ros::init(argc, argv, "HeuristicPolicyServer");
 
  	ros::NodeHandle nh;
+  nh.getParam("/active_vision/environment/voxelGridSize", ::voxelGridSize);
   ros::ServiceServer service = nh.advertiseService("/active_vision/heuristic_policy", heuristicPolicy);
   ROS_INFO("3D Heuristic policy service ready.");
   ros::spin();
@@ -371,10 +397,8 @@ int main(int argc, char** argv){
 //   // Initialize ROS
 //   ros::init(argc, argv, "Test");
 //   ros::NodeHandle nh;
-//
+//   nh.getParam("/active_vision/environment/voxelGridSize", ::voxelGridSize);
 //   environment activeVision(&nh);
-//   activeVision.setPtCldNoise(0);
-//   activeVision.viewsphereRad = 1;
 //
 //   // 4 kinect position to capture and fuse
 //   std::vector<std::vector<double>> kinectPoses = {{1.0,M_PI,M_PI/4},
@@ -396,26 +420,20 @@ int main(int argc, char** argv){
 //   int dir;
 //   std::vector<double> newPose = kinectPoses[0];
 //   activeVision.spawnObject(objID,pose,yaw*M_PI/180);
-//   activeVision.moveKinectViewsphere(kinectPoses[0]);
-//   activeVision.readKinect();
-//   activeVision.fuseLastData();
-//   activeVision.dataExtract();
-//   activeVision.genUnexploredPtCld();
-//   activeVision.updateUnexploredPtCld();
-//   activeVision.graspAndCollisionCheck();
 //
+//   singlePass(activeVision,newPose,true,true,2);
+//   int minPtsVis = 0.025*(3*activeVision.ptrPtCldObject->points.size());
+//
+//   ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
 //   int nSteps = 0;
 //   while(activeVision.selectedGrasp == -1 && nSteps <= 5){
-//     dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,kinectPoses[0],2);
+//     dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,newPose,2,minPtsVis,viewer);
+//     // dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,newPose,2,minPtsVis);
 //     std::cout << "Direction selected : " << dir << std::endl;
 //
 //     newPose = calcExplorationPose(newPose,dir,2);
-//     activeVision.moveKinectViewsphere(newPose); nSteps++;
-//     activeVision.readKinect();
-//     activeVision.fuseLastData();
-//     activeVision.dataExtract();
-//     activeVision.updateUnexploredPtCld();
-//     activeVision.graspAndCollisionCheck();
+//     singlePass(activeVision,newPose,false,true,2);
+//     nSteps++;
 //   }
 //
 //   activeVision.deleteObject(objID);

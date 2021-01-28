@@ -34,7 +34,9 @@ graspPoint::graspPoint(){
 
 // Function to compare grasp point for sorting
 bool compareGrasp(graspPoint A, graspPoint B){
-  return(A.quality > B.quality);
+  if(A.quality > B.quality + 10) return true;
+  else if (B.quality > A.quality + 10) return false;
+  else return(A.distance < B.distance);
 }
 // ***END***
 
@@ -115,6 +117,8 @@ environment::environment(ros::NodeHandle *nh){
 
   nh->getParam("/active_vision/environment/addNoise", addNoise);
   nh->getParam("/active_vision/environment/depthNoise", depthNoise);
+
+  nh->getParam("/active_vision/environment/graspCurvatureConstraint", graspCurvatureConstraint);
 }
 
 // Function to reset the environment
@@ -599,7 +603,7 @@ void environment::updateUnexploredPtCld(){
         projIndex = proj[1]*(ptrPtCldLast->width)+proj[0];
         // If the z value of unexplored pt is greater than the corresponding
         // projected point in Kinect Raw data then that point is occluded.
-        if(ptrPtCldLast->points[projIndex].z <= ptTemp[2]){
+        if(ptrPtCldLast->points[projIndex].z <= ptTemp[2]*0.99){
           occludedIndices->indices.push_back(i);
         }
       }
@@ -635,16 +639,28 @@ void environment::graspsynthesis(){
   graspPoint graspTemp;
   Eigen::Vector3f vectA, vectB;
   double A,B;
+  float avgCurvature;
+  if(graspCurvatureConstraint){
+    for(int i = 0; i < cPtrPtCldObject->points.size(); i++) avgCurvature += ptrObjNormal->points[i].curvature;
+    avgCurvature /= cPtrPtCldObject->points.size();
+  }
 
+  pcl::PointXYZRGB centroidObj,centroidGrasp;
+  Eigen::Vector4f temp1;
+  pcl::compute3DCentroid(*ptrPtCldObject, temp1);
+  centroidObj.x = temp1[0]; centroidObj.y = temp1[1]; centroidObj.z = temp1[2];
   // Using brute force search
   // Checking for each pair of points (alternate points skipped to speedup the process)
-  for(int i = 0; i < ptrPtCldObject->size()-1; i=i+2){
-    for(int j = i+1; j < ptrPtCldObject->size(); j=j+2){
+  for(int i = 0; i < ptrPtCldObject->size()-1; i++){
+    for(int j = i+1; j < ptrPtCldObject->size(); j++){
       graspTemp.p1 = ptrPtCldObject->points[i];
       graspTemp.p2 = ptrPtCldObject->points[j];
 
       // Ignoring point closer to table
-      if(graspTemp.p1.z <= tableCentre[2]+0.03 || graspTemp.p2.z <= tableCentre[2]+0.03) continue;
+      if(graspTemp.p1.z <= tableCentre[2]+0.01 || graspTemp.p2.z <= tableCentre[2]+0.01) continue;
+
+      // Curvature check : If any one point is greater than average curvature then skip
+      if(graspCurvatureConstraint && (ptrObjNormal->points[i].curvature > 2*avgCurvature || ptrObjNormal->points[j].curvature > 2*avgCurvature)) continue;
 
       // Vector connecting the two grasp points and its distance
       vectA = graspTemp.p1.getVector3fMap() - graspTemp.p2.getVector3fMap();
@@ -664,6 +680,11 @@ void environment::graspsynthesis(){
       // If grasp quality is less than the min requirement then skip the rest
       if(graspTemp.quality < minGraspQuality) continue;
 
+      centroidGrasp.x = (graspTemp.p1.x + graspTemp.p2.x) / 2;
+      centroidGrasp.y = (graspTemp.p1.y + graspTemp.p2.y) / 2;
+      centroidGrasp.z = (graspTemp.p1.z + graspTemp.p2.z) / 2;
+      graspTemp.distance = pcl::euclideanDistance(centroidGrasp,centroidObj);
+
       // Push this into the vector
       graspsPossible.push_back(graspTemp);
     }
@@ -680,9 +701,13 @@ void environment::graspsynthesis(){
                  pcl::getAngle3D(xyPlaneB,ptrObjNormal->points[i].getNormalVector3fMap()))*180/M_PI;
 
     // If the point is too close to table and its normal vector is along z axis this skip it
-    if (A > 45 && ptrPtCldObject->points[i].z < tableCentre[2]+0.02){
+    if (A > 45 && ptrPtCldObject->points[i].z < tableCentre[2]+0.01){
       continue;
     }
+
+    // Curvature check : If any one point is greater than average curvature then skip
+    if(graspCurvatureConstraint && ptrObjNormal->points[i].curvature > 2*avgCurvature) continue;
+
     graspTemp.p1 = ptrPtCldObject->points[i];
     // Translating it along the +ve normal vector
     graspTemp.p1.x += (voxelGridSize)/2*ptrObjNormal->points[i].normal_x;
@@ -697,6 +722,12 @@ void environment::graspsynthesis(){
 
     graspTemp.gripperWidth = voxelGridSize;
     graspTemp.quality = 180;
+
+    centroidGrasp.x = (graspTemp.p1.x + graspTemp.p2.x) / 2;
+    centroidGrasp.y = (graspTemp.p1.y + graspTemp.p2.y) / 2;
+    centroidGrasp.z = (graspTemp.p1.z + graspTemp.p2.z) / 2;
+    graspTemp.distance = pcl::euclideanDistance(centroidGrasp,centroidObj);
+
     graspsPossible.push_back(graspTemp);
   }
 }
@@ -797,6 +828,18 @@ int environment::graspAndCollisionCheck(){
   graspPoint graspTemp;
   Eigen::Vector3f vectA, vectB;
   double A,B;
+
+  float avgCurvature;
+  if(graspCurvatureConstraint){
+    for(int i = 0; i < cPtrPtCldObject->points.size(); i++) avgCurvature += ptrObjNormal->points[i].curvature;
+    avgCurvature /= cPtrPtCldObject->points.size();
+  }
+
+  pcl::PointXYZRGB centroidObj,centroidGrasp;
+  Eigen::Vector4f temp1;
+  pcl::compute3DCentroid(*ptrPtCldObject, temp1);
+  centroidObj.x = temp1[0]; centroidObj.y = temp1[1]; centroidObj.z = temp1[2];
+
   int nGrasp = 0;
   // std::cout << "IN1" << std::endl;
   for (int i = 0; i < ptrPtCldObject->size()-1; i++){
@@ -805,7 +848,10 @@ int environment::graspAndCollisionCheck(){
       graspTemp.p2 = ptrPtCldObject->points[j];
 
       // Ignoring point closer to table
-      if(graspTemp.p1.z <= tableCentre[2]+0.03 || graspTemp.p2.z <= tableCentre[2]+0.03) continue;
+      if(graspTemp.p1.z <= tableCentre[2]+0.01 || graspTemp.p2.z <= tableCentre[2]+0.01) continue;
+
+      // Curvature check : If any one point is greater than average curvature then skip
+      if(graspCurvatureConstraint && (ptrObjNormal->points[i].curvature > 2*avgCurvature || ptrObjNormal->points[j].curvature > 2*avgCurvature)) continue;
 
       // Vector connecting the two grasp points and its distance
       vectA = graspTemp.p1.getVector3fMap() - graspTemp.p2.getVector3fMap();
@@ -825,6 +871,11 @@ int environment::graspAndCollisionCheck(){
 
       // If grasp quality is less than the min requirement then skip the rest
       if (graspTemp.quality < minGraspQuality) continue;
+
+      centroidGrasp.x = (graspTemp.p1.x + graspTemp.p2.x) / 2;
+      centroidGrasp.y = (graspTemp.p1.y + graspTemp.p2.y) / 2;
+      centroidGrasp.z = (graspTemp.p1.z + graspTemp.p2.z) / 2;
+      graspTemp.distance = pcl::euclideanDistance(centroidGrasp,centroidObj);
 
       nGrasp++;
       // Push this into the vector
@@ -851,9 +902,13 @@ int environment::graspAndCollisionCheck(){
                  pcl::getAngle3D(xyPlaneB,ptrObjNormal->points[i].getNormalVector3fMap()))*180/M_PI;
 
     // If the point is too close to table and its normal vector is along z axis this skip it
-    if (A > 45 && ptrPtCldObject->points[i].z < tableCentre[2]+0.02){
+    if (A > 45 && ptrPtCldObject->points[i].z < tableCentre[2]+0.01){
       continue;
     }
+
+    // Curvature check : If any one point is greater than average curvature then skip
+    if(graspCurvatureConstraint && ptrObjNormal->points[i].curvature > 2*avgCurvature) continue;
+
     graspTemp.p1 = ptrPtCldObject->points[i];
     // Translating it along the +ve normal vector
     graspTemp.p1.x += (voxelGridSize)/2*ptrObjNormal->points[i].normal_x;
@@ -868,6 +923,12 @@ int environment::graspAndCollisionCheck(){
 
     graspTemp.gripperWidth = voxelGridSize;
     graspTemp.quality = 180;
+
+    centroidGrasp.x = (graspTemp.p1.x + graspTemp.p2.x) / 2;
+    centroidGrasp.y = (graspTemp.p1.y + graspTemp.p2.y) / 2;
+    centroidGrasp.z = (graspTemp.p1.z + graspTemp.p2.z) / 2;
+    graspTemp.distance = pcl::euclideanDistance(centroidGrasp,centroidObj);
+
     nGrasp++;
     if (graspsPossible.size() == 0){
       graspsPossible.push_back(graspTemp);
@@ -885,7 +946,7 @@ int environment::graspAndCollisionCheck(){
 // ******************** ENVIRONMENT CLASS FUNCTIONS END ********************
 
 // Function to do a single pass
-void singlePass(environment &av, std::vector<double> kinectPose, bool firstTime, bool findGrasp){
+void singlePass(environment &av, std::vector<double> kinectPose, bool firstTime, bool findGrasp, int mode){
   av.moveKinectViewsphere(kinectPose);
   av.readKinect();
   av.fuseLastData();
@@ -893,7 +954,12 @@ void singlePass(environment &av, std::vector<double> kinectPose, bool firstTime,
   if (firstTime == true) av.genUnexploredPtCld();
   av.updateUnexploredPtCld();
   if (findGrasp == true){
-    av.graspAndCollisionCheck();
-    // av.graspsynthesis(); av.collisionCheck();
+    if(mode == 1){
+      av.graspAndCollisionCheck();
+    }
+    else{
+      av.graspsynthesis();
+      av.collisionCheck();
+    }
   }
 }

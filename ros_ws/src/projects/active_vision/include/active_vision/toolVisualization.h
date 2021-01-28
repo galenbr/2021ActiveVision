@@ -28,6 +28,8 @@ void addViewsphere(ptCldVis::Ptr viewer, int vp, pcl::PointXYZ centre, double &r
 
 void setCamView(ptCldVis::Ptr viewer, std::vector<double> pose, pcl::PointXYZ &centre);
 
+void setCamView(ptCldVis::Ptr viewer, std::vector<double> pose, pcl::PointXYZ &centre, int vp);
+
 class keyboardEvent{
 public:
   int type;

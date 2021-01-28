@@ -58,6 +58,7 @@ bool ROSCheck(std::string type, std::string name);
 // Structure to store one grasp related data
 struct graspPoint{
   float quality;
+  float distance;
   float gripperWidth;
   pcl::PointXYZRGB p1;
   pcl::PointXYZRGB p2;
@@ -117,6 +118,7 @@ private:
   bool addNoise;
   float depthNoise;                // Depth in %
   std::default_random_engine generator;
+  bool graspCurvatureConstraint;
 
   std::string path;                // Path the active vision package
 
@@ -249,6 +251,6 @@ public:
 };
 
 // Function to do a single pass
-void singlePass(environment &av, std::vector<double> kinectPose, bool firstTime, bool findGrasp);
+void singlePass(environment &av, std::vector<double> kinectPose, bool firstTime, bool findGrasp, int mode = 1);
 
 #endif

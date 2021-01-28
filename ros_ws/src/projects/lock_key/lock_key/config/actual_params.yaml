@@ -1,17 +1,17 @@
 ##### Key Position #####
 key_goal:
   # Key grasping position in map frame [meters]
-  x: 0.5715
-  y: 0.2623
-  z: 0.165 #peg: 0.1665, key: 0.165
+  x: 0.4847
+  y: -0.3071
+  z: 0.1700 #peg: 0.1665, key: 0.165
   # Key grasping orientation in [radians]
-  roll: 3.1416
-  pitch: 0.0
-  yaw: -0.7854 #Gazebo:0.0, Panda: -0.7854
+  roll: -1.5708 #Hor.: -1.5708, Vertical: 3.1416
+  pitch: 0.7854 #Hor.: 0.7854, Vertical: 0.0
+  yaw:   0.0    #Hor.: (Panda: 0.0), Vertical: (Gazebo:0.0, Panda: -0.7854)
   # Distance offsets for pre-grasp [meters]
   pre_x_offset: 0.0
-  pre_y_offset: 0.0
-  pre_z_offset: 0.15
+  pre_y_offset: -0.05 #Hor.: -0.05, Vertical:0.0
+  pre_z_offset: 0.0 #Hor.: 0.0, Vertical: 0.15
   # Distance offsets for post-grasp [meters]
   post_x_offset: 0.0
   post_y_offset: 0.0
@@ -45,7 +45,16 @@ padlock_goal:
   # Rotation for turning lock [radians]
   key_roll: 0.0
   key_pitch: 0.0
-  key_yaw: -1.0472
+  key_yaw: 0.0 #-1.0472
+
+##### Object Color Thresholds #####
+hsv:
+  lock:
+    min: [16,10,80] #[40,76,153]
+    max: [55,230,200] #[150,230,204]
+  key:
+    min: [95,46,153]
+    max: [110,77,217]
 
 ##### Home Position #####
 home:
