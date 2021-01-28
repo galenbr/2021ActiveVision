@@ -110,7 +110,7 @@ void get_cur_pose(const geometry_msgs::PointStamped &msg){
         // j_dot_fit(0) = j_dot(0)/(2*(abs(j_dot(0)) + abs(j_dot(1))));
         // j_dot_fit(1) = j_dot(1)/(2*(abs(j_dot(0)) + abs(j_dot(1))));
         
-        // std_msgs::Float64MultiArray vel_msg;    //Velocity Message for Pub
+        std_msgs::Float64MultiArray vel_msg;    //Velocity Message for Pub
         // vel_msg.data.resize(2);
     
         // vel_msg.data[0] = j_dot_fit(0);
