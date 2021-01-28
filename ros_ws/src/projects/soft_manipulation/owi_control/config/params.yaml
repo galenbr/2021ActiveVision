@@ -13,5 +13,7 @@ const_vel_exp: {
 
 owi_controller: {
   goal_x: 200,
-  goal_y: 300,
+  goal_y: 250,
+  start_x: 150,
+  start_y: 200,
 }
