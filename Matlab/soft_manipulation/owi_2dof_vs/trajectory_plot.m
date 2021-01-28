@@ -5,7 +5,7 @@ str = "~/owi_data/vs_data/exp"+exp_no+"/frame0000.jpg";
 img = imread(str);
 size(img)
 
-
+figure(1)
 imshow(img);
 axis on
 hold on
