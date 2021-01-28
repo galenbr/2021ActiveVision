@@ -1,6 +1,9 @@
 <launch>
 <!-- This file launches visual servo control framework for the OWI Robot -->
 
+<!-- Load YAML file -->
+<rosparam file="$(find owi_control)/config/params.yaml" />
+
 <!-- Webcam -->
 <include file = "$(find usb_cam)/launch/usb_cam-test.launch" />
 
@@ -18,10 +21,10 @@
 
 <!-- Record Node -->
 <node name ="record_data_node" pkg="owi_control" type="owi_freq_record_node" output="screen" />
-<!-- ROSSERIAL -->
-<!-- <node name="serial_node" pkg="rosserial_python" type="serial_node.py">
-<param name="port" type="string" value="/dev/ttyACM0"/>
-<param name="baud" type="int" value="57600" />
+
+<!-- Traj plotter -->
+<!-- <node name="draw_traj" pkg="image_view" type="image_view" respawn="false" output="screen">
+<remap from="image" to="/traj_output" />
 </node> -->
 
 </launch>
