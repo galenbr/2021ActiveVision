@@ -116,6 +116,8 @@ private:
   //Color filtering levers
   pcl::ConditionalRemoval<pcl::PointXYZRGB> color_filter;
   pcl::ConditionAnd<pcl::PointXYZRGB>::Ptr color_cond;
+  pcl::ConditionalRemoval<pcl::PointXYZRGB> color_filter2;
+  pcl::ConditionAnd<pcl::PointXYZRGB>::Ptr color_cond2;
 
   pcl::VoxelGrid<pcl::PointXYZRGB> voxelGrid;               // VoxelGrid object
   pcl::SACSegmentation<pcl::PointXYZRGB> seg;               // Segmentation object

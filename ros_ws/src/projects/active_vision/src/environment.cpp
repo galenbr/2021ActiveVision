@@ -247,14 +247,21 @@ environment::environment(ros::NodeHandle *nh){
 
   nh->getParam("/active_vision/environment/graspCurvatureConstraint", graspCurvatureConstraint);
 
+  int cutoff = 80;
+
   pcl::PackedHSIComparison<pcl::PointXYZRGB>::Ptr
      red_condition(new pcl::PackedHSIComparison<pcl::PointXYZRGB>("h", pcl::ComparisonOps::LE, 127));
   pcl::PackedHSIComparison<pcl::PointXYZRGB>::Ptr
-     red_condition_2(new pcl::PackedHSIComparison<pcl::PointXYZRGB>("h", pcl::ComparisonOps::GE, 80));
+     red_condition_2(new pcl::PackedHSIComparison<pcl::PointXYZRGB>("h", pcl::ComparisonOps::GE, cutoff));
+  pcl::PackedHSIComparison<pcl::PointXYZRGB>::Ptr
+     red_condition_3(new pcl::PackedHSIComparison<pcl::PointXYZRGB>("h", pcl::ComparisonOps::LT, cutoff-20));
   pcl::ConditionAnd<pcl::PointXYZRGB>::Ptr color_cond(new pcl::ConditionAnd<pcl::PointXYZRGB> ());
   color_cond->addComparison (red_condition);
   color_cond->addComparison (red_condition_2);
   color_filter.setCondition(color_cond);
+  pcl::ConditionAnd<pcl::PointXYZRGB>::Ptr color_cond2(new pcl::ConditionAnd<pcl::PointXYZRGB> ());
+  color_cond2->addComparison (red_condition_3);
+  color_filter2.setCondition(color_cond2);
 }
 
 // Function to reset the environment
@@ -686,9 +693,12 @@ void environment::dataExtract(){
 
   // Using extract to get the point cloud
   extract.setInputCloud(cPtrPtCldEnv);
-  extract.setNegative(false);
-  extract.setIndices(objectIndices);
+  extract.setNegative(true);
+  extract.setIndices(tableIndices);
   extract.filter(*ptrPtCldObject);
+
+  color_filter2.setInputCloud(cPtrPtCldObject);
+  color_filter2.filter(*ptrPtCldObject);
 
   // Getting the min and max co-ordinates of the object
   pcl::getMinMax3D(*ptrPtCldObject, minPtObj, maxPtObj);
