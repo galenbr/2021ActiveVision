@@ -181,7 +181,9 @@ void testDataExtract(environment &av, int objID, int flag){
     // addRGBN(viewer,av.cPtrPtCldObject,normal,"Object",vp[1]);
     std::cout << "Showing the table and object extacted. Close viewer to continue" << std::endl;
     std::vector<float> curvatures = {};
-    for(int i = 0; i < av.cPtrPtCldObject->points.size(); i++) curvatures.push_back(normal->points[i].curvature);
+    for(int i = 0; i < av.cPtrPtCldObject->points.size(); i++){
+      curvatures.push_back(normal->points[i].curvature);
+    }
     std::sort(curvatures.begin(), curvatures.end());
     float avgCurvature = std::accumulate(curvatures.begin(), curvatures.end(), 0.0)/av.cPtrPtCldObject->points.size();
     float minCurvature = *std::min_element(curvatures.begin(), curvatures.end());
@@ -228,7 +230,7 @@ void testGenUnexpPtCld(environment &av, int objID, int flag){
 
     // Adding the point clouds
     addRGB(viewer,av.cPtrPtCldObject,"Object",vp[0]);
-    addRGB(viewer,av.cPtrPtCldUnexp,"Unexplored pointcloud",vp[0]);
+    //addRGB(viewer,av.cPtrPtCldUnexp,"Unexplored pointcloud",vp[0]);
     std::cout << "Showing the object extacted and unexplored point cloud generated. Close viewer to continue" << std::endl;
     while (!viewer->wasStopped()){
       viewer->spinOnce(100);
@@ -254,8 +256,8 @@ void testUpdateUnexpPtCld(environment &av, int objID, int flag){
                                                   {1.0,-M_PI/2,M_PI/4},
                                                   {1.0,0,M_PI/4},
                                                   {1.0,M_PI/2,M_PI/4}};
-
   for (int i = 0; i < 4; i++) {
+    std::cout << "*** Starting move... ***" << std::endl;
     av.moveKinectViewsphere(kinectPoses[i]);
     av.readKinect();
     av.fuseLastData();
@@ -265,9 +267,10 @@ void testUpdateUnexpPtCld(environment &av, int objID, int flag){
     }
     av.updateUnexploredPtCld();
     if (flag == 1){
-      addRGB(viewer,av.cPtrPtCldEnv,"Env "+std::to_string(i),vp[i]);
-      addRGB(viewer,av.ptrPtCldUnexp,"Unexp "+std::to_string(i),vp[i]);
+      addRGB(viewer,av.cPtrPtCldTable,"Env "+std::to_string(i),vp[i]);
+      addRGB(viewer,av.ptrPtCldObject,"Unexp "+std::to_string(i),vp[i]);
     }
+    std::cout << "*** Move finished ***" << std::endl;
   }
   if (flag == 1){
     std::cout << "Close viewer to continue." << std::endl;

@@ -35,7 +35,7 @@
         <material>
           <script>
             <uri>file://media/materials/scripts/gazebo.material</uri>
-            <name>Gazebo/Wood</name>
+            <name>Gazebo/Green</name>
           </script>
         </material>
       </visual>

@@ -119,6 +119,15 @@ environment::environment(ros::NodeHandle *nh){
   nh->getParam("/active_vision/environment/depthNoise", depthNoise);
 
   nh->getParam("/active_vision/environment/graspCurvatureConstraint", graspCurvatureConstraint);
+
+  pcl::PackedHSIComparison<pcl::PointXYZRGB>::Ptr
+     red_condition(new pcl::PackedHSIComparison<pcl::PointXYZRGB>("h", pcl::ComparisonOps::LE, 127));
+  pcl::PackedHSIComparison<pcl::PointXYZRGB>::Ptr
+     red_condition_2(new pcl::PackedHSIComparison<pcl::PointXYZRGB>("h", pcl::ComparisonOps::GE, 80));
+  pcl::ConditionAnd<pcl::PointXYZRGB>::Ptr color_cond(new pcl::ConditionAnd<pcl::PointXYZRGB> ());
+  color_cond->addComparison (red_condition);
+  color_cond->addComparison (red_condition_2);
+  color_filter.setCondition(color_cond);
 }
 
 // Function to reset the environment
@@ -485,7 +494,7 @@ void environment::fuseLastData(){
 
 // 9: Extracting the major plane (Table) and object
 void environment::dataExtract(){
-  // Find the major plane and get its coefficients and indices
+  /*// Find the major plane and get its coefficients and indices
   seg.setInputCloud(cPtrPtCldEnv);
   seg.setOptimizeCoefficients(true);
   seg.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
@@ -506,12 +515,26 @@ void environment::dataExtract(){
   extract.setInputCloud(cPtrPtCldEnv);
   extract.setIndices(tableIndices);
   extract.setNegative(false);
-  extract.filter(*ptrPtCldTable);
+  extract.filter(*ptrPtCldTable);*/
+
+  
+  //For the time being, all our objects are (255,0,0) so everything
+  // <(90,90,90) will exclude them. For the real test, we can adjust
+  // the requirements to fit the table.
+  /*
+  pcl::PackedHSIComparison<pcl::PointXYZRGB>::Ptr
+     green_condition(new pcl::PackedRGBComparison<pcl::PointXYZRGB>("g", pcl::ComparisonOps::GE, 00));
+  pcl::PackedRGBComparison<pcl::PointXYZRGB>::Ptr
+     blue_condition(new pcl::PackedRGBComparison<pcl::PointXYZRGB>("b", pcl::ComparisonOps::GE, 100));*/
+  /*color_cond->addComparison (green_condition);
+  color_cond->addComparison (blue_condition);*/
+  color_filter.setInputCloud(cPtrPtCldEnv);
+  color_filter.filter(*ptrPtCldTable);
 
   pcl::compute3DCentroid(*ptrPtCldTable, cenTable);
   pcl::getMinMax3D(*ptrPtCldTable, minTable, maxTable);
-  // std::cout << tableCoeff->values[0] << " " << tableCoeff->values[1] << " " << tableCoeff->values[2] << " " << tableCoeff->values[3] << std::endl;
-  // std::cout << minTable.z << " " << cenTable[2] << " " << maxTable.z << std::endl;
+  //std::cout << tableCoeff->values[0] << " " << tableCoeff->values[1] << " " << tableCoeff->values[2] << " " << tableCoeff->values[3] << std::endl;
+  //std::cout << minTable.z << " " << cenTable[2] << " " << maxTable.z << std::endl;
 
   // Using convex hull to get the table boundary which would be like a rectangle
   cvHull.setInputCloud(cPtrPtCldTable);
@@ -527,7 +550,7 @@ void environment::dataExtract(){
   // Using polygonal prism and hull the extract object above the table
   prism.setInputCloud(cPtrPtCldEnv);
   prism.setInputPlanarHull(cPtrPtCldHull);
-  if(tableCoeff->values[3] < 0){
+  if(maxTable.z-cenTable[2] < viewsphereRad*depthNoise/100/2+voxelGridSize){
     prism.setHeightLimits(-1.5f,-(maxTable.z-cenTable[2]+viewsphereRad*depthNoise/100/2+voxelGridSize)); // Z height (min, max) in m
   }else{
     prism.setHeightLimits(maxTable.z-cenTable[2]+viewsphereRad*depthNoise/100/2+voxelGridSize,1.5f);     // Z height (min, max) in m
