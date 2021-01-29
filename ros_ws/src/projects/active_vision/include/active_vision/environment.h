@@ -17,6 +17,10 @@
 #include <ros/master.h>
 #include <tf/transform_datatypes.h>
 
+// OpenCV Specific Includes
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
 // PCL specific includes
 #include <pcl_ros/point_cloud.h>
 #include <pcl/io/ply_io.h>
@@ -90,6 +94,13 @@ Eigen::Vector3f getEuler(const Eigen::Affine3f& tf);
 
 // Get Translational Part of a Affine3f
 Eigen::Vector3f getTranslation(const Eigen::Affine3f& tf);
+
+Eigen::Affine3f calcTfFromNormal(pcl::Normal normal, pcl::PointXYZRGB point);
+
+void calcTfFromNormal(pcl::Normal normal, pcl::PointXYZRGB point, Eigen::Matrix3f &rot, Eigen::Vector3f &trans);
+
+// Estimating the contact patch
+bool isContactPatchOk(ptCldColor::Ptr obj, ptCldNormal::Ptr normal, long int ptIdx, float tolerance);
 
 // Class to store data of environment and its processing
 class environment{

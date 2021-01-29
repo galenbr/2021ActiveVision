@@ -179,6 +179,10 @@ class FinderPub:
         #        'lock':{'min':{'x':-0.12,'y':-0.08,'z':0.4},
         #                'max':{'x':-0.05,'y':0.0,'z':0.45}},
         #        'frame':'/camera_color_optical_frame'}
+
+        #TODO: Incorporate point transformation here. Instantiate
+        # PointStamped objects in init.
+
         key_min=(bounds['key']['min']['x'],
                  bounds['key']['min']['y'],
                  bounds['key']['min']['z'])

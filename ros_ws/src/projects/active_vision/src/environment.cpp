@@ -1,4 +1,5 @@
 #include <active_vision/environment.h>
+#include <active_vision/toolVisualization.h>
 
 // Function to check if a ROS NODE/TOPIC/SERVICE exists
 bool ROSCheck(std::string type, std::string name){
@@ -34,9 +35,7 @@ graspPoint::graspPoint(){
 
 // Function to compare grasp point for sorting
 bool compareGrasp(graspPoint A, graspPoint B){
-  if(A.quality > B.quality + 10) return true;
-  else if (B.quality > A.quality + 10) return false;
-  else return(A.distance < B.distance);
+  return(A.distance < B.distance);
 }
 // ***END***
 
@@ -59,6 +58,134 @@ Eigen::Vector3f getEuler(const Eigen::Affine3f& tf){
 // Get Translational Part of a Affine3f
 Eigen::Vector3f getTranslation(const Eigen::Affine3f& tf){
   return Eigen::Vector3f(tf(0,3), tf(1,3), tf(2,3));
+}
+
+Eigen::Affine3f calcTfFromNormal(pcl::Normal normal, pcl::PointXYZRGB point){
+  Eigen::Matrix3f rot;
+  Eigen::Vector3f trans;
+
+  Eigen::Matrix4f tfMat; tfMat.setIdentity();
+  Eigen::Affine3f tf;
+
+  Eigen::Vector3f xAxis,yAxis,zAxis,xyPlane(0,0,1);
+
+  xAxis = {normal.normal_x,normal.normal_y,normal.normal_z}; xAxis.normalize();
+  yAxis = xAxis.cross(xyPlane); yAxis.normalize();
+  zAxis = xAxis.cross(yAxis);
+
+  rot << xAxis[0], yAxis[0], zAxis[0],
+         xAxis[1], yAxis[1], zAxis[1],
+         xAxis[2], yAxis[2], zAxis[2];
+  trans = point.getVector3fMap();
+
+  tfMat.block<3,3>(0,0) = rot;
+  tfMat.block<3,1>(0,3) = trans;
+  tf.matrix() = tfMat;
+
+  return tf;
+}
+
+void calcTfFromNormal(pcl::Normal normal, pcl::PointXYZRGB point, Eigen::Matrix3f &rot, Eigen::Vector3f &trans){
+  Eigen::Matrix4f tfMat; tfMat.setIdentity();
+  Eigen::Affine3f tf;
+
+  Eigen::Vector3f xAxis,yAxis,zAxis,xyPlane(0,0,1);
+
+  xAxis = {normal.normal_x,normal.normal_y,normal.normal_z}; xAxis.normalize();
+  yAxis = xAxis.cross(xyPlane); yAxis.normalize();
+  zAxis = xAxis.cross(yAxis);
+
+  rot << xAxis[0], yAxis[0], zAxis[0],
+         xAxis[1], yAxis[1], zAxis[1],
+         xAxis[2], yAxis[2], zAxis[2];
+  trans = point.getVector3fMap();
+}
+
+// Estimating if the contact patch is sufficient
+bool isContactPatchOk(ptCldColor::Ptr obj, ptCldNormal::Ptr normal, long int ptIdx, float voxelGridSize){
+  int w = 100;
+  cv::Mat patchMask = cv::Mat::zeros(w+1,w+1,CV_8UC1);
+  int patchWidth = 26;
+  float patchArea = patchWidth*patchWidth;
+  circle(patchMask, cv::Point(w/2,w/2), int(patchWidth/2.0*sqrt(2)), 255, cv::FILLED, cv::LINE_8);
+
+  pcl::PointXYZRGB minBound,maxBound;
+  minBound.x = -0.005; maxBound.x = 0.005;
+  minBound.y = -0.030; maxBound.y = 0.030;
+  minBound.z = -0.030; maxBound.z = 0.030;
+
+  pcl::CropBox<pcl::PointXYZRGB> cpBox;
+  cpBox.setInputCloud(obj);
+  cpBox.setMin(minBound.getVector4fMap());
+  cpBox.setMax(maxBound.getVector4fMap());
+
+  Eigen::Affine3f tf = calcTfFromNormal(normal->points[ptIdx],obj->points[ptIdx]);
+  cpBox.setRotation(getEuler(tf));
+  cpBox.setTranslation(getTranslation(tf));
+
+  static ptCldColor::Ptr objFiltered{new ptCldColor};
+  cpBox.filter(*objFiltered);
+  Eigen::Affine3f tfTranspose = homoMatTranspose(tf);
+  pcl::transformPointCloud(*objFiltered, *objFiltered, tfTranspose);
+
+  cv::Mat surface = cv::Mat::zeros(w+1,w+1,CV_8UC1);
+  Eigen::Vector3f proj;
+  std::vector<cv::Point> projPts;
+  for(int i = 0; i<objFiltered->points.size(); i++){
+    proj[0] = int(objFiltered->points[i].y*1000+w/2);
+    proj[1] = int(objFiltered->points[i].z*1000+w/2);
+    if(proj[0] >= 0 && proj[0] < w+1 && proj[1] >= 0 && proj[1] < w+1){
+      // uchar &intensity = surface.at<uchar>(proj[1],proj[0]);
+      // intensity = 255;
+      projPts.push_back(cv::Point(proj[1],proj[0]));
+    }else{
+      ROS_WARN("Error in isContactPatchOk projection.");
+    }
+  }
+
+  std::vector<std::vector<cv::Point>> hullPts(1);
+  cv::convexHull(projPts, hullPts[0]);
+  cv::drawContours(surface, hullPts, -1, 255,-1);
+
+  cv::Mat surfacePatch; surface.copyTo(surfacePatch, patchMask);
+  std::vector<std::vector<cv::Point>> contours;
+  cv::findContours(surfacePatch, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+  static int i = 0;
+  if(contours.size() == 1){
+    cv::RotatedRect bBox = cv::minAreaRect(contours[0]);
+    float dimRatio = std::max(bBox.size.width,bBox.size.height) / std::min(bBox.size.width,bBox.size.height);
+    cv::Moments mu = cv::moments(contours[0]);
+    float cx,cy,area;
+    cx = mu.m10 / (mu.m00 + 1e-5);
+    cy = mu.m01 / (mu.m00 + 1e-5);
+    area = mu.m00;
+    if(dimRatio <= 1.75 && area >= patchArea*0.8 && sqrt(pow(cx - w/2,2) + pow(cy - w/2,2)) <= 4){
+      return true;
+    }
+  }
+
+  // cv::Mat surfacePatch;
+  // int sA1 = int((voxelGridSize*1000)/2)+1;
+  // cv::Mat element1 = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(2*sA1+1,2*sA1+1));
+  // cv::morphologyEx(surface,surface,1,element1);
+  // surface.copyTo(surfacePatch, patchMask);
+  // std::vector<std::vector<cv::Point>> contours;
+  // cv::findContours(surfacePatch, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+  // cv::Moments mu = cv::moments(contours[0]);
+  // float cx,cy,area;
+  // cx = mu.m10 / (mu.m00 + 1e-5);
+  // cy = mu.m01 / (mu.m00 + 1e-5);
+  // area = mu.m00;
+  //
+  // if(contours.size() == 1 && area >= patchArea*0.85 && sqrt(pow(cx - w/2,2) + pow(cy - w/2,2)) <= 2){
+  //   cv::RotatedRect bBox = cv::minAreaRect(contours[0]);
+  //   float dimRatio = std::max(bBox.size.width,bBox.size.height) / std::min(bBox.size.width,bBox.size.height);
+  //   // std::cout << std::fixed;
+  //   // std::cout << std::setprecision(2);
+  //   // std::cout << "X : " << cx << " Y : " << cy << " Area : " << area << " Ratio : " << dimRatio << std::endl;
+  //   if(dimRatio < 1.25) return true;
+  // }
+  return false;
 }
 
 // ******************** ENVIRONMENT CLASS FUNCTIONS START ********************
@@ -606,7 +733,8 @@ void environment::updateUnexploredPtCld(){
 
   Eigen::Vector4f ptTemp;
   Eigen::Vector3f proj;
-  pcl::PointIndices::Ptr occludedIndices(new pcl::PointIndices());
+  static pcl::PointIndices::Ptr occludedIndices(new pcl::PointIndices());
+  occludedIndices->indices.clear();
   int projIndex;
 
   // Looping through all the points and finding occluded ones.

@@ -231,7 +231,7 @@ add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EX
 
 add_executable(environmentTesting src/environmentTesting.cpp)
 add_dependencies(environmentTesting active_vision ${catkin_EXPORTED_TARGETS})
-target_link_libraries(environmentTesting active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(environmentTesting active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
 
 add_executable(dataCollector src/dataCollector.cpp)
 add_dependencies(dataCollector active_vision ${catkin_EXPORTED_TARGETS})

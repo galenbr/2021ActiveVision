@@ -135,9 +135,9 @@ def genSummary(path,fileNames):
     policyWise =  OrderedDict(sorted(policyWise.items()))
     policyWise2 =  OrderedDict(sorted(policyWise2.items()))
     stVecWise =  OrderedDict(sorted(stVecWise.items()))
-    print(policyWise)
-    print(policyWise2)
-    print(stVecWise)
+    # print(policyWise)
+    # print(policyWise2)
+    # print(stVecWise)
     return policyWise,policyWise2,stVecWise
 
 #Generate a bar graph of the summary

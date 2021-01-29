@@ -482,6 +482,7 @@ void testComplete(environment &av, int objID, int nVp, int graspMode, int flag, 
       av.genUnexploredPtCld();
     }
     av.updateUnexploredPtCld();
+    av.graspsynthesis();
   }
   end[1] = std::chrono::high_resolution_clock::now();
 
@@ -786,6 +787,58 @@ void testReadPCD(std::string filename){
   std::cout << "*** END ***" << std::endl;
 }
 
+// 15: Testing SUrface Patch
+void testSurfacePatch(environment &av, int objID, int flag){
+  std::cout << "*** In surface patch testing function ***" << std::endl;
+  av.spawnObject(objID,0,0.0/180.0*M_PI);
+
+  // 4 kinect position to capture and fuse
+  std::vector<std::vector<double>> kinectPoses = {{1.0,-M_PI,M_PI/4},
+                                                  {1.0,-M_PI/2,M_PI/4},
+                                                  {1.0,0,M_PI/4},
+                                                  {1.0,M_PI/2,M_PI/4}};
+
+  for (int i = 0; i < 4; i++){
+    av.moveKinectViewsphere(kinectPoses[i]);
+    av.readKinect();
+    av.fuseLastData();
+    av.dataExtract();
+    if (i==0){
+      av.genUnexploredPtCld();
+    }
+    av.updateUnexploredPtCld();
+  }
+  av.graspsynthesis();
+
+  for(int i = 0; i < av.ptrPtCldObject->points.size(); i++){
+    if(isContactPatchOk(av.ptrPtCldObject,av.ptrObjNormal,i,av.voxelGridSize)){
+      av.ptrPtCldObject->points[i].r = 0;
+      av.ptrPtCldObject->points[i].g = 255;
+      av.ptrPtCldObject->points[i].b = 0;
+    }
+  }
+
+  av.deleteObject(objID);
+
+  if (flag == 1) {
+    // Setting up the point cloud visualizer
+    ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer")); std::vector<int> vp;
+    setupViewer(viewer, 1, vp);
+    viewer->setCameraPosition(-2,0,7,1.5,0,1,0,0,1);
+
+    addRGB(viewer,av.ptrPtCldUnexp,"Unexplored",vp[0]);
+    addRGB(viewer,av.ptrPtCldObject,"Object",vp[0]);
+    std::cout << "Showing the graspable points in green. Close viewer to continue" << std::endl;
+
+    while (!viewer->wasStopped ()){
+      viewer->spinOnce(100);
+      boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+    }
+  }
+
+  std::cout << "*** End ***" << std::endl;
+}
+
 int main (int argc, char** argv){
 
   // Initialize ROS
@@ -813,9 +866,10 @@ int main (int argc, char** argv){
   std::cout << "13 : Save point clouds." << std::endl;
   std::cout << "14 : Read CSV and print a column." << std::endl;
   std::cout << "15 : Read PCD based on CSV data." << std::endl;
+  std::cout << "16 : Surface patch testing." << std::endl;
   std::cout << "Enter your choice : "; cin >> choice;
 
-  if (choice >= 5 && choice <= 13) {
+  if (choice >= 5 && choice <= 13 || choice == 16) {
     std::cout << "Objects available :" << std::endl;
     for(auto data: activeVision.objectDict){
         data.second.printObjectInfo();
@@ -872,13 +926,15 @@ int main (int argc, char** argv){
       testComplete(activeVision,objID,4,graspMode,1,0);
       break;
     case 12:
-      testSaveRollback(activeVision,objID,1);    break;
+      testSaveRollback(activeVision,objID,1);         break;
     case 13:
-      testSavePCD(activeVision,objID);           break;
+      testSavePCD(activeVision,objID);                break;
     case 14:
-      testReadCSV(filename,colID);               break;
+      testReadCSV(filename,colID);                    break;
     case 15:
-      testReadPCD(filename);                     break;
+      testReadPCD(filename);                          break;
+    case 16:
+      testSurfacePatch(activeVision,objID,1);         break;
     default:
       std::cout << "Invalid choice." << std::endl;
   }
