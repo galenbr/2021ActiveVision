@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 ROS node for lock and key segmentation and centroid finding
@@ -14,16 +15,17 @@ from cv_bridge import CvBridge, CvBridgeError
 
 class FinderPub:
     '''Finds lock and key from RGBD data.'''
-    def __init__(self, key_min_hsv, key_max_hsv, lock_min_hsv, lock_max_hsv):
+    def __init__(self):
         self.header=None
         self.key_search_box=None
-        self.key_min_hsv=key_min_hsv
-        self.key_max_hsv=key_max_hsv
+        self.hsv=rospy.get_param('hsv')
+        self.key_min_hsv=self.hsv['key']['min']
+        self.key_max_hsv=self.hsv['key']['max']
         self.key_center=None
         self.key_center_depth=None
         self.lock_search_box=None
-        self.lock_min_hsv=lock_min_hsv
-        self.lock_max_hsv=lock_max_hsv
+        self.lock_min_hsv=self.hsv['lock']['min']
+        self.lock_max_hsv=self.hsv['lock']['max']
         self.lock_center=None
         self.lock_center_depth=None
         self.rgb_camera=image_geometry.PinholeCameraModel()
@@ -178,11 +180,7 @@ class FinderPub:
         #                'max':{'x':0.2,'y':0.0,'z':0.45}},
         #        'lock':{'min':{'x':-0.12,'y':-0.08,'z':0.4},
         #                'max':{'x':-0.05,'y':0.0,'z':0.45}},
-        #        'frame':'/camera_color_optical_frame'}
-
-        #TODO: Incorporate point transformation here. Instantiate
-        # PointStamped objects in init.
-
+        #        'frame':'/camera_depth_optical_frame'}
         key_min=(bounds['key']['min']['x'],
                  bounds['key']['min']['y'],
                  bounds['key']['min']['z'])
@@ -195,6 +193,9 @@ class FinderPub:
         lock_max=(bounds['lock']['max']['x'],
                   bounds['lock']['max']['y'],
                   bounds['lock']['max']['z'])
+
+        #TODO: Transform points from /camera_depth_optical_frame to /camera_color_optical_frame
+
         key_min_pix=self.rgb_camera.project3dToPixel(key_min)
         key_max_pix=self.rgb_camera.project3dToPixel(key_max)
         lock_min_pix=self.rgb_camera.project3dToPixel(lock_min)
@@ -208,13 +209,7 @@ class FinderPub:
         
 def main():
     rospy.init_node('lock_key_finder_pub',anonymous=True)
-    #Define input parameters
-    hsv={'lock':{'min':[40,int(0.3*255),int(0.6*255)],
-                 'max':[150,int(0.9*255),int(0.8*255)]},
-         'key':{'min':[95,int(0.18*255),int(0.6*255)],
-                'max':[110,int(0.3*255),int(0.85*255)]}}
-    finder=FinderPub(hsv['key']['min'], hsv['key']['max'], 
-                     hsv['lock']['min'], hsv['lock']['max'])
+    finder=FinderPub()
     try:
         rospy.spin()
     except KeyboardInterrupt:
