@@ -9,7 +9,7 @@
   <!-- Arguments -->
   <arg name="robot_ip" default="172.16.0.2" />
   <arg name="load_gripper" default="true" />
-  <arg name="launch_vision" default="false" />
+  <arg name="launch_vision" default="true" />
   <arg name="launch_rviz" default="false" />
 	
   <!-- Set Parameters so other nodes can access them -->
