@@ -37,13 +37,11 @@
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/crop_hull.h>
 #include <pcl/filters/crop_box.h>
-#include <pcl/filters/conditional_removal.h>
 #include <pcl/ModelCoefficients.h>
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/extract_polygonal_prism_data.h>
-#include <pcl/segmentation/region_growing_rgb.h>
 #include <pcl/surface/convex_hull.h>
 #include <pcl/features/normal_3d.h>
 
@@ -102,6 +100,8 @@ void calcTfFromNormal(pcl::Normal normal, pcl::PointXYZRGB point, Eigen::Matrix3
 // Estimating the contact patch
 bool isContactPatchOk(ptCldColor::Ptr obj, ptCldNormal::Ptr normal, long int ptIdx, float tolerance);
 
+void RGBtoHSV(float fR, float fG, float fB, float& fH, float& fS, float& fV);
+
 // Class to store data of environment and its processing
 class environment{
 private:
@@ -113,12 +113,6 @@ private:
   ros::ServiceClient gazeboDeleteModel; // Service : Delete Model
 
   pcl::PassThrough<pcl::PointXYZRGB> pass;                  // Passthrough filter
-  //Color filtering levers
-  pcl::ConditionalRemoval<pcl::PointXYZRGB> color_filter;
-  pcl::ConditionAnd<pcl::PointXYZRGB>::Ptr color_cond;
-  pcl::ConditionalRemoval<pcl::PointXYZRGB> color_filter2;
-  pcl::ConditionAnd<pcl::PointXYZRGB>::Ptr color_cond2;
-
   pcl::VoxelGrid<pcl::PointXYZRGB> voxelGrid;               // VoxelGrid object
   pcl::SACSegmentation<pcl::PointXYZRGB> seg;               // Segmentation object
   pcl::ExtractIndices<pcl::PointXYZRGB> extract;            // Extracting object
@@ -249,6 +243,8 @@ public:
 
   // 9: Extracting the major plane (Table) and object
   void dataExtract();
+  void dataExtractPlaneSeg();
+  void dataColorCorrection();
 
   // 10: Generating unexplored point cloud
   void genUnexploredPtCld();

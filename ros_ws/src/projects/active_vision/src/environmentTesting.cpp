@@ -21,7 +21,7 @@ void testSpawnDeleteObj(environment &av){
   std::cout << "*** End ***" << std::endl;
 }
 
-// 2A: A test function to check if the "moveKinect" functions are working
+// 3: A test function to check if the "moveKinect" functions are working
 void testKinectMovement(environment &av){
   std::cout << "*** In kinect movement testing function ***" << std::endl;
   int flag = 0;
@@ -57,7 +57,7 @@ void testKinectMovement(environment &av){
   std::cout << "*** End ***" << std::endl;
 }
 
-// 2B: A test function to move the kinect in a viewsphere continuously
+// 4: A test function to move the kinect in a viewsphere continuously
 void testMoveKinectInViewsphere(environment &av){
   std::cout << "*** In Kinect move in viewsphere testing function ***" << std::endl;
   for (double i = M_PI/2; i > 0;) {
@@ -71,7 +71,7 @@ void testMoveKinectInViewsphere(environment &av){
   std::cout << "*** End ***" << std::endl;
 }
 
-// 3: A test function to check if the "readKinect" function is working
+// 5: A test function to check if the "readKinect" function is working
 void testKinectRead(environment &av, int objID, int flag){
   std::cout << "*** In kinect data read testing function ***" << std::endl;
   av.spawnObject(objID,0,0);
@@ -111,7 +111,7 @@ void testKinectRead(environment &av, int objID, int flag){
   std::cout << "*** End ***" << std::endl;
 }
 
-// 4: A test function to check fusing of data
+// 6: A test function to check fusing of data
 void testPtCldFuse(environment &av, int objID, int flag){
   std::cout << "*** In point cloud data fusion testing function ***" << std::endl;
   av.spawnObject(objID,0,0);
@@ -146,7 +146,7 @@ void testPtCldFuse(environment &av, int objID, int flag){
   std::cout << "*** End ***" << std::endl;
 }
 
-// 5: A test function to extract table and object data
+// 7: A test function to extract table and object data
 void testDataExtract(environment &av, int objID, int flag){
   std::cout << "*** In table and object extraction testing function ***" << std::endl;
   av.spawnObject(objID,0,0);
@@ -161,16 +161,7 @@ void testDataExtract(environment &av, int objID, int flag){
     av.readKinect();
     av.fuseLastData();
   }
-
   av.dataExtract();
-
-  ptCldNormal::Ptr normal{new ptCldNormal};
-  pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;  // Normal Estimation
-  pcl::search::Search<pcl::PointXYZRGB>::Ptr KdTree{new pcl::search::KdTree<pcl::PointXYZRGB>};
-  ne.setInputCloud(av.cPtrPtCldObject);
-  ne.setSearchMethod(KdTree);
-  ne.setKSearch(10);
-  ne.compute(*normal);
 
   if(flag==1){
     // Setting up the point cloud visualizer
@@ -180,22 +171,6 @@ void testDataExtract(environment &av, int objID, int flag){
 
     // addRGBN(viewer,av.cPtrPtCldObject,normal,"Object",vp[1]);
     std::cout << "Showing the table and object extacted. Close viewer to continue" << std::endl;
-    std::vector<float> curvatures = {};
-    for(int i = 0; i < av.cPtrPtCldObject->points.size(); i++){
-      curvatures.push_back(normal->points[i].curvature);
-    }
-    std::sort(curvatures.begin(), curvatures.end());
-    float avgCurvature = std::accumulate(curvatures.begin(), curvatures.end(), 0.0)/av.cPtrPtCldObject->points.size();
-    float minCurvature = *std::min_element(curvatures.begin(), curvatures.end());
-    float maxCurvature = *std::max_element(curvatures.begin(), curvatures.end());
-    // std::cout << minCurvature << "," << avgCurvature << "," << maxCurvature << "," << std::endl;
-
-    for(int i = 0; i < av.cPtrPtCldObject->points.size(); i++){
-      if(normal->points[i].curvature > 2*avgCurvature) continue;
-      av.ptrPtCldObject->points[i].r = 0;
-      av.ptrPtCldObject->points[i].g = 255;
-      av.ptrPtCldObject->points[i].b = 0;
-    }
 
     // ADding the point clouds
     addRGB(viewer,av.cPtrPtCldTable,"Table",vp[0]);
@@ -210,7 +185,7 @@ void testDataExtract(environment &av, int objID, int flag){
   std::cout << "*** End ***" << std::endl;
 }
 
-// 6: A test function to generate unexplored point cloud
+// 8: A test function to generate unexplored point cloud
 void testGenUnexpPtCld(environment &av, int objID, int flag){
   std::cout << "*** In unexplored point cloud generation testing function ***" << std::endl;
   av.spawnObject(objID,0,0);
@@ -241,7 +216,7 @@ void testGenUnexpPtCld(environment &av, int objID, int flag){
   std::cout << "*** End ***" << std::endl;
 }
 
-// 7: A test function to update unexplored point cloud
+// 9: A test function to update unexplored point cloud
 void testUpdateUnexpPtCld(environment &av, int objID, int flag){
   std::cout << "*** In unexplored point cloud update testing function ***" << std::endl;
   av.spawnObject(objID,0,0);
@@ -257,7 +232,6 @@ void testUpdateUnexpPtCld(environment &av, int objID, int flag){
                                                   {1.0,0,M_PI/4},
                                                   {1.0,M_PI/2,M_PI/4}};
   for (int i = 0; i < 4; i++) {
-    std::cout << "*** Starting move... ***" << std::endl;
     av.moveKinectViewsphere(kinectPoses[i]);
     av.readKinect();
     av.fuseLastData();
@@ -267,10 +241,9 @@ void testUpdateUnexpPtCld(environment &av, int objID, int flag){
     }
     av.updateUnexploredPtCld();
     if (flag == 1){
-      addRGB(viewer,av.cPtrPtCldTable,"Env "+std::to_string(i),vp[i]);
-      addRGB(viewer,av.ptrPtCldObject,"Unexp "+std::to_string(i),vp[i]);
+      addRGB(viewer,av.cPtrPtCldEnv,"Env "+std::to_string(i),vp[i]);
+      addRGB(viewer,av.ptrPtCldUnexp,"Unexp "+std::to_string(i),vp[i]);
     }
-    std::cout << "*** Move finished ***" << std::endl;
   }
   if (flag == 1){
     std::cout << "Close viewer to continue." << std::endl;
@@ -283,7 +256,7 @@ void testUpdateUnexpPtCld(environment &av, int objID, int flag){
   std::cout << "*** End ***" << std::endl;
 }
 
-// 8: A test function to load and update gripper
+// 2: A test function to load and update gripper
 void testGripper(environment &av, int flag, float width){
   std::cout << "*** In gripper testing function ***" << std::endl;
 
@@ -328,7 +301,7 @@ void testGripper(environment &av, int flag, float width){
   std::cout << "*** End ***" << std::endl;
 }
 
-// 9: Grasp synthesis test function
+// 10: Grasp synthesis test function
 void testGraspsynthesis(environment &av, int objID, int flag){
   std::cout << "*** In grasp synthesis testing function ***" << std::endl;
   av.spawnObject(objID,0,0);
@@ -385,7 +358,7 @@ void testGraspsynthesis(environment &av, int objID, int flag){
   std::cout << "*** End ***" << std::endl;
 }
 
-// 10A: A test function to check the collision check algorithm with dummy data
+// A test function to check the collision check algorithm with dummy data
 void testCollisionDummy(environment &av, bool result, int flag){
   std::cout << "*** In dummy collision testing function ***" << std::endl;
 
@@ -446,7 +419,7 @@ void testCollisionDummy(environment &av, bool result, int flag){
   std::cout << "*** End ***" << std::endl;
 }
 
-// 10B: A test function to check the collision check algorithm with object and grasp points
+// 11: A test function to check the collision check algorithm with object and grasp points
 void testComplete(environment &av, int objID, int nVp, int graspMode, int flag, int write){
   std::cout << "*** In overall testing function ***" << std::endl;
   int ctrGrasp;
@@ -589,7 +562,7 @@ void testComplete(environment &av, int objID, int nVp, int graspMode, int flag, 
   std::cout << "*** End ***" << std::endl;
 }
 
-// 11: A test function to check rollback feature
+// 12: A test function to check rollback feature
 void testSaveRollback(environment &av, int objID, int flag){
   std::cout << "*** In save and rollback testing function ***" << std::endl;
   // av.reset();
@@ -699,7 +672,7 @@ void testSaveRollback(environment &av, int objID, int flag){
   std::cout << "*** End ***" << std::endl;
 }
 
-// 12: A function to test saving pointcloud
+// 13: A function to test saving pointcloud
 void testSavePCD(environment &av, int objID){
   std::cout << "*** In point cloud save testing function ***" << std::endl;
   std::string dir = "./DataRecAV/";
@@ -733,7 +706,7 @@ void testSavePCD(environment &av, int objID){
   std::cout << "*** END ***" << std::endl;
 }
 
-// 13: A function to test reading csv file
+// 14: A function to test reading csv file
 void testReadCSV(std::string filename, int colID){
   std::cout << "*** In CSV read testing function ***" << std::endl;
 
@@ -751,7 +724,7 @@ void testReadCSV(std::string filename, int colID){
   std::cout << "*** END ***" << std::endl;
 }
 
-// 14: A function to test reading PCD based on CSV file data
+// 15: A function to test reading PCD based on CSV file data
 void testReadPCD(std::string filename){
   std::cout << "*** In PCD read testing function ***" << std::endl;
   std::string dir = "./DataRecAV/";
@@ -787,7 +760,7 @@ void testReadPCD(std::string filename){
   std::cout << "*** END ***" << std::endl;
 }
 
-// 15: Testing SUrface Patch
+// 16: Testing SUrface Patch
 void testSurfacePatch(environment &av, int objID, int flag){
   std::cout << "*** In surface patch testing function ***" << std::endl;
   av.spawnObject(objID,0,0.0/180.0*M_PI);

@@ -33,10 +33,10 @@
           </box>
         </geometry>
         <material>
-          <script>
-            <uri>file://media/materials/scripts/gazebo.material</uri>
-            <name>Gazebo/Green</name>
-          </script>
+          <ambient>0.07 0.53 0 1</ambient>
+          <diffuse>0.07 0.53 0 1</diffuse>
+          <specular>0.0 0.0 0.0 1</specular>
+          <emissive>0 0 0 0</emissive>
         </material>
       </visual>
       <collision name="front_left_leg">

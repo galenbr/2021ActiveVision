@@ -188,6 +188,35 @@ bool isContactPatchOk(ptCldColor::Ptr obj, ptCldNormal::Ptr normal, long int ptI
   return false;
 }
 
+/*! \brief Convert RGB to HSV color space
+  Converts a given set of RGB values `r', `g', `b' into HSV
+  coordinates. The input RGB values are in the range [0, 1], and the
+  output HSV values are in the ranges h = [0, 360], and s, v = [0,
+  1], respectively.
+*/
+void RGBtoHSV(float fR, float fG, float fB, float& fH, float& fS, float& fV){
+  float fCMax = std::max(std::max(fR, fG), fB);
+  float fCMin = std::min(std::min(fR, fG), fB);
+  float fDelta = fCMax - fCMin;
+
+  if(fDelta > 0){
+    if(fCMax == fR)       fH = 60 * (std::fmod(((fG - fB) / fDelta), 6));
+    else if(fCMax == fG)  fH = 60 * (((fB - fR) / fDelta) + 2);
+    else if(fCMax == fB)  fH = 60 * (((fR - fG) / fDelta) + 4);
+
+    if(fCMax > 0) fS = fDelta / fCMax;
+    else          fS = 0;
+
+    fV = fCMax;
+  }else{
+    fH = 0;
+    fS = 0;
+    fV = fCMax;
+  }
+
+  if(fH < 0) fH = 360 + fH;
+}
+
 // ******************** ENVIRONMENT CLASS FUNCTIONS START ********************
 // Environment class constructor
 environment::environment(ros::NodeHandle *nh){
@@ -246,22 +275,6 @@ environment::environment(ros::NodeHandle *nh){
   nh->getParam("/active_vision/environment/depthNoise", depthNoise);
 
   nh->getParam("/active_vision/environment/graspCurvatureConstraint", graspCurvatureConstraint);
-
-  int cutoff = 80;
-
-  pcl::PackedHSIComparison<pcl::PointXYZRGB>::Ptr
-     red_condition(new pcl::PackedHSIComparison<pcl::PointXYZRGB>("h", pcl::ComparisonOps::LE, 127));
-  pcl::PackedHSIComparison<pcl::PointXYZRGB>::Ptr
-     red_condition_2(new pcl::PackedHSIComparison<pcl::PointXYZRGB>("h", pcl::ComparisonOps::GE, cutoff));
-  pcl::PackedHSIComparison<pcl::PointXYZRGB>::Ptr
-     red_condition_3(new pcl::PackedHSIComparison<pcl::PointXYZRGB>("h", pcl::ComparisonOps::LT, cutoff-20));
-  pcl::ConditionAnd<pcl::PointXYZRGB>::Ptr color_cond(new pcl::ConditionAnd<pcl::PointXYZRGB> ());
-  color_cond->addComparison (red_condition);
-  color_cond->addComparison (red_condition_2);
-  color_filter.setCondition(color_cond);
-  pcl::ConditionAnd<pcl::PointXYZRGB>::Ptr color_cond2(new pcl::ConditionAnd<pcl::PointXYZRGB> ());
-  color_cond2->addComparison (red_condition_3);
-  color_filter2.setCondition(color_cond2);
 }
 
 // Function to reset the environment
@@ -628,7 +641,12 @@ void environment::fuseLastData(){
 
 // 9: Extracting the major plane (Table) and object
 void environment::dataExtract(){
-  /*// Find the major plane and get its coefficients and indices
+  dataExtractPlaneSeg();
+  dataColorCorrection();
+}
+
+void environment::dataExtractPlaneSeg(){
+  // Find the major plane and get its coefficients and indices
   seg.setInputCloud(cPtrPtCldEnv);
   seg.setOptimizeCoefficients(true);
   seg.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
@@ -649,21 +667,7 @@ void environment::dataExtract(){
   extract.setInputCloud(cPtrPtCldEnv);
   extract.setIndices(tableIndices);
   extract.setNegative(false);
-  extract.filter(*ptrPtCldTable);*/
-
-  
-  //For the time being, all our objects are (255,0,0) so everything
-  // <(90,90,90) will exclude them. For the real test, we can adjust
-  // the requirements to fit the table.
-  /*
-  pcl::PackedHSIComparison<pcl::PointXYZRGB>::Ptr
-     green_condition(new pcl::PackedRGBComparison<pcl::PointXYZRGB>("g", pcl::ComparisonOps::GE, 00));
-  pcl::PackedRGBComparison<pcl::PointXYZRGB>::Ptr
-     blue_condition(new pcl::PackedRGBComparison<pcl::PointXYZRGB>("b", pcl::ComparisonOps::GE, 100));*/
-  /*color_cond->addComparison (green_condition);
-  color_cond->addComparison (blue_condition);*/
-  color_filter.setInputCloud(cPtrPtCldEnv);
-  color_filter.filter(*ptrPtCldTable);
+  extract.filter(*ptrPtCldTable);
 
   pcl::compute3DCentroid(*ptrPtCldTable, cenTable);
   pcl::getMinMax3D(*ptrPtCldTable, minTable, maxTable);
@@ -684,21 +688,53 @@ void environment::dataExtract(){
   // Using polygonal prism and hull the extract object above the table
   prism.setInputCloud(cPtrPtCldEnv);
   prism.setInputPlanarHull(cPtrPtCldHull);
-  if(maxTable.z-cenTable[2] < viewsphereRad*depthNoise/100/2+voxelGridSize){
-    prism.setHeightLimits(-1.5f,-(maxTable.z-cenTable[2]+viewsphereRad*depthNoise/100/2+voxelGridSize)); // Z height (min, max) in m
-  }else{
-    prism.setHeightLimits(maxTable.z-cenTable[2]+viewsphereRad*depthNoise/100/2+voxelGridSize,1.5f);     // Z height (min, max) in m
-  }
+  prism.setViewPoint(cenTable[0],cenTable[1],cenTable[2]+1);            // Ensuring normals point above the table
+  prism.setHeightLimits(maxTable.z-cenTable[2]+voxelGridSize,1.5f);     // Z height (min, max) in m
   prism.segment(*objectIndices);
 
   // Using extract to get the point cloud
   extract.setInputCloud(cPtrPtCldEnv);
-  extract.setNegative(true);
-  extract.setIndices(tableIndices);
+  extract.setNegative(false);
+  extract.setIndices(objectIndices);
   extract.filter(*ptrPtCldObject);
 
-  color_filter2.setInputCloud(cPtrPtCldObject);
-  color_filter2.filter(*ptrPtCldObject);
+  // Getting the min and max co-ordinates of the object
+  pcl::getMinMax3D(*ptrPtCldObject, minPtObj, maxPtObj);
+}
+
+void environment::dataColorCorrection(){
+  // Green Color for table (Hue range 81 to 140)
+  // Removing all non-green points from table
+  for(int i = 0; i < ptrPtCldTable->points.size(); i++){
+    float r,g,b,h,s,v;
+    r = static_cast<float>(ptrPtCldTable->points[i].r);
+    g = static_cast<float>(ptrPtCldTable->points[i].g);
+    b = static_cast<float>(ptrPtCldTable->points[i].b);
+    RGBtoHSV(r/255.0,g/255.0,b/255.0,h,s,v);
+    if(!(h >= 81 && h <=140)){
+      ptrPtCldTable->points.erase(ptrPtCldTable->points.begin()+i);
+      i--;
+    }
+  }
+  ptrPtCldTable->width = ptrPtCldTable->points.size();
+  ptrPtCldTable->height = 1;
+  pcl::compute3DCentroid(*ptrPtCldTable, cenTable);
+  pcl::getMinMax3D(*ptrPtCldTable, minTable, maxTable);
+
+  // Removing all green points from object
+  for(int i = 0; i < ptrPtCldObject->points.size(); i++){
+    float r,g,b,h,s,v;
+    r = static_cast<float>(ptrPtCldObject->points[i].r);
+    g = static_cast<float>(ptrPtCldObject->points[i].g);
+    b = static_cast<float>(ptrPtCldObject->points[i].b);
+    RGBtoHSV(r/255.0,g/255.0,b/255.0,h,s,v);
+    if(h >= 81 && h <=140){
+      ptrPtCldObject->points.erase(ptrPtCldObject->points.begin()+i);
+      i--;
+    }
+  }
+  ptrPtCldObject->width = ptrPtCldObject->points.size();
+  ptrPtCldObject->height = 1;
 
   // Getting the min and max co-ordinates of the object
   pcl::getMinMax3D(*ptrPtCldObject, minPtObj, maxPtObj);

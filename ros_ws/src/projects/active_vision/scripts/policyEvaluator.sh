@@ -37,8 +37,8 @@ nDataPoints=100
 # Policyxxx = ("Policy" "Unique description" "Param 1 name" "Param 1 value" ...)
 
 #Policy1A=("HEURISTIC" "Heuristic")
-Policy1B=("BRICK" "Brick")
-Policy1C=("RANDOM" "Random")
+# Policy1B=("BRICK" "Brick")
+# Policy1C=("RANDOM" "Random")
 Policy1D=("3DHEURISTIC" "3D_Heuristic")
 # Policy2A=("PCA_LR" "PCA_LR_95"
 #           "/active_vision/policyTester/PCAcomponents" 0.95
@@ -52,9 +52,9 @@ Policy1D=("3DHEURISTIC" "3D_Heuristic")
 # Policy3A=("PCA_LDA" "PCA_LDA_95"
 #           "/active_vision/policyTester/PCAcomponents" 0.95
 #           "/active_vision/policyTester/HAFstVecGridSize" 7)
-Policy3B=("PCA_LDA" "PCA_LDA_85"
-           "/active_vision/policyTester/PCAcomponents" 0.85
-           "/active_vision/policyTester/HAFstVecGridSize" 5)
+# Policy3B=("PCA_LDA" "PCA_LDA_85"
+#            "/active_vision/policyTester/PCAcomponents" 0.85
+#            "/active_vision/policyTester/HAFstVecGridSize" 5)
 # Policy3C=("PCA_LDA" "PCA_LDA_75"
 #           "/active_vision/policyTester/PCAcomponents" 0.75
 #           "/active_vision/policyTester/HAFstVecGridSize" 7)
