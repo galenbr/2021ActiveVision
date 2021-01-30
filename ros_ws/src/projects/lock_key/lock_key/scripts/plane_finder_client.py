@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 ROS node for calling plane finder service.
@@ -43,7 +44,7 @@ class CloudClient:
                        'max':{'x':max(key_xs),'y':max(key_ys),'z':max(key_zs)}},
                 'lock':{'min':{'x':min(lock_xs),'y':min(lock_ys),'z':min(key_zs)},
                         'max':{'x':max(lock_xs),'y':max(lock_ys),'z':max(lock_zs)}},
-                'frame':'/camera_color_optical_frame'}
+                'frame':'/camera_depth_optical_frame'}
         rospy.set_param('bounds',bounds)
         
         #Publish point clouds

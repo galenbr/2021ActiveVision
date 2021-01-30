@@ -11,6 +11,7 @@ import lock_key.msg
 import lock_key_msgs.msg
 import franka_gripper.msg
 import moveit_planner.srv
+from lock_key_msgs.srv import GetLockKeyPoses, GetLockKeyPosesResponse
 
 class Epsilon:
 	'''Define Epsilon object for gripper function.'''
@@ -97,6 +98,32 @@ def rotate_key(d_roll, d_pitch, d_yaw):
 	rospy.loginfo('Waiting for result')
 	client.wait_for_result()
 
+def get_positions():
+	'''Retrieves key and lock positions from vision system.'''
+	rospy.loginfo('Waiting for Service')
+	rospy.wait_for_service('lock_and_key_poses')
+	rospy.loginfo('Calling Service')
+	service_call = rospy.ServiceProxy('lock_and_key_poses', 
+									  GetLockKeyPoses)
+	response = service_call()
+	rospy.loginfo(response)
+	return response
+
+class GetPositions(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['succeeded','failed'])
+    def execute(self, userdata):
+        rospy.loginfo('Getting positions from vision system...')
+        response=get_positions()
+        # rospy.set_param("key_goal/x",response.key_point.point.x)
+        # rospy.set_param("key_goal/y",response.key_point.point.y)
+        # rospy.set_param("key_goal/z",response.key_point.point.z)
+        rospy.set_param("padlock_goal/x",response.lock_point.point.x)
+        rospy.set_param("padlock_goal/y",response.lock_point.point.y)
+        # rospy.set_param("padlock_goal/z",response.lock_point.point.z)
+        rospy.set_param("padlock_goal/z",0.26)
+        return 'succeeded'
+
 class NavigateToPreKey(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
@@ -110,6 +137,7 @@ class NavigateToPreKey(smach.State):
         # Call movement action
         move_to_position(goal['x'],goal['y'],goal['z'],
                          goal['roll'],goal['pitch'],goal['yaw'])
+        rospy.sleep(3)
         return 'succeeded'
 
 class NavigateToKey(smach.State):
@@ -122,6 +150,7 @@ class NavigateToKey(smach.State):
         # Call movement action
         move_to_position(goal['x'],goal['y'],goal['z'],
                          goal['roll'],goal['pitch'],goal['yaw'])
+        rospy.sleep(3)
         return 'succeeded'
 
 class NavigateToPostKey(smach.State):
@@ -137,6 +166,7 @@ class NavigateToPostKey(smach.State):
         # Call movement action
         move_to_position(goal['x'],goal['y'],goal['z'],
                          goal['roll'],goal['pitch'],goal['yaw'])
+        rospy.sleep(3)
         return 'succeeded'
 
 class CloseGripper(smach.State):
@@ -160,6 +190,7 @@ class NavigateToPreLockFar(smach.State):
         # Call movement action
         move_to_position(goal['x'],goal['y'],goal['z'],
                          goal['roll'],goal['pitch'],goal['yaw'])
+        rospy.sleep(3)
         return 'succeeded'
 
 class NavigateToPreLockClose(smach.State):
@@ -177,6 +208,7 @@ class NavigateToPreLockClose(smach.State):
         # Call movement action
         move_to_position(goal['x'],goal['y'],goal['z'],
                          goal['roll'],goal['pitch'],goal['yaw'])
+        rospy.sleep(3)
         return 'succeeded'
 
 class PlaneDetection(smach.State):
@@ -262,6 +294,9 @@ def main():
 	# Open the container
 	with sm:
 	    # Add states to the container
+		smach.StateMachine.add('GetPositions', GetPositions(), 
+	                           transitions={'succeeded':'NavigateToPreKey',  
+	                                        'failed':'GetPositions'})
 		smach.StateMachine.add('NavigateToPreKey', NavigateToPreKey(), 
 	                           transitions={'succeeded':'NavigateToKey',  
 	                                        'failed':'NavigateToPreKey'})
