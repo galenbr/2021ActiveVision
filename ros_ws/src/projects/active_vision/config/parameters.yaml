@@ -44,6 +44,7 @@ environment: {
     maxGripperWidth: 0.08,        # Gripper max width
     minGraspQuality: 150,         # Min grasp quality threshold
     graspCurvatureConstraint: True, # If the grasp pairs need to be checked for curvature constraint or not
+    graspSurPatchConstraint: True,  # If the grasp pairs need to be checked for surface patch constraint or not
 
     addNoise: false,
     depthNoise: 0,

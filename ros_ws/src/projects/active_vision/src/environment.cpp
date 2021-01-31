@@ -148,44 +148,41 @@ bool isContactPatchOk(ptCldColor::Ptr obj, ptCldNormal::Ptr normal, long int ptI
   cv::drawContours(surface, hullPts, -1, 255,-1);
 
   cv::Mat surfacePatch; surface.copyTo(surfacePatch, patchMask);
-  std::vector<std::vector<cv::Point>> contours;
-  cv::findContours(surfacePatch, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-  static int i = 0;
-  if(contours.size() == 1){
-    cv::RotatedRect bBox = cv::minAreaRect(contours[0]);
-    float dimRatio = std::max(bBox.size.width,bBox.size.height) / std::min(bBox.size.width,bBox.size.height);
-    cv::Moments mu = cv::moments(contours[0]);
-    float cx,cy,area;
-    cx = mu.m10 / (mu.m00 + 1e-5);
-    cy = mu.m01 / (mu.m00 + 1e-5);
-    area = mu.m00;
-    if(dimRatio <= 1.75 && area >= patchArea*0.8 && sqrt(pow(cx - w/2,2) + pow(cy - w/2,2)) <= 4){
-      return true;
-    }
-  }
+  // Finding the minimum inscribed circle
+  double max_val; cv::Point max_loc; cv::Mat1f dt;
+  cv::distanceTransform(surfacePatch, dt, cv::DIST_L2, 5, cv::DIST_LABEL_PIXEL);
+  cv::minMaxLoc(dt, nullptr, &max_val, nullptr, &max_loc);
 
-  // cv::Mat surfacePatch;
-  // int sA1 = int((voxelGridSize*1000)/2)+1;
-  // cv::Mat element1 = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(2*sA1+1,2*sA1+1));
-  // cv::morphologyEx(surface,surface,1,element1);
-  // surface.copyTo(surfacePatch, patchMask);
+  if(max_val >= patchWidth/2) return true;
+  else                        return false;
+
   // std::vector<std::vector<cv::Point>> contours;
   // cv::findContours(surfacePatch, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-  // cv::Moments mu = cv::moments(contours[0]);
-  // float cx,cy,area;
-  // cx = mu.m10 / (mu.m00 + 1e-5);
-  // cy = mu.m01 / (mu.m00 + 1e-5);
-  // area = mu.m00;
-  //
-  // if(contours.size() == 1 && area >= patchArea*0.85 && sqrt(pow(cx - w/2,2) + pow(cy - w/2,2)) <= 2){
+  // if(contours.size() == 1){
   //   cv::RotatedRect bBox = cv::minAreaRect(contours[0]);
   //   float dimRatio = std::max(bBox.size.width,bBox.size.height) / std::min(bBox.size.width,bBox.size.height);
-  //   // std::cout << std::fixed;
-  //   // std::cout << std::setprecision(2);
-  //   // std::cout << "X : " << cx << " Y : " << cy << " Area : " << area << " Ratio : " << dimRatio << std::endl;
-  //   if(dimRatio < 1.25) return true;
+  //   cv::Moments mu = cv::moments(contours[0]);
+  //
+  //   double max_val;
+  //   cv::Point max_loc;
+  //   cv::Mat1f dt;
+  //
+  //   cv::circle(surfacePatch, max_loc, max_val, 127, cv::FILLED, cv::LINE_8);
+  //
+  //   float cx,cy,area;
+  //   cx = mu.m10 / (mu.m00 + 1e-5);
+  //   cy = mu.m01 / (mu.m00 + 1e-5);
+  //   area = mu.m00;
+  //
+  //   // if(dimRatio <= 1.75 && area >= patchArea*0.8 && sqrt(pow(cx - w/2,2) + pow(cy - w/2,2)) <= 4){
+  //   //   circle(surfacePatch, cv::Point(10,10), int(5), 255, cv::FILLED, cv::LINE_8);
+  //   //   cv::imshow("Projection",surfacePatch);
+  //   //   cv::waitKey(2);
+  //   //   std::cout << 1 << "," << max_val << "," << sqrt(pow(cx - w/2,2) + pow(cy - w/2,2)) << "," << sqrt(pow(max_loc.x - w/2,2) + pow(max_loc.y - w/2,2)) << std::endl;
+  //   //   return true;
+  //   // }
   // }
-  return false;
+
 }
 
 /*! \brief Convert RGB to HSV color space
@@ -275,6 +272,7 @@ environment::environment(ros::NodeHandle *nh){
   nh->getParam("/active_vision/environment/depthNoise", depthNoise);
 
   nh->getParam("/active_vision/environment/graspCurvatureConstraint", graspCurvatureConstraint);
+  nh->getParam("/active_vision/environment/graspSurPatchConstraint", graspSurPatchConstraint);
 }
 
 // Function to reset the environment
@@ -643,6 +641,35 @@ void environment::fuseLastData(){
 void environment::dataExtract(){
   dataExtractPlaneSeg();
   dataColorCorrection();
+
+  // Generating the normals for the object point cloud. Used from grasp synthesis
+  pcl::search::Search<pcl::PointXYZRGB>::Ptr KdTree{new pcl::search::KdTree<pcl::PointXYZRGB>};
+  ne.setInputCloud(cPtrPtCldObject);
+  ne.setSearchMethod(KdTree);
+  ne.setKSearch(10);
+  ne.compute(*ptrObjNormal);
+
+  float avgCurvature;
+  if(graspCurvatureConstraint){
+    for(int i = 0; i < cPtrPtCldObject->points.size(); i++) avgCurvature += ptrObjNormal->points[i].curvature;
+    avgCurvature /= cPtrPtCldObject->points.size();
+  }
+
+  useForGrasp.resize(cPtrPtCldObject->points.size());
+  for(int i = 0; i < cPtrPtCldObject->points.size(); i++){
+    useForGrasp[i] = true;
+
+    // Curvature check
+    if(graspCurvatureConstraint && ptrObjNormal->points[i].curvature > 2*avgCurvature){
+      useForGrasp[i] = false;
+    }
+
+    // Surface Patch constraint check
+    if(graspSurPatchConstraint && !(isContactPatchOk(ptrPtCldObject,ptrObjNormal,i,voxelGridSize))){
+      useForGrasp[i] = false;
+    }
+  }
+
 }
 
 void environment::dataExtractPlaneSeg(){
@@ -823,12 +850,6 @@ void environment::updateUnexploredPtCld(){
 
 // 12: Finding normals and pairs of grasp points from object point cloud
 void environment::graspsynthesis(){
-  // Generating the normals for the object point cloud
-  pcl::search::Search<pcl::PointXYZRGB>::Ptr KdTree{new pcl::search::KdTree<pcl::PointXYZRGB>};
-  ne.setInputCloud(cPtrPtCldObject);
-  ne.setSearchMethod(KdTree);
-  ne.setKSearch(10);
-  ne.compute(*ptrObjNormal);
 
   graspsPossible.clear();   // Clear the vector
   selectedGrasp = -1;
@@ -836,11 +857,6 @@ void environment::graspsynthesis(){
   graspPoint graspTemp;
   Eigen::Vector3f vectA, vectB;
   double A,B;
-  float avgCurvature;
-  if(graspCurvatureConstraint){
-    for(int i = 0; i < cPtrPtCldObject->points.size(); i++) avgCurvature += ptrObjNormal->points[i].curvature;
-    avgCurvature /= cPtrPtCldObject->points.size();
-  }
 
   pcl::PointXYZRGB centroidObj,centroidGrasp;
   Eigen::Vector4f temp1;
@@ -849,15 +865,15 @@ void environment::graspsynthesis(){
   // Using brute force search
   // Checking for each pair of points (alternate points skipped to speedup the process)
   for(int i = 0; i < ptrPtCldObject->size()-1; i++){
+    if(useForGrasp[i] == false) continue;
     for(int j = i+1; j < ptrPtCldObject->size(); j++){
+      if(useForGrasp[j] == false) continue;
+
       graspTemp.p1 = ptrPtCldObject->points[i];
       graspTemp.p2 = ptrPtCldObject->points[j];
 
       // Ignoring point closer to table
       if(graspTemp.p1.z <= tableCentre[2]+0.01 || graspTemp.p2.z <= tableCentre[2]+0.01) continue;
-
-      // Curvature check : If any one point is greater than average curvature then skip
-      if(graspCurvatureConstraint && (ptrObjNormal->points[i].curvature > 2*avgCurvature || ptrObjNormal->points[j].curvature > 2*avgCurvature)) continue;
 
       // Vector connecting the two grasp points and its distance
       vectA = graspTemp.p1.getVector3fMap() - graspTemp.p2.getVector3fMap();
@@ -886,13 +902,13 @@ void environment::graspsynthesis(){
       graspsPossible.push_back(graspTemp);
     }
   }
-  std::sort(graspsPossible.begin(),graspsPossible.end(),compareGrasp);
 
   // For thin objects grasp pair would not be feasible, so each point is considered as a grasp pair
   // Adding these grasps in the end
   Eigen::Vector3f xyPlaneA(0,0,1);
   Eigen::Vector3f xyPlaneB(0,0,-1);
   for(int i = 0; i < ptrPtCldObject->size(); i++){
+    if(useForGrasp[i] == false) continue;
 
     A = std::min(pcl::getAngle3D(xyPlaneA,ptrObjNormal->points[i].getNormalVector3fMap()),
                  pcl::getAngle3D(xyPlaneB,ptrObjNormal->points[i].getNormalVector3fMap()))*180/M_PI;
@@ -901,9 +917,6 @@ void environment::graspsynthesis(){
     if (A > 45 && ptrPtCldObject->points[i].z < tableCentre[2]+0.01){
       continue;
     }
-
-    // Curvature check : If any one point is greater than average curvature then skip
-    if(graspCurvatureConstraint && ptrObjNormal->points[i].curvature > 2*avgCurvature) continue;
 
     graspTemp.p1 = ptrPtCldObject->points[i];
     // Translating it along the +ve normal vector
@@ -927,6 +940,8 @@ void environment::graspsynthesis(){
 
     graspsPossible.push_back(graspTemp);
   }
+
+  std::sort(graspsPossible.begin(),graspsPossible.end(),compareGrasp);
 }
 
 // 13: Given a grasp point pair find the gripper orientation
@@ -1012,12 +1027,6 @@ void environment::collisionCheck(){
 
 // 15: Grasp and Collision check combined. After finding each grasp collision check is done
 int environment::graspAndCollisionCheck(){
-  // Generating the normals for the object point cloud
-  pcl::search::Search<pcl::PointXYZRGB>::Ptr KdTree{new pcl::search::KdTree<pcl::PointXYZRGB>};
-  ne.setInputCloud(cPtrPtCldObject);
-  ne.setSearchMethod(KdTree);
-  ne.setKSearch(10);
-  ne.compute(*ptrObjNormal);
 
   graspsPossible.clear();   // Clear the vector
   selectedGrasp = -1;
@@ -1025,12 +1034,6 @@ int environment::graspAndCollisionCheck(){
   graspPoint graspTemp;
   Eigen::Vector3f vectA, vectB;
   double A,B;
-
-  float avgCurvature;
-  if(graspCurvatureConstraint){
-    for(int i = 0; i < cPtrPtCldObject->points.size(); i++) avgCurvature += ptrObjNormal->points[i].curvature;
-    avgCurvature /= cPtrPtCldObject->points.size();
-  }
 
   pcl::PointXYZRGB centroidObj,centroidGrasp;
   Eigen::Vector4f temp1;
@@ -1040,15 +1043,15 @@ int environment::graspAndCollisionCheck(){
   int nGrasp = 0;
   // std::cout << "IN1" << std::endl;
   for (int i = 0; i < ptrPtCldObject->size()-1; i++){
+    if(useForGrasp[i] == false) continue;
     for (int j = i+1; j < ptrPtCldObject->size(); j++){
+      if(useForGrasp[j] == false) continue;
+
       graspTemp.p1 = ptrPtCldObject->points[i];
       graspTemp.p2 = ptrPtCldObject->points[j];
 
       // Ignoring point closer to table
       if(graspTemp.p1.z <= tableCentre[2]+0.01 || graspTemp.p2.z <= tableCentre[2]+0.01) continue;
-
-      // Curvature check : If any one point is greater than average curvature then skip
-      if(graspCurvatureConstraint && (ptrObjNormal->points[i].curvature > 2*avgCurvature || ptrObjNormal->points[j].curvature > 2*avgCurvature)) continue;
 
       // Vector connecting the two grasp points and its distance
       vectA = graspTemp.p1.getVector3fMap() - graspTemp.p2.getVector3fMap();
@@ -1094,6 +1097,7 @@ int environment::graspAndCollisionCheck(){
   Eigen::Vector3f xyPlaneA(0,0,1);
   Eigen::Vector3f xyPlaneB(0,0,-1);
   for(int i = 0; i < ptrPtCldObject->size(); i++){
+    if(useForGrasp[i] == false) continue;
 
     A = std::min(pcl::getAngle3D(xyPlaneA,ptrObjNormal->points[i].getNormalVector3fMap()),
                  pcl::getAngle3D(xyPlaneB,ptrObjNormal->points[i].getNormalVector3fMap()))*180/M_PI;
@@ -1102,9 +1106,6 @@ int environment::graspAndCollisionCheck(){
     if (A > 45 && ptrPtCldObject->points[i].z < tableCentre[2]+0.01){
       continue;
     }
-
-    // Curvature check : If any one point is greater than average curvature then skip
-    if(graspCurvatureConstraint && ptrObjNormal->points[i].curvature > 2*avgCurvature) continue;
 
     graspTemp.p1 = ptrPtCldObject->points[i];
     // Translating it along the +ve normal vector
