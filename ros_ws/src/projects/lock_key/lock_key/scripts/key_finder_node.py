@@ -39,18 +39,16 @@ class FinderPub:
         #ROS Subscribers and Publishers
         self.bridge=CvBridge()
         self.rgb_sub=rospy.Subscriber('/camera/color/image_raw',
-                                      Image,self.rgb_callback)
+                                      Image,self.rgb_callback, queue_size=1)
         self.depth_sub=rospy.Subscriber('/camera/aligned_depth_to_color/image_raw',
-                                        #/camera/depth/image_rect_raw
-                                        #/depth_registered/image_rect
-                                        Image,self.depth_callback)
+                                        Image,self.depth_callback, queue_size=1)
         self.rgb_info=rospy.Subscriber('/camera/color/camera_info',
-                                       CameraInfo,self.rgb_info_callback)
-        self.vis_pub = rospy.Publisher('finder_image', Image, queue_size=10)
+                                       CameraInfo,self.rgb_info_callback, queue_size=1)
+        self.vis_pub = rospy.Publisher('finder_image', Image, queue_size=1)
         self.key_pub = rospy.Publisher('key_point', PointStamped, 
-                                       queue_size=10)
+                                       queue_size=1)
         self.lock_pub = rospy.Publisher('lock_point', PointStamped, 
-                                        queue_size=10)
+                                        queue_size=1)
         rospy.loginfo('Running lock and key finder node.')
 
     def calculate_positions(self,img):
@@ -63,7 +61,7 @@ class FinderPub:
             # Get corresponding depth values (in meters)       
             self.lock_center_depth=self.depth_array[self.lock_center[1],
                                                     self.lock_center[0]]
-            # Get normalized XYZ displacement (in camera_link)
+            # Get normalized XYZ displacement (in camera_color_optical_frame)
             lock_disp=self.rgb_camera.projectPixelTo3dRay(self.lock_center)
             #Get scale from depth
             lock_scale=self.lock_center_depth/lock_disp[2]/1000.0
@@ -75,14 +73,25 @@ class FinderPub:
             rospy.loginfo('Lock Not Found in Frame')
         #Key
         try:
+            # rospy.loginfo('Key Center in Pixels:')
+            # rospy.loginfo(self.key_center)
+            #TODO: Find alternative to "-100 pixel" hack for getting depth of table for scaling
             self.key_center_depth=self.depth_array[self.key_center[1],
-                                                   self.key_center[0]]
-            # Get normalized XYZ displacement (in camera_link)
+                                                   self.key_center[0]-100]
+            # Get normalized XYZ displacement (in camera_color_optical_frame)
             key_disp=self.rgb_camera.projectPixelTo3dRay(self.key_center)
-            #Get scale from depth
+            # Get scale from depth
+            # rospy.loginfo('Key Center depth:')
+            # rospy.loginfo(self.key_center_depth)
             key_scale=self.key_center_depth/key_disp[2]/1000.0
+            # rospy.loginfo('Unscaled key position:')
+            # rospy.loginfo(key_disp)
+            # rospy.loginfo('Key Scale:')
+            # rospy.loginfo(key_scale)
             #Convert to meters
             key_disp=key_scale*np.array(key_disp)
+            # rospy.loginfo('Scaled key position:')
+            # rospy.loginfo(key_disp)
             # Publish center
             self.publish_key_point(key_disp)
         except TypeError:
@@ -182,7 +191,7 @@ class FinderPub:
         transformer.waitForTransform(bounds['frame'], 
                                     "camera_color_optical_frame",
                                     rospy.Time(0), rospy.Duration(4.0))
-        # This is for troublshooting
+        # This is for troubleshooting
         # bounds={'key':{'min':{'x':0.1,'y':-0.08,'z':0.4},
         #                'max':{'x':0.2,'y':0.0,'z':0.45}},
         #        'lock':{'min':{'x':-0.12,'y':-0.08,'z':0.4},

@@ -29,7 +29,7 @@ class Commander:
 		self.scene = moveit_commander.PlanningSceneInterface()
 		self.group_name = "panda_arm"
 		self.move_group = moveit_commander.MoveGroupCommander(self.group_name)
-		self.move_group.set_max_velocity_scaling_factor(0.2)
+		self.move_group.set_max_velocity_scaling_factor(0.1)
 		self.display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
 															moveit_msgs.msg.DisplayTrajectory,
 															queue_size=20)
@@ -200,8 +200,9 @@ class GetPositions(smach.State):
     def execute(self, userdata):
         rospy.loginfo('Getting positions from vision system...')
         response=get_positions()
-        # rospy.set_param("key_goal/x",response.key_point.point.x)
-        # rospy.set_param("key_goal/y",response.key_point.point.y)
+        rospy.set_param("key_goal/x",response.key_point.point.x)
+        rospy.set_param("key_goal/y",response.key_point.point.y-0.105) #TODO: REMOVE SAFETY PADDING IN Y DIRECTION
+        rospy.set_param("key_goal/z",0.1485)
         # rospy.set_param("key_goal/z",response.key_point.point.z)
         rospy.set_param("padlock_goal/x",response.lock_point.point.x)
         rospy.set_param("padlock_goal/y",response.lock_point.point.y)
@@ -253,7 +254,7 @@ class NavigateToPostKey(smach.State):
         # Call movement action
         move_to_position(goal['x'],goal['y'],goal['z'],
                          goal['roll'],goal['pitch'],goal['yaw'],goal_time=3.0)
-        rospy.sleep(2)
+        rospy.sleep(1)
         return 'succeeded'
 
 class NavigateToPostKeyRotated(smach.State):
@@ -270,7 +271,7 @@ class NavigateToPostKeyRotated(smach.State):
         # Call movement action
         move_to_position(goal['x'],goal['y'],goal['z'],
                          padlock_goal['roll'],padlock_goal['pitch'],padlock_goal['yaw'],goal_time=4.0)
-        rospy.sleep(2)
+        rospy.sleep(1)
         return 'succeeded'
 
 class CloseGripper(smach.State):
@@ -294,7 +295,7 @@ class NavigateToPreLockFar(smach.State):
         # Call movement action
         move_to_position(goal['x'],goal['y'],goal['z'],
                          goal['roll'],goal['pitch'],goal['yaw'],goal_time=4.0)
-        rospy.sleep(2)
+        rospy.sleep(1)
         return 'succeeded'
 
 class NavigateToPreLockClose(smach.State):
@@ -312,7 +313,7 @@ class NavigateToPreLockClose(smach.State):
         # Call movement action
         move_to_position(goal['x'],goal['y'],goal['z'],
                          goal['roll'],goal['pitch'],goal['yaw'],goal_time=3.0)
-        rospy.sleep(2)
+        rospy.sleep(1)
         return 'succeeded'
 
 class PlaneDetection(smach.State):
@@ -321,6 +322,7 @@ class PlaneDetection(smach.State):
     def execute(self, userdata):
 		rospy.loginfo('Starting Plane Detection...')
 		rospy.loginfo('Retrieving parameters')
+		set_vel_scale(1.0)
 		F_max=rospy.get_param("spiral/Ft")
 		detect_plane(F_max,recalculate_bias=True)
 		return 'succeeded'
