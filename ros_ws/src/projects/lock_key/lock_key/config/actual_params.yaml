@@ -1,9 +1,9 @@
 ##### Key Position #####
 key_goal:
   # Key grasping position in map frame [meters]
-  x: 0.444
-  y: -0.2255
-  z: 0.1485 #peg: 0.1665, key: 0.165
+  # x: 0.444
+  # y: -0.2255
+  # z: 0.1485 #peg: 0.1665, key: 0.165
   # Key grasping orientation in [radians]
   roll: -1.5708 #Hor.: -1.5708, Vertical: 3.1416
   pitch: 0.7854 #Hor.: 0.7854, Vertical: 0.0
@@ -16,6 +16,8 @@ key_goal:
   post_x_offset: 0.0
   post_y_offset: 0.0
   post_z_offset: 0.2
+  # Max. force when moving to key plane [Newtons]
+  Ft: 1.5
 
 ##### Padlock Position #####
 padlock_goal:
@@ -37,7 +39,7 @@ padlock_goal:
   # Distance offsets for post-insert [meters]
   post_x_offset: 0.0
   post_y_offset: 0.0
-  post_z_offset: 0.03
+  post_z_offset: 0.015
   # Intentional misalignment in X for padlock [meters]
   x_misalignment: 0.0
   # Intentional misalignment in Y for padlock [meters]
@@ -70,15 +72,15 @@ home:
 ##### Spiral Insertion #####
 spiral:
   # Max. force when moving to insertion plane [Newtons]
-  Ft: 2.3 #1.5
+  Ft: 3.5 #1.5
   # Max. wrist force during spiral [Newtons]
   Fd: 4.0
   # Max. insertion force during final insert phase [Newtons]
-  Fi: 4.5 #pegboard: 1.5, padlock: 4.5
+  Fi: 6.5 #pegboard: 1.5, padlock: 4.5
   # Max. torque in X during spiral [Newton-meters]
-  Tx: 0.5
+  Tx: 1.5 #0.5
   # Max. Torque in Y during spiral [Newton-meters]
-  Ty: 0.5
+  Ty: 1.5 #0.5
   # Max. distance for EE to move in Z [meters]
   delta_max: 0.2
   # Distance to move EE in Z each step [meters]
@@ -96,4 +98,4 @@ spiral:
   # Sleep time between force-torque samples [seconds]
   ft_sleep: 0.05
   # Minimum downward (negative) spiral force for detecting padlock/hole [Newtons]
-  min_spiral_force: -2.0 # pegboard: -0.6, padlock: -2.0
+  min_spiral_force: -2.5 # pegboard: -0.6, padlock: -2.0
