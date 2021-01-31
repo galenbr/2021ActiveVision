@@ -70,7 +70,7 @@ home:
 ##### Spiral Insertion #####
 spiral:
   # Max. force when moving to insertion plane [Newtons]
-  Ft: 1.5
+  Ft: 2.3 #1.5
   # Max. wrist force during spiral [Newtons]
   Fd: 4.0
   # Max. insertion force during final insert phase [Newtons]
