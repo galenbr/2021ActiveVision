@@ -10,27 +10,13 @@ import actionlib
 import tf_conversions
 #Messages
 import geometry_msgs.msg
-import franka_gripper.msg
 import lock_key.msg
 import lock_key_msgs.msg
 #Services
 from lock_key_msgs.srv import GetLockKeyPoses, GetLockKeyPosesResponse
 import moveit_planner.srv
 
-def set_vel_scale(scale):
-	'''Sets velocity scale.'''
-	rospy.wait_for_service('set_velocity_scaling')
-	set_scale_client = rospy.ServiceProxy('set_velocity_scaling', 
-										  moveit_planner.srv.SetVelocity)
-	set_scale_client(scale)
-
-class Epsilon:
-	'''Define Epsilon object for gripper function.'''
-	def __init__(self, inner, outer):
-		self.inner=inner
-		self.outer=outer
-
-def move_to_position(x,y,z,roll,pitch,yaw,goal_time=0.5):
+def move_to_pose_goal(x,y,z,roll,pitch,yaw,goal_time=0.5):
 	'''Moves EE to abs. pose in map frame. Wrapper for panda commander.'''
 	global panda
 	pose_goal = geometry_msgs.msg.Pose()
@@ -44,50 +30,6 @@ def move_to_position(x,y,z,roll,pitch,yaw,goal_time=0.5):
 	pose_goal.position.z = z
 
 	panda.move_to_pose(pose_goal,goal_time)
-
-def change_to_task():
-	global panda
-	panda.set_joint_params()
-
-# def move_to_position(x,y,z,roll,pitch,yaw):
-# 	'''Moves EE to abs. pose in map frame.'''
-# 	# Call move absolute action
-# 	client = actionlib.SimpleActionClient('move_abs_server', 
-# 										  lock_key.msg.MoveAbsAction)
-# 	rospy.loginfo('Waiting for server')
-# 	client.wait_for_server()
-# 	rospy.loginfo('Found Server')
-# 	goal=lock_key.msg.MoveAbsGoal(x,y,z,roll,pitch,yaw)
-# 	rospy.loginfo('Sending Goal')
-# 	client.send_goal(goal)
-# 	rospy.loginfo('Waiting for result')
-# 	client.wait_for_result()
-# 	# Get result from action server
-# 	#action_result=client.get_result()
-# 	#print(action_result)
-
-def move_to_joint_position(j1,j2,j3,j4,j5,j6,j7):
-	'''Moves arm to position in joint space (radians).'''
-	rospy.wait_for_service('move_to_joint_space')
-	joint_move = rospy.ServiceProxy('move_to_joint_space', 
-									moveit_planner.srv.MoveJoint)
-	val=[j1,j2,j3,j4,j5,j6,j7]
-	execute=True
-	response = joint_move(val,execute)
-
-def move_gripper(width, epsilon_inner=0.05, epsilon_outer=0.05, speed=0.1, force=40):
-	'''Moves gripper to the specified width.'''
-	epsilon=Epsilon(epsilon_inner,epsilon_outer)
-	client = actionlib.SimpleActionClient('franka_gripper/grasp', 
-										  franka_gripper.msg.GraspAction)
-	rospy.loginfo('Waiting for server')
-	client.wait_for_server()
-	rospy.loginfo('Found Server')
-	goal=franka_gripper.msg.GraspGoal(width, epsilon, speed, force)
-	rospy.loginfo('Sending Goal')
-	client.send_goal(goal)
-	rospy.loginfo('Waiting for result')
-	client.wait_for_result()
 
 def spiral_motion():
 	'''Calls spiral motion action.'''
@@ -160,16 +102,14 @@ class NavigateToPreKey(smach.State):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
     def execute(self, userdata):
         rospy.loginfo('Navigating to Pre-Key...')
-		#Reduce velocity scale
-        #set_vel_scale(0.1)
         # Retrieve goal position from param server
         goal=rospy.get_param("key_goal")
         goal['x']+=goal['pre_x_offset']
         goal['y']+=goal['pre_y_offset']
         goal['z']+=goal['pre_z_offset']
         # Call movement action
-        move_to_position(goal['x'],goal['y'],goal['z'],
-                         goal['roll'],goal['pitch'],goal['yaw'],goal_time=5.0)
+        move_to_pose_goal(goal['x'],goal['y'],goal['z'],
+                          goal['roll'],goal['pitch'],goal['yaw'],goal_time=5.0)
         rospy.sleep(1)
         return 'succeeded'
 
@@ -181,8 +121,8 @@ class NavigateToKey(smach.State):
         # Retrieve goal position from param server
         goal=rospy.get_param("key_goal")
         # Call movement action
-        move_to_position(goal['x'],goal['y'],goal['z'],
-                         goal['roll'],goal['pitch'],goal['yaw'],goal_time=3.0)
+        move_to_pose_goal(goal['x'],goal['y'],goal['z'],
+                          oal['roll'],goal['pitch'],goal['yaw'],goal_time=3.0)
         rospy.sleep(1)
         return 'succeeded'
 
@@ -197,8 +137,8 @@ class NavigateToPostKey(smach.State):
         goal['y']+=goal['post_y_offset']
         goal['z']+=goal['post_z_offset']
         # Call movement action
-        move_to_position(goal['x'],goal['y'],goal['z'],
-                         goal['roll'],goal['pitch'],goal['yaw'],goal_time=3.0)
+        move_to_pose_goal(goal['x'],goal['y'],goal['z'],
+                          goal['roll'],goal['pitch'],goal['yaw'],goal_time=3.0)
         rospy.sleep(1)
         return 'succeeded'
 
@@ -214,8 +154,8 @@ class NavigateToPostKeyRotated(smach.State):
         goal['z']+=goal['post_z_offset']
         padlock_goal=rospy.get_param("padlock_goal")
         # Call movement action
-        move_to_position(goal['x'],goal['y'],goal['z'],
-                         padlock_goal['roll'],padlock_goal['pitch'],padlock_goal['yaw'],goal_time=4.0)
+        move_to_pose_goal(goal['x'],goal['y'],goal['z'],
+                          padlock_goal['roll'],padlock_goal['pitch'],padlock_goal['yaw'],goal_time=4.0)
         rospy.sleep(1)
         return 'succeeded'
 
@@ -223,8 +163,9 @@ class CloseGripper(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
     def execute(self, userdata):
+    	global panda
         rospy.loginfo('Closing Gripper')
-        move_gripper(0.02)
+        panda.move_gripper(0.02)
         return 'succeeded'
 
 class NavigateToPreLockFar(smach.State):
@@ -238,8 +179,8 @@ class NavigateToPreLockFar(smach.State):
         goal['y']+=goal['pre_y_offset_far']
         goal['z']+=goal['pre_z_offset_far']
         # Call movement action
-        move_to_position(goal['x'],goal['y'],goal['z'],
-                         goal['roll'],goal['pitch'],goal['yaw'],goal_time=4.0)
+        move_to_pose_goal(goal['x'],goal['y'],goal['z'],
+                          goal['roll'],goal['pitch'],goal['yaw'],goal_time=4.0)
         rospy.sleep(1)
         return 'succeeded'
 
@@ -256,8 +197,8 @@ class NavigateToPreLockClose(smach.State):
         goal['x']+=goal['x_misalignment']
         goal['y']+=goal['y_misalignment']
         # Call movement action
-        move_to_position(goal['x'],goal['y'],goal['z'],
-                         goal['roll'],goal['pitch'],goal['yaw'],goal_time=3.0)
+        move_to_pose_goal(goal['x'],goal['y'],goal['z'],
+                          goal['roll'],goal['pitch'],goal['yaw'],goal_time=3.0)
         rospy.sleep(1)
         return 'succeeded'
 
@@ -313,16 +254,17 @@ class NavigateToPostLock(smach.State):
         goal['y']+=goal['post_y_offset']
         goal['z']+=goal['post_z_offset']
         # Call movement action
-        move_to_position(goal['x'],goal['y'],goal['z'],
-                         goal['roll'],goal['pitch'],goal['yaw'],goal_time=2.0)
+        move_to_pose_goal(goal['x'],goal['y'],goal['z'],
+                          goal['roll'],goal['pitch'],goal['yaw'],goal_time=2.0)
         return 'succeeded'
 
 class OpenGripper(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
     def execute(self, userdata):
+    	global panda
         rospy.loginfo('Opening Gripper')
-        move_gripper(0.1)
+        panda.move_gripper(0.1)
         return 'succeeded'
 
 class NavigateToHome(smach.State):
@@ -330,22 +272,18 @@ class NavigateToHome(smach.State):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
     def execute(self, userdata):
         rospy.loginfo('Navigating to Home...')
-        #Change control mode (set params differently)
-        change_to_task()
         # Retrieve goal position from param server
         goal=rospy.get_param("home")
         move_to_joint_position(goal['j1'],goal['j2'],goal['j3'],goal['j4'],
         	                   goal['j5'],goal['j6'],goal['j7'])
-        #Increase velocity scale
-        #set_vel_scale(1.0)
         return 'succeeded'
 
 def main():
 	global panda
-	rospy.init_node('test_smach')
+	rospy.init_node('actual_smach_node')
 
 	#Initialize panda controller
-	panda=commander.Commander(vel_scale=0.1)
+	panda=commander.Commander(group_name="panda_arm",vel_scale=0.1)
 
 	# Create a SMACH state machine
 	sm = smach.StateMachine(outcomes=['complete'])
