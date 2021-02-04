@@ -33,4 +33,27 @@
     </include>
   </group>
 
+  <!--Ripped off wholesale from Craig for the time being, just setting things up.-->
+
+  <param name="robot_description" command="$(find xacro)/xacro --inorder $(find active_vision)/desc/franka_camera.xacro" />
+  <rosparam file="$(find active_vision)/config/panda_control.yaml" command="load" />
+
+  <!--Add the YAML to the param Server-->
+  <rosparam command = "load" file="$(find active_vision)/config/sim_robot_params.yaml" />
+
+  <node name="spawn_franka_urdf" pkg="gazebo_ros" type="spawn_model"
+    args="-param robot_description -urdf -model panda
+          -J panda_joint2 0.0 -J panda_joint6 0.785398
+          -J panda_joint7 0.785398" />
+
+  <!-- Start moveit -->
+  <include file="$(find active_vision)/launch/moveGroup.launch" />
+  <!-- launch moveit API -->
+  <node name="moveit_api" type="main_node" pkg="moveit_planner" args="panda_arm"/>
+
+  <!-- Launch controllers -->
+  <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
+  output="screen" args="joint_state_controller gazebo_ros_control" ns="/panda" />
+  <include file="$(find panda_finger_torque_controller)/launch/main.launch" />
+
 </launch>

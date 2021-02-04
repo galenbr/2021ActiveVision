@@ -18,6 +18,16 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_conversions
   pcl_ros
   tf
+  pluginlib
+  geometry_msgs
+  moveit_planner
+  moveit_ros_planning_interface
+  moveit_msgs
+  moveit_ros_planning
+  moveit_ros_move_group
+  franka_gripper
+  genmsg
+  actionlib_msgs
   # cv_bridge
   # image_transport
   message_generation
@@ -82,6 +92,8 @@ generate_messages(
   DEPENDENCIES
   std_msgs
   sensor_msgs
+  geometry_msgs
+  actionlib_msgs
 )
 
 ################################################

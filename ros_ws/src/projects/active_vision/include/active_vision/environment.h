@@ -53,6 +53,16 @@
 
 #include <active_vision/toolDataHandling.h>
 
+//Moveit
+#include "moveit_planner/MoveCart.h"
+#include "moveit_planner/MoveJoint.h"
+#include "moveit_planner/SetVelocity.h"
+#include <moveit/planning_scene_interface/planning_scene_interface.h>
+#include <moveit/move_group_interface/move_group_interface.h>
+#include <actionlib/client/simple_action_client.h>
+#include <actionlib/client/terminal_state.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+
 // Typedef for convinience
 typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
 typedef pcl::PointCloud<pcl::Normal> ptCldNormal;
@@ -84,6 +94,33 @@ struct stateConfig{
   std::vector<double> unexpMax;
 };
 
+//Defines target end-effector point with offsets
+struct pose_goal{
+    double x{0.0};
+    double y{0.0};
+    double z{0.0};
+    double roll{0.0};
+    double pitch{0.0};
+    double yaw{0.0};
+
+    double x_misalignment{0.0};
+    double y_misalignment{0.0};
+
+    double z_offset_far{0.0};
+    double z_offset_close{0.0};
+};
+
+//Defines arm position in joint space
+struct joint_space_pos{
+    double j1{0.0};
+    double j2{0.0};
+    double j3{0.0};
+    double j4{0.0};
+    double j5{0.0};
+    double j6{0.0};
+    double j7{0.0};
+};
+
 // Funstion to transpose a homogenous matrix
 Eigen::Affine3f homoMatTranspose(const Eigen::Affine3f& tf);
 
@@ -111,6 +148,10 @@ private:
   ros::ServiceClient gazeboSpawnModel;  // Service : Spawn Model
   ros::ServiceClient gazeboCheckModel;  // Service : Check Model
   ros::ServiceClient gazeboDeleteModel; // Service : Delete Model
+  ros::ServiceClient cartMoveClient;
+  ros::ServiceClient velScalingClient;
+  ros::ServiceClient jointSpaceClient;
+  moveit_planner::SetVelocity velscale;
 
   pcl::PassThrough<pcl::PointXYZRGB> pass;                  // Passthrough filter
   pcl::VoxelGrid<pcl::PointXYZRGB> voxelGrid;               // VoxelGrid object

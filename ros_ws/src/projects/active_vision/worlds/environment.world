@@ -16,12 +16,12 @@
       <static>true</static>
     </include>
     <!-- Kinect -->
-    <include>
+    <!-- <include>
       <uri>model://kinectAV</uri>
       <name>Kinect</name>
       <pose>0.25 0 1.75 0 0.55 0</pose>
       <static>true</static>
-    </include>
+    </include> -->
     <!-- Cordless Drill -->
     <!-- <include>
       <uri>model://drillAV</uri>

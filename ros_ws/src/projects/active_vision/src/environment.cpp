@@ -238,6 +238,12 @@ environment::environment(ros::NodeHandle *nh){
   gazeboSpawnModel = nh->serviceClient< gazebo_msgs::SpawnModel> ("/gazebo/spawn_sdf_model");
   gazeboCheckModel = nh->serviceClient< gazebo_msgs::GetModelState> ("/gazebo/get_model_state");
   gazeboDeleteModel = nh->serviceClient< gazebo_msgs::DeleteModel> ("/gazebo/delete_model");
+  cartMoveClient = nh->serviceClient<moveit_planner::MoveCart>("cartesian_move");
+  velScalingClient = nh->serviceClient<moveit_planner::SetVelocity>("set_velocity_scaling");
+  jointSpaceClient = nh->serviceClient<moveit_planner::MoveJoint>("move_to_joint_space");
+  ros::service::waitForService("cartesian_move",-1);
+  ros::service::waitForService("set_velocity_scaling",-1);
+  ros::service::waitForService("move_to_joint_space", -1);
   // NOT USED (JUST FOR REFERENCE)
   /*subKinectRGB = nh->subscribe ("/camera/color/image_raw", 1, &environment::cbImgRgb, this);
   subKinectDepth = nh->subscribe ("/camera/depth/image_raw", 1, &environment::cbImgDepth, this);*/
