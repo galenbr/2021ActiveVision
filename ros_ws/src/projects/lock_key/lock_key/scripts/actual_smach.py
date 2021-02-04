@@ -4,73 +4,18 @@
 SMACH for key insertion procedure
 """
 from __future__ import print_function
-import sys
 import rospy
 import smach
 import actionlib
-import moveit_commander
 import tf_conversions
 #Messages
 import geometry_msgs.msg
 import franka_gripper.msg
 import lock_key.msg
 import lock_key_msgs.msg
-import moveit_msgs.msg
 #Services
 from lock_key_msgs.srv import GetLockKeyPoses, GetLockKeyPosesResponse
 import moveit_planner.srv
-
-class Commander:
-	'''Commander interface for Panda.'''
-	def __init__(self):
-		moveit_commander.roscpp_initialize(sys.argv)
-		#rospy.init_node('move_group_python_interface_tutorial', anonymous=True)
-		self.robot = moveit_commander.RobotCommander()
-		self.scene = moveit_commander.PlanningSceneInterface()
-		self.group_name = "panda_arm"
-		self.move_group = moveit_commander.MoveGroupCommander(self.group_name)
-		self.move_group.set_max_velocity_scaling_factor(0.1)
-		self.display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
-															moveit_msgs.msg.DisplayTrajectory,
-															queue_size=20)
-		self.set_task_params()
-		rospy.loginfo('Initialized Commander Interface')
-
-	def set_joint_params(self):
-		'''Set global parameters related to controller for joint control.'''
-		# rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint1/goal',0.05)
-		# rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint2/goal',0.05)
-		# rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint3/goal',0.05)
-		# rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint4/goal',0.05)
-		# rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint5/goal',0.05)
-		# rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint6/goal',0.05)
-		# rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint7/goal',0.05)
-		self.state='joint'
-
-	def set_task_params(self):
-		'''Set global parameters related to controller.'''
-		# rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint1/goal',0)
-		# rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint2/goal',0)
-		# rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint3/goal',0)
-		# rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint4/goal',0)
-		# rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint5/goal',0)
-		# rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint6/goal',0)
-		# rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint7/goal',0)
-		self.state='task'
-
-	def move_to_pose(self,pose_goal,goal_time=0.5):
-		'''Move to pose in map frame.'''
-		if self.state is not 'task':
-			self.set_task_params()
-		rospy.set_param('/position_joint_trajectory_controller/constraints/goal_time',goal_time)
-		#Plan to Pose goal
-		self.move_group.set_pose_target(pose_goal)
-		#Execute
-		plan = self.move_group.go(wait=True)
-		# Ensure that there is no residual movement
-		self.move_group.stop()
-		# Clear targets
-		self.move_group.clear_pose_targets()
 
 def set_vel_scale(scale):
 	'''Sets velocity scale.'''
@@ -400,7 +345,7 @@ def main():
 	rospy.init_node('test_smach')
 
 	#Initialize panda controller
-	panda=Commander()
+	panda=commander.Commander(vel_scale=0.1)
 
 	# Create a SMACH state machine
 	sm = smach.StateMachine(outcomes=['complete'])
