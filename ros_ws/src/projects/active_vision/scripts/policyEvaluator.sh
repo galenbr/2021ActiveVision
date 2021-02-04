@@ -36,7 +36,7 @@ nDataPoints=100
 # List all the policies to be tested with the prefix "Policy"
 # Policyxxx = ("Policy" "Unique description" "Param 1 name" "Param 1 value" ...)
 
-#Policy1A=("HEURISTIC" "Heuristic")
+# Policy1A=("HEURISTIC" "Heuristic")
 # Policy1B=("BRICK" "Brick")
 # Policy1C=("RANDOM" "Random")
 Policy1D=("3DHEURISTIC" "3D_Heuristic")

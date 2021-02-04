@@ -679,7 +679,7 @@ void environment::dataExtractPlaneSeg(){
   seg.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
   seg.setMethodType(pcl::SAC_RANSAC);
   seg.setMaxIterations(1000);
-  seg.setDistanceThreshold(0.01+viewsphereRad*depthNoise/100);
+  seg.setDistanceThreshold(0.005+viewsphereRad*depthNoise/100);
   Eigen::Vector3f axis = Eigen::Vector3f(0.0,0.0,1.0); //y axis
   seg.setAxis(axis);
   seg.setEpsAngle(10.0f*(M_PI/180.0f) );
@@ -693,8 +693,8 @@ void environment::dataExtractPlaneSeg(){
   // Seperating the table and storing its point
   extract.setInputCloud(cPtrPtCldEnv);
   extract.setIndices(tableIndices);
-  extract.setNegative(false);
-  extract.filter(*ptrPtCldTable);
+  extract.setNegative(false); extract.filter(*ptrPtCldTable);
+  extract.setNegative(true);  extract.filter(*ptrPtCldObject);
 
   pcl::compute3DCentroid(*ptrPtCldTable, cenTable);
   pcl::getMinMax3D(*ptrPtCldTable, minTable, maxTable);
@@ -713,14 +713,14 @@ void environment::dataExtractPlaneSeg(){
   }
 
   // Using polygonal prism and hull the extract object above the table
-  prism.setInputCloud(cPtrPtCldEnv);
+  prism.setInputCloud(cPtrPtCldObject);
   prism.setInputPlanarHull(cPtrPtCldHull);
-  prism.setViewPoint(cenTable[0],cenTable[1],cenTable[2]+1);            // Ensuring normals point above the table
-  prism.setHeightLimits(maxTable.z-cenTable[2]+voxelGridSize,1.5f);     // Z height (min, max) in m
+  prism.setViewPoint(cenTable[0],cenTable[1],cenTable[2]+1);        // Ensuring normals point above the table
+  prism.setHeightLimits(0,1.5f);                                    // Z height (min, max) in m
   prism.segment(*objectIndices);
 
   // Using extract to get the point cloud
-  extract.setInputCloud(cPtrPtCldEnv);
+  extract.setInputCloud(cPtrPtCldObject);
   extract.setNegative(false);
   extract.setIndices(objectIndices);
   extract.filter(*ptrPtCldObject);
@@ -732,21 +732,21 @@ void environment::dataExtractPlaneSeg(){
 void environment::dataColorCorrection(){
   // Green Color for table (Hue range 81 to 140)
   // Removing all non-green points from table
-  for(int i = 0; i < ptrPtCldTable->points.size(); i++){
-    float r,g,b,h,s,v;
-    r = static_cast<float>(ptrPtCldTable->points[i].r);
-    g = static_cast<float>(ptrPtCldTable->points[i].g);
-    b = static_cast<float>(ptrPtCldTable->points[i].b);
-    RGBtoHSV(r/255.0,g/255.0,b/255.0,h,s,v);
-    if(!(h >= 81 && h <=140)){
-      ptrPtCldTable->points.erase(ptrPtCldTable->points.begin()+i);
-      i--;
-    }
-  }
-  ptrPtCldTable->width = ptrPtCldTable->points.size();
-  ptrPtCldTable->height = 1;
-  pcl::compute3DCentroid(*ptrPtCldTable, cenTable);
-  pcl::getMinMax3D(*ptrPtCldTable, minTable, maxTable);
+  // for(int i = 0; i < ptrPtCldTable->points.size(); i++){
+  //   float r,g,b,h,s,v;
+  //   r = static_cast<float>(ptrPtCldTable->points[i].r);
+  //   g = static_cast<float>(ptrPtCldTable->points[i].g);
+  //   b = static_cast<float>(ptrPtCldTable->points[i].b);
+  //   RGBtoHSV(r/255.0,g/255.0,b/255.0,h,s,v);
+  //   if(!(h >= 81 && h <=140)){
+  //     ptrPtCldTable->points.erase(ptrPtCldTable->points.begin()+i);
+  //     i--;
+  //   }
+  // }
+  // ptrPtCldTable->width = ptrPtCldTable->points.size();
+  // ptrPtCldTable->height = 1;
+  // pcl::compute3DCentroid(*ptrPtCldTable, cenTable);
+  // pcl::getMinMax3D(*ptrPtCldTable, minTable, maxTable);
 
   // Removing all green points from object
   for(int i = 0; i < ptrPtCldObject->points.size(); i++){
