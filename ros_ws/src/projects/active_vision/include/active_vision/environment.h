@@ -173,6 +173,7 @@ private:
   float depthNoise;                // Depth in %
   std::default_random_engine generator;
   bool graspCurvatureConstraint;
+  bool graspSurPatchConstraint;
 
   std::string path;                // Path the active vision package
 
@@ -185,6 +186,7 @@ public:
   ptCldColor::Ptr ptrPtCldTable{new ptCldColor};     ptCldColor::ConstPtr cPtrPtCldTable{ptrPtCldTable};
   ptCldColor::Ptr ptrPtCldObject{new ptCldColor};    ptCldColor::ConstPtr cPtrPtCldObject{ptrPtCldObject};
   ptCldNormal::Ptr ptrObjNormal{new ptCldNormal};    ptCldNormal::ConstPtr cPtrObjNormal{ptrObjNormal};
+  std::vector<bool> useForGrasp;  // Maps to object point cloud and stores if each point can be used in grasp synthesis or not
 
   // PtCld: Sorting the convex hull generated
   ptCldColor::Ptr ptrPtCldHull{new ptCldColor};      ptCldColor::ConstPtr cPtrPtCldHull{ptrPtCldHull};

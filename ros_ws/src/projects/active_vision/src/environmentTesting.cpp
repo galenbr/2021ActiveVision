@@ -455,7 +455,6 @@ void testComplete(environment &av, int objID, int nVp, int graspMode, int flag, 
       av.genUnexploredPtCld();
     }
     av.updateUnexploredPtCld();
-    av.graspsynthesis();
   }
   end[1] = std::chrono::high_resolution_clock::now();
 
@@ -532,6 +531,12 @@ void testComplete(environment &av, int objID, int nVp, int graspMode, int flag, 
 
     addRGB(viewer,av.ptrPtCldEnv,"Environment",vp[0]);
     addRGB(viewer,av.ptrPtCldObject,"Object",vp[1]);
+
+    pcl::PointXYZRGB centroidObj; Eigen::Vector4f temp1;
+    pcl::compute3DCentroid(*av.ptrPtCldObject, temp1);
+    centroidObj.x = temp1[0]; centroidObj.y = temp1[1]; centroidObj.z = temp1[2];
+    viewer->addSphere<pcl::PointXYZRGB>(centroidObj,0.0050,0.0,1.0,0.0,"Centroid0",vp[0]);
+    viewer->addSphere<pcl::PointXYZRGB>(centroidObj,0.0050,0.0,1.0,0.0,"Centroid1",vp[1]);
     // rbgNormalVis(viewer,av.ptrPtCldObject,av.ptrObjNormal,"Object",vp[1]);
 
     for (int i = 0; i < av.ptrPtCldUnexp->size(); i++) {
@@ -760,9 +765,9 @@ void testReadPCD(std::string filename){
   std::cout << "*** END ***" << std::endl;
 }
 
-// 16: Testing SUrface Patch
-void testSurfacePatch(environment &av, int objID, int flag){
-  std::cout << "*** In surface patch testing function ***" << std::endl;
+// 16: Testing SUrface Patch and Curvature
+void testSurfacePatchAndCurvature(environment &av, int objID, int flag){
+  std::cout << "*** In surface patch and curvature testing function ***" << std::endl;
   av.spawnObject(objID,0,0.0/180.0*M_PI);
 
   // 4 kinect position to capture and fuse
@@ -781,15 +786,25 @@ void testSurfacePatch(environment &av, int objID, int flag){
     }
     av.updateUnexploredPtCld();
   }
-  av.graspsynthesis();
 
   for(int i = 0; i < av.ptrPtCldObject->points.size(); i++){
-    if(isContactPatchOk(av.ptrPtCldObject,av.ptrObjNormal,i,av.voxelGridSize)){
+    if(av.useForGrasp[i]){
       av.ptrPtCldObject->points[i].r = 0;
       av.ptrPtCldObject->points[i].g = 255;
       av.ptrPtCldObject->points[i].b = 0;
     }
   }
+
+  // float avgCurvature;
+  // for(int i = 0; i < av.cPtrPtCldObject->points.size(); i++) avgCurvature += av.ptrObjNormal->points[i].curvature;
+  // avgCurvature /= av.cPtrPtCldObject->points.size();
+  // for(int i = 0; i < av.ptrPtCldObject->points.size(); i++){
+  //   if(av.ptrObjNormal->points[i].curvature <= 2*avgCurvature && isContactPatchOk(av.ptrPtCldObject,av.ptrObjNormal,i,av.voxelGridSize)){
+  //     av.ptrPtCldObject->points[i].r = 0;
+  //     av.ptrPtCldObject->points[i].g = 255;
+  //     av.ptrPtCldObject->points[i].b = 0;
+  //   }
+  // }
 
   av.deleteObject(objID);
 
@@ -907,7 +922,7 @@ int main (int argc, char** argv){
     case 15:
       testReadPCD(filename);                          break;
     case 16:
-      testSurfacePatch(activeVision,objID,1);         break;
+      testSurfacePatchAndCurvature(activeVision,objID,1);         break;
     default:
       std::cout << "Invalid choice." << std::endl;
   }

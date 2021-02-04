@@ -12,12 +12,14 @@ from geometry_msgs.msg import PointStamped
 from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import Header
 from cv_bridge import CvBridge, CvBridgeError
+import tf
 
 class FinderPub:
     '''Finds lock and key from RGBD data.'''
     def __init__(self):
         self.header=None
         self.key_search_box=None
+        #TODO: Handle case when param is not yet available.
         self.hsv=rospy.get_param('hsv')
         self.key_min_hsv=self.hsv['key']['min']
         self.key_max_hsv=self.hsv['key']['max']
@@ -37,18 +39,16 @@ class FinderPub:
         #ROS Subscribers and Publishers
         self.bridge=CvBridge()
         self.rgb_sub=rospy.Subscriber('/camera/color/image_raw',
-                                      Image,self.rgb_callback)
+                                      Image,self.rgb_callback, queue_size=1)
         self.depth_sub=rospy.Subscriber('/camera/aligned_depth_to_color/image_raw',
-                                        #/camera/depth/image_rect_raw
-                                        #/depth_registered/image_rect
-                                        Image,self.depth_callback)
+                                        Image,self.depth_callback, queue_size=1)
         self.rgb_info=rospy.Subscriber('/camera/color/camera_info',
-                                       CameraInfo,self.rgb_info_callback)
-        self.vis_pub = rospy.Publisher('finder_image', Image, queue_size=10)
+                                       CameraInfo,self.rgb_info_callback, queue_size=1)
+        self.vis_pub = rospy.Publisher('finder_image', Image, queue_size=1)
         self.key_pub = rospy.Publisher('key_point', PointStamped, 
-                                       queue_size=10)
+                                       queue_size=1)
         self.lock_pub = rospy.Publisher('lock_point', PointStamped, 
-                                        queue_size=10)
+                                        queue_size=1)
         rospy.loginfo('Running lock and key finder node.')
 
     def calculate_positions(self,img):
@@ -61,7 +61,7 @@ class FinderPub:
             # Get corresponding depth values (in meters)       
             self.lock_center_depth=self.depth_array[self.lock_center[1],
                                                     self.lock_center[0]]
-            # Get normalized XYZ displacement (in camera_link)
+            # Get normalized XYZ displacement (in camera_color_optical_frame)
             lock_disp=self.rgb_camera.projectPixelTo3dRay(self.lock_center)
             #Get scale from depth
             lock_scale=self.lock_center_depth/lock_disp[2]/1000.0
@@ -73,14 +73,25 @@ class FinderPub:
             rospy.loginfo('Lock Not Found in Frame')
         #Key
         try:
+            # rospy.loginfo('Key Center in Pixels:')
+            # rospy.loginfo(self.key_center)
+            #TODO: Find alternative to "-100 pixel" hack for getting depth of table for scaling
             self.key_center_depth=self.depth_array[self.key_center[1],
-                                                   self.key_center[0]]
-            # Get normalized XYZ displacement (in camera_link)
+                                                   self.key_center[0]-100]
+            # Get normalized XYZ displacement (in camera_color_optical_frame)
             key_disp=self.rgb_camera.projectPixelTo3dRay(self.key_center)
-            #Get scale from depth
+            # Get scale from depth
+            # rospy.loginfo('Key Center depth:')
+            # rospy.loginfo(self.key_center_depth)
             key_scale=self.key_center_depth/key_disp[2]/1000.0
+            # rospy.loginfo('Unscaled key position:')
+            # rospy.loginfo(key_disp)
+            # rospy.loginfo('Key Scale:')
+            # rospy.loginfo(key_scale)
             #Convert to meters
             key_disp=key_scale*np.array(key_disp)
+            # rospy.loginfo('Scaled key position:')
+            # rospy.loginfo(key_disp)
             # Publish center
             self.publish_key_point(key_disp)
         except TypeError:
@@ -173,40 +184,104 @@ class FinderPub:
 
         # Convert object bounds from meters (in /camera_color_optical_frame)
         # to pixels using Pinhole model
+        
+        # First Transform points from /camera_depth_optical_frame to /camera_color_optical_frame
         bounds=rospy.get_param('bounds')
-
-        # This is for troublshooting
+        transformer=tf.TransformListener()
+        transformer.waitForTransform(bounds['frame'], 
+                                    "camera_color_optical_frame",
+                                    rospy.Time(0), rospy.Duration(4.0))
+        # This is for troubleshooting
         # bounds={'key':{'min':{'x':0.1,'y':-0.08,'z':0.4},
         #                'max':{'x':0.2,'y':0.0,'z':0.45}},
         #        'lock':{'min':{'x':-0.12,'y':-0.08,'z':0.4},
         #                'max':{'x':-0.05,'y':0.0,'z':0.45}},
         #        'frame':'/camera_depth_optical_frame'}
-        key_min=(bounds['key']['min']['x'],
-                 bounds['key']['min']['y'],
-                 bounds['key']['min']['z'])
-        key_max=(bounds['key']['max']['x'],
-                 bounds['key']['max']['y'],
-                 bounds['key']['max']['z'])
-        lock_min=(bounds['lock']['min']['x'],
-                  bounds['lock']['min']['y'],
-                  bounds['lock']['min']['z'])
-        lock_max=(bounds['lock']['max']['x'],
-                  bounds['lock']['max']['y'],
-                  bounds['lock']['max']['z'])
+        key_min=PointStamped()
+        key_max=PointStamped()
+        lock_min=PointStamped()
+        lock_max=PointStamped()
+        #Define and add header (without timestamp)
+        h=Header()
+        h.frame_id=bounds['frame']
+        key_min.header=h
+        key_max.header=h
+        lock_min.header=h
+        lock_max.header=h
+        #Define points from params
+        key_min.point.x=bounds['key']['min']['x']
+        key_min.point.y=bounds['key']['min']['y']
+        key_min.point.z=bounds['key']['min']['z']
+        key_max.point.x=bounds['key']['max']['x']
+        key_max.point.y=bounds['key']['max']['y']
+        key_max.point.z=bounds['key']['max']['z']
+        lock_min.point.x=bounds['lock']['min']['x']
+        lock_min.point.y=bounds['lock']['min']['y']
+        lock_min.point.z=bounds['lock']['min']['z']
+        lock_max.point.x=bounds['lock']['max']['x']
+        lock_max.point.y=bounds['lock']['max']['y']
+        lock_max.point.z=bounds['lock']['max']['z']
+        #Calculate transformed points
+        key_min_transformed=PointStamped()
+        key_max_transformed=PointStamped()
+        lock_min_transformed=PointStamped()
+        lock_max_transformed=PointStamped()
+        key_min_transformed=transformer.transformPoint('camera_color_optical_frame',key_min)
+        key_max_transformed=transformer.transformPoint('camera_color_optical_frame',key_max)
+        lock_min_transformed=transformer.transformPoint('camera_color_optical_frame',lock_min)
+        lock_max_transformed=transformer.transformPoint('camera_color_optical_frame',lock_max)
 
-        #TODO: Transform points from /camera_depth_optical_frame to /camera_color_optical_frame
+        #Get points in pixel coordinates
+        key_min_pix=self.rgb_camera.project3dToPixel((key_min_transformed.point.x,key_min_transformed.point.y,key_min_transformed.point.z))
+        key_max_pix=self.rgb_camera.project3dToPixel((key_max_transformed.point.x,key_max_transformed.point.y,key_max_transformed.point.z))
+        lock_min_pix=self.rgb_camera.project3dToPixel((lock_min_transformed.point.x,lock_min_transformed.point.y,lock_min_transformed.point.z))
+        lock_max_pix=self.rgb_camera.project3dToPixel((lock_max_transformed.point.x,lock_max_transformed.point.y,lock_max_transformed.point.z))
+        #Convert to list to make mutable
+        key_min_pix=list(key_min_pix)
+        key_max_pix=list(key_max_pix)
+        lock_min_pix=list(lock_min_pix)
+        lock_max_pix=list(lock_max_pix)
+        #Add padding to bounding boxes
+        image_max_x=640
+        image_max_y=480
+        pad_key_x_max=55
+        pad_key_x_min=0
+        pad_key_y=0
+        pad_lock_x=0
+        pad_lock_y=0
+        key_min_pix[0]=key_min_pix[0]-pad_key_x_min
+        key_max_pix[0]=key_max_pix[0]+pad_key_x_max
+        key_min_pix[1]=key_min_pix[1]-pad_key_y
+        key_max_pix[1]=key_max_pix[1]+pad_key_y
+        lock_min_pix[0]=lock_min_pix[0]-pad_lock_x
+        lock_max_pix[0]=lock_max_pix[0]+pad_lock_x
+        lock_min_pix[1]=lock_min_pix[1]-pad_lock_y
+        lock_max_pix[1]=lock_max_pix[1]+pad_lock_y
 
-        key_min_pix=self.rgb_camera.project3dToPixel(key_min)
-        key_max_pix=self.rgb_camera.project3dToPixel(key_max)
-        lock_min_pix=self.rgb_camera.project3dToPixel(lock_min)
-        lock_max_pix=self.rgb_camera.project3dToPixel(lock_max)
-
+        #Check if we exceed image bounds, then set to 0, 480, 640, etc.
+        if key_min_pix[0]<0:
+            key_min_pix[0]=0
+        if key_max_pix[0]>image_max_x:
+            key_max_pix[0]=image_max_x
+        if key_min_pix[1]<0:
+            key_min_pix[1]=0
+        if key_max_pix[1]>image_max_y:
+            key_max_pix[1]=image_max_y
+        if lock_min_pix[0]<0:
+            lock_min_pix[0]=0
+        if lock_max_pix[0]>image_max_x:
+            lock_max_pix[0]=image_max_x
+        if lock_min_pix[1]<0:
+            lock_min_pix[1]=0
+        if lock_max_pix[1]>image_max_y:
+            lock_max_pix[1]=image_max_y
+        
         self.key_search_box={'min':{'x':int(key_min_pix[0]),'y':int(key_min_pix[1])},
                              'max':{'x':int(key_max_pix[0]),'y':int(key_max_pix[1])}}
 
         self.lock_search_box={'min':{'x':int(lock_min_pix[0]),'y':int(lock_min_pix[1])},
                               'max':{'x':int(lock_max_pix[0]),'y':int(lock_max_pix[1])}}
-        
+
 def main():
     rospy.init_node('lock_key_finder_pub',anonymous=True)
     finder=FinderPub()

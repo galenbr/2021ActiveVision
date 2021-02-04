@@ -24,7 +24,7 @@ objectsInfo: {
     Pose3: [0.120,1.570,1.570,0,179],
   },
   ID4: {
-    Filename: bowlAV,
+    Filename: bowl2AV,
     Description: Bowl,
     nPoses: 1,
     Pose1: [0.015,0.000,0.000,0,1],
@@ -69,6 +69,6 @@ objectsInfo: {
     Filename: sprayFlaskAV,
     Description: Spray Flask,
     nPoses: 1,
-    Pose1: [0.015,0.01,-0.055,0,359],
+    Pose1: [0.015,0.00,0.00,0,359],
   },
 }

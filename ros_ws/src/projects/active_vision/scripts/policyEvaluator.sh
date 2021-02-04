@@ -54,7 +54,7 @@ Policy1D=("3DHEURISTIC" "3D_Heuristic")
 #           "/active_vision/policyTester/HAFstVecGridSize" 7)
 # Policy3B=("PCA_LDA" "PCA_LDA_85"
 #            "/active_vision/policyTester/PCAcomponents" 0.85
-#            "/active_vision/policyTester/HAFstVecGridSize" 5)
+#            "/active_vision/policyTester/HAFstVecGridSize" 7)
 # Policy3C=("PCA_LDA" "PCA_LDA_75"
 #           "/active_vision/policyTester/PCAcomponents" 0.75
 #           "/active_vision/policyTester/HAFstVecGridSize" 7)

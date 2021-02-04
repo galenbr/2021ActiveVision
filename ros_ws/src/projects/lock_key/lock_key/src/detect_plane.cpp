@@ -1,10 +1,12 @@
 #include "ros/ros.h"
+//#include <geometry_msgs/PointStamped.h>
 #include "lock_key/getWrench.h"
 #include "lock_key/getAveWrench.h"
 #include "moveit_planner/GetTF.h"
 #include "moveit_planner/MoveCart.h"
 #include <lock_key_msgs/DetectPlaneAction.h> // Note: "Action" is appended
 #include <actionlib/server/simple_action_server.h>
+#include <tf/transform_listener.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <iostream>
 #include <vector>
@@ -99,10 +101,24 @@ public:
   void moveRel(double x, double y, double z){
     getTFClient.call(curTF);
     p.position=curTF.response.pose.position;
-    
+    // if (use_current_or){
+    //   p.orientation=curTF.response.pose.orientation;
+    // }
+
+    //Define PointStamped in panda_link8 (using xyz args)
+    // hand_point.header.frame_id = "panda_link8";
+    // hand_point.point.x = x;
+    // hand_point.point.y = y;
+    // hand_point.point.z = z;
+    // //Transform to map frame.
+    // listener.waitForTransform("/map", "/panda_link8",
+    //                           ros::Time(0), ros::Duration(1.0));
+    // listener.transformPoint("map",hand_point,hand_point_tf);
+    //Use that as your positions
+    // p.position=hand_point_tf.point;
     // ROS_INFO("Current: %.6f, %.6f, %.6f.",p.position.x,p.position.y,p.position.z);
 
-    //Update position with relative changes
+    // //Update position with relative changes
     p.position.x += x;
     p.position.y += y;
     p.position.z += z;
@@ -130,6 +146,10 @@ public:
       calculateFTBias();
     }
 
+    // if (goal->use_current_orientation == 0){ // | !bias.set
+    //   ROS_INFO("Setting goal orientation for padlock.");
+    //   setGoalOrientation();
+    // }
     // make sure that the action hasn't been canceled
     if (!as.isActive())
       return;
@@ -180,6 +200,9 @@ private:
   moveit_planner::MoveCart cart;
   geometry_msgs::Quaternion padlock_goal_or;
   geometry_msgs::Pose p;
+  geometry_msgs::PointStamped hand_point;
+  geometry_msgs::PointStamped hand_point_tf;
+  tf::TransformListener listener;
   int32_t timeout = 1000;
   double current_delta{0.0};
   double delta_max{0.0};
