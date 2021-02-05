@@ -10,6 +10,7 @@ import rospy
 import tf
 import tf_conversions
 #Messages
+from lock_key.srv import getAveWrench, getWrench
 from moveit_planner.srv import GetTF, GetTFRequest, GetPose
 from std_msgs.msg import Header
 import franka_gripper.msg
@@ -44,12 +45,27 @@ class Commander:
 			self.gripper_client.wait_for_server()
 			rospy.wait_for_service('get_transform')
 			self.get_tf_client = rospy.ServiceProxy('get_transform', GetTF)
+		rospy.wait_for_service('getWrench')
+		rospy.wait_for_service('getAveWrench')
+		self.get_wrench_client = rospy.ServiceProxy('getWrench', getWrench)
+		self.get_ave_wrench_client = rospy.ServiceProxy('getAveWrench', getAveWrench)
 		self.transformer=tf.TransformListener()
 		rospy.loginfo('Initialized Commander Interface and Action Clients')
 
 	def __repr__(self):
 		'''Defines string representation of Commander object.'''
 		return self.group_name + " Commander:\n" + str(self.robot.get_current_state())
+
+	def get_ft(self,remove_bias=True):
+		'''Reads force/torque value and optionally removes biases.'''
+		if remove_bias:
+			return self.get_wrench_client()-self.ft_bias
+		else:
+			return self.get_wrench_client()
+
+	def get_ft_bias(self):
+		'''Retrieves force/torque offset biases.'''
+		self.ft_bias=self.get_ave_wrench_client()
 
 	def get_ee_pose(self):
 		'''Retrieves current EE pose in Map frame.'''
@@ -96,7 +112,7 @@ class Commander:
 		self.move_to_joint_pos(self.joint_home,goal_time=0.5)
 
 	# def move_to_plane(self,step,axis,max_disp,max_force,max_iter=500,
-	# 				  orientation=None,goal_time=0.5):
+	# 				  orientation=None,goal_time=0.5,recalculate_bias=True):
 	# 	'''Incrementally move end-effector until it hits a plane.'''
 	# 	#TODO: Finish Implementation
 	# 	ii=1
@@ -136,7 +152,8 @@ class Commander:
 		# Stop movement, clear targets
 		self.stop_and_clear()
 
-	# def rotate_to_step(self,angle,axis,max_angle,max_torque,max_iter=500):
+	# def rotate_to_step(self,angle,axis,max_angle,max_torque,
+						 #max_iter=500,recalculate_bias=True):
 		'''Incrementally rotate end-effector until torque theshold is exceeded.'''
 		#TODO: Finish Implementation
 		# if orientation is not None:
