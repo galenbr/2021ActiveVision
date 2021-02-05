@@ -7,25 +7,27 @@ import sys
 import actionlib
 import moveit_commander
 import rospy
+import tf
 import tf_conversions
 #Messages
+from moveit_planner.srv import GetTF, GetTFRequest, GetPose
+from std_msgs.msg import Header
 import franka_gripper.msg
 import geometry_msgs.msg
 
-class Epsilon:
-	'''Define Epsilon object for gripper function.'''
-	def __init__(self, inner, outer):
-		self.inner=inner
-		self.outer=outer
-
 class Commander:
 	'''Commander interface for Panda.'''
-	def __init__(self,group_name="panda_arm",vel_scale=0.1):
+	def __init__(self,group_name="panda_arm",vel_scale=0.1,gazebo=False):
 		#Initialize commander
 		moveit_commander.roscpp_initialize(sys.argv)
 		self.robot = moveit_commander.RobotCommander()
 		self.scene = moveit_commander.PlanningSceneInterface()
-		self.group_name = group_name
+		self.gazebo=gazebo
+		#Select control group
+		if self.gazebo:
+			self.group_name="arm"
+		else:
+			self.group_name = group_name
 		self.move_group = moveit_commander.MoveGroupCommander(self.group_name)
 		#Set velocity scale
 		self.set_vel_scale(vel_scale)
@@ -34,34 +36,64 @@ class Commander:
 		#Wait for action server
 		self.gripper_client = actionlib.SimpleActionClient('franka_gripper/grasp', 
 											  	      	   franka_gripper.msg.GraspAction)
-		rospy.loginfo('Waiting for action server')
-		self.gripper_client.wait_for_server()
+		rospy.loginfo('Waiting for actions, services, and TF listener')
+		if self.gazebo:
+			rospy.wait_for_service('get_pose')
+			self.get_pose_client = rospy.ServiceProxy('get_pose', GetPose)
+		else:
+			self.gripper_client.wait_for_server()
+			rospy.wait_for_service('get_transform')
+			self.get_tf_client = rospy.ServiceProxy('get_transform', GetTF)
+		self.transformer=tf.TransformListener()
 		rospy.loginfo('Initialized Commander Interface and Action Clients')
 
 	def __repr__(self):
 		'''Defines string representation of Commander object.'''
 		return self.group_name + " Commander:\n" + str(self.robot.get_current_state())
 
-	# def move_relative(self,pose_change_goal,goal_time=0.5):
-	# 	'''Moves end-effector by a relative displacement in panda_link8 frame.'''
-	# 	#TODO: Finish Implementation
-	# 	# Retrieve current pose in map frame using getTFClient
-	# 	current_pose=
-	# 	# Convert to EE frame, then update, then back to map??
-	# 	# Update desired pose with relative change
-	# 	pose_goal=
-	# 	# Move to desired pose
-	# 	self.move_to_pose(pose_goal,goal_time)
+	def get_ee_pose(self):
+		'''Retrieves current EE pose in Map frame.'''
+		if self.gazebo:
+			return self.get_pose_client()
+		else:
+			# req=GetTFRequest()
+			# req.from='map'
+			# req.to='panda_link8'
+			# return self.get_tf_client(req)
+			pass
+
+	def move_relative(self,xyz_disp=(0.0,0.0,0.1),goal_time=0.5):
+		'''Moves end-effector by a relative displacement in panda_link8 frame.'''
+		# Convert point to map frame
+		point_goal=self.transform_ee_to_map(xyz_disp)
+		# Get current orientation
+		current_pose=self.get_ee_pose()
+		# Build complete pose goal
+		pose_goal= geometry_msgs.msg.Pose()
+		pose_goal.position = point_goal.point
+		pose_goal.orientation = current_pose.pose.orientation
+		# Move to desired pose
+		self.move_to_pose(pose_goal,goal_time)
 
 	def move_gripper(self, width, epsilon_inner=0.05, epsilon_outer=0.05, 
 					 speed=0.1, force=40):
 		'''Moves gripper to the specified width.'''
-		epsilon=Epsilon(epsilon_inner,epsilon_outer)
-		goal=franka_gripper.msg.GraspGoal(width, epsilon, speed, force)
+		#Build goal
+		goal=franka_gripper.msg.GraspGoal()
+		goal.width=width
+		goal.epsilon.inner=epsilon_inner
+		goal.epsilon.outer=epsilon_outer
+		goal.speed=speed
+		goal.force=force
+		#Send
 		rospy.loginfo('Sending gripper goal')
 		self.gripper_client.send_goal(goal)
 		rospy.loginfo('Waiting for gripper result')
 		self.gripper_client.wait_for_result()
+
+	def move_home(self, goal_time):
+		'''Move to home position.'''
+		self.move_to_joint_pos(self.joint_home,goal_time=0.5)
 
 	# def move_to_plane(self,step,axis,max_disp,max_force,max_iter=500,
 	# 				  orientation=None,goal_time=0.5):
@@ -87,30 +119,34 @@ class Commander:
 	def move_to_joint_pos(self,joint_goal,goal_time=0.5):
 		'''Move to joint specificed joint positions joint_goal[0:6] in rads.'''
 		#Set goal time for trajectory
-		rospy.set_param('/position_joint_trajectory_controller/constraints/goal_time',goal_time)
+		self.set_goal_time(goal_time)
 		# Execute
 		plan=self.move_group.go(joint_goal, wait=True)
-		# Stop movemoent, clear targets
+		# Stop movement, clear targets
 		self.stop_and_clear()
 
 	def move_to_pose(self,pose_goal,goal_time=0.5):
 		'''Move to pose in map frame.'''
 		#Set goal time for trajectory
-		rospy.set_param('/position_joint_trajectory_controller/constraints/goal_time',goal_time)
+		self.set_goal_time(goal_time)
 		#Plan to Pose goal
 		self.move_group.set_pose_target(pose_goal)
 		#Execute
 		plan = self.move_group.go(wait=True)
-		# Stop movemoent, clear targets
+		# Stop movement, clear targets
 		self.stop_and_clear()
 
-	# def rotate(self,angle,axis,max_angle,max_torque,max_iter=500):
-		'''Incrementally rotate end-effector.'''
+	# def rotate_to_step(self,angle,axis,max_angle,max_torque,max_iter=500):
+		'''Incrementally rotate end-effector until torque theshold is exceeded.'''
 		#TODO: Finish Implementation
 		# if orientation is not None:
 		# 	#Then use the given orientation
 		# else:
 		# 	#Use the current orientation
+
+	def set_goal_time(self,goal_time):
+		'''Sets trajectory goal time.'''
+		rospy.set_param('/position_joint_trajectory_controller/constraints/goal_time',goal_time)
 
 	def set_vel_scale(self,vel_scale):
 		'''Sets velocity scaling (0,1] for motion.'''
@@ -121,29 +157,57 @@ class Commander:
 		self.move_group.stop()
 		self.move_group.clear_pose_targets()
 
+	def transform_ee_to_map(self,point):
+		'''Transforms point (x,y,z) in panda_link8 to map frame. Returns PointStamped.'''
+		# Initialize objects
+		h = Header()
+		orig_point=geometry_msgs.msg.PointStamped()
+		#Define original point as PointStamped
+		h.frame_id='panda_link8'
+		orig_point.header=h
+		orig_point.point.x=point[0]
+		orig_point.point.y=point[1]
+		orig_point.point.z=point[2]
+		#Wait for transform to become available
+		self.transformer.waitForTransform("panda_link8", "map", rospy.Time(0), rospy.Duration(4.0))
+		#Calculate transformed point
+		return self.transformer.transformPoint('map',orig_point)
+		
 if __name__ == '__main__':
+	rospy.init_node('commander_node')
 	#Instantiate commander
-	panda=Commander(group_name="arm") #Gazebo uses "arm". Physical uses "panda_arm"
+	panda=Commander(gazebo=True) #Gazebo uses "arm". Physical uses "panda_arm"
 	#Test __repr__ method
-	print panda
+	#print panda
 
 	#Test move_to_pose method
-	pose_goal = geometry_msgs.msg.Pose()
-	goal_time = 0.5
-	quat=tf_conversions.transformations.quaternion_from_euler(-1.5708, #roll
-															  0.7854,  #pitch
-															  0.0)     #yaw
-	pose_goal.orientation.x = quat[0]
-	pose_goal.orientation.y = quat[1]
-	pose_goal.orientation.z = quat[2]
-	pose_goal.orientation.w = quat[3]
-	pose_goal.position.x = 0.4
-	pose_goal.position.y = 0.2
-	pose_goal.position.z = 0.3
-	panda.move_to_pose(pose_goal,goal_time)
+	# pose_goal = geometry_msgs.msg.Pose()
+	# goal_time = 0.5
+	# quat=tf_conversions.transformations.quaternion_from_euler(-1.5708, #roll
+	# 														  0.7854,  #pitch
+	# 														  0.0)     #yaw
+	# pose_goal.orientation.x = quat[0]
+	# pose_goal.orientation.y = quat[1]
+	# pose_goal.orientation.z = quat[2]
+	# pose_goal.orientation.w = quat[3]
+	# pose_goal.position.x = 0.4
+	# pose_goal.position.y = 0.2
+	# pose_goal.position.z = 0.3
+	# panda.move_to_pose(pose_goal,goal_time)
 
 	#Test move_to_joint_pos method
-	panda.move_to_joint_pos(panda.joint_home,goal_time=0.8)
+	#panda.move_to_joint_pos(panda.joint_home,goal_time=0.8)
+
+	#Test move_home method
+	#panda.move_home(goal_time=0.8)
 
 	#Test move_gripper method
-	panda.move_gripper(0.02)
+	#panda.move_gripper(0.02)
+
+	#Test get_ee_pose method
+	print panda.get_ee_pose()
+
+	#Test move_relative method
+	panda.move_relative(xyz_disp=(0.0,0.0,0.15),goal_time=0.5)
+
+	print panda.get_ee_pose()
