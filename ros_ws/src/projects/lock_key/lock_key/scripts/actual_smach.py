@@ -45,21 +45,8 @@ def spiral_motion():
 	rospy.loginfo('Waiting for result')
 	client.wait_for_result()
 
-def detect_plane(F_max, recalculate_bias=False):
-	'''Calls insertion plane contact detection action.'''
-	client = actionlib.SimpleActionClient("plane_detector_node", 
-										  lock_key_msgs.msg.DetectPlaneAction)
-	rospy.loginfo('Waiting for server')
-	client.wait_for_server()
-	rospy.loginfo('Found Server')
-	goal=lock_key_msgs.msg.DetectPlaneGoal(F_max, recalculate_bias)
-	rospy.loginfo('Sending Goal')
-	client.send_goal(goal)
-	rospy.loginfo('Waiting for result')
-	client.wait_for_result()
-
 def rotate_key(d_roll, d_pitch, d_yaw):
-	'''Calls key rotation action.'''
+	'''Calls key rotation action. No torque feedback.'''
 	client = actionlib.SimpleActionClient("rotate_key", 
 										  lock_key_msgs.msg.RotateKeyAction)
 	rospy.loginfo('Waiting for server')
@@ -126,8 +113,9 @@ class NavigateToKey(smach.State):
     def execute(self, userdata):
         global panda
         rospy.loginfo('Navigating to Key...')
-        panda.move_to_plane(step=0.001,axis='z',max_disp=0.2,max_force=3.0,max_iter=500,
-			    		    orientation=None,step_goal_time=0.5,recalculate_bias=True)
+        panda.move_to_plane(step=0.002,axis='z',max_disp=0.2,max_force=3.0,max_iter=500,
+			    		    orientation=None,step_goal_time=0.5,recalculate_bias=True,
+                            use_orig_point=True)
         # # Retrieve goal position from param server
         # goal=rospy.get_param("key_goal")
         # # Call movement action
@@ -219,7 +207,10 @@ class PlaneDetection(smach.State):
 		rospy.loginfo('Starting Plane Detection...')
 		rospy.loginfo('Retrieving parameters')
 		F_max=rospy.get_param("spiral/Ft")
-		detect_plane(F_max,recalculate_bias=True)
+		max_disp=rospy.get_param("spiral/delta_max")
+		delta_step=rospy.get_param("spiral/delta_step")
+		panda.move_to_plane(step=delta_step,axis='z',max_disp=max_disp,max_force=F_max,max_iter=500,
+			    		    orientation=None,step_goal_time=0.5,recalculate_bias=True,use_orig_point=False)
 		return 'succeeded'
 
 class SpiralMotion(smach.State):
@@ -234,16 +225,21 @@ class FinalInsert(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
     def execute(self, userdata):
+		global panda
 		rospy.loginfo('Starting Final Insertion...')
 		rospy.loginfo('Retrieving parameters')
 		F_max=rospy.get_param("spiral/Fi")
-		detect_plane(F_max,recalculate_bias=False)
+		max_disp=rospy.get_param("spiral/delta_max")
+		delta_step=rospy.get_param("spiral/delta_step")
+		panda.move_to_plane(step=delta_step,axis='z',max_disp=max_disp,max_force=F_max,max_iter=500,
+			    		    orientation=None,step_goal_time=0.5,recalculate_bias=True,use_orig_point=False)
 		return 'succeeded'
 
 class RotateKey(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
     def execute(self, userdata):
+		global panda
 		rospy.loginfo('Rotating key...')
 		rospy.loginfo('Retrieving parameters')
 		d_roll=rospy.get_param("padlock_goal/key_roll")
