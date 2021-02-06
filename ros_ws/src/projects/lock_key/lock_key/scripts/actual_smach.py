@@ -7,6 +7,7 @@ from __future__ import print_function
 import rospy
 import smach
 import actionlib
+import commander
 import tf_conversions
 #Messages
 import geometry_msgs.msg
@@ -87,14 +88,20 @@ class GetPositions(smach.State):
     def execute(self, userdata):
         rospy.loginfo('Getting positions from vision system...')
         response=get_positions()
-        rospy.set_param("key_goal/x",response.key_point.point.x)
-        rospy.set_param("key_goal/y",response.key_point.point.y-0.105) #TODO: REMOVE SAFETY PADDING IN Y DIRECTION
-        rospy.set_param("key_goal/z",0.1485)
-        # rospy.set_param("key_goal/z",response.key_point.point.z)
-        rospy.set_param("padlock_goal/x",response.lock_point.point.x)
+        #Define offsets
+        ee_to_link8_offset=0.103
+        x_offset=0.009
+        height_safety_offset_key=0.008
+        height_safety_offset_lock=0.02
+
+        rospy.set_param("key_goal/x",response.key_point.point.x-x_offset)
+        rospy.set_param("key_goal/y",response.key_point.point.y-ee_to_link8_offset)
+        # rospy.set_param("key_goal/z",0.1485)
+        rospy.set_param("key_goal/z",response.key_point.point.z+height_safety_offset_key)
+        rospy.set_param("padlock_goal/x",response.lock_point.point.x-x_offset)
         rospy.set_param("padlock_goal/y",response.lock_point.point.y)
-        # rospy.set_param("padlock_goal/z",response.lock_point.point.z)
-        rospy.set_param("padlock_goal/z",0.26)
+        rospy.set_param("padlock_goal/z",response.lock_point.point.z+ee_to_link8_offset+height_safety_offset_lock)
+        # rospy.set_param("padlock_goal/z",0.116+ee_to_link8_offset)
         return 'succeeded'
 
 class NavigateToPreKey(smach.State):
@@ -117,12 +124,15 @@ class NavigateToKey(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
     def execute(self, userdata):
+        global panda
         rospy.loginfo('Navigating to Key...')
-        # Retrieve goal position from param server
-        goal=rospy.get_param("key_goal")
-        # Call movement action
-        move_to_pose_goal(goal['x'],goal['y'],goal['z'],
-                          oal['roll'],goal['pitch'],goal['yaw'],goal_time=3.0)
+        panda.move_to_plane(step=0.001,axis='z',max_disp=0.2,max_force=3.0,max_iter=500,
+			    		    orientation=None,step_goal_time=0.5,recalculate_bias=True)
+        # # Retrieve goal position from param server
+        # goal=rospy.get_param("key_goal")
+        # # Call movement action
+        # move_to_pose_goal(goal['x'],goal['y'],goal['z'],
+        #                   goal['roll'],goal['pitch'],goal['yaw'],goal_time=3.0)
         rospy.sleep(1)
         return 'succeeded'
 
@@ -208,7 +218,6 @@ class PlaneDetection(smach.State):
     def execute(self, userdata):
 		rospy.loginfo('Starting Plane Detection...')
 		rospy.loginfo('Retrieving parameters')
-		set_vel_scale(1.0)
 		F_max=rospy.get_param("spiral/Ft")
 		detect_plane(F_max,recalculate_bias=True)
 		return 'succeeded'
@@ -227,7 +236,7 @@ class FinalInsert(smach.State):
     def execute(self, userdata):
 		rospy.loginfo('Starting Final Insertion...')
 		rospy.loginfo('Retrieving parameters')
-		F_max=rospy.get_param("spiral/Fd")
+		F_max=rospy.get_param("spiral/Fi")
 		detect_plane(F_max,recalculate_bias=False)
 		return 'succeeded'
 
@@ -240,7 +249,11 @@ class RotateKey(smach.State):
 		d_roll=rospy.get_param("padlock_goal/key_roll")
 		d_pitch=rospy.get_param("padlock_goal/key_pitch")
 		d_yaw=rospy.get_param("padlock_goal/key_yaw")
-		rotate_key(d_roll,d_pitch,d_yaw)
+		# rotate_key(d_roll,d_pitch,d_yaw)
+		panda.rotate_to_torque(step_angle=-0.0174533,axis='z',max_angle=-1.0472,max_torque=1.0,
+			   			       max_iter=500,step_goal_time=0.5,recalculate_bias=True)
+
+        #Rotate key back
 		return 'succeeded'
 
 class NavigateToPostLock(smach.State):
@@ -271,11 +284,10 @@ class NavigateToHome(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
     def execute(self, userdata):
+        global panda
         rospy.loginfo('Navigating to Home...')
         # Retrieve goal position from param server
-        goal=rospy.get_param("home")
-        move_to_joint_position(goal['j1'],goal['j2'],goal['j3'],goal['j4'],
-        	                   goal['j5'],goal['j6'],goal['j7'])
+        panda.move_home(goal_time=1.0)
         return 'succeeded'
 
 def main():
@@ -283,7 +295,7 @@ def main():
 	rospy.init_node('actual_smach_node')
 
 	#Initialize panda controller
-	panda=commander.Commander(group_name="panda_arm",vel_scale=0.1)
+	panda=commander.Commander(group_name="panda_arm",vel_scale=0.1,gazebo=False)
 
 	# Create a SMACH state machine
 	sm = smach.StateMachine(outcomes=['complete'])
