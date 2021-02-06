@@ -10,7 +10,7 @@ key_goal:
   yaw:   0.0    #Hor.: (Panda: 0.0), Vertical: (Gazebo:0.0, Panda: -0.7854)
   # Distance offsets for pre-grasp [meters]
   pre_x_offset: 0.0
-  pre_y_offset: -0.05 #Hor.: -0.05, Vertical:0.0
+  pre_y_offset: -0.025 #Hor.: -0.05, Vertical:0.0
   pre_z_offset: 0.0 #Hor.: 0.0, Vertical: 0.15
   # Distance offsets for post-grasp [meters]
   post_x_offset: 0.0
@@ -98,4 +98,4 @@ spiral:
   # Sleep time between force-torque samples [seconds]
   ft_sleep: 0.05
   # Minimum downward (negative) spiral force for detecting padlock/hole [Newtons]
-  min_spiral_force: -2.5 # pegboard: -0.6, padlock: -2.0
+  min_spiral_force: -2.25 # pegboard: -0.6, padlock: -2.0
