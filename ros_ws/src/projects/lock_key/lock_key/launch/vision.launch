@@ -3,9 +3,12 @@
   <arg name="json_file_path"        default=""/>
   <arg name="camera"                default="camera"/>
 
-  <!-- Broadcast Static Transform between panda_hand and camera_link (y: -0.0175)-->
-  <node pkg="tf2_ros" type="static_transform_publisher" name="hand_to_camera" args="0.067 -0.0275 0 3.14159 -1.57079 0 panda_hand camera_link" />
-  
+  <!-- Red Mount: Broadcast Static Transform between panda_hand and camera_link (y: -0.0175)-->
+  <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="hand_to_camera" args="0.067 -0.0275 0 3.14159 -1.57079 0 panda_hand camera_link" /> -->
+  <!-- Green Mount: Broadcast Static Transform between panda_hand and camera_link-->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="realsense_link_broadcaster"
+        args="0.040 -0.0175 0.066 3.1415 -1.571 0 panda_hand camera_link" />
+
   <group ns="$(arg camera)">
     <include file="$(find realsense2_camera)/launch/includes/nodelet.launch.xml">
       <arg name="serial_no"         value="$(arg serial_no)"/>
