@@ -2,9 +2,12 @@
 # -*- coding: utf-8 -*-
 """
 Class for working with MoveIt Commander.
+
+https://frankaemika.github.io/docs/franka_ros.html?highlight=reflex
 """
 import sys
 import actionlib
+from math import cos, pi, sin, sqrt
 import moveit_commander
 import rospy
 import tf
@@ -23,6 +26,7 @@ class Commander:
 		moveit_commander.roscpp_initialize(sys.argv)
 		self.robot = moveit_commander.RobotCommander()
 		self.scene = moveit_commander.PlanningSceneInterface()
+		self.add_table()
 		self.gazebo=gazebo
 		#Select control group
 		if self.gazebo:
@@ -55,6 +59,24 @@ class Commander:
 	def __repr__(self):
 		'''Defines string representation of Commander object.'''
 		return self.group_name + " Commander:\n" + str(self.robot.get_current_state())
+
+	def add_table(self):
+		'''Adds table to planning scene.'''
+		box_pose = geometry_msgs.msg.PoseStamped()
+		box_pose.header.frame_id = "map"
+		box_pose.pose.orientation.w = 1.0
+		box_pose.pose.position.z = -0.05
+		box_name = "table"
+		self.scene.add_box(box_name, box_pose, size=(2.0, 2.0, 0.1))
+
+	def found_hole(self,min_spiral_force,tx_limit,ty_limit):
+		'''Returns bool stating whether hole was found.'''
+		#Retrieve current FT reading
+		ft=self.get_ft(remove_bias=True)
+		#Return true if hole detected, else False
+		return not ((ft['force']['z']>min_spiral_force) and
+                	(sqrt(ft['torque']['x']**2)<tx_limit) and
+                	(sqrt(ft['torque']['y']**2)<ty_limit))
 
 	def get_ft(self,remove_bias=True):
 		'''Reads force/torque value and optionally removes biases.'''
@@ -94,18 +116,21 @@ class Commander:
 			ee_pose.orientation = self.get_tf_client("map","panda_link8").pose.orientation
 			return ee_pose
 
-	def move_relative(self,xyz_disp=(0.0,0.0,0.01),orig_point=None,goal_orientation=None,goal_time=0.5):
+	def move_relative(self,xyz_disp=(0.0,0.0,0.01),hold_xyz=[None,None,None],
+					  goal_orientation=None,goal_time=0.5):
 		'''Moves end-effector by a relative displacement in panda_link8 frame.'''
 		# Convert point to map frame
 		point_goal=self.transform_ee_to_map(xyz_disp)
 		# Build complete pose goal
 		pose_goal=geometry_msgs.msg.Pose()
 		pose_goal.position = point_goal.point
-		#use original components of point for unchanged axes
-		if orig_point is not None:
-			#TODO: Find a more general way to handle this
-			pose_goal.position.x=orig_point.x
-			pose_goal.position.z=orig_point.z
+		#Use specified component of point to hold constant (in map frame)
+		if hold_xyz[0] is not None:
+			pose_goal.position.x=hold_xyz[0]
+		if hold_xyz[1] is not None:
+			pose_goal.position.y=hold_xyz[1]
+		if hold_xyz[2] is not None:
+			pose_goal.position.z=hold_xyz[2]
 		#Use goal orientation (geometry_msgs/Quaternion) if given, otherwise use current orientation
 		if goal_orientation is not None:
 			pose_goal.orientation = goal_orientation
@@ -137,8 +162,11 @@ class Commander:
 		self.move_to_joint_pos(self.joint_home,goal_time=0.5)
 
 	def move_to_plane(self,step,axis,max_disp,max_force,max_iter=500,
-					  orientation=None,step_goal_time=0.5,recalculate_bias=True):
+					  orientation=None,step_goal_time=0.5,recalculate_bias=True,
+					  hold_xyz=[False,False,False]):
 		'''Incrementally move end-effector until it hits a plane.'''
+		#Set tight goal tolerances
+		self.set_joint_tol(0.01)
 		ii=1
 		disp=0
 		pose_change_step=[0,0,0]
@@ -156,15 +184,25 @@ class Commander:
 		if recalculate_bias:
 			self.get_ft_bias()
 		force=self.get_ft(remove_bias=True)['force'][axis]
+		#Use components of original point for accuracy
 		orig_point=self.get_tf_client("map","panda_link8").pose.position
+		hold_xyz_pts=[None,None,None]
+		if hold_xyz[0]:
+			hold_xyz_pts[0]=orig_point.x
+		if hold_xyz[1]:
+			hold_xyz_pts[1]=orig_point.y
+		if hold_xyz[2]:
+			hold_xyz_pts[2]=orig_point.z
 		#Move slightly until max. force or max. iterations are exceeded.
 		while (force<=max_force) and (disp<=max_disp) and (ii<=max_iter):
-			self.move_relative(pose_change_step,orig_point=orig_point,
+			self.move_relative(pose_change_step,hold_xyz=hold_xyz_pts,
 							   goal_orientation=orientation,goal_time=step_goal_time)
 			force=self.get_ft(remove_bias=True)['force'][axis]
 			disp+=step
 			ii+=1
-
+			rospy.sleep(0.05)
+		#Return to default
+		self.set_joint_tol()
 		if ii<=max_iter:
 			rospy.loginfo('Arrived at plane.')
 		else:
@@ -240,9 +278,63 @@ class Commander:
 		'''Sets trajectory goal time.'''
 		rospy.set_param('/position_joint_trajectory_controller/constraints/goal_time',goal_time)
 
+	def set_joint_tol(self,tol=0.05):
+		'''Set global parameters related to controller for joint control.'''
+		rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint1/goal',tol)
+		rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint2/goal',tol)
+		rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint3/goal',tol)
+		rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint4/goal',tol)
+		rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint5/goal',tol)
+		rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint6/goal',tol)
+		rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint7/goal',tol)
+
 	def set_vel_scale(self,vel_scale):
 		'''Sets velocity scaling (0,1] for motion.'''
 		self.move_group.set_max_velocity_scaling_factor(vel_scale)
+
+	def spiral_gen(self,spiral_a,spiral_b,spiral_rot,max_iter,
+				   x=0.0,y=0.0):
+		'''Generator for spiral motion.'''
+		ii=1.0
+		while ii<=max_iter:
+			phi = sqrt(ii/max_iter)*(spiral_rot*2.0*pi)
+			spiral_rad=(spiral_a-spiral_b*phi)
+			x+=spiral_rad*cos(phi)
+			y+=spiral_rad*sin(phi)
+			ii+=1.0
+			yield x, y
+
+	def spiral(self,spiral_a,spiral_b,min_spiral_force,tx_limit,ty_limit,
+			   spiral_rot,spiral_fd,max_iter=500,step_goal_time=0.5):
+		'''Performs spiral motion until hole is detected.'''
+		#Use existing bias from initial plane detection
+		ii=1
+		#Set tight goal tolerances
+		self.set_joint_tol(0.01)
+		pose_goal = geometry_msgs.msg.Pose()
+		orig_pose=self.get_tf_client("map","panda_link8").pose
+		pose_goal=orig_pose
+		#Generate xy points for spiral
+		for x,y in self.spiral_gen(spiral_a,spiral_b,spiral_rot,max_iter,
+				   				   x=0.0,y=0.0):
+			#Check if hole was found
+			at_hole=self.found_hole(min_spiral_force,tx_limit,ty_limit)
+			if (not at_hole) and (ii<=max_iter):
+				#Move to next point
+				pose_goal.position=orig_pose.position
+				pose_goal.position.x+=x
+				pose_goal.position.y+=y
+				self.move_to_pose(pose_goal,goal_time=step_goal_time)
+				ii+=1
+			else:
+				break
+			rospy.sleep(0.08)
+		#Return to default
+		self.set_joint_tol()
+		if ii<=max_iter:
+			rospy.loginfo('Found hole.')
+		else:
+			rospy.loginfo('Failed to find hole.')
 
 	def stop_and_clear(self):
 		'''Stops residual motions. Clears movement targets.'''
@@ -269,6 +361,8 @@ if __name__ == '__main__':
 	rospy.init_node('commander_node')
 	#Instantiate commander
 	panda=Commander(gazebo=False) #Gazebo uses "arm". Physical uses "panda_arm"
+	panda.add_object()
+	rospy.sleep(30)
 	#Test __repr__ method
 	#print panda
 
@@ -310,12 +404,17 @@ if __name__ == '__main__':
 	# print panda.move_group.get_end_effector_link()
 
 	# panda.move_to_pose(panda.get_ee_pose(),goal_time=0.8)
-	panda.move_home(0.8)
 
-	# panda.move_to_plane(step=0.001,axis='z',max_disp=0.2,max_force=3.0,max_iter=500,
-	# 				    orientation=None,step_goal_time=0.5,recalculate_bias=True)
+	# panda.move_to_plane(step=0.0005,axis='z',max_disp=0.2,max_force=3.5,max_iter=500,
+			    		# orientation=None,step_goal_time=0.5,recalculate_bias=True,hold_xyz=[False,False,False])
 	# panda.move_gripper(0.05)
 
+	#Test rotate_to_torque method
 	#1deg=0.0174533rad
-	panda.rotate_to_torque(step_angle=-0.0174533,axis='z',max_angle=-1.0472,max_torque=1.0,
-			   			   max_iter=500,step_goal_time=0.5,recalculate_bias=True)
+	# panda.rotate_to_torque(step_angle=-0.0174533,axis='z',max_angle=-1.0472,max_torque=1.0,
+			   			#    max_iter=500,step_goal_time=0.5,recalculate_bias=True)
+
+	#Test spiral method
+	# panda.spiral(spiral_a=0.0,spiral_b=0.000005,min_spiral_force=-2.25,tx_limit=1.5,ty_limit=1.5,
+	# 	   		 spiral_rot=10.0,spiral_fd=4.0,max_iter=500,step_goal_time=0.5)
+	# panda.move_home(0.8)

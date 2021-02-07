@@ -32,19 +32,6 @@ def move_to_pose_goal(x,y,z,roll,pitch,yaw,goal_time=0.5):
 
 	panda.move_to_pose(pose_goal,goal_time)
 
-def spiral_motion():
-	'''Calls spiral motion action.'''
-	client = actionlib.SimpleActionClient("spiral_motion", 
-										  lock_key_msgs.msg.SpiralAction)
-	rospy.loginfo('Waiting for server')
-	client.wait_for_server()
-	rospy.loginfo('Found Server')
-	goal=lock_key_msgs.msg.SpiralGoal()
-	rospy.loginfo('Sending Goal')
-	client.send_goal(goal)
-	rospy.loginfo('Waiting for result')
-	client.wait_for_result()
-
 def rotate_key(d_roll, d_pitch, d_yaw):
 	'''Calls key rotation action. No torque feedback.'''
 	client = actionlib.SimpleActionClient("rotate_key", 
@@ -77,7 +64,7 @@ class GetPositions(smach.State):
         response=get_positions()
         #Define offsets
         ee_to_link8_offset=0.103
-        x_offset=0.009
+        x_offset=0.009 #Half of finger width
         height_safety_offset_key=0.008
         height_safety_offset_lock=0.02
 
@@ -95,12 +82,15 @@ class NavigateToPreKey(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
     def execute(self, userdata):
+        global panda
         rospy.loginfo('Navigating to Pre-Key...')
         # Retrieve goal position from param server
         goal=rospy.get_param("key_goal")
         goal['x']+=goal['pre_x_offset']
         goal['y']+=goal['pre_y_offset']
         goal['z']+=goal['pre_z_offset']
+        #Make scale faster
+        panda.set_vel_scale(0.2)
         # Call movement action
         move_to_pose_goal(goal['x'],goal['y'],goal['z'],
                           goal['roll'],goal['pitch'],goal['yaw'],goal_time=5.0)
@@ -113,9 +103,11 @@ class NavigateToKey(smach.State):
     def execute(self, userdata):
         global panda
         rospy.loginfo('Navigating to Key...')
-        panda.move_to_plane(step=0.002,axis='z',max_disp=0.2,max_force=3.0,max_iter=500,
+        #Make scale slower
+        panda.set_vel_scale(0.1)
+        panda.move_to_plane(step=0.0018,axis='z',max_disp=0.2,max_force=2.0,max_iter=500,
 			    		    orientation=None,step_goal_time=0.5,recalculate_bias=True,
-                            use_orig_point=True)
+                            hold_xyz=[True,False,True])
         # # Retrieve goal position from param server
         # goal=rospy.get_param("key_goal")
         # # Call movement action
@@ -128,7 +120,10 @@ class NavigateToPostKey(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
     def execute(self, userdata):
+        global panda
         rospy.loginfo('Navigating to Post-Key...')
+        #Make scale faster
+        panda.set_vel_scale(0.15)
         # Retrieve goal position from param server
         goal=rospy.get_param("key_goal")
         goal['x']+=goal['post_x_offset']
@@ -144,7 +139,10 @@ class NavigateToPostKeyRotated(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
     def execute(self, userdata):
+        global panda
         rospy.loginfo('Navigating to Post-Key Rotated...')
+        #Make scale slower
+        panda.set_vel_scale(0.1)
         # Retrieve goal position from param server
         goal=rospy.get_param("key_goal")
         goal['x']+=goal['post_x_offset']
@@ -170,7 +168,10 @@ class NavigateToPreLockFar(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
     def execute(self, userdata):
+        global panda
         rospy.loginfo('Navigating to Pre-Lock Far...')
+        #Make scale faster
+        panda.set_vel_scale(0.15)
         # Retrieve goal position from param server
         goal=rospy.get_param("padlock_goal")
         goal['x']+=goal['pre_x_offset_far']
@@ -186,15 +187,15 @@ class NavigateToPreLockClose(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
     def execute(self, userdata):
+        global panda
         rospy.loginfo('Navigating to Pre-Lock Close...')
+        #Make scale slower
+        panda.set_vel_scale(0.1)
         # Retrieve goal position from param server
         goal=rospy.get_param("padlock_goal")
         goal['x']+=goal['pre_x_offset_close']
         goal['y']+=goal['pre_y_offset_close']
         goal['z']+=goal['pre_z_offset_close']
-        goal['x']+=goal['x_misalignment']
-        goal['y']+=goal['y_misalignment']
-        # Call movement action
         move_to_pose_goal(goal['x'],goal['y'],goal['z'],
                           goal['roll'],goal['pitch'],goal['yaw'],goal_time=3.0)
         rospy.sleep(1)
@@ -210,16 +211,26 @@ class PlaneDetection(smach.State):
 		max_disp=rospy.get_param("spiral/delta_max")
 		delta_step=rospy.get_param("spiral/delta_step")
 		panda.move_to_plane(step=delta_step,axis='z',max_disp=max_disp,max_force=F_max,max_iter=500,
-			    		    orientation=None,step_goal_time=0.5,recalculate_bias=True,use_orig_point=False)
+			    		    orientation=None,step_goal_time=0.5,recalculate_bias=True,hold_xyz=[True,True,False])
 		return 'succeeded'
 
 class SpiralMotion(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
     def execute(self, userdata):
-		rospy.loginfo('Starting Spiral Motion...')
-		spiral_motion()
-		return 'succeeded'
+        global panda
+        rospy.loginfo('Starting Spiral Motion...')
+        a=rospy.get_param("spiral/a")
+        b=rospy.get_param("spiral/b")
+        min_spiral_force=rospy.get_param("spiral/min_spiral_force")
+        tx_limit=rospy.get_param("spiral/Tx")
+        ty_limit=rospy.get_param("spiral/Ty")
+        F_max=rospy.get_param("spiral/Fd")
+        spiral_rot=rospy.get_param("spiral/rot")
+        nmax=rospy.get_param("spiral/nmax")
+        panda.spiral(spiral_a=a,spiral_b=b,min_spiral_force=min_spiral_force,tx_limit=tx_limit,ty_limit=ty_limit,
+                        spiral_rot=spiral_rot,spiral_fd=F_max,max_iter=nmax,step_goal_time=0.5)
+        return 'succeeded'
 
 class FinalInsert(smach.State):
     def __init__(self):
@@ -232,7 +243,7 @@ class FinalInsert(smach.State):
 		max_disp=rospy.get_param("spiral/delta_max")
 		delta_step=rospy.get_param("spiral/delta_step")
 		panda.move_to_plane(step=delta_step,axis='z',max_disp=max_disp,max_force=F_max,max_iter=500,
-			    		    orientation=None,step_goal_time=0.5,recalculate_bias=True,use_orig_point=False)
+			    		    orientation=None,step_goal_time=0.5,recalculate_bias=True,hold_xyz=[True,True,False])
 		return 'succeeded'
 
 class RotateKey(smach.State):
@@ -246,7 +257,7 @@ class RotateKey(smach.State):
 		d_pitch=rospy.get_param("padlock_goal/key_pitch")
 		d_yaw=rospy.get_param("padlock_goal/key_yaw")
 		# rotate_key(d_roll,d_pitch,d_yaw)
-		panda.rotate_to_torque(step_angle=-0.0174533,axis='z',max_angle=-1.0472,max_torque=1.0,
+		panda.rotate_to_torque(step_angle=-0.0174533,axis='z',max_angle=d_yaw,max_torque=1.0,
 			   			       max_iter=500,step_goal_time=0.5,recalculate_bias=True)
 
         #Rotate key back
@@ -281,6 +292,8 @@ class NavigateToHome(smach.State):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
     def execute(self, userdata):
         global panda
+        #Make scale faster
+        panda.set_vel_scale(0.2)
         rospy.loginfo('Navigating to Home...')
         # Retrieve goal position from param server
         panda.move_home(goal_time=1.0)
