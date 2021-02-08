@@ -369,10 +369,17 @@ void environment::spawnObject(int objectID, int choice, float yaw){
 
   spawnObj.request.model_name = objectDict[objectID].description;
 
-  std::ifstream ifs(path+"/models/"+objectDict[objectID].fileName+"/model.sdf");
-  std::string sdfFile( (std::istreambuf_iterator<char>(ifs)),
-                       (std::istreambuf_iterator<char>()));
-  spawnObj.request.model_xml = sdfFile;
+  if(objectDict[objectID].fileName.substr(0,3) == "YCB"){
+    std::ifstream ifs(path+"/models/ycbAV/sdf/"+objectDict[objectID].fileName+".sdf");
+    std::string sdfFile( (std::istreambuf_iterator<char>(ifs)),
+                         (std::istreambuf_iterator<char>()));
+    spawnObj.request.model_xml = sdfFile;
+  }else{
+    std::ifstream ifs(path+"/models/"+objectDict[objectID].fileName+"/model.sdf");
+    std::string sdfFile( (std::istreambuf_iterator<char>(ifs)),
+                         (std::istreambuf_iterator<char>()));
+    spawnObj.request.model_xml = sdfFile;
+  }
 
   spawnObj.request.reference_frame = "world";
   spawnObj.request.initial_pose = pose;

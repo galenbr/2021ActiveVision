@@ -1,7 +1,7 @@
 # Parameters with for the objects used
 
 objectsInfo: {
-  nObjects: 10,
+  nObjects: 12,
   ID1: {
     Filename: prismAV6x6x6,
     Description: Prism 6x6x6,
@@ -70,5 +70,17 @@ objectsInfo: {
     Description: Spray Flask,
     nPoses: 1,
     Pose1: [0.015,0.00,0.00,0,359],
+  },
+  ID11: {
+    Filename: YCB003,
+    Description: 003_cracker_box,
+    nPoses: 1,
+    Pose1: [0.018,0.00,0.00,0,180],
+  },
+  ID12: {
+    Filename: YCB005,
+    Description: 005_tomato_soup_can,
+    nPoses: 1,
+    Pose1: [0.015,0.00,0.00,0,1],
   },
 }

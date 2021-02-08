@@ -38,6 +38,10 @@ ros_ws/.vscode
 #active vision data
 
 ros_ws/src/projects/active_vision/data/*
+ros_ws/src/projects/active_vision/models/ycbAV/*
+!ros_ws/src/projects/active_vision/models/ycbAV/ycbObjSetup.py
+!ros_ws/src/projects/active_vision/models/ycbAV/object_ids.txt
+!ros_ws/src/projects/active_vision/models/ycbAV/ReadMe.txt
 ros_ws/src/projects/active_vision/dataCollected/storage/*
 !ros_ws/src/projects/active_vision/dataCollected/storage/ReadMe.txt
 ros_ws/src/projects/active_vision/dataCollected/testData/*
