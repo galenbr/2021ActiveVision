@@ -71,7 +71,6 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 									objYaw*(M_PI/180.0)};
 	// printf("Starting first pass.\n");
 	singlePass(kinectControl, startPose, true, true, 2);
-	int minPtsVis = 0.025*(3*kinectControl.ptrPtCldObject->points.size()); // Only for 3D Heuristic
 	updateRouteData(kinectControl,home,true,"Home");
 	current = home;
 
@@ -125,7 +124,7 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
           srv.request.path.data.push_back(current.path[i][2]);
         }
         srv.request.mode = ::mode;
-				srv.request.minPtsVis = minPtsVis; // Only used for 3D Heuristic
+				srv.request.minPtsVis = 0.15*(kinectControl.ptrPtCldObject->points.size()); // Only used for 3D Heuristic
         policy.call(srv);
   			maxIndex = srv.response.direction;
   			if(::testAll != 1) viewer->addText("Best direction calculated : " + std::to_string(maxIndex+1) + "(" + dirLookup[maxIndex+1] + ").\nPress any key to continue.",5,30,25,1,0,0,"Dir1",vp[0]);

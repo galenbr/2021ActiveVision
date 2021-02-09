@@ -7,6 +7,36 @@
 
 float voxelGridSize;
 
+bool heuristicDiagonalPref = true;
+bool compareDirections(std::vector<int> A, std::vector<int> B){
+  if(::heuristicDiagonalPref){
+    bool isADiagonal, isBDiagonal;
+    if((A[1]/45)%2 == 1) isADiagonal = true;
+    else                 isADiagonal = false;
+
+    if((B[1]/45)%2 == 1) isBDiagonal = true;
+    else                 isBDiagonal = false;
+
+    if((isADiagonal && isBDiagonal) || (!isADiagonal && !isBDiagonal)){
+      return (A[2] > B[2]);
+    }
+
+    if(isADiagonal && !isBDiagonal){
+      if(abs(A[2]-B[2]) >= 20) return (A[2] > B[2]);
+      else                     return true;
+    }
+
+    if(!isADiagonal && isBDiagonal){
+      if(abs(A[2]-B[2]) >= 20) return (A[2] > B[2]);
+      else                     return false;
+    }
+
+  }else{
+    return (A[2] > B[2]);
+  }
+
+}
+
 Eigen::Affine3f tfKinect(std::vector<double> &pose){
   std::vector<double> cartesian = {0,0,0,0,0,0};
   cartesian[0] = 1.5+pose[0]*sin(pose[2])*cos(pose[1]);
@@ -24,7 +54,7 @@ Eigen::Affine3f tfKinect(std::vector<double> &pose){
 }
 
 // For object point cloud
-bool objCheckIfNotOccluded(pcl::PointXYZRGB home, pcl::PointXYZRGB check, pcl::Normal normal, float radius){
+bool objCheckIfOccluded(pcl::PointXYZRGB &home, pcl::PointXYZRGB &check, pcl::Normal &normal, float radius){
 
   // Plane
   Eigen::Vector3f n = {normal.normal_x,normal.normal_y,normal.normal_z};
@@ -41,27 +71,29 @@ bool objCheckIfNotOccluded(pcl::PointXYZRGB home, pcl::PointXYZRGB check, pcl::N
   intersectionPt.getVector3fMap() = l0 + l*d;
   float distance = pcl::euclideanDistance(check,intersectionPt);
 
-  // std::cout << (distance > radius) << "," << d << "," << distance << std::endl;
-
-  if(d <= 0 || distance > radius) return true;
-  else                            return false;
+  if(d <= 0 || distance > radius) return false;
+  else                            return true;
 }
 
 // For unexplored point cloud
-bool unexpCheckIfNotOccluded(pcl::PointXYZRGB home, pcl::PointXYZRGB check,float radius){
+bool unexpCheckIfOccluded(pcl::PointXYZRGB &home, pcl::PointXYZRGB &check, float radius){
 
   float disEuc = pcl::euclideanDistance(home,check);
   float disPerpVP = 0;
+  float disParaVP = 0;
+  float angle = 0;
   if(disEuc > 0){
     Eigen::Vector3f homeToVP,homeToCheck;
     homeToVP = {-home.x,-home.y,-home.z}; homeToVP.normalize();
     homeToCheck = {check.x-home.x,check.y-home.y,check.z-home.z}; homeToCheck.normalize();
-    float angle = atan2(homeToVP.cross(homeToCheck).norm(), homeToVP.dot(homeToCheck));
+    angle = atan2(homeToVP.cross(homeToCheck).norm(), homeToVP.dot(homeToCheck));
     disPerpVP = disEuc*sin(angle);
+    disParaVP = disEuc*cos(angle);
   }
 
-  if(disEuc > 0 && disPerpVP < radius*0.5 && disEuc > radius) return false;
-  return true;
+  if(disParaVP <= radius*sqrt(2) && disPerpVP <= radius && angle < 75.0/180.0*M_PI) return true;
+  else return false;
+
 }
 
 void extractUsefulUnexpPts(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, ptCldColor::Ptr res){
@@ -109,7 +141,7 @@ void extractUsefulUnexpPts(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, ptCldColo
 
   // Extracting the indices
   for(auto idx : usefulIndices){
-    if(unexp->points[idx].z >= minPtObj.z*1.01){
+    if(unexp->points[idx].z >= minPtObj.z){
       res->points.push_back(unexp->points[idx]);
       res->points.back().r = 0;
       res->points.back().g = 200;
@@ -120,10 +152,21 @@ void extractUsefulUnexpPts(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, ptCldColo
   res->height = 1;
 }
 
-std::set<int> findVisibleUsefulUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr usefulUnexp, std::vector<double> &pose){
+std::set<int> findVisibleUsefulUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, ptCldColor::Ptr usefulUnexp, std::vector<double> &pose){
+
+  static Eigen::MatrixXf projectionMat;
+  projectionMat.resize(3,4);
+  projectionMat << 554.254691191187, 0.0, 320.5, -0.0,
+                   0.0, 554.254691191187, 240.5, 0.0,
+                   0.0, 0.0, 1.0, 0.0;
+
   Eigen::Affine3f tf = tfKinect(pose);
-  static ptCldColor::Ptr tempObj{new ptCldColor};          pcl::transformPointCloud(*obj, *tempObj, homoMatTranspose(tf));
-  static ptCldColor::Ptr tempUsefulUnexp{new ptCldColor};  pcl::transformPointCloud(*usefulUnexp, *tempUsefulUnexp, homoMatTranspose(tf));
+  static ptCldColor::Ptr tempObj{new ptCldColor};            pcl::transformPointCloud(*obj, *tempObj, homoMatTranspose(tf));
+  static ptCldColor::Ptr tempUsefulUnexp{new ptCldColor};    pcl::transformPointCloud(*usefulUnexp, *tempUsefulUnexp, homoMatTranspose(tf));
+  static ptCldColor::Ptr tempUsefulUnexpObj{new ptCldColor};
+
+  pcl::transformPointCloud(*unexp, *tempUsefulUnexpObj, homoMatTranspose(tf));
+  *tempUsefulUnexpObj += *tempObj;
 
   // Calculating the transoformed normal vectors
   static ptCldNormal::Ptr tempNormal{new ptCldNormal};
@@ -135,55 +178,225 @@ std::set<int> findVisibleUsefulUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr useful
   ne.setKSearch(10);
   ne.compute(*tempNormal);
 
-  // float coneAngle = calcConeAngle(pose[1],pose[2]);
-
-  float radius = ::voxelGridSize/sqrt(2)*1.1;
-  pcl::PointXYZRGB min,max;
-  min.y = -radius;  max.y = radius;
-  min.z = -radius;  max.z = radius;
-
-  Eigen::Affine3f tf1;
-  pcl::CropBox<pcl::PointXYZRGB> cpBoxObj; cpBoxObj.setInputCloud(tempObj);
-
   pcl::PointXYZRGB cam; cam.x = 0; cam.y = 0; cam.z = 0;
 
   std::vector<int> tempIndices;
   std::set<int> objClearIndices; objClearIndices.clear();
   std::set<int> finalIndices; finalIndices.clear();
 
-  for(int i = 0; i < tempUsefulUnexp->width; i++){
-    pcl::Normal normal, line;
+  int scale = 2;
+  int w = 75*scale;
+  int maskRadius;
+  cv::Mat patchMask, surface; float minPatchArea;
+
+  Eigen::Vector3f proj;
+  std::vector<cv::Point> projPts;
+
+  // std::vector<int> indicesOK,indicesNotOK;
+  // static ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
+  // std::vector<int> vp;
+  // setupViewer(viewer, 1, vp);
+  // viewer->removeCoordinateSystem();
+  // keyboardEvent keyPress(viewer,1);
+
+  Eigen::Affine3f tf1;
+  pcl::CropBox<pcl::PointXYZRGB> cpBoxObj1;
+  pcl::CropBox<pcl::PointXYZRGB> cpBoxObj2;
+
+  pcl::PointXYZRGB cpBoxMin,cpBoxMax;
+  cpBoxMin.x = -0.01;                 cpBoxMax.x = ::voxelGridSize*2.5;
+  cpBoxMin.y = -::voxelGridSize*2.5;  cpBoxMax.y = ::voxelGridSize*2.5;
+  cpBoxMin.z = -::voxelGridSize*2.5;  cpBoxMax.z = ::voxelGridSize*2.5;
+
+  cpBoxObj1.setInputCloud(tempObj);
+
+  cpBoxObj2.setInputCloud(tempUsefulUnexpObj);
+  cpBoxObj2.setMin(cpBoxMin.getVector4fMap());
+  cpBoxObj2.setMax(cpBoxMax.getVector4fMap());
+
+  for(int i = 0; i < tempUsefulUnexp->points.size(); i++){
+    // indicesOK.clear(); indicesNotOK.clear();
+    projPts.clear(); projPts.push_back(cv::Point(w/2,w/2));
+
+    Eigen::Vector3f projCentre = projectionMat*(tempUsefulUnexp->points[i].getVector4fMap()); projCentre = projCentre/projCentre[2];
+    // Converting the voxelGridSize to pixels (Scaled up by 2) as it would change based on depth
+    maskRadius = round((projectionMat(0,0)*::voxelGridSize*1.1/tempUsefulUnexp->points[i].z) * scale);
+
+    pcl::Normal normal;
     normal.normal_x = -1*tempUsefulUnexp->points[i].x;
     normal.normal_y = -1*tempUsefulUnexp->points[i].y;
     normal.normal_z = -1*tempUsefulUnexp->points[i].z;
     tf1 = calcTfFromNormal(normal,tempUsefulUnexp->points[i]);
-    bool notOccluded = true;
 
-    // Checking for occlusion with object
-    min.x = -0.01; max.x = sqrt(pow(tempUsefulUnexp->points[i].x,2)+pow(tempUsefulUnexp->points[i].y,2)+pow(tempUsefulUnexp->points[i].z,2));
-    cpBoxObj.setMin(min.getVector4fMap()); cpBoxObj.setMax(max.getVector4fMap());
-    cpBoxObj.setRotation(getEuler(tf1));   cpBoxObj.setTranslation(getTranslation(tf1));
-    cpBoxObj.filter(tempIndices);
+    cpBoxMax.x = sqrt(pow(tempUsefulUnexp->points[i].x,2)+pow(tempUsefulUnexp->points[i].y,2)+pow(tempUsefulUnexp->points[i].z,2));
+    cpBoxObj1.setMin(cpBoxMin.getVector4fMap()); cpBoxObj1.setMax(cpBoxMax.getVector4fMap());
+    cpBoxObj1.setRotation(getEuler(tf1));   cpBoxObj1.setTranslation(getTranslation(tf1));
+    cpBoxObj1.filter(tempIndices);
 
-    for(int j = 0; j < tempIndices.size(); j++){
-      notOccluded *= objCheckIfNotOccluded(tempUsefulUnexp->points[i],tempObj->points[tempIndices[j]],tempNormal->points[tempIndices[j]],radius);
+    for(auto j : tempIndices){
+      bool tempResult = objCheckIfOccluded(tempUsefulUnexp->points[i],tempObj->points[j],tempNormal->points[j],::voxelGridSize*2.5);
+      if(tempResult){
+        Eigen::Vector3f projCurrent = projectionMat*(tempObj->points[j].getVector4fMap()); projCurrent = projCurrent/projCurrent[2];
+        proj[1] = round((-projCentre[0]+projCurrent[0])*scale+w/2);
+        proj[0] = round((-projCentre[1]+projCurrent[1])*scale+w/2);
+        if(proj[0] >= 0 && proj[0] < w && proj[1] >= 0 && proj[1] < w){
+          projPts.push_back(cv::Point(proj[1],proj[0]));
+        }
+      }
+      // if(tempResult) indicesOK.push_back(j);
+      // else indicesNotOK.push_back(j);
     }
 
-    if(notOccluded) objClearIndices.insert(i);
+    surface = cv::Mat::zeros(w-1,w-1,CV_8UC1);
+    minPatchArea = 0.33*M_PI*pow(maskRadius-0.5,2)+1;
+    patchMask = cv::Mat::zeros(w-1,w-1,CV_8UC1);
+    cv::circle(patchMask, cv::Point(w/2,w/2), maskRadius, 255, cv::FILLED, cv::LINE_8);
+
+    if(projPts.size() > 3){
+      std::vector<std::vector<cv::Point>> hullPts(1);
+      cv::convexHull(projPts, hullPts[0]);
+      cv::drawContours(surface, hullPts, -1, 255,-1);
+    }
+
+    cv::Mat surfacePatch;
+    surface.copyTo(surfacePatch,patchMask);
+
+    std::vector<std::vector<cv::Point>> contours;
+    cv::findContours(surfacePatch, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+    float area = 0;
+    cv::Point2f vtx[4];
+    if(contours.size() == 1){
+      cv::Moments mu = cv::moments(contours[0]);
+      area = mu.m00;
+    }
+
+    // if(keyPress.ok){
+    //   addRGB(viewer,tempObj,"tempObj",vp[0]);
+    //   addRGB(viewer,tempUsefulUnexp,"tempUsefulUnexp",vp[0]);
+    //   viewer->addSphere(tempUsefulUnexp->points[i],0.001,0,1,0,"P1",vp[0]);
+    //   for(int x=0; x < indicesOK.size(); x++){
+    //     viewer->addSphere(tempObj->points[indicesOK[x]],0.001,1,0,0,"P"+std::to_string(x+2),vp[0]);
+    //     viewer->addLine(tempObj->points[indicesOK[x]],tempUsefulUnexp->points[i],1,0,0,"L"+std::to_string(x+2),vp[0]);
+    //   }
+    //   // for(int x=0; x < indicesNotOK.size(); x++){
+    //   //   viewer->addLine(tempObj->points[indicesNotOK[x]],tempUsefulUnexp->points[i],0,0,1,"LL"+std::to_string(x+2),vp[0]);
+    //   // }
+    //   viewer->addLine(cam,tempUsefulUnexp->points[i],0,1,0,"L1",vp[0]);
+    //   std::cout << maskRadius << "," << area << "," << M_PI*pow(maskRadius-0.5,2)+1 << std::endl;
+    //   cv::circle(surfacePatch, cv::Point(w/2,w/2), 2, 127, cv::FILLED, cv::LINE_8);
+    //   cv::Mat res;
+    //   cv::resize(surfacePatch, res, cv::Size(), 4, 4);
+    //   cv::imshow("Projection",res);
+    //   cv::waitKey(10);
+    //   while(!viewer->wasStopped() && keyPress.called==false){
+    //     viewer->spinOnce(100);
+    //     boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+    //   }
+    //   viewer->resetStoppedFlag();
+    //   viewer->removeAllPointClouds();
+    //   viewer->removeAllShapes();
+    // }
+
+    if(area < minPatchArea) objClearIndices.insert(i);
   }
+
+  // *****************STAGE 1 END*****************************
+
+  // static ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
+  // std::vector<int> vp;
+  // setupViewer(viewer, 1, vp);
+  // viewer->removeCoordinateSystem();
+  // keyboardEvent keyPress(viewer,1);
+  // static ptCldColor::Ptr tempUsefulObjCleared{new ptCldColor}; tempUsefulObjCleared->clear();
+  // for(auto i : objClearIndices){
+  //   tempUsefulObjCleared->points.push_back(tempUsefulUnexp->points[i]);
+  // }
+  // tempUsefulObjCleared->width = tempUsefulObjCleared->points.size();
+  // tempUsefulObjCleared->height = 1;
 
   // Check of the object cleared useful unxplored occlude each other
   for(auto i : objClearIndices){
-    bool notOccluded = true;
-    for(auto j : objClearIndices){
-      if(i == j) continue;
-      float disI = pcl::euclideanDistance(cam,tempUsefulUnexp->points[i]);
-      float disJ = pcl::euclideanDistance(cam,tempUsefulUnexp->points[j]);
-      // J in in front of I
-      if(disJ < disI)  notOccluded = unexpCheckIfNotOccluded(tempUsefulUnexp->points[i],tempUsefulUnexp->points[j],::voxelGridSize);
-      if(!notOccluded) break;
+    // indicesOK.clear(); indicesNotOK.clear();
+    projPts.clear(); projPts.push_back(cv::Point(w/2,w/2));
+
+    Eigen::Vector3f projCentre = projectionMat*(tempUsefulUnexp->points[i].getVector4fMap()); projCentre = projCentre/projCentre[2];
+    // Converting the voxelGridSize to pixels (Scaled up by 2) as it would change based on depth
+    maskRadius = round((projectionMat(0,0)*::voxelGridSize*1.1/tempUsefulUnexp->points[i].z) * scale);
+
+    pcl::Normal normal;
+    normal.normal_x = -1*tempUsefulUnexp->points[i].x;
+    normal.normal_y = -1*tempUsefulUnexp->points[i].y;
+    normal.normal_z = -1*tempUsefulUnexp->points[i].z;
+    tf1 = calcTfFromNormal(normal,tempUsefulUnexp->points[i]);
+
+    cpBoxObj2.setRotation(getEuler(tf1));   cpBoxObj2.setTranslation(getTranslation(tf1));
+    cpBoxObj2.filter(tempIndices);
+
+    for(auto j : tempIndices){
+      bool tempResult = unexpCheckIfOccluded(tempUsefulUnexp->points[i],tempUsefulUnexpObj->points[j],::voxelGridSize*2);
+      if(tempResult){
+        Eigen::Vector3f projCurrent = projectionMat*(tempUsefulUnexpObj->points[j].getVector4fMap()); projCurrent = projCurrent/projCurrent[2];
+        proj[1] = round((-projCentre[0]+projCurrent[0])*scale+w/2);
+        proj[0] = round((-projCentre[1]+projCurrent[1])*scale+w/2);
+        if(proj[0] >= 0 && proj[0] < w && proj[1] >= 0 && proj[1] < w){
+          projPts.push_back(cv::Point(proj[1],proj[0]));
+        }
+      }
+      // if(tempResult) indicesOK.push_back(j);
+      // else indicesNotOK.push_back(j);
     }
-    if(notOccluded) finalIndices.insert(i);
+
+    surface = cv::Mat::zeros(w-1,w-1,CV_8UC1);
+    minPatchArea = 0.5*M_PI*pow(maskRadius-0.5,2)+1;
+    patchMask = cv::Mat::zeros(w-1,w-1,CV_8UC1);
+    cv::circle(patchMask, cv::Point(w/2,w/2), maskRadius, 255, cv::FILLED, cv::LINE_8);
+
+    if(projPts.size() > 3){
+      std::vector<std::vector<cv::Point>> hullPts(1);
+      cv::convexHull(projPts, hullPts[0]);
+      cv::drawContours(surface, hullPts, -1, 255,-1);
+    }
+
+    cv::Mat surfacePatch;
+    surface.copyTo(surfacePatch,patchMask);
+
+    std::vector<std::vector<cv::Point>> contours;
+    cv::findContours(surfacePatch, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+    float area = 0;
+    cv::Point2f vtx[4];
+    if(contours.size() == 1){
+      cv::Moments mu = cv::moments(contours[0]);
+      area = mu.m00;
+    }
+
+    // if(keyPress.ok){
+    //   addRGB(viewer,tempObj,"tempObj",vp[0]);
+    //   addRGB(viewer,tempUsefulObjCleared,"tempUsefulObjCleared",vp[0]);
+    //   viewer->addSphere(tempUsefulUnexp->points[i],0.001,0,1,0,"P1",vp[0]);
+    //   for(int x=0; x < indicesOK.size(); x++){
+    //     viewer->addSphere(tempUsefulUnexp->points[indicesOK[x]],0.001,1,0,0,"P"+std::to_string(x+2),vp[0]);
+    //     viewer->addLine(tempUsefulUnexp->points[indicesOK[x]],tempUsefulUnexp->points[i],1,0,0,"L"+std::to_string(x+2),vp[0]);
+    //   }
+    //   // for(int x=0; x < indicesNotOK.size(); x++){
+    //   //   viewer->addLine(tempUsefulUnexp->points[indicesNotOK[x]],tempUsefulUnexp->points[i],0,0,1,"LL"+std::to_string(x+2),vp[0]);
+    //   // }
+    //   viewer->addLine(cam,tempUsefulUnexp->points[i],0,1,0,"L1",vp[0]);
+    //   std::cout << maskRadius << "," << area << "," << M_PI*pow(maskRadius-0.5,2)+1 << std::endl;
+    //   cv::circle(surfacePatch, cv::Point(w/2,w/2), 2, 127, cv::FILLED, cv::LINE_8);
+    //     cv::Mat res;
+    //     cv::resize(surfacePatch, res, cv::Size(), 4, 4);
+    //     cv::imshow("Projection",res);
+    //     cv::waitKey(10);
+    //   while(!viewer->wasStopped() && keyPress.called==false){
+    //     viewer->spinOnce(100);
+    //     boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+    //   }
+    //   viewer->resetStoppedFlag();
+    //   viewer->removeAllPointClouds();
+    //   viewer->removeAllShapes();
+    // }
+
+    if(area < minPatchArea) finalIndices.insert(i);
   }
 
   return finalIndices;
@@ -203,9 +416,9 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
   int maxRes = 0;
 
   for(int i = 1 ; i <= 8; i++){
-    std::vector<double> newPose = calcExplorationPose(pose,i,mode); step[i-1] = 20;
+    std::vector<double> newPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0)); step[i-1] = 20;
 
-    if(checkValidPose(newPose)) visibleIndices = findVisibleUsefulUnexp(obj,usefulUnexp,newPose);
+    if(checkValidPose(newPose)) visibleIndices = findVisibleUsefulUnexp(obj,unexp,usefulUnexp,newPose);
     else                        visibleIndices.clear();
     indices.push_back(visibleIndices);
   }
@@ -213,35 +426,13 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
   maxRes = *std::max_element(res.begin(), res.end());
 
   if(maxRes < minVis){
-    // std::cout << "Two Check" << std::endl;
-    threshold = 80;
     for(int i = 1 ; i <= 8; i++){
       std::vector<double> newPose = calcExplorationPose(pose,i,mode,40*(M_PI/180.0)); step[i-1] = 40;
       if(!checkValidPose(newPose)){
         newPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0)); step[i-1] = 20;
       }
 
-      if(checkValidPose(newPose)) visibleIndices = findVisibleUsefulUnexp(obj,usefulUnexp,newPose);
-      else                        visibleIndices.clear();
-      indices[i-1].insert(visibleIndices.begin(),visibleIndices.end());
-    }
-    for(int i = 0 ; i < 8; i++) res[i] = indices[i].size();
-    maxRes = *std::max_element(res.begin(), res.end());
-  }
-
-  if(maxRes < minVis){
-    // std::cout << "Three Check" << std::endl;
-    threshold = 85;
-    for(int i = 1 ; i <= 8; i++){
-      std::vector<double> newPose = calcExplorationPose(pose,i,mode,60*(M_PI/180.0)); step[i-1] = 60;
-      if(!checkValidPose(newPose)){
-        newPose = calcExplorationPose(pose,i,mode,40*(M_PI/180.0)); step[i-1] = 40;
-      }
-      if(!checkValidPose(newPose)){
-        newPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0)); step[i-1] = 20;
-      }
-
-      if(checkValidPose(newPose)) visibleIndices = findVisibleUsefulUnexp(obj,usefulUnexp,newPose);
+      if(checkValidPose(newPose)) visibleIndices = findVisibleUsefulUnexp(obj,unexp,usefulUnexp,newPose);
       else                        visibleIndices.clear();
       indices[i-1].insert(visibleIndices.begin(),visibleIndices.end());
     }
@@ -250,23 +441,25 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
   }
 
   for(int i = 0 ; i < 8; i++){
-    if(maxRes != 0){
-      // std::cout << obj->points.size() << "," << i+1 << "->" << res[i] << "," << round(res[i]*100.0/maxRes) << std::endl;
-      res[i] = round(res[i]*100.0/maxRes);
-    }
-    else{
-      res[i] = 100;
-    }
+    if(maxRes != 0) res[i] = round(res[i]*100.0/maxRes);
+    else            res[i] = 100;
   }
 
-  /***/
+
+  std::vector<std::vector<int>> resDetailed;
+  for(int i = 0 ; i < 8; i++) resDetailed.push_back({i+1,45*i,res[i]});
+  std::sort(resDetailed.begin(),resDetailed.end(),compareDirections);
+  // for(int i = 0 ; i < 8; i++) std::cout << resDetailed[i][0] << ",";
+  // std::cout << std::endl;
+
+  // /***/
   // std::vector<int> vp;
   // setupViewer(viewer, 9, vp);
   // pcl::PointXYZ table;
 	// table.x = 1.5; table.y = 0; table.z = 1;
   // setCamView(viewer,{pose[0]/2,pose[1],pose[2]},table,vp[0]);
   // addRGB(viewer,obj,"obj0",vp[0]);
-  // addRGB(viewer,unexp,"unexp",vp[0]);
+  // // addRGB(viewer,unexp,"unexp",vp[0]);
   // addRGB(viewer,usefulUnexp,"usefulUnexp",vp[0]);
   // viewer->removeCoordinateSystem();
   //
@@ -283,7 +476,7 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
   //   setCamView(viewer,{newPose[0]/2,newPose[1],newPose[2]},table,vp[i]);
   //   addRGB(viewer,obj,"obj"+std::to_string(i),vp[i]);
   //   addRGB(viewer,result,"result"+std::to_string(i),vp[i]);
-  //   viewer->addText(std::to_string(step[i-1])+","+std::to_string(res[i-1]),2,2,20,1,0,0,"data"+std::to_string(i),vp[i]);
+  //   viewer->addText(std::to_string(i)+","+std::to_string(step[i-1])+","+std::to_string(res[i-1]),2,2,20,1,0,0,"data"+std::to_string(i),vp[i]);
   // }
   // while(!viewer->wasStopped()){
   //   viewer->spinOnce(100);
@@ -294,26 +487,8 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
   // viewer->removeAllShapes();
   /***/
 
-  return std::distance(res.begin(), std::max_element(res.begin(), res.end())) + 1;
-
-  // DIrection pref order 1,(2,8),(3,7),(4,6),5
-  // if(res[1-1] >= threshold){
-  //   return 1;
-  // }else if(res[2-1] >= threshold || res[8-1] >= threshold){
-  //   if(res[2-1] > res[8-1]) return 2;
-  //   else return 8;
-  // }else if(res[3-1] >= threshold || res[7-1] >= threshold){
-  //   if(res[3-1] > res[7-1]) return 3;
-  //   else return 7;
-  // }else if(res[4-1] >= threshold || res[6-1] >= threshold){
-  //   if(res[4-1] > res[6-1]) return 4;
-  //   else return 6;
-  // }else if(res[5-1] >= threshold){
-  //   return 5;
-  // }else{
-  //   std::cout << "ERROR in direction calculation" << std::endl;
-  //   return 1;
-  // }
+  return resDetailed[0][0];
+  // return std::distance(res.begin(), std::max_element(res.begin(), res.end())) + 1;
 }
 
 bool heuristicPolicy(active_vision::heuristicPolicySRV::Request  &req,
@@ -342,10 +517,11 @@ bool heuristicPolicy(active_vision::heuristicPolicySRV::Request  &req,
 }
 
 int main(int argc, char** argv){
-	ros::init(argc, argv, "HeuristicPolicyServer");
+  ros::init(argc, argv, "HeuristicPolicyServer");
 
- 	ros::NodeHandle nh;
+  ros::NodeHandle nh;
   nh.getParam("/active_vision/environment/voxelGridSize", ::voxelGridSize);
+  nh.getParam("/active_vision/policyTester/heuristicDiagonalPref", ::heuristicDiagonalPref);
   ros::ServiceServer service = nh.advertiseService("/active_vision/heuristic_policy", heuristicPolicy);
   ROS_INFO("3D Heuristic policy service ready.");
   ros::spin();
@@ -357,13 +533,16 @@ int main(int argc, char** argv){
 //   ros::init(argc, argv, "Test");
 //   ros::NodeHandle nh;
 //   nh.getParam("/active_vision/environment/voxelGridSize", ::voxelGridSize);
+//   nh.getParam("/active_vision/policyTester/heuristicDiagonalPref", ::heuristicDiagonalPref);
+//
 //   environment activeVision(&nh);
+//   activeVision.loadGripper();
 //
 //   // 4 kinect position to capture and fuse
-//   std::vector<std::vector<double>> kinectPoses = {{1.0,M_PI,M_PI/4},
-//                                                   {1.0,M_PI/2,M_PI/4},
-//                                                   {1.0,0,M_PI/4},
-//                                                   {1.0,M_PI/2,M_PI/4}};
+//   std::vector<std::vector<double>> kinectPoses = {{0.8,M_PI,M_PI/4},
+//                                                   {0.8,M_PI/2,M_PI/4},
+//                                                   {0.8,0,M_PI/4},
+//                                                   {0.8,M_PI/2,M_PI/4}};
 //
 //   // Delay to ensure all publishers and subscribers are connected
 //   boost::this_thread::sleep(boost::posix_time::milliseconds(500));
@@ -381,11 +560,12 @@ int main(int argc, char** argv){
 //   activeVision.spawnObject(objID,pose,yaw*M_PI/180);
 //
 //   singlePass(activeVision,newPose,true,true,2);
-//   int minPtsVis = 0.025*(3*activeVision.ptrPtCldObject->points.size());
+//   int minPtsVis;
 //
 //   ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
 //   int nSteps = 0;
 //   while(activeVision.selectedGrasp == -1 && nSteps <= 5){
+//     minPtsVis = 0.15*(activeVision.ptrPtCldObject->points.size());
 //     dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,newPose,2,minPtsVis,viewer);
 //     // dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,newPose,2,minPtsVis);
 //     std::cout << "Direction selected : " << dir << std::endl;
@@ -393,6 +573,20 @@ int main(int argc, char** argv){
 //     newPose = calcExplorationPose(newPose,dir,2);
 //     singlePass(activeVision,newPose,false,true,2);
 //     nSteps++;
+//   }
+//
+//   std::vector<int> vp;
+//   setupViewer(viewer, 1, vp);
+//   pcl::PointXYZ table;
+// 	table.x = 1.5; table.y = 0; table.z = 1;
+//   setCamView(viewer,{kinectPoses[0][0],kinectPoses[0][1],kinectPoses[0][2]},table,vp[0]);
+//   activeVision.updateGripper(activeVision.selectedGrasp,0);
+//   addRGB(viewer,activeVision.ptrPtCldEnv,"Env",vp[0]);
+//   addRGB(viewer,activeVision.ptrPtCldGripper,"Gripper",vp[0]);
+//   viewer->removeCoordinateSystem();
+//   while(!viewer->wasStopped()){
+//     viewer->spinOnce(100);
+//     boost::this_thread::sleep (boost::posix_time::microseconds(100000));
 //   }
 //
 //   activeVision.deleteObject(objID);
