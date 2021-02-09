@@ -279,6 +279,7 @@ environment::environment(ros::NodeHandle *nh){
 
   nh->getParam("/active_vision/environment/graspCurvatureConstraint", graspCurvatureConstraint);
   nh->getParam("/active_vision/environment/graspSurPatchConstraint", graspSurPatchConstraint);
+  ros::Rate r(60);
 }
 
 // Function to reset the environment
@@ -538,7 +539,28 @@ void environment::moveKinectCartesian(std::vector<double> pose){
   tf::Quaternion quat;
   rotMat.getRotation(quat);
 
-  // Converting it to the required gazebo format
+  //Moveit move command.
+  moveit_planner::MoveCart move;
+  geometry_msgs::Pose p;
+  p.position.x = pose[0];
+  p.position.y = pose[1];
+  p.position.z = pose[2];
+  /*p.orientation.x = quat.x();
+  p.orientation.y = quat.y();
+  p.orientation.z = quat.z();
+  p.orientation.w = quat.w();*/
+  move.request.val.push_back(p);
+  move.request.time = 1.0;
+  move.request.execute = true;
+  cartMoveClient.call(move);
+  std::cout << "Cartesian move (" << p.position.x << "," 
+    << p.position.y << "," << p.position.z << "), rotation=(" 
+    << p.orientation.x << "," << p.orientation.y << "," 
+    << p.orientation.z << "," << p.orientation.w << ")" << std::endl; 
+  ROS_INFO("Called cartesian move");
+  lastKinectPoseCartesian = pose;
+
+  /*// Converting it to the required gazebo format
   gazebo_msgs::ModelState ModelState;
   ModelState.model_name = "Kinect";           // This should be the name of kinect in gazebo
   ModelState.reference_frame = "world";
@@ -556,7 +578,7 @@ void environment::moveKinectCartesian(std::vector<double> pose){
   boost::this_thread::sleep(boost::posix_time::milliseconds(250));
 
   // Storing the kinect pose
-  lastKinectPoseCartesian = pose;
+  lastKinectPoseCartesian = pose;*/
 }
 
 // 6B: Funtion to move the Kinect in a viewsphere which has the table cente as its centre
@@ -572,7 +594,32 @@ void environment::moveKinectViewsphere(std::vector<double> pose){
   tf::Quaternion quat;
   rotMat.getRotation(quat);
 
-  // Converting it to the required gazebo format
+  //Moveit move command.
+  moveit_planner::MoveCart move;
+  geometry_msgs::Pose p;
+  p.position.x = tableCentre[0]+pose[0]*sin(pose[2])*cos(pose[1]);
+  p.position.y = tableCentre[1]+pose[0]*sin(pose[2])*sin(pose[1]);
+  p.position.z = tableCentre[2]+pose[0]*cos(pose[2]);
+  p.orientation.x = quat.x();
+  p.orientation.y = quat.y();
+  p.orientation.z = quat.z();
+  p.orientation.w = quat.w();
+  move.request.val.push_back(p);
+  move.request.time = 10.0;
+  move.request.execute = true;
+  cartMoveClient.call(move);
+  std::cout << "Viewsphere move (" << p.position.x << "," 
+    << p.position.y << "," << p.position.z << "), rotation=(" 
+    << p.orientation.x << "," << p.orientation.y << "," 
+    << p.orientation.z << "," << p.orientation.w << ")" << std::endl;
+  ROS_INFO("Called viewsphere move");
+  lastKinectPoseCartesian = pose;
+  lastKinectPoseCartesian = {p.position.x,
+                             p.position.y,
+                             p.position.z,
+                             0,M_PI/2-pose[2],M_PI+pose[1]};
+
+  /*// Converting it to the required gazebo format
   gazebo_msgs::ModelState ModelState;
   ModelState.model_name = "Kinect";           // This should be the name of kinect in gazebo
   ModelState.reference_frame = "world";
@@ -594,7 +641,7 @@ void environment::moveKinectViewsphere(std::vector<double> pose){
   lastKinectPoseCartesian = {ModelState.pose.position.x,
                              ModelState.pose.position.y,
                              ModelState.pose.position.z,
-                             0,M_PI/2-pose[2],M_PI+pose[1]};
+                             0,M_PI/2-pose[2],M_PI+pose[1]};*/
 }
 
 // 7: Function to read the kinect data.
