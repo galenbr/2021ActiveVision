@@ -552,12 +552,12 @@ void environment::moveKinectCartesian(std::vector<double> pose){
   p.position.x = pose[0];
   p.position.y = pose[1];
   p.position.z = pose[2];
-  /*p.orientation.x = quat.x();
-  p.orientation.y = quat.y();
-  p.orientation.z = quat.z();
-  p.orientation.w = quat.w();*/
+  p.orientation.x = pose[3];
+  p.orientation.y = pose[4];
+  p.orientation.z = pose[5];
+  p.orientation.w = pose[6];
   move.request.val.push_back(p);
-  move.request.time = 1.0;
+  move.request.time = 0;
   move.request.execute = true;
   cartMoveClient.call(move);
   std::cout << "Cartesian move (" << p.position.x << "," 
@@ -595,7 +595,8 @@ void environment::moveKinectCartesian(std::vector<double> pose){
 void environment::moveKinectViewsphere(std::vector<double> pose){
   //Create Matrix3x3 from Euler Angles
   tf::Matrix3x3 rotMat;
-  rotMat.setEulerYPR(M_PI+pose[1], M_PI/2-pose[2], 0);
+  //rotMat.setEulerYPR(M_PI+pose[1], M_PI/2-pose[2], 0);
+  rotMat.setEulerYPR(pose[1], 3*M_PI/2.0-pose[2], 0);
 
   // Convert into quaternion
   tf::Quaternion quat;
@@ -604,15 +605,15 @@ void environment::moveKinectViewsphere(std::vector<double> pose){
   //Moveit move command.
   moveit_planner::MoveCart move;
   geometry_msgs::Pose p;
-  p.position.x = tableCentre[0]+pose[0]*sin(pose[2])*cos(pose[1]);
-  p.position.y = tableCentre[1]+pose[0]*sin(pose[2])*sin(pose[1]);
-  p.position.z = tableCentre[2]+pose[0]*cos(pose[2]);
+  p.position.x = tableCentre[0]-1.15+pose[0]*sin(pose[2])*cos(pose[1]);
+  p.position.y = pose[0]*sin(pose[2])*sin(pose[1]);
+  p.position.z = tableCentre[2]-1.02+pose[0]*cos(pose[2]);
   p.orientation.x = quat.x();
   p.orientation.y = quat.y();
   p.orientation.z = quat.z();
   p.orientation.w = quat.w();
   move.request.val.push_back(p);
-  move.request.time = 10.0;
+  move.request.time = 0;
   move.request.execute = true;
   cartMoveClient.call(move);
   std::cout << "Viewsphere move (" << p.position.x << "," 

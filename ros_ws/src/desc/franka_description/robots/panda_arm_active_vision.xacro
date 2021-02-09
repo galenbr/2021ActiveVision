@@ -15,7 +15,7 @@
     <link name="world"/>
 
     <joint name="fixed" type="fixed">
-      <origin rpy="0 0 0" xyz=".75 0 1"/>
+      <origin rpy="0 0 0" xyz="1.15 0 1.02"/>
       <parent link="world"/>
       <child link="${arm_id}_link0"/>
     </joint>
