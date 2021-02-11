@@ -11,6 +11,16 @@ import matplotlib.pyplot as plt
 from scipy.ndimage import label
 from scipy.stats import trim_mean
 
+def get_orientation(data):
+    '''Returns orientation (radians) CCW from horizontal using PCA.'''
+    # Perform PCA analysis
+    mean = np.empty((0))
+    mean, eigenvectors, eigenvalues = cv2.PCACompute2(data, mean)
+    # Calculate angle
+    angle = atan2(eigenvectors[0,1], eigenvectors[0,0])
+    
+    return angle
+
 def drawAxis(img, p_, q_, colour, scale):
     '''Draw Axis from PCA.'''
     p = list(p_)
@@ -232,3 +242,8 @@ def add_blur(img):
     img= cv2.GaussianBlur(img,(5,5),0)
     img= cv2.bilateralFilter(img,9,5,5)
     return img
+
+if __name__=='__main__':
+    data=np.array([[1,1],[2,2],[3,3]], dtype=np.float64)
+    orientation=get_orientation(data)
+    print(orientation)
