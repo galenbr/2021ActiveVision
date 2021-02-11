@@ -8,10 +8,11 @@ import image_utils
 import numpy as np
 import rospy
 import image_geometry
-from geometry_msgs.msg import PointStamped
+from geometry_msgs.msg import PointStamped, QuaternionStamped
 from sensor_msgs.msg import Image, CameraInfo
-from std_msgs.msg import Header
+from std_msgs.msg import Header, Float64
 from cv_bridge import CvBridge, CvBridgeError
+from math import pi
 import tf
 
 class FinderPub:
@@ -25,11 +26,14 @@ class FinderPub:
         self.key_max_hsv=self.hsv['key']['max']
         self.key_center=None
         self.key_center_depth=None
+        self.key_yaw=None
         self.lock_search_box=None
         self.lock_min_hsv=self.hsv['lock']['min']
         self.lock_max_hsv=self.hsv['lock']['max']
         self.lock_center=None
         self.lock_center_depth=None
+        #self.lock_yaw=None
+        self.map_yaw_offset=pi/2
         self.rgb_camera=image_geometry.PinholeCameraModel()
         self.rgb_camera_info_received=False
         self.rgb_image=None
@@ -49,6 +53,10 @@ class FinderPub:
                                        queue_size=1)
         self.lock_pub = rospy.Publisher('lock_point', PointStamped, 
                                         queue_size=1)
+        self.key_yaw_pub = rospy.Publisher('key_yaw', Float64, 
+                                           queue_size=1)
+        # self.lock_yaw_pub = rospy.Publisher('lock_yaw', Float64, 
+        #                                     queue_size=1)
         rospy.loginfo('Running lock and key finder node.')
 
     def calculate_positions(self,img):
@@ -73,25 +81,15 @@ class FinderPub:
             rospy.loginfo('Lock Not Found in Frame')
         #Key
         try:
-            # rospy.loginfo('Key Center in Pixels:')
-            # rospy.loginfo(self.key_center)
             #TODO: Find alternative to "-100 pixel" hack for getting depth of table for scaling
             self.key_center_depth=self.depth_array[self.key_center[1],
                                                    self.key_center[0]-100]
             # Get normalized XYZ displacement (in camera_color_optical_frame)
             key_disp=self.rgb_camera.projectPixelTo3dRay(self.key_center)
             # Get scale from depth
-            # rospy.loginfo('Key Center depth:')
-            # rospy.loginfo(self.key_center_depth)
             key_scale=self.key_center_depth/key_disp[2]/1000.0
-            # rospy.loginfo('Unscaled key position:')
-            # rospy.loginfo(key_disp)
-            # rospy.loginfo('Key Scale:')
-            # rospy.loginfo(key_scale)
             #Convert to meters
             key_disp=key_scale*np.array(key_disp)
-            # rospy.loginfo('Scaled key position:')
-            # rospy.loginfo(key_disp)
             # Publish center
             self.publish_key_point(key_disp)
         except TypeError:
@@ -115,19 +113,19 @@ class FinderPub:
     def get_centers(self,img):
         '''Compute object centers and adds visuals to image.'''
         #Update img for key
-        img,self.key_center=image_utils.color_change(img,
-                                                     self.key_search_box,
-                                                     self.key_min_hsv,
-                                                     self.key_max_hsv,
-                                                     new_pixel=[255,0,0], #Blue
-                                                     centroid_pixel=[0,0,255]) #Red 
-        #Update img for lock
-        img,self.lock_center=image_utils.color_change(img,
-                                                     self.lock_search_box,
-                                                     self.lock_min_hsv,
-                                                     self.lock_max_hsv,
-                                                     new_pixel=[0,255,0], #Green
-                                                     centroid_pixel=[255,0,255]) #Pink
+        img,self.key_center,self.key_yaw=image_utils.color_change(img,
+                                                                 self.key_search_box,
+                                                                 self.key_min_hsv,
+                                                                 self.key_max_hsv,
+                                                                 new_pixel=[255,0,0], #Blue
+                                                                 centroid_pixel=[0,0,255]) #Red 
+        #Update img for lock (ignore orientation for now)
+        img,self.lock_center,_=image_utils.color_change(img,
+                                                                 self.lock_search_box,
+                                                                 self.lock_min_hsv,
+                                                                 self.lock_max_hsv,
+                                                                 new_pixel=[0,255,0], #Green
+                                                                 centroid_pixel=[255,0,255]) #Pink
         
         #Add search box to img for key
         img=image_utils.add_quad(img,self.key_search_box,color=[0,0,255]) #Red
@@ -146,6 +144,8 @@ class FinderPub:
         key_msg.point.z=key_disp[2]
         #Publish message
         self.key_pub.publish(key_msg)
+        #Publish yaw
+        self.key_yaw_pub.publish(Float64(self.key_yaw-self.map_yaw_offset))
 
     def publish_lock_point(self,lock_disp):
         '''Publish lock position in terms of camera_color_optical_frame.'''
@@ -157,6 +157,8 @@ class FinderPub:
         lock_msg.point.z=lock_disp[2]
         #Publish message
         self.lock_pub.publish(lock_msg)
+        #Publish yaw
+        # self.lock_yaw_pub.publish(Float64(self.lock_yaw-self.map_yaw_offset))
 
     def publish_vis(self,vis_img):
         '''Define and publish visualization image'''

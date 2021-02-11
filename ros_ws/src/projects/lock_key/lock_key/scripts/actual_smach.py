@@ -45,8 +45,8 @@ def rotate_key(d_roll, d_pitch, d_yaw):
 	rospy.loginfo('Waiting for result')
 	client.wait_for_result()
 
-def get_positions():
-	'''Retrieves key and lock positions from vision system.'''
+def get_poses():
+	'''Retrieves key pose and lock position from vision system.'''
 	rospy.loginfo('Waiting for Service')
 	rospy.wait_for_service('lock_and_key_poses')
 	rospy.loginfo('Calling Service')
@@ -60,18 +60,26 @@ class GetPositions(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
     def execute(self, userdata):
-        rospy.loginfo('Getting positions from vision system...')
-        response=get_positions()
+        rospy.loginfo('Getting key pose and lock position from vision system...')
+        response=get_poses()
         #Define offsets
         ee_to_link8_offset=0.103
         x_offset=0.009 #Half of finger width
         height_safety_offset_key=0.008
         height_safety_offset_lock=0.02
 
-        rospy.set_param("key_goal/x",response.key_point.point.x-x_offset)
-        rospy.set_param("key_goal/y",response.key_point.point.y-ee_to_link8_offset)
+        rospy.set_param("key_goal/x",response.key_pose.position.x-x_offset)
+        rospy.set_param("key_goal/y",response.key_pose.position.y-ee_to_link8_offset)
         # rospy.set_param("key_goal/z",0.1485)
-        rospy.set_param("key_goal/z",response.key_point.point.z+height_safety_offset_key)
+        rospy.set_param("key_goal/z",response.key_pose.position.z+height_safety_offset_key)
+        #Convert quat to RPY, then set key_goal/roll, etc.
+        quaternion = (response.key_pose.orientation.x,response.key_pose.orientation.y,
+                      response.key_pose.orientation.z,response.key_pose.orientation.w)
+        euler = tf.transformations.euler_from_quaternion(quaternion)
+        rospy.set_param("key_goal/roll",euler[0])
+        rospy.set_param("key_goal/pitch",euler[1])
+        rospy.set_param("key_goal/yaw",euler[2])
+
         rospy.set_param("padlock_goal/x",response.lock_point.point.x-x_offset)
         rospy.set_param("padlock_goal/y",response.lock_point.point.y)
         rospy.set_param("padlock_goal/z",response.lock_point.point.z+ee_to_link8_offset+height_safety_offset_lock)

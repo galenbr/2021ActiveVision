@@ -152,7 +152,10 @@ def color_change(img,search_box,min_hsv=[150,0,0],max_hsv=[255,150,150],
         center=(None,None)
         pass
 
-    return new_img, center
+    #Calculate orientation (radians) of final_region
+    orientation=get_orientation(final_region)
+    
+    return new_img, center, orientation
 
 def find_color(img,min_hsv,max_hsv):
     '''Identify pixels in image within a color range.'''
