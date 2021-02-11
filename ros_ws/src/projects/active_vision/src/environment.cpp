@@ -218,6 +218,8 @@ void RGBtoHSV(float fR, float fG, float fB, float& fH, float& fS, float& fV){
 // Environment class constructor
 environment::environment(ros::NodeHandle *nh){
 
+  nh->getParam("/active_vision/simulationMode", simulationMode);
+
   // Checking if the required topics and services are running
   bool allOK = false;
   while(!allOK){
@@ -228,6 +230,11 @@ environment::environment(ros::NodeHandle *nh){
     allOK *= ROSCheck("TOPIC","/camera/depth/points"); if(!allOK) continue;
     allOK *= ROSCheck("SERVICE","/gazebo/spawn_sdf_model"); if(!allOK) continue;
     allOK *= ROSCheck("SERVICE","/gazebo/delete_model"); if(!allOK) continue;
+    if(simulationMode == "FRANKASIMULATION"){
+      allOK *= ROSCheck("SERVICE","cartesian_move"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","set_velocity_scaling"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","move_to_joint_space"); if(!allOK) continue;
+    }
   }
 
   pubObjPose = nh->advertise<gazebo_msgs::ModelState> ("/gazebo/set_model_state", 1);
@@ -238,9 +245,6 @@ environment::environment(ros::NodeHandle *nh){
   cartMoveClient = nh->serviceClient<moveit_planner::MoveCart>("cartesian_move");
   velScalingClient = nh->serviceClient<moveit_planner::SetVelocity>("set_velocity_scaling");
   jointSpaceClient = nh->serviceClient<moveit_planner::MoveJoint>("move_to_joint_space");
-  ros::service::waitForService("cartesian_move",-1);
-  ros::service::waitForService("set_velocity_scaling",-1);
-  ros::service::waitForService("move_to_joint_space", -1);
   // NOT USED (JUST FOR REFERENCE)
   /*subKinectRGB = nh->subscribe ("/camera/color/image_raw", 1, &environment::cbImgRgb, this);
   subKinectDepth = nh->subscribe ("/camera/depth/image_raw", 1, &environment::cbImgDepth, this);*/
@@ -538,54 +542,68 @@ void environment::updateGripper(int index ,int choice){
 
 // 6A: Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
 void environment::moveKinectCartesian(std::vector<double> pose){
-  //Create Matrix3x3 from Euler Angles
-  tf::Matrix3x3 rotMat;
-  rotMat.setEulerYPR(pose[5], pose[4], pose[3]);
+  if(simulationMode == "SIMULATION"){
+    //Create Matrix3x3 from Euler Angles
+    tf::Matrix3x3 rotMat;
+    rotMat.setEulerYPR(pose[5], pose[4], pose[3]);
 
-  // Convert into quaternion
-  tf::Quaternion quat;
-  rotMat.getRotation(quat);
+    // Convert into quaternion
+    tf::Quaternion quat;
+    rotMat.getRotation(quat);
 
-  //Moveit move command.
-  moveit_planner::MoveCart move;
-  geometry_msgs::Pose p;
-  p.position.x = pose[0];
-  p.position.y = pose[1];
-  p.position.z = pose[2];
-  p.orientation.x = pose[3];
-  p.orientation.y = pose[4];
-  p.orientation.z = pose[5];
-  p.orientation.w = pose[6];
-  move.request.val.push_back(p);
-  move.request.time = 0;
-  move.request.execute = true;
-  cartMoveClient.call(move);
-  std::cout << "Cartesian move (" << p.position.x << "," 
-    << p.position.y << "," << p.position.z << "), rotation=(" 
-    << p.orientation.x << "," << p.orientation.y << "," 
-    << p.orientation.z << "," << p.orientation.w << ")" << std::endl; 
-  ROS_INFO("Called cartesian move");
-  lastKinectPoseCartesian = pose;
+    // Converting it to the required gazebo format
+    gazebo_msgs::ModelState ModelState;
+    ModelState.model_name = "Kinect";           // This should be the name of kinect in gazebo
+    ModelState.reference_frame = "world";
+    ModelState.pose.position.x = pose[0];
+    ModelState.pose.position.y = pose[1];
+    ModelState.pose.position.z = pose[2];
+    ModelState.pose.orientation.x = quat.x();
+    ModelState.pose.orientation.y = quat.y();
+    ModelState.pose.orientation.z = quat.z();
+    ModelState.pose.orientation.w = quat.w();
 
-  /*// Converting it to the required gazebo format
-  gazebo_msgs::ModelState ModelState;
-  ModelState.model_name = "Kinect";           // This should be the name of kinect in gazebo
-  ModelState.reference_frame = "world";
-  ModelState.pose.position.x = pose[0];
-  ModelState.pose.position.y = pose[1];
-  ModelState.pose.position.z = pose[2];
-  ModelState.pose.orientation.x = quat.x();
-  ModelState.pose.orientation.y = quat.y();
-  ModelState.pose.orientation.z = quat.z();
-  ModelState.pose.orientation.w = quat.w();
+    // Publishing it to gazebo
+    pubObjPose.publish(ModelState);
+    ros::spinOnce();
+    boost::this_thread::sleep(boost::posix_time::milliseconds(250));
 
-  // Publishing it to gazebo
-  pubObjPose.publish(ModelState);
-  ros::spinOnce();
-  boost::this_thread::sleep(boost::posix_time::milliseconds(250));
+    // Storing the kinect pose
+    lastKinectPoseCartesian = pose;
+  }
+  else if(simulationMode == "FRANKASIMULATION"){
+    //Create Matrix3x3 from Euler Angles
+    tf::Matrix3x3 rotMat;
+    rotMat.setEulerYPR(pose[5], pose[4], pose[3]);
+    tf::Matrix3x3 kinectOffset;
+    kinectOffset.setEulerYPR(M_PI, -M_PI/2, 0);
+    rotMat *= kinectOffset;
 
-  // Storing the kinect pose
-  lastKinectPoseCartesian = pose;*/
+    // Convert into quaternion
+    tf::Quaternion quat;
+    rotMat.getRotation(quat);
+
+    //Moveit move command.
+    moveit_planner::MoveCart move;
+    geometry_msgs::Pose p;
+    p.position.x = pose[0];
+    p.position.y = pose[1];
+    p.position.z = pose[2];
+    p.orientation.x = quat.x();
+    p.orientation.y = quat.y();
+    p.orientation.z = quat.z();
+    p.orientation.w = quat.w();
+    move.request.val.push_back(p);
+    move.request.time = 0;
+    move.request.execute = true;
+    cartMoveClient.call(move);
+    std::cout << "Cartesian move (" << p.position.x << ","
+      << p.position.y << "," << p.position.z << "), rotation=("
+      << p.orientation.x << "," << p.orientation.y << ","
+      << p.orientation.z << "," << p.orientation.w << ")" << std::endl;
+    ROS_INFO("Called cartesian move");
+    lastKinectPoseCartesian = pose;
+  }
 }
 
 // 6B: Funtion to move the Kinect in a viewsphere which has the table cente as its centre
@@ -593,63 +611,80 @@ void environment::moveKinectCartesian(std::vector<double> pose){
 // Phi (Azhimuthal angle) -> 0 to 2*PI
 // Theta (Polar Angle)) -> 0 to PI/2
 void environment::moveKinectViewsphere(std::vector<double> pose){
-  //Create Matrix3x3 from Euler Angles
-  tf::Matrix3x3 rotMat;
-  //rotMat.setEulerYPR(M_PI+pose[1], M_PI/2-pose[2], 0);
-  rotMat.setEulerYPR(pose[1], 3*M_PI/2.0-pose[2], 0);
 
-  // Convert into quaternion
-  tf::Quaternion quat;
-  rotMat.getRotation(quat);
+  if(simulationMode == "SIMULATION"){
+    //Create Matrix3x3 from Euler Angles
+    tf::Matrix3x3 rotMat;
+    //rotMat.setEulerYPR(M_PI+pose[1], M_PI/2-pose[2], 0);
+    rotMat.setEulerYPR(M_PI+pose[1], M_PI/2-pose[2], 0);
 
-  //Moveit move command.
-  moveit_planner::MoveCart move;
-  geometry_msgs::Pose p;
-  p.position.x = tableCentre[0]-1.15+pose[0]*sin(pose[2])*cos(pose[1]);
-  p.position.y = pose[0]*sin(pose[2])*sin(pose[1]);
-  p.position.z = tableCentre[2]-1.02+pose[0]*cos(pose[2]);
-  p.orientation.x = quat.x();
-  p.orientation.y = quat.y();
-  p.orientation.z = quat.z();
-  p.orientation.w = quat.w();
-  move.request.val.push_back(p);
-  move.request.time = 0;
-  move.request.execute = true;
-  cartMoveClient.call(move);
-  std::cout << "Viewsphere move (" << p.position.x << "," 
-    << p.position.y << "," << p.position.z << "), rotation=(" 
-    << p.orientation.x << "," << p.orientation.y << "," 
-    << p.orientation.z << "," << p.orientation.w << ")" << std::endl;
-  ROS_INFO("Called viewsphere move");
-  lastKinectPoseCartesian = pose;
-  lastKinectPoseCartesian = {p.position.x,
-                             p.position.y,
-                             p.position.z,
-                             0,M_PI/2-pose[2],M_PI+pose[1]};
+    // Convert into quaternion
+    tf::Quaternion quat;
+    rotMat.getRotation(quat);
 
-  /*// Converting it to the required gazebo format
-  gazebo_msgs::ModelState ModelState;
-  ModelState.model_name = "Kinect";           // This should be the name of kinect in gazebo
-  ModelState.reference_frame = "world";
-  ModelState.pose.position.x = tableCentre[0]+pose[0]*sin(pose[2])*cos(pose[1]);
-  ModelState.pose.position.y = tableCentre[1]+pose[0]*sin(pose[2])*sin(pose[1]);
-  ModelState.pose.position.z = tableCentre[2]+pose[0]*cos(pose[2]);
-  ModelState.pose.orientation.x = quat.x();
-  ModelState.pose.orientation.y = quat.y();
-  ModelState.pose.orientation.z = quat.z();
-  ModelState.pose.orientation.w = quat.w();
+    // Converting it to the required gazebo format
+    gazebo_msgs::ModelState ModelState;
+    ModelState.model_name = "Kinect";           // This should be the name of kinect in gazebo
+    ModelState.reference_frame = "world";
+    ModelState.pose.position.x = tableCentre[0]+pose[0]*sin(pose[2])*cos(pose[1]);
+    ModelState.pose.position.y = tableCentre[1]+pose[0]*sin(pose[2])*sin(pose[1]);
+    ModelState.pose.position.z = tableCentre[2]+pose[0]*cos(pose[2]);
+    ModelState.pose.orientation.x = quat.x();
+    ModelState.pose.orientation.y = quat.y();
+    ModelState.pose.orientation.z = quat.z();
+    ModelState.pose.orientation.w = quat.w();
 
-  // Publishing it to gazebo
-  pubObjPose.publish(ModelState);
-  ros::spinOnce();
-  boost::this_thread::sleep(boost::posix_time::milliseconds(250));
+    // Publishing it to gazebo
+    pubObjPose.publish(ModelState);
+    ros::spinOnce();
+    boost::this_thread::sleep(boost::posix_time::milliseconds(250));
 
-  // Storing the kinect pose
-  lastKinectPoseViewsphere = pose;
-  lastKinectPoseCartesian = {ModelState.pose.position.x,
-                             ModelState.pose.position.y,
-                             ModelState.pose.position.z,
-                             0,M_PI/2-pose[2],M_PI+pose[1]};*/
+    // Storing the kinect pose
+    lastKinectPoseViewsphere = pose;
+    lastKinectPoseCartesian = {ModelState.pose.position.x,
+                               ModelState.pose.position.y,
+                               ModelState.pose.position.z,
+                               0,M_PI/2-pose[2],M_PI+pose[1]};
+  }
+  else if(simulationMode == "FRANKASIMULATION"){
+    //Create Matrix3x3 from Euler Angles
+    tf::Matrix3x3 rotMat;
+    rotMat.setEulerYPR(M_PI+pose[1], M_PI/2-pose[2], 0);
+    // rotMat.setEulerYPR(pose[1], 3*M_PI/2.0-pose[2], 0);
+    tf::Matrix3x3 kinectOffset;
+    kinectOffset.setEulerYPR(M_PI, -M_PI/2, 0);
+    rotMat *= kinectOffset;
+
+    // Convert into quaternion
+    tf::Quaternion quat;
+    rotMat.getRotation(quat);
+
+    //Moveit move command.
+    moveit_planner::MoveCart move;
+    geometry_msgs::Pose p;
+    p.position.x = tableCentre[0]+pose[0]*sin(pose[2])*cos(pose[1]);
+    p.position.y = pose[0]*sin(pose[2])*sin(pose[1]);
+    p.position.z = tableCentre[2]+pose[0]*cos(pose[2]);
+    p.orientation.x = quat.x();
+    p.orientation.y = quat.y();
+    p.orientation.z = quat.z();
+    p.orientation.w = quat.w();
+    move.request.val.push_back(p);
+    move.request.time = 0;
+    move.request.execute = true;
+    cartMoveClient.call(move);
+    std::cout << "Viewsphere move (" << p.position.x << ","
+      << p.position.y << "," << p.position.z << "), rotation=("
+      << p.orientation.x << "," << p.orientation.y << ","
+      << p.orientation.z << "," << p.orientation.w << ")" << std::endl;
+    ROS_INFO("Called viewsphere move");
+    lastKinectPoseCartesian = pose;
+    lastKinectPoseCartesian = {p.position.x,
+                               p.position.y,
+                               p.position.z,
+                               0,M_PI/2-pose[2],M_PI+pose[1]};
+  }
+
 }
 
 // 7: Function to read the kinect data.

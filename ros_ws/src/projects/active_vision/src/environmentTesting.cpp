@@ -28,15 +28,18 @@ void testKinectMovement(environment &av){
   do {
     std::cout << "Enter your choice 1:Cartesian, 2:Viewsphere, 0:Exit : "; std::cin >> flag;
     if (flag == 1) {
-      std::vector<double> pose(7);
+      std::vector<double> pose(6);
       std::cout << "Enter kinect pose data" << std::endl;
       std::cout << "X : ";      std::cin >> pose[0];
       std::cout << "Y : ";      std::cin >> pose[1];
       std::cout << "Z : ";      std::cin >> pose[2];
-      std::cout << "qX : ";    std::cin >> pose[3];
-      std::cout << "qY : ";    std::cin >> pose[4];
-      std::cout << "qZ : ";    std::cin >> pose[5];
-      std::cout << "qW : ";    std::cin >> pose[6];
+      std::cout << "Roll : ";   std::cin >> pose[3];
+      std::cout << "Pitch : ";  std::cin >> pose[4];
+      std::cout << "Yaw : ";    std::cin >> pose[5];
+      // std::cout << "qX : ";    std::cin >> pose[3];
+      // std::cout << "qY : ";    std::cin >> pose[4];
+      // std::cout << "qZ : ";    std::cin >> pose[5];
+      // std::cout << "qW : ";    std::cin >> pose[6];
 
       av.moveKinectCartesian(pose);
       std::cout << "Kinect moved" << std::endl;

@@ -1,4 +1,5 @@
 kinectMode: 2 # Kinect Movement Mode
+simulationMode: SIMULATION # SIMULATION / FRANKASIMULATION / FRANKA
 
 # Parameters for DataCollector code
 dataCollector: {

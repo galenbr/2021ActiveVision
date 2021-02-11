@@ -176,6 +176,7 @@ private:
   bool graspSurPatchConstraint;
 
   std::string path;                // Path the active vision package
+  std::string simulationMode;      // simulationMode
 
 public:
   // PtCld: Last recorded viewpoint

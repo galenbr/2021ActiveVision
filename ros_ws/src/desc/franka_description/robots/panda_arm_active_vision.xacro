@@ -15,7 +15,7 @@
     <link name="world"/>
 
     <joint name="fixed" type="fixed">
-      <origin rpy="0 0 0" xyz="1.15 0 1.02"/>
+      <origin rpy="0 0 0" xyz="1.00 0.00 1.02"/>
       <parent link="world"/>
       <child link="${arm_id}_link0"/>
     </joint>
@@ -325,7 +325,7 @@
 	<hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
 	<mechanicalReduction>1</mechanicalReduction>
       </actuator>
-    </transmission> 
+    </transmission>
   </xacro:macro>
 
   <!-- Gazebo control plugin -->
