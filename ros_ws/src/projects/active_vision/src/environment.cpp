@@ -232,7 +232,9 @@ environment::environment(ros::NodeHandle *nh){
     allOK *= ROSCheck("SERVICE","/gazebo/delete_model"); if(!allOK) continue;
     if(simulationMode == "FRANKASIMULATION"){
       allOK *= ROSCheck("SERVICE","get_pose"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","move_to_pose"); if(!allOK) continue;
       allOK *= ROSCheck("SERVICE","cartesian_move"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","inverse_kinematics"); if(!allOK) continue;
       allOK *= ROSCheck("SERVICE","set_velocity_scaling"); if(!allOK) continue;
       allOK *= ROSCheck("SERVICE","move_to_joint_space"); if(!allOK) continue;
       allOK *= ROSCheck("SERVICE","gripPosServer"); if(!allOK) continue;
@@ -245,7 +247,9 @@ environment::environment(ros::NodeHandle *nh){
   gazeboCheckModel = nh->serviceClient< gazebo_msgs::GetModelState> ("/gazebo/get_model_state");
   gazeboDeleteModel = nh->serviceClient< gazebo_msgs::DeleteModel> ("/gazebo/delete_model");
   getPoseClient = nh->serviceClient<moveit_planner::GetPose>("get_pose");
+  poseClient = nh->serviceClient<moveit_planner::MovePose>("move_to_pose");
   cartMoveClient = nh->serviceClient<moveit_planner::MoveCart>("cartesian_move");
+  IKClient =  nh->serviceClient<moveit_planner::Inv>("inverse_kinematics");
   velScalingClient = nh->serviceClient<moveit_planner::SetVelocity>("set_velocity_scaling");
   jointSpaceClient = nh->serviceClient<moveit_planner::MoveJoint>("move_to_joint_space");
   gripperPosClient = nh->serviceClient<franka_pos_grasping_gazebo::GripPos>("gripPosServer");
@@ -545,7 +549,7 @@ void environment::updateGripper(int index ,int choice){
 }
 
 // 6A: Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
-bool environment::moveKinectCartesian(std::vector<double> pose){
+bool environment::moveKinectCartesian(std::vector<double> pose, bool execute){
   if(simulationMode == "SIMULATION"){
     //Create Matrix3x3 from Euler Angles
     tf::Matrix3x3 rotMat;
@@ -579,8 +583,7 @@ bool environment::moveKinectCartesian(std::vector<double> pose){
     // Create Matrix3x3 from Euler Angles
     // Additional rotation of PI about Z and -PI/2 about Y so that kinect frame orientation aligns with the gripper
     Eigen::Matrix3f rotMat;
-    rotMat = Eigen::AngleAxisf(pose[5], Eigen::Vector3f::UnitZ()) * Eigen:: AngleAxisf(pose[4], Eigen::Vector3f::UnitY()) * Eigen::AngleAxisf(pose[3], Eigen::Vector3f::UnitX()) *
-             Eigen::AngleAxisf(M_PI, Eigen::Vector3f::UnitZ()) *    Eigen::AngleAxisf(-M_PI/2, Eigen::Vector3f::UnitY());
+    rotMat = Eigen::AngleAxisf(pose[5], Eigen::Vector3f::UnitZ()) * Eigen:: AngleAxisf(pose[4], Eigen::Vector3f::UnitY()) * Eigen::AngleAxisf(pose[3], Eigen::Vector3f::UnitX());
 
     // Convert into quaternion
     Eigen::Quaternionf quat(rotMat);
@@ -592,52 +595,9 @@ bool environment::moveKinectCartesian(std::vector<double> pose){
     tfMat(1,3) = pose[1];
     tfMat(2,3) = pose[2];
 
-    Eigen::Matrix4f kinectOffset; kinectOffset.setIdentity();
-    kinectOffset(0,3) = -0.06;
-
-    tfMat *= kinectOffset;
-    Eigen::Quaternionf newQuat(tfMat.block<3,3>(0,0));
-
-    float frankaOffset[3] = {0.0,0.0,0.0};
-    float frankaX = tfMat(0,3)-frankaOffset[0];
-    float frankaY = tfMat(1,3)-frankaOffset[1];
-    float frankaZ = tfMat(2,3)-frankaOffset[2];
-    float reach = sqrt(pow(frankaX,2)+pow(frankaY,2)+pow(frankaZ-0.3,2));
-
-    if((abs(frankaX) <= 0.1 && abs(frankaY) <= 0.1 && frankaZ-0.3 < 0.2) || reach > 0.75) return false;
-
-    // Moveit move command.
-    moveit_planner::MoveCart move;
     geometry_msgs::Pose p;
-    p.position.x = tfMat(0,3);
-    p.position.y = tfMat(1,3);
-    p.position.z = tfMat(2,3);
-    p.orientation.x = newQuat.x();
-    p.orientation.y = newQuat.y();
-    p.orientation.z = newQuat.z();
-    p.orientation.w = newQuat.w();
-    move.request.val.push_back(p);
-    move.request.time = 0;
-    move.request.execute = true;
-    cartMoveClient.call(move);
-    // std::cout << "Cartesian move (" << p.position.x << ","
-    //   << p.position.y << "," << p.position.z << "), rotation=("
-    //   << p.orientation.x << "," << p.orientation.y << ","
-    //   << p.orientation.z << "," << p.orientation.w << ")" << std::endl;
-    // ROS_INFO("Called cartesian move");
-
-    moveit_planner::GetPose curPose;
-    getPoseClient.call(curPose);
-
-    float positionError = sqrt(pow(curPose.response.pose.position.x-frankaX,2) +
-                               pow(curPose.response.pose.position.y-frankaY,2) +
-                               pow(curPose.response.pose.position.z-frankaZ,2));
-    float orientationError = curPose.response.pose.orientation.x * p.orientation.x +
-                             curPose.response.pose.orientation.y * p.orientation.y +
-                             curPose.response.pose.orientation.z * p.orientation.z +
-                             curPose.response.pose.orientation.w * p.orientation.w;
-
-    if(positionError > 5e-03 || 1-abs(orientationError) > 1e-03) return false;
+    bool res = moveFranka(tfMat,"JOINT",true,execute,p);
+    if(!res) return false;
 
     lastKinectPoseCartesian = pose;
   }
@@ -648,7 +608,7 @@ bool environment::moveKinectCartesian(std::vector<double> pose){
 // R (Radius)
 // Phi (Azhimuthal angle) -> 0 to 2*PI
 // Theta (Polar Angle)) -> 0 to PI/2
-bool environment::moveKinectViewsphere(std::vector<double> pose){
+bool environment::moveKinectViewsphere(std::vector<double> pose, bool execute){
 
   if(simulationMode == "SIMULATION"){
     //Create Matrix3x3 from Euler Angles
@@ -689,8 +649,7 @@ bool environment::moveKinectViewsphere(std::vector<double> pose){
     // Create Matrix3x3 from Euler Angles
     // Additional rotation of PI about Z and -PI/2 about Y so that kinect frame orientation aligns with the gripper
     Eigen::Matrix3f rotMat;
-    rotMat = Eigen::AngleAxisf(M_PI+pose[1], Eigen::Vector3f::UnitZ()) * Eigen:: AngleAxisf(M_PI/2-pose[2], Eigen::Vector3f::UnitY()) * Eigen::AngleAxisf(0, Eigen::Vector3f::UnitX()) *
-             Eigen::AngleAxisf(M_PI, Eigen::Vector3f::UnitZ())         * Eigen::AngleAxisf(-M_PI/2, Eigen::Vector3f::UnitY());
+    rotMat = Eigen::AngleAxisf(M_PI+pose[1], Eigen::Vector3f::UnitZ()) * Eigen:: AngleAxisf(M_PI/2-pose[2], Eigen::Vector3f::UnitY()) * Eigen::AngleAxisf(0, Eigen::Vector3f::UnitX());
 
     // Convert into quaternion
     Eigen::Quaternionf quat(rotMat);
@@ -702,42 +661,61 @@ bool environment::moveKinectViewsphere(std::vector<double> pose){
     tfMat(1,3) = tableCentre[1]+pose[0]*sin(pose[2])*sin(pose[1]);
     tfMat(2,3) = tableCentre[2]+pose[0]*cos(pose[2]);
 
+    geometry_msgs::Pose p;
+    bool res = moveFranka(tfMat,"JOINT",true,execute,p);
+    if(!res) return false;
+
+    lastKinectPoseViewsphere = pose;
+    lastKinectPoseCartesian = {p.position.x,
+                               p.position.y,
+                               p.position.z,
+                               0,M_PI/2-pose[2],M_PI+pose[1]};
+  }
+  return true;
+
+}
+
+bool environment::moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKinect ,bool execute, geometry_msgs::Pose &p){
+
+  tfMat *= pcl::getTransformation(0,0,0,0,-M_PI/2,M_PI).matrix();
+  if(isKinect){
     Eigen::Matrix4f kinectOffset; kinectOffset.setIdentity();
     kinectOffset(0,3) = -0.06;
-
     tfMat *= kinectOffset;
-    Eigen::Quaternionf newQuat(tfMat.block<3,3>(0,0));
+  }
+
+  Eigen::Quaternionf quat(tfMat.block<3,3>(0,0));
+
+  p.position.x = tfMat(0,3);  p.position.y = tfMat(1,3);  p.position.z = tfMat(2,3);
+  p.orientation.x = quat.x(); p.orientation.y = quat.y(); p.orientation.z = quat.z(); p.orientation.w = quat.w();
+
+  moveit_planner::Inv poseIKMsg;
+  poseIKMsg.request.pose = p;
+  if(!IKClient.call(poseIKMsg)) return false;
+
+  // Moveit move command.
+  if(execute){
+    if(mode == "JOINT"){
+      moveit_planner::MovePose movePoseMsg;
+      movePoseMsg.request.val = p;
+      movePoseMsg.request.execute = true;
+      poseClient.call(movePoseMsg);
+    }else if(mode == "CARTESIAN"){
+      moveit_planner::MoveCart moveCartMsg;
+      moveCartMsg.request.val.push_back(p);
+      moveCartMsg.request.time = 0;
+      moveCartMsg.request.execute = true;
+      cartMoveClient.call(moveCartMsg);
+    }
+
+    moveit_planner::GetPose curPose;
+    getPoseClient.call(curPose);
 
     float frankaOffset[3] = {0.0,0.0,0.0};
     float frankaX = tfMat(0,3)-frankaOffset[0];
     float frankaY = tfMat(1,3)-frankaOffset[1];
     float frankaZ = tfMat(2,3)-frankaOffset[2];
-    float reach = sqrt(pow(frankaX,2)+pow(frankaY,2)+pow(frankaZ-0.3,2));
-
-    if((abs(frankaX) <= 0.1 && abs(frankaY) <= 0.1 && frankaZ-0.3 < 0.2) || reach > 0.75) return false;
-
-    //Moveit move command.
-    moveit_planner::MoveCart move;
-    geometry_msgs::Pose p;
-    p.position.x = tfMat(0,3);
-    p.position.y = tfMat(1,3);
-    p.position.z = tfMat(2,3);
-    p.orientation.x = newQuat.x();
-    p.orientation.y = newQuat.y();
-    p.orientation.z = newQuat.z();
-    p.orientation.w = newQuat.w();
-    move.request.val.push_back(p);
-    move.request.time = 0;
-    move.request.execute = true;
-    cartMoveClient.call(move);
-    // std::cout << "Viewsphere move (" << p.position.x << ","
-    //   << p.position.y << "," << p.position.z << "), rotation=("
-    //   << p.orientation.x << "," << p.orientation.y << ","
-    //   << p.orientation.z << "," << p.orientation.w << ")" << std::endl;
-    // ROS_INFO("Called viewsphere move");
-
-    moveit_planner::GetPose curPose;
-    getPoseClient.call(curPose);
+    // float reach = sqrt(pow(frankaX,2)+pow(frankaY,2)+pow(frankaZ-0.3,2));
 
     float positionError = sqrt(pow(curPose.response.pose.position.x-frankaX,2) +
                                pow(curPose.response.pose.position.y-frankaY,2) +
@@ -748,15 +726,9 @@ bool environment::moveKinectViewsphere(std::vector<double> pose){
                              curPose.response.pose.orientation.w * p.orientation.w;
 
     if(positionError > 5e-03 || 1-abs(orientationError) > 1e-03) return false;
-
-    lastKinectPoseCartesian = pose;
-    lastKinectPoseCartesian = {p.position.x,
-                               p.position.y,
-                               p.position.z,
-                               0,M_PI/2-pose[2],M_PI+pose[1]};
   }
-  return true;
 
+  return true;
 }
 
 // 7: Function to read the kinect data.

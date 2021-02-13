@@ -66,8 +66,6 @@
     <mu2>100000.0</mu2>
     <minDepth>0.001</minDepth>
     <maxVel>0.001</maxVel>
-    <soft_erp>0.5</soft_erp>
-    <soft_cfm>0.001</soft_cfm>
   </gazebo>
   <gazebo reference="panda_rightfinger">
     <kp>1000000.0</kp>
@@ -76,8 +74,6 @@
     <mu2>100000.0</mu2>
     <minDepth>0.001</minDepth>
     <maxVel>0.001</maxVel>
-    <soft_erp>0.5</soft_erp>
-    <soft_cfm>0.001</soft_cfm>
   </gazebo>
 
   <gazebo>

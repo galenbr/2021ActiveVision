@@ -54,6 +54,7 @@ void testKinectMovement(environment &av){
     }
     std::cout << "Kinect moved : " << std::boolalpha << res << std::endl;
   } while(flag != 0);
+  av.deleteObject(2);
   std::cout << "*** End ***" << std::endl;
 }
 
@@ -63,24 +64,30 @@ void testMoveKinectInViewsphere(environment &av){
   float rad;
   std::cout << "Viewsphere radius : "; std::cin >> rad;
   av.spawnObject(2,1,0);
-  for (double j = 0; j < 195.0/180.0*M_PI;) {
-    av.moveKinectViewsphere({0.5,M_PI,0});
-    av.moveKinectViewsphere({0.5,M_PI,0});
+  std::vector<int> data;
+  for (double j = 0; j < 2*M_PI;) {
+    av.moveKinectViewsphere({rad,M_PI,0},false);
     for (double i = 0; i <= 75.0/180.0*M_PI;) {
-      std::cout << "Azhimuthal\t" << round(j/M_PI*180) << "\tPolar\t" << round(i/M_PI*180);
-      bool res;
       if(av.simulationMode == "SIMULATION"){
-        res = av.moveKinectViewsphere({rad,j,i});
+        av.moveKinectViewsphere({rad,j,i});
       }
       else if(av.simulationMode == "FRANKASIMULATION"){
-        res = av.moveKinectViewsphere({rad,j,i});
+        std::cout << "Azhimuthal\t" << round(j/M_PI*180) << "\tPolar\t" << round(i/M_PI*180);
+        bool res = av.moveKinectViewsphere({rad,j,i},false);
+        std::cout << "\t" << res << std::endl;
+        data.push_back(res);
+        if(res == false) av.moveKinectViewsphere({rad,M_PI,0},false);
       }
-      std::cout << "\t" << res << std::endl;
-      if(res == false) av.moveKinectViewsphere({0.5,M_PI,0});
+
       i += M_PI/18; // 10 degree increment
     }
     j += 2*M_PI/16; // 22.5 degree increment
   }
+  if(av.simulationMode == "FRANKASIMULATION"){
+    for(auto i : data) std::cout << i << ",";
+    std::cout << std::endl;
+  }
+  av.deleteObject(2);
   std::cout << "*** End ***" << std::endl;
 }
 
@@ -920,38 +927,38 @@ void testObjectPickup(environment &av, int objID){
     return;
   }
 
+  Eigen::Affine3f tfHome = pcl::getTransformation(0.55,0,0.62,0,M_PI/2,0);
 
-  Eigen::Affine3f tf = pcl::getTransformation(graspData.pose[0],graspData.pose[1],
-                                              graspData.pose[2],graspData.pose[3],
-                                              graspData.pose[4],graspData.pose[5])*
-                       pcl::getTransformation(0,0,0,0,graspData.addnlPitch,0)*
-                       pcl::getTransformation(0.0,0,-0.05-av.fingerZOffset,0,0,0)*
-                       pcl::getTransformation(0.06,0,0,0,0,0)*
-                       pcl::getTransformation(0,0,0,0,-M_PI/2,-M_PI);
+  Eigen::Affine3f tfGrasp = pcl::getTransformation(graspData.pose[0],graspData.pose[1],
+                                                   graspData.pose[2],graspData.pose[3],
+                                                   graspData.pose[4],graspData.pose[5])*
+                            pcl::getTransformation(0,0,0,0,graspData.addnlPitch,0)*
+                            pcl::getTransformation(0.0,0,-0.05-av.fingerZOffset,0,0,0)*
+                            pcl::getTransformation(0,0,0,0,-M_PI/2,-M_PI);
+  Eigen::Affine3f tfGraspMoveUp = tfGrasp; tfGraspMoveUp(2,3)+=0.3;
 
-  Eigen::Affine3f tfPreGrasp = tf*pcl::getTransformation(-0.2,0,0,0,0,0);
+  Eigen::Affine3f tfPreGrasp2 = tfGrasp*pcl::getTransformation(-0.2,0,0,0,0,0);
+  Eigen::Affine3f tfPreGrasp1 = tfPreGrasp2; tfPreGrasp1(2,3) = 0.5;
 
-  double Roll,Pitch,Yaw;
-  tf::Matrix3x3 rotMat; rotMat.setValue(tf(0,0),tf(0,1),tf(0,2),tf(1,0),tf(1,1),tf(1,2),tf(2,0),tf(2,1),tf(2,2));
-  rotMat.getRPY(Roll,Pitch,Yaw);
+  geometry_msgs::Pose p;
 
   av.spawnObject(objID,0,0);
 
   // Home
-  av.moveKinectCartesian({0.6,0,0.5,0,M_PI/2,0});
+  av.moveFranka(tfHome.matrix(),"JOINT",false,true,p);
   grasp.request.finger_pos = 0.08/2.0;
   av.gripperPosClient.call(grasp);
   ros::Duration(2).sleep();
 
   // Move to Pre-grasp
-  av.moveKinectCartesian({tfPreGrasp(0,3),tfPreGrasp(1,3),0.5,Roll,Pitch,Yaw});
-  av.moveKinectCartesian({tfPreGrasp(0,3),tfPreGrasp(1,3),tfPreGrasp(2,3),Roll,Pitch,Yaw});
+  av.moveFranka(tfPreGrasp1.matrix(),"CARTESIAN",false,true,p);
+  av.moveFranka(tfPreGrasp2.matrix(),"CARTESIAN",false,true,p);
   grasp.request.finger_pos = (graspData.gripperWidth+1.5*av.voxelGridSize)/2.0;
   av.gripperPosClient.call(grasp);
   ros::Duration(2).sleep();
 
   // Move to Grasp
-  av.moveKinectCartesian({tf(0,3),tf(1,3),tf(2,3),Roll,Pitch,Yaw});
+  av.moveFranka(tfGrasp.matrix(),"CARTESIAN",false,true,p);
   ros::Duration(2).sleep();
 
   // Gras3
@@ -960,11 +967,11 @@ void testObjectPickup(environment &av, int objID){
   ros::Duration(3).sleep();
 
   // Move straight up
-  av.moveKinectCartesian({tf(0,3),tf(1,3),tf(2,3)+0.3,Roll,Pitch,Yaw});
+  av.moveFranka(tfGraspMoveUp.matrix(),"CARTESIAN",false,true,p);
   ros::Duration(2).sleep();
 
   // Go to same location
-  av.moveKinectCartesian({tf(0,3),tf(1,3),tf(2,3),Roll,Pitch,Yaw});
+  av.moveFranka(tfGrasp.matrix(),"CARTESIAN",false,true,p);
   ros::Duration(2).sleep();
 
   // Release
@@ -973,14 +980,14 @@ void testObjectPickup(environment &av, int objID){
   ros::Duration(3).sleep();
 
   // Move to Post-grasp
-  av.moveKinectCartesian({tfPreGrasp(0,3),tfPreGrasp(1,3),tfPreGrasp(2,3),Roll,Pitch,Yaw});
-  av.moveKinectCartesian({tfPreGrasp(0,3),tfPreGrasp(1,3),0.5,Roll,Pitch,Yaw});
-  grasp.request.finger_pos = 0.08/2.0;
-  av.gripperPosClient.call(grasp);
-  ros::Duration(3).sleep();
+  av.moveFranka(tfPreGrasp2.matrix(),"CARTESIAN",false,true,p);
+  av.moveFranka(tfPreGrasp1.matrix(),"CARTESIAN",false,true,p);
+  ros::Duration(2).sleep();
 
   // Home
-  av.moveKinectCartesian({0.6,0,0.5,0,M_PI/2,0});
+  av.moveFranka(tfHome.matrix(),"JOINT",false,true,p);
+  grasp.request.finger_pos = 0.08/2.0;
+  av.gripperPosClient.call(grasp);
   ros::Duration(2).sleep();
 
   av.deleteObject(objID);
