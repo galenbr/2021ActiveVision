@@ -245,49 +245,49 @@ add_executable(environmentTesting src/environmentTesting.cpp)
 add_dependencies(environmentTesting active_vision ${catkin_EXPORTED_TARGETS})
 target_link_libraries(environmentTesting active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
 
-# add_executable(dataCollector src/dataCollector.cpp)
-# add_dependencies(dataCollector active_vision ${catkin_EXPORTED_TARGETS})
-# target_link_libraries(dataCollector active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
-#
-# add_executable(visDataRec src/visDataRec.cpp)
-# add_dependencies(visDataRec active_vision ${catkin_EXPORTED_TARGETS})
-# target_link_libraries(visDataRec active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
-#
-# add_executable(visAllPaths src/visAllPaths.cpp)
-# add_dependencies(visAllPaths active_vision ${catkin_EXPORTED_TARGETS})
-# target_link_libraries(visAllPaths active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
-#
-# # add_executable(visViewsphere src/visViewsphere.cpp)
-# # add_dependencies(visViewsphere active_vision ${catkin_EXPORTED_TARGETS})
-# # target_link_libraries(visViewsphere active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
-#
-# add_executable(visDataCollectionPaths src/visDataCollectionPaths.cpp)
-# add_dependencies(visDataCollectionPaths active_vision ${catkin_EXPORTED_TARGETS})
-# target_link_libraries(visDataCollectionPaths active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
-#
-# # add_executable(findStablePos src/findStablePos.cpp)
-# # add_dependencies(findStablePos active_vision ${catkin_EXPORTED_TARGETS})
-# # target_link_libraries(findStablePos active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
-#
-# add_executable(genStateVec src/genStateVec.cpp)
-# add_dependencies(genStateVec active_vision ${catkin_EXPORTED_TARGETS})
-# target_link_libraries(genStateVec active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
-#
-# add_executable(policyTester src/policyTester.cpp)
-# add_dependencies(policyTester active_vision ${catkin_EXPORTED_TARGETS})
-# target_link_libraries(policyTester active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
-#
-# add_executable(heuristicPolicyService src/heuristicPolicyService.cpp)
-# add_dependencies(heuristicPolicyService active_vision ${catkin_EXPORTED_TARGETS})
-# target_link_libraries(heuristicPolicyService active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
-#
-# add_executable(BFSHeuristicPolicyService src/BFSHeuristicPolicyService.cpp)
-# add_dependencies(BFSHeuristicPolicyService active_vision ${catkin_EXPORTED_TARGETS})
-# target_link_libraries(BFSHeuristicPolicyService active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
-#
-# add_executable(3DheuristicPolicyService src/3DheuristicPolicyService.cpp)
-# add_dependencies(3DheuristicPolicyService active_vision ${catkin_EXPORTED_TARGETS})
-# target_link_libraries(3DheuristicPolicyService active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+add_executable(dataCollector src/dataCollector.cpp)
+add_dependencies(dataCollector active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(dataCollector active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(visDataRec src/visDataRec.cpp)
+add_dependencies(visDataRec active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(visDataRec active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(visAllPaths src/visAllPaths.cpp)
+add_dependencies(visAllPaths active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(visAllPaths active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+# add_executable(visViewsphere src/visViewsphere.cpp)
+# add_dependencies(visViewsphere active_vision ${catkin_EXPORTED_TARGETS})
+# target_link_libraries(visViewsphere active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(visDataCollectionPaths src/visDataCollectionPaths.cpp)
+add_dependencies(visDataCollectionPaths active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(visDataCollectionPaths active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+# add_executable(findStablePos src/findStablePos.cpp)
+# add_dependencies(findStablePos active_vision ${catkin_EXPORTED_TARGETS})
+# target_link_libraries(findStablePos active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(genStateVec src/genStateVec.cpp)
+add_dependencies(genStateVec active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(genStateVec active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(policyTester src/policyTester.cpp)
+add_dependencies(policyTester active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(policyTester active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(heuristicPolicyService src/heuristicPolicyService.cpp)
+add_dependencies(heuristicPolicyService active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(heuristicPolicyService active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
+
+add_executable(BFSHeuristicPolicyService src/BFSHeuristicPolicyService.cpp)
+add_dependencies(BFSHeuristicPolicyService active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(BFSHeuristicPolicyService active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
+
+add_executable(3DheuristicPolicyService src/3DheuristicPolicyService.cpp)
+add_dependencies(3DheuristicPolicyService active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(3DheuristicPolicyService active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 # add_executable(bfs src/bfs.cpp)
 # add_dependencies(bfs active_vision ${catkin_EXPORTED_TARGETS})
