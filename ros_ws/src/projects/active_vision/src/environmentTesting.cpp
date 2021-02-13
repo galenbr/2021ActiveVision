@@ -25,6 +25,8 @@ void testSpawnDeleteObj(environment &av){
 void testKinectMovement(environment &av){
   std::cout << "*** In kinect movement testing function ***" << std::endl;
   int flag = 0;
+  av.spawnObject(2,1,0);
+  bool res;
   do {
     std::cout << "Enter your choice 1:Cartesian, 2:Viewsphere, 0:Exit : "; std::cin >> flag;
     if (flag == 1) {
@@ -36,27 +38,21 @@ void testKinectMovement(environment &av){
       std::cout << "Roll : ";   std::cin >> pose[3];
       std::cout << "Pitch : ";  std::cin >> pose[4];
       std::cout << "Yaw : ";    std::cin >> pose[5];
-      // std::cout << "qX : ";    std::cin >> pose[3];
-      // std::cout << "qY : ";    std::cin >> pose[4];
-      // std::cout << "qZ : ";    std::cin >> pose[5];
-      // std::cout << "qW : ";    std::cin >> pose[6];
 
-      av.moveKinectCartesian(pose);
-      std::cout << "Kinect moved" << std::endl;
-
+      res = av.moveKinectCartesian(pose);
     } else if(flag == 2){
       std::vector<double> pose(3);
       std::cout << "Enter viewsphere co-ordinates with centre at (" <<
                     av.tableCentre[0] << "," <<
                     av.tableCentre[1] << "," <<
                     av.tableCentre[2] << ")" << std::endl;
-      std::cout << "R (Radius) : ";                         std::cin >> pose[0];
-      std::cout << "Phi (Azhimuthal Angle) (0->2*PI) : ";      std::cin >> pose[1];
-      std::cout << "Theta (Polar Angle) (0->PI/2): ";    std::cin >> pose[2];
+      std::cout << "R (Radius) : ";                             std::cin >> pose[0];
+      std::cout << "Phi (Azhimuthal Angle) (0->2*PI) : ";       std::cin >> pose[1];
+      std::cout << "Theta (Polar Angle) (0->PI/2): ";           std::cin >> pose[2];
 
-      av.moveKinectViewsphere(pose);
-      std::cout << "Kinect moved" << std::endl;
+      res = av.moveKinectViewsphere(pose);
     }
+    std::cout << "Kinect moved : " << std::boolalpha << res << std::endl;
   } while(flag != 0);
   std::cout << "*** End ***" << std::endl;
 }
@@ -64,13 +60,26 @@ void testKinectMovement(environment &av){
 // 4: A test function to move the kinect in a viewsphere continuously
 void testMoveKinectInViewsphere(environment &av){
   std::cout << "*** In Kinect move in viewsphere testing function ***" << std::endl;
-  for (double i = M_PI/2; i > 0;) {
-    for (double j = 0; j < 2*M_PI;) {
-      av.moveKinectViewsphere({1.0,j,i});
-      j += 2*M_PI/10;
+  float rad;
+  std::cout << "Viewsphere radius : "; std::cin >> rad;
+  av.spawnObject(2,1,0);
+  for (double j = 0; j < 195.0/180.0*M_PI;) {
+    av.moveKinectViewsphere({0.5,M_PI,0});
+    av.moveKinectViewsphere({0.5,M_PI,0});
+    for (double i = 0; i <= 75.0/180.0*M_PI;) {
+      std::cout << "Azhimuthal\t" << round(j/M_PI*180) << "\tPolar\t" << round(i/M_PI*180);
+      bool res;
+      if(av.simulationMode == "SIMULATION"){
+        res = av.moveKinectViewsphere({rad,j,i});
+      }
+      else if(av.simulationMode == "FRANKASIMULATION"){
+        res = av.moveKinectViewsphere({rad,j,i});
+      }
+      std::cout << "\t" << res << std::endl;
+      if(res == false) av.moveKinectViewsphere({0.5,M_PI,0});
+      i += M_PI/18; // 10 degree increment
     }
-    std::cout << (int)((M_PI/2-i)/(M_PI/2/10)+1)<< " out of 10 completed." << std::endl;
-    i -= M_PI/2/10;
+    j += 2*M_PI/16; // 22.5 degree increment
   }
   std::cout << "*** End ***" << std::endl;
 }
@@ -209,7 +218,7 @@ void testGenUnexpPtCld(environment &av, int objID, int flag){
 
     // Adding the point clouds
     addRGB(viewer,av.cPtrPtCldObject,"Object",vp[0]);
-    //addRGB(viewer,av.cPtrPtCldUnexp,"Unexplored pointcloud",vp[0]);
+    addRGB(viewer,av.cPtrPtCldUnexp,"Unexplored pointcloud",vp[0]);
     std::cout << "Showing the object extacted and unexplored point cloud generated. Close viewer to continue" << std::endl;
     while (!viewer->wasStopped()){
       viewer->spinOnce(100);
@@ -485,8 +494,18 @@ void testComplete(environment &av, int objID, int nVp, int graspMode, int flag, 
   }
 
   if(av.selectedGrasp != -1){
+    av.updateGripper(av.selectedGrasp,0);    // Only for visulization purpose
     std::cout << "Selected Grasp ID : " << av.selectedGrasp << std::endl;
     std::cout << "Selected Grasp Quality : " << av.graspsPossible[av.selectedGrasp].quality << std::endl;
+    std::cout << "graspData.pose = {" << av.graspsPossible[av.selectedGrasp].pose[0] << "," <<
+                                         av.graspsPossible[av.selectedGrasp].pose[1] << "," <<
+                                         av.graspsPossible[av.selectedGrasp].pose[2] << "," <<
+                                         av.graspsPossible[av.selectedGrasp].pose[3] << "," <<
+                                         av.graspsPossible[av.selectedGrasp].pose[4] << "," <<
+                                         av.graspsPossible[av.selectedGrasp].pose[5] << "};" << std::endl;
+    std::cout << "graspData.addnlPitch = " << av.graspsPossible[av.selectedGrasp].addnlPitch << ";" << std::endl;
+    std::cout << "graspData.gripperWidth = " << av.graspsPossible[av.selectedGrasp].gripperWidth << ";" << std::endl;
+
   }else{
     std::cout << "No grasp found" << std::endl;
   }
@@ -554,7 +573,6 @@ void testComplete(environment &av, int objID, int nVp, int graspMode, int flag, 
       std::cout << "No grasp orientation for the grasp points found." << std::endl;
       std::cout << "Showing the object (red), collision check points (blue). Close viewer to continue" << std::endl;
     }else{
-      av.updateGripper(av.selectedGrasp,0);    // Only for visulization purpose
       addRGB(viewer,av.ptrPtCldGripper,"Gripper",vp[0]);
       addRGB(viewer,av.ptrPtCldGripper,"Gripper1",vp[1]);
       std::cout << "Showing the object (red), collision check points (blue), selected gripper position (black). Close viewer to continue" << std::endl;
@@ -831,6 +849,145 @@ void testSurfacePatchAndCurvature(environment &av, int objID, int flag){
   std::cout << "*** End ***" << std::endl;
 }
 
+// 17: Testing gripper open close
+void testGripperOpenClose(environment &av){
+  std::cout << "*** In gripper open close testing function ***" << std::endl;
+  if(av.simulationMode != "FRANKASIMULATION"){
+    std::cout << "Incorrect simulation mode... Closing" << std::endl;
+    std::cout << "*** End ***" << std::endl;
+    return;
+  }
+
+  av.spawnObject(2,1,0);
+  av.moveKinectViewsphere({0.5,M_PI,0});
+  franka_pos_grasping_gazebo::GripPos grasp;
+
+  float width = 0;
+  do {
+    std::cout << "Enter gripper width (cms) (-1 to exit) : "; std::cin >> width;
+    if (width != -1) {
+      grasp.request.finger_pos = width/100.0;
+      av.gripperPosClient.call(grasp);
+      ros::Duration(2).sleep();
+    }
+  } while(width != -1);
+
+  av.deleteObject(2);
+
+  std::cout << "*** End ***" << std::endl;
+}
+
+// 18: Testing object pickup
+void testObjectPickup(environment &av, int objID){
+  std::cout << "*** In object pickup function ***" << std::endl;
+  if(av.simulationMode != "FRANKASIMULATION"){
+    std::cout << "Incorrect simulation mode... Closing" << std::endl;
+    std::cout << "*** End ***" << std::endl;
+    return;
+  }
+  franka_pos_grasping_gazebo::GripPos grasp;
+
+  graspPoint graspData;
+  if(objID == 2){
+    {graspData.pose = {0.551718,7.93952e-06,0.0479308,-1.5708,1.57031,1.5708};}
+    graspData.addnlPitch = 1.5708;
+    graspData.gripperWidth = 0.0475006;
+  }else if(objID == 7){
+    {graspData.pose = {0.566138,0.0687767,0.0409107,-1.5708,1.5529,1.60483};}
+    graspData.addnlPitch = 1.5708;
+    graspData.gripperWidth = 0.0207021;
+  }else if(objID == 8){
+    {graspData.pose = {0.546149,-0.0264734,0.142481,-1.5708,1.37201,3.12775};}
+    graspData.addnlPitch = 3.14159;
+    graspData.gripperWidth = 0.0460051;
+  }else if(objID == 9){
+    {graspData.pose = {0.574497,-0.027417,0.0487696,1.5708,1.52962,2.15774};}
+    graspData.addnlPitch = 1.5708;
+    graspData.gripperWidth = 0.0075;
+  }else if(objID == 10){
+    {graspData.pose = {0.550668,0.00685909,0.115708,1.5708,1.5586,0.6982};}
+    graspData.addnlPitch = 0;
+    graspData.gripperWidth = 0.0606716;
+  }else if(objID == 11){
+    {graspData.pose = {0.53062,-0.0600863,0.120164,-1.5708,1.44276,-0.116368};}
+    graspData.addnlPitch = 0;
+    graspData.gripperWidth = 0.0692391;
+  }else if(objID == 12){
+    {graspData.pose = {0.541044,0.0840552,0.0626893,1.5708,1.54494,0.707};}
+    graspData.addnlPitch = 0;
+    graspData.gripperWidth = 0.0739337;
+  }else{
+    return;
+  }
+
+
+  Eigen::Affine3f tf = pcl::getTransformation(graspData.pose[0],graspData.pose[1],
+                                              graspData.pose[2],graspData.pose[3],
+                                              graspData.pose[4],graspData.pose[5])*
+                       pcl::getTransformation(0,0,0,0,graspData.addnlPitch,0)*
+                       pcl::getTransformation(0.0,0,-0.05-av.fingerZOffset,0,0,0)*
+                       pcl::getTransformation(0.06,0,0,0,0,0)*
+                       pcl::getTransformation(0,0,0,0,-M_PI/2,-M_PI);
+
+  Eigen::Affine3f tfPreGrasp = tf*pcl::getTransformation(-0.2,0,0,0,0,0);
+
+  double Roll,Pitch,Yaw;
+  tf::Matrix3x3 rotMat; rotMat.setValue(tf(0,0),tf(0,1),tf(0,2),tf(1,0),tf(1,1),tf(1,2),tf(2,0),tf(2,1),tf(2,2));
+  rotMat.getRPY(Roll,Pitch,Yaw);
+
+  av.spawnObject(objID,0,0);
+
+  // Home
+  av.moveKinectCartesian({0.6,0,0.5,0,M_PI/2,0});
+  grasp.request.finger_pos = 0.08/2.0;
+  av.gripperPosClient.call(grasp);
+  ros::Duration(2).sleep();
+
+  // Move to Pre-grasp
+  av.moveKinectCartesian({tfPreGrasp(0,3),tfPreGrasp(1,3),0.5,Roll,Pitch,Yaw});
+  av.moveKinectCartesian({tfPreGrasp(0,3),tfPreGrasp(1,3),tfPreGrasp(2,3),Roll,Pitch,Yaw});
+  grasp.request.finger_pos = (graspData.gripperWidth+1.5*av.voxelGridSize)/2.0;
+  av.gripperPosClient.call(grasp);
+  ros::Duration(2).sleep();
+
+  // Move to Grasp
+  av.moveKinectCartesian({tf(0,3),tf(1,3),tf(2,3),Roll,Pitch,Yaw});
+  ros::Duration(2).sleep();
+
+  // Gras3
+  grasp.request.finger_pos = (std::max(graspData.gripperWidth-1.2*av.voxelGridSize,0.005))/2.0;
+  av.gripperPosClient.call(grasp);
+  ros::Duration(3).sleep();
+
+  // Move straight up
+  av.moveKinectCartesian({tf(0,3),tf(1,3),tf(2,3)+0.3,Roll,Pitch,Yaw});
+  ros::Duration(2).sleep();
+
+  // Go to same location
+  av.moveKinectCartesian({tf(0,3),tf(1,3),tf(2,3),Roll,Pitch,Yaw});
+  ros::Duration(2).sleep();
+
+  // Release
+  grasp.request.finger_pos = (graspData.gripperWidth+0.04)/2.0;
+  av.gripperPosClient.call(grasp);
+  ros::Duration(3).sleep();
+
+  // Move to Post-grasp
+  av.moveKinectCartesian({tfPreGrasp(0,3),tfPreGrasp(1,3),tfPreGrasp(2,3),Roll,Pitch,Yaw});
+  av.moveKinectCartesian({tfPreGrasp(0,3),tfPreGrasp(1,3),0.5,Roll,Pitch,Yaw});
+  grasp.request.finger_pos = 0.08/2.0;
+  av.gripperPosClient.call(grasp);
+  ros::Duration(3).sleep();
+
+  // Home
+  av.moveKinectCartesian({0.6,0,0.5,0,M_PI/2,0});
+  ros::Duration(2).sleep();
+
+  av.deleteObject(objID);
+
+  std::cout << "*** End ***" << std::endl;
+}
+
 int main (int argc, char** argv){
 
   // Initialize ROS
@@ -859,9 +1016,11 @@ int main (int argc, char** argv){
   std::cout << "14 : Read CSV and print a column." << std::endl;
   std::cout << "15 : Read PCD based on CSV data." << std::endl;
   std::cout << "16 : Surface patch testing." << std::endl;
+  std::cout << "17 : Gripper open close testing." << std::endl;
+  std::cout << "18 : Testing object pickup." << std::endl;
   std::cout << "Enter your choice : "; cin >> choice;
 
-  if (choice >= 5 && choice <= 13 || choice == 16) {
+  if (choice >= 5 && choice <= 13 || choice == 16 || choice == 18) {
     std::cout << "Objects available :" << std::endl;
     for(auto data: activeVision.objectDict){
         data.second.printObjectInfo();
@@ -927,6 +1086,10 @@ int main (int argc, char** argv){
       testReadPCD(filename);                          break;
     case 16:
       testSurfacePatchAndCurvature(activeVision,objID,1);         break;
+    case 17:
+      testGripperOpenClose(activeVision);             break;
+    case 18:
+      testObjectPickup(activeVision,objID);           break;
     default:
       std::cout << "Invalid choice." << std::endl;
   }

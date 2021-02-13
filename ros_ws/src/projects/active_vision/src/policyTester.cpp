@@ -78,7 +78,9 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 	static ptCldColor::Ptr tempPtCldObj{new ptCldColor};
 	static ptCldColor::Ptr tempPtCldUnexp{new ptCldColor};
 	pcl::PointXYZ table,a1,a2;
-	table.x = 1.5; table.y = 0; table.z = 1;
+	table.x = kinectControl.tableCentre[0];
+	table.y = kinectControl.tableCentre[1];
+	table.z = kinectControl.tableCentre[2];
 	std::vector<int> nUnexp;
 	// printf("Starting while loop.\n");
 

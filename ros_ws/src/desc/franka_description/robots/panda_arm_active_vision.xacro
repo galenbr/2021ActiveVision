@@ -15,7 +15,7 @@
     <link name="world"/>
 
     <joint name="fixed" type="fixed">
-      <origin rpy="0 0 0" xyz="1.00 0.00 1.02"/>
+      <origin rpy="0 0 0" xyz="0.00 0.00 0.00"/>
       <parent link="world"/>
       <child link="${arm_id}_link0"/>
     </joint>
@@ -253,77 +253,77 @@
     <transmission name="tran1">
       <type>transmission_interface/SimpleTransmission</type>
       <joint name="${arm_id}_joint1">
-	<hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
       </joint>
       <actuator name="motor1">
-	<hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-	<mechanicalReduction>1</mechanicalReduction>
+      	<hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+      	<mechanicalReduction>1</mechanicalReduction>
       </actuator>
     </transmission>
 
     <transmission name="tran2">
       <type>transmission_interface/SimpleTransmission</type>
       <joint name="${arm_id}_joint2">
-	<hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
       </joint>
       <actuator name="motor2">
-	<hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-	<mechanicalReduction>1</mechanicalReduction>
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <mechanicalReduction>1</mechanicalReduction>
       </actuator>
     </transmission>
 
     <transmission name="tran3">
       <type>transmission_interface/SimpleTransmission</type>
       <joint name="${arm_id}_joint3">
-	<hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
       </joint>
       <actuator name="motor3">
-	<hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-	<mechanicalReduction>1</mechanicalReduction>
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <mechanicalReduction>1</mechanicalReduction>
       </actuator>
     </transmission>
 
     <transmission name="tran4">
       <type>transmission_interface/SimpleTransmission</type>
       <joint name="${arm_id}_joint4">
-	<hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
       </joint>
       <actuator name="motor4">
-	<hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-	<mechanicalReduction>1</mechanicalReduction>
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <mechanicalReduction>1</mechanicalReduction>
       </actuator>
     </transmission>
 
     <transmission name="tran5">
       <type>transmission_interface/SimpleTransmission</type>
       <joint name="${arm_id}_joint5">
-	<hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
       </joint>
       <actuator name="motor5">
-	<hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-	<mechanicalReduction>1</mechanicalReduction>
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <mechanicalReduction>1</mechanicalReduction>
       </actuator>
     </transmission>
 
     <transmission name="tran6">
       <type>transmission_interface/SimpleTransmission</type>
       <joint name="${arm_id}_joint6">
-	<hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
       </joint>
       <actuator name="motor6">
-	<hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-	<mechanicalReduction>1</mechanicalReduction>
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <mechanicalReduction>1</mechanicalReduction>
       </actuator>
     </transmission>
 
     <transmission name="tran7">
       <type>transmission_interface/SimpleTransmission</type>
       <joint name="${arm_id}_joint7">
-	<hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
       </joint>
       <actuator name="motor7">
-	<hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-	<mechanicalReduction>1</mechanicalReduction>
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <mechanicalReduction>1</mechanicalReduction>
       </actuator>
     </transmission>
   </xacro:macro>

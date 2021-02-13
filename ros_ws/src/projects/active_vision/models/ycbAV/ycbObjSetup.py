@@ -144,8 +144,16 @@ def generate_sdf(object_name, data_type, object_mass, x, y, z, ixx, ixy, ixz, iy
             <ode>
               <max_vel>0.1</max_vel>
               <min_depth>0.001</min_depth>
+              <soft_erp>0.5</soft_erp>
+              <soft_cfm>0.001</soft_cfm>
             </ode>
           </contact>
+          <friction>
+            <ode>
+              <mu>10000.0</mu>
+              <mu2>10000.0</mu2>
+            </ode>
+          </friction>
         </surface>
       </collision>
       <visual name="visual">

@@ -231,9 +231,11 @@ environment::environment(ros::NodeHandle *nh){
     allOK *= ROSCheck("SERVICE","/gazebo/spawn_sdf_model"); if(!allOK) continue;
     allOK *= ROSCheck("SERVICE","/gazebo/delete_model"); if(!allOK) continue;
     if(simulationMode == "FRANKASIMULATION"){
+      allOK *= ROSCheck("SERVICE","get_pose"); if(!allOK) continue;
       allOK *= ROSCheck("SERVICE","cartesian_move"); if(!allOK) continue;
       allOK *= ROSCheck("SERVICE","set_velocity_scaling"); if(!allOK) continue;
       allOK *= ROSCheck("SERVICE","move_to_joint_space"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","gripPosServer"); if(!allOK) continue;
     }
   }
 
@@ -242,9 +244,11 @@ environment::environment(ros::NodeHandle *nh){
   gazeboSpawnModel = nh->serviceClient< gazebo_msgs::SpawnModel> ("/gazebo/spawn_sdf_model");
   gazeboCheckModel = nh->serviceClient< gazebo_msgs::GetModelState> ("/gazebo/get_model_state");
   gazeboDeleteModel = nh->serviceClient< gazebo_msgs::DeleteModel> ("/gazebo/delete_model");
+  getPoseClient = nh->serviceClient<moveit_planner::GetPose>("get_pose");
   cartMoveClient = nh->serviceClient<moveit_planner::MoveCart>("cartesian_move");
   velScalingClient = nh->serviceClient<moveit_planner::SetVelocity>("set_velocity_scaling");
   jointSpaceClient = nh->serviceClient<moveit_planner::MoveJoint>("move_to_joint_space");
+  gripperPosClient = nh->serviceClient<franka_pos_grasping_gazebo::GripPos>("gripPosServer");
   // NOT USED (JUST FOR REFERENCE)
   /*subKinectRGB = nh->subscribe ("/camera/color/image_raw", 1, &environment::cbImgRgb, this);
   subKinectDepth = nh->subscribe ("/camera/depth/image_raw", 1, &environment::cbImgDepth, this);*/
@@ -541,7 +545,7 @@ void environment::updateGripper(int index ,int choice){
 }
 
 // 6A: Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
-void environment::moveKinectCartesian(std::vector<double> pose){
+bool environment::moveKinectCartesian(std::vector<double> pose){
   if(simulationMode == "SIMULATION"){
     //Create Matrix3x3 from Euler Angles
     tf::Matrix3x3 rotMat;
@@ -572,45 +576,79 @@ void environment::moveKinectCartesian(std::vector<double> pose){
     lastKinectPoseCartesian = pose;
   }
   else if(simulationMode == "FRANKASIMULATION"){
-    //Create Matrix3x3 from Euler Angles
-    tf::Matrix3x3 rotMat;
-    rotMat.setEulerYPR(pose[5], pose[4], pose[3]);
-    tf::Matrix3x3 kinectOffset;
-    kinectOffset.setEulerYPR(M_PI, -M_PI/2, 0);
-    rotMat *= kinectOffset;
+    // Create Matrix3x3 from Euler Angles
+    // Additional rotation of PI about Z and -PI/2 about Y so that kinect frame orientation aligns with the gripper
+    Eigen::Matrix3f rotMat;
+    rotMat = Eigen::AngleAxisf(pose[5], Eigen::Vector3f::UnitZ()) * Eigen:: AngleAxisf(pose[4], Eigen::Vector3f::UnitY()) * Eigen::AngleAxisf(pose[3], Eigen::Vector3f::UnitX()) *
+             Eigen::AngleAxisf(M_PI, Eigen::Vector3f::UnitZ()) *    Eigen::AngleAxisf(-M_PI/2, Eigen::Vector3f::UnitY());
 
     // Convert into quaternion
-    tf::Quaternion quat;
-    rotMat.getRotation(quat);
+    Eigen::Quaternionf quat(rotMat);
 
-    //Moveit move command.
+    // Incorporating the kinect translation offset
+    Eigen::Matrix4f tfMat; tfMat.setIdentity();
+    tfMat.block<3,3>(0,0) = rotMat;
+    tfMat(0,3) = pose[0];
+    tfMat(1,3) = pose[1];
+    tfMat(2,3) = pose[2];
+
+    Eigen::Matrix4f kinectOffset; kinectOffset.setIdentity();
+    kinectOffset(0,3) = -0.06;
+
+    tfMat *= kinectOffset;
+    Eigen::Quaternionf newQuat(tfMat.block<3,3>(0,0));
+
+    float frankaOffset[3] = {0.0,0.0,0.0};
+    float frankaX = tfMat(0,3)-frankaOffset[0];
+    float frankaY = tfMat(1,3)-frankaOffset[1];
+    float frankaZ = tfMat(2,3)-frankaOffset[2];
+    float reach = sqrt(pow(frankaX,2)+pow(frankaY,2)+pow(frankaZ-0.3,2));
+
+    if((abs(frankaX) <= 0.1 && abs(frankaY) <= 0.1 && frankaZ-0.3 < 0.2) || reach > 0.75) return false;
+
+    // Moveit move command.
     moveit_planner::MoveCart move;
     geometry_msgs::Pose p;
-    p.position.x = pose[0];
-    p.position.y = pose[1];
-    p.position.z = pose[2];
-    p.orientation.x = quat.x();
-    p.orientation.y = quat.y();
-    p.orientation.z = quat.z();
-    p.orientation.w = quat.w();
+    p.position.x = tfMat(0,3);
+    p.position.y = tfMat(1,3);
+    p.position.z = tfMat(2,3);
+    p.orientation.x = newQuat.x();
+    p.orientation.y = newQuat.y();
+    p.orientation.z = newQuat.z();
+    p.orientation.w = newQuat.w();
     move.request.val.push_back(p);
     move.request.time = 0;
     move.request.execute = true;
     cartMoveClient.call(move);
-    std::cout << "Cartesian move (" << p.position.x << ","
-      << p.position.y << "," << p.position.z << "), rotation=("
-      << p.orientation.x << "," << p.orientation.y << ","
-      << p.orientation.z << "," << p.orientation.w << ")" << std::endl;
-    ROS_INFO("Called cartesian move");
+    // std::cout << "Cartesian move (" << p.position.x << ","
+    //   << p.position.y << "," << p.position.z << "), rotation=("
+    //   << p.orientation.x << "," << p.orientation.y << ","
+    //   << p.orientation.z << "," << p.orientation.w << ")" << std::endl;
+    // ROS_INFO("Called cartesian move");
+
+    moveit_planner::GetPose curPose;
+    getPoseClient.call(curPose);
+
+    float positionError = sqrt(pow(curPose.response.pose.position.x-frankaX,2) +
+                               pow(curPose.response.pose.position.y-frankaY,2) +
+                               pow(curPose.response.pose.position.z-frankaZ,2));
+    float orientationError = curPose.response.pose.orientation.x * p.orientation.x +
+                             curPose.response.pose.orientation.y * p.orientation.y +
+                             curPose.response.pose.orientation.z * p.orientation.z +
+                             curPose.response.pose.orientation.w * p.orientation.w;
+
+    if(positionError > 5e-03 || 1-abs(orientationError) > 1e-03) return false;
+
     lastKinectPoseCartesian = pose;
   }
+  return true;
 }
 
 // 6B: Funtion to move the Kinect in a viewsphere which has the table cente as its centre
 // R (Radius)
 // Phi (Azhimuthal angle) -> 0 to 2*PI
 // Theta (Polar Angle)) -> 0 to PI/2
-void environment::moveKinectViewsphere(std::vector<double> pose){
+bool environment::moveKinectViewsphere(std::vector<double> pose){
 
   if(simulationMode == "SIMULATION"){
     //Create Matrix3x3 from Euler Angles
@@ -647,43 +685,77 @@ void environment::moveKinectViewsphere(std::vector<double> pose){
                                0,M_PI/2-pose[2],M_PI+pose[1]};
   }
   else if(simulationMode == "FRANKASIMULATION"){
-    //Create Matrix3x3 from Euler Angles
-    tf::Matrix3x3 rotMat;
-    rotMat.setEulerYPR(M_PI+pose[1], M_PI/2-pose[2], 0);
-    // rotMat.setEulerYPR(pose[1], 3*M_PI/2.0-pose[2], 0);
-    tf::Matrix3x3 kinectOffset;
-    kinectOffset.setEulerYPR(M_PI, -M_PI/2, 0);
-    rotMat *= kinectOffset;
+
+    // Create Matrix3x3 from Euler Angles
+    // Additional rotation of PI about Z and -PI/2 about Y so that kinect frame orientation aligns with the gripper
+    Eigen::Matrix3f rotMat;
+    rotMat = Eigen::AngleAxisf(M_PI+pose[1], Eigen::Vector3f::UnitZ()) * Eigen:: AngleAxisf(M_PI/2-pose[2], Eigen::Vector3f::UnitY()) * Eigen::AngleAxisf(0, Eigen::Vector3f::UnitX()) *
+             Eigen::AngleAxisf(M_PI, Eigen::Vector3f::UnitZ())         * Eigen::AngleAxisf(-M_PI/2, Eigen::Vector3f::UnitY());
 
     // Convert into quaternion
-    tf::Quaternion quat;
-    rotMat.getRotation(quat);
+    Eigen::Quaternionf quat(rotMat);
+
+    // Incorporating the kinect translation offset
+    Eigen::Matrix4f tfMat; tfMat.setIdentity();
+    tfMat.block<3,3>(0,0) = rotMat;
+    tfMat(0,3) = tableCentre[0]+pose[0]*sin(pose[2])*cos(pose[1]);
+    tfMat(1,3) = tableCentre[1]+pose[0]*sin(pose[2])*sin(pose[1]);
+    tfMat(2,3) = tableCentre[2]+pose[0]*cos(pose[2]);
+
+    Eigen::Matrix4f kinectOffset; kinectOffset.setIdentity();
+    kinectOffset(0,3) = -0.06;
+
+    tfMat *= kinectOffset;
+    Eigen::Quaternionf newQuat(tfMat.block<3,3>(0,0));
+
+    float frankaOffset[3] = {0.0,0.0,0.0};
+    float frankaX = tfMat(0,3)-frankaOffset[0];
+    float frankaY = tfMat(1,3)-frankaOffset[1];
+    float frankaZ = tfMat(2,3)-frankaOffset[2];
+    float reach = sqrt(pow(frankaX,2)+pow(frankaY,2)+pow(frankaZ-0.3,2));
+
+    if((abs(frankaX) <= 0.1 && abs(frankaY) <= 0.1 && frankaZ-0.3 < 0.2) || reach > 0.75) return false;
 
     //Moveit move command.
     moveit_planner::MoveCart move;
     geometry_msgs::Pose p;
-    p.position.x = tableCentre[0]+pose[0]*sin(pose[2])*cos(pose[1]);
-    p.position.y = pose[0]*sin(pose[2])*sin(pose[1]);
-    p.position.z = tableCentre[2]+pose[0]*cos(pose[2]);
-    p.orientation.x = quat.x();
-    p.orientation.y = quat.y();
-    p.orientation.z = quat.z();
-    p.orientation.w = quat.w();
+    p.position.x = tfMat(0,3);
+    p.position.y = tfMat(1,3);
+    p.position.z = tfMat(2,3);
+    p.orientation.x = newQuat.x();
+    p.orientation.y = newQuat.y();
+    p.orientation.z = newQuat.z();
+    p.orientation.w = newQuat.w();
     move.request.val.push_back(p);
     move.request.time = 0;
     move.request.execute = true;
     cartMoveClient.call(move);
-    std::cout << "Viewsphere move (" << p.position.x << ","
-      << p.position.y << "," << p.position.z << "), rotation=("
-      << p.orientation.x << "," << p.orientation.y << ","
-      << p.orientation.z << "," << p.orientation.w << ")" << std::endl;
-    ROS_INFO("Called viewsphere move");
+    // std::cout << "Viewsphere move (" << p.position.x << ","
+    //   << p.position.y << "," << p.position.z << "), rotation=("
+    //   << p.orientation.x << "," << p.orientation.y << ","
+    //   << p.orientation.z << "," << p.orientation.w << ")" << std::endl;
+    // ROS_INFO("Called viewsphere move");
+
+    moveit_planner::GetPose curPose;
+    getPoseClient.call(curPose);
+
+    float positionError = sqrt(pow(curPose.response.pose.position.x-frankaX,2) +
+                               pow(curPose.response.pose.position.y-frankaY,2) +
+                               pow(curPose.response.pose.position.z-frankaZ,2));
+    float orientationError = curPose.response.pose.orientation.x * p.orientation.x +
+                             curPose.response.pose.orientation.y * p.orientation.y +
+                             curPose.response.pose.orientation.z * p.orientation.z +
+                             curPose.response.pose.orientation.w * p.orientation.w;
+
+    if(positionError > 5e-03 || 1-abs(orientationError) > 1e-03) return false;
+
     lastKinectPoseCartesian = pose;
     lastKinectPoseCartesian = {p.position.x,
                                p.position.y,
                                p.position.z,
                                0,M_PI/2-pose[2],M_PI+pose[1]};
   }
+  return true;
 
 }
 
@@ -725,10 +797,10 @@ void environment::fuseLastData(){
     voxelGrid.filter(*ptrPtCldEnv);
   }
 
-  // Using pass through filter to remove ground plane
-  pass.setInputCloud(cPtrPtCldEnv);
-  pass.setFilterFieldName("z"); pass.setFilterLimits(0.2,10);
-  pass.filter(*ptrPtCldEnv);
+  // Using pass through filter to remove ground plane (Not needed with the current setup)
+  // pass.setInputCloud(cPtrPtCldEnv);
+  // pass.setFilterFieldName("z"); pass.setFilterLimits(0.2,10);
+  // pass.filter(*ptrPtCldEnv);
 
   ptrPtCldTemp->clear();
 }
@@ -873,11 +945,11 @@ void environment::genUnexploredPtCld(){
   // Setting the min and max limits based on the object dimension and scale.
   // Min of 0.40m on each side
   // Note: Z scale is only used on +z axis
-  minUnexp[0] = (minPtObj.x-std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.40f));
-  minUnexp[1] = (minPtObj.y-std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.40f));
+  minUnexp[0] = (minPtObj.x-std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.30f));
+  minUnexp[1] = (minPtObj.y-std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.30f));
   minUnexp[2] = cenTable[2]-0.01;
-  maxUnexp[0] = (maxPtObj.x+std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.40f));
-  maxUnexp[1] = (maxPtObj.y+std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.40f));
+  maxUnexp[0] = (maxPtObj.x+std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.30f));
+  maxUnexp[1] = (maxPtObj.y+std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.30f));
   maxUnexp[2] = (maxPtObj.z+std::max((scale-1)*(maxPtObj.z-minPtObj.z)/2,0.25f));
 
   pcl::PointXYZRGB ptTemp;

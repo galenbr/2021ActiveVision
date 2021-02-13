@@ -37,7 +37,7 @@ policyTester: {
 
 # Parameters for the simulated environment
 environment: {
-    tableCentre: [1.5,0,1],       # Co-ordinates of table centre
+    tableCentre: [0.55,0,0],      # Co-ordinates of table centre
     fingerZOffset: 0.0584,        # Z axis offset between gripper hand and finger
     viewsphereRad: 0.80,
     voxelGridSize: 0.0075,        # Voxel Grid size for environment

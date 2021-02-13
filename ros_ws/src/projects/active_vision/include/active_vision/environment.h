@@ -54,14 +54,16 @@
 #include <active_vision/toolDataHandling.h>
 
 //Moveit
-#include "moveit_planner/MoveCart.h"
-#include "moveit_planner/MoveJoint.h"
-#include "moveit_planner/SetVelocity.h"
+#include <moveit_planner/GetPose.h>
+#include <moveit_planner/MoveCart.h>
+#include <moveit_planner/MoveJoint.h>
+#include <moveit_planner/SetVelocity.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <actionlib/client/simple_action_client.h>
 #include <actionlib/client/terminal_state.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <franka_pos_grasping_gazebo/GripPos.h>
 
 // Typedef for convinience
 typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
@@ -148,10 +150,6 @@ private:
   ros::ServiceClient gazeboSpawnModel;  // Service : Spawn Model
   ros::ServiceClient gazeboCheckModel;  // Service : Check Model
   ros::ServiceClient gazeboDeleteModel; // Service : Delete Model
-  ros::ServiceClient cartMoveClient;
-  ros::ServiceClient velScalingClient;
-  ros::ServiceClient jointSpaceClient;
-  moveit_planner::SetVelocity velscale;
 
   pcl::PassThrough<pcl::PointXYZRGB> pass;                  // Passthrough filter
   pcl::VoxelGrid<pcl::PointXYZRGB> voxelGrid;               // VoxelGrid object
@@ -165,10 +163,8 @@ private:
   Eigen::MatrixXf projectionMat;   // Camera projection matrix
   Eigen::Affine3f tfKinOptGaz;     // Transform : Kinect Optical Frame to Kinect Gazebo frame
   Eigen::Affine3f tfGazWorld;      // Transform : Kinect Gazebo Frame to Gazebo World frame
-  Eigen::Affine3f tfGripper;       // Transform : For gripper based on grasp points found
 
   int readFlag[3];                 // Flag used to read data from kinect only when needed
-  float fingerZOffset;             // Z axis offset between gripper hand and finger
   bool addNoise;
   float depthNoise;                // Depth in %
   std::default_random_engine generator;
@@ -176,9 +172,16 @@ private:
   bool graspSurPatchConstraint;
 
   std::string path;                // Path the active vision package
-  std::string simulationMode;      // simulationMode
 
 public:
+
+  ros::ServiceClient getPoseClient;
+  ros::ServiceClient cartMoveClient;
+  ros::ServiceClient velScalingClient;
+  ros::ServiceClient jointSpaceClient;
+  ros::ServiceClient gripperPosClient;
+  moveit_planner::SetVelocity velscale;
+
   // PtCld: Last recorded viewpoint
   ptCldColor::Ptr ptrPtCldLast{new ptCldColor};      ptCldColor::ConstPtr cPtrPtCldLast{ptrPtCldLast};
 
@@ -234,6 +237,9 @@ public:
   int selectedGrasp;                                // Index of the selected grasp
   std::vector<stateConfig> configurations;          // Vector to store states for rollback
   float viewsphereRad;                              // Viewsphere Radius in m
+  std::string simulationMode;                       // simulationMode
+  Eigen::Affine3f tfGripper;                        // Transform : For gripper based on grasp points found
+  float fingerZOffset;                              // Z axis offset between gripper hand and finger
 
   environment(ros::NodeHandle *nh);
 
@@ -271,13 +277,13 @@ public:
   void updateGripper(int index ,int choice);
 
   // 6A: Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
-  void moveKinectCartesian(std::vector<double> pose);
+  bool moveKinectCartesian(std::vector<double> pose);
 
   // 6B: Funtion to move the Kinect in a viewsphere which has the table cente as its centre
   // R (Radius)
   // Theta (Polar Angle) -> 0 to 2*PI
   // Phi (Azhimuthal angle) -> 0 to PI/2
-  void moveKinectViewsphere(std::vector<double> pose);
+  bool moveKinectViewsphere(std::vector<double> pose);
 
   // 7: Function to read the kinect data.
   void readKinect();

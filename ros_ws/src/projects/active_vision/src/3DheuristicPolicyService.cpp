@@ -6,6 +6,7 @@
 #include <set>
 
 float voxelGridSize;
+pcl::PointXYZ table;
 
 bool heuristicDiagonalPref = true;
 bool compareDirections(std::vector<int> A, std::vector<int> B){
@@ -39,9 +40,9 @@ bool compareDirections(std::vector<int> A, std::vector<int> B){
 
 Eigen::Affine3f tfKinect(std::vector<double> &pose){
   std::vector<double> cartesian = {0,0,0,0,0,0};
-  cartesian[0] = 1.5+pose[0]*sin(pose[2])*cos(pose[1]);
-  cartesian[1] = 0.0+pose[0]*sin(pose[2])*sin(pose[1]);
-  cartesian[2] = 1.0+pose[0]*cos(pose[2]);
+  cartesian[0] = ::table.x+pose[0]*sin(pose[2])*cos(pose[1]);
+  cartesian[1] = ::table.y+pose[0]*sin(pose[2])*sin(pose[1]);
+  cartesian[2] = ::table.z+pose[0]*cos(pose[2]);
   cartesian[3] = 0;
   cartesian[4] = M_PI/2-pose[2];
   cartesian[5] = M_PI+pose[1];
@@ -455,9 +456,7 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
   // /***/
   // std::vector<int> vp;
   // setupViewer(viewer, 9, vp);
-  // pcl::PointXYZ table;
-	// table.x = 1.5; table.y = 0; table.z = 1;
-  // setCamView(viewer,{pose[0]/2,pose[1],pose[2]},table,vp[0]);
+  // setCamView(viewer,{pose[0]/2,pose[1],pose[2]},::table,vp[0]);
   // addRGB(viewer,obj,"obj0",vp[0]);
   // // addRGB(viewer,unexp,"unexp",vp[0]);
   // addRGB(viewer,usefulUnexp,"usefulUnexp",vp[0]);
@@ -473,7 +472,7 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
   //     result->points.back().b = 255;
   //   }
   //   std::vector<double> newPose = calcExplorationPose(pose,i,mode,step[i-1]*(M_PI/180.0));
-  //   setCamView(viewer,{newPose[0]/2,newPose[1],newPose[2]},table,vp[i]);
+  //   setCamView(viewer,{newPose[0]/2,newPose[1],newPose[2]},::table,vp[i]);
   //   addRGB(viewer,obj,"obj"+std::to_string(i),vp[i]);
   //   addRGB(viewer,result,"result"+std::to_string(i),vp[i]);
   //   viewer->addText(std::to_string(i)+","+std::to_string(step[i-1])+","+std::to_string(res[i-1]),2,2,20,1,0,0,"data"+std::to_string(i),vp[i]);
@@ -522,6 +521,13 @@ int main(int argc, char** argv){
   ros::NodeHandle nh;
   nh.getParam("/active_vision/environment/voxelGridSize", ::voxelGridSize);
   nh.getParam("/active_vision/policyTester/heuristicDiagonalPref", ::heuristicDiagonalPref);
+  nh.getParam("/active_vision/policyTester/heuristicDiagonalPref", ::heuristicDiagonalPref);
+  std::vector<double> tableCentre;
+  nh.getParam("/active_vision/environment/tableCentre", tableCentre);
+  ::table.x = tableCentre[0];
+  ::table.y = tableCentre[1];
+  ::table.z = tableCentre[2];
+
   ros::ServiceServer service = nh.advertiseService("/active_vision/heuristic_policy", heuristicPolicy);
   ROS_INFO("3D Heuristic policy service ready.");
   ros::spin();
@@ -534,7 +540,11 @@ int main(int argc, char** argv){
 //   ros::NodeHandle nh;
 //   nh.getParam("/active_vision/environment/voxelGridSize", ::voxelGridSize);
 //   nh.getParam("/active_vision/policyTester/heuristicDiagonalPref", ::heuristicDiagonalPref);
-//
+//   std::vector<double> tableCentre;
+//   nh.getParam("/active_vision/environment/tableCentre", tableCentre);
+//   ::table.x = tableCentre[0];
+//   ::table.y = tableCentre[1];
+//   ::table.z = tableCentre[2];
 //   environment activeVision(&nh);
 //   activeVision.loadGripper();
 //
@@ -577,9 +587,7 @@ int main(int argc, char** argv){
 //
 //   std::vector<int> vp;
 //   setupViewer(viewer, 1, vp);
-//   pcl::PointXYZ table;
-// 	table.x = 1.5; table.y = 0; table.z = 1;
-//   setCamView(viewer,{kinectPoses[0][0],kinectPoses[0][1],kinectPoses[0][2]},table,vp[0]);
+//   setCamView(viewer,{kinectPoses[0][0],kinectPoses[0][1],kinectPoses[0][2]},::table,vp[0]);
 //   activeVision.updateGripper(activeVision.selectedGrasp,0);
 //   addRGB(viewer,activeVision.ptrPtCldEnv,"Env",vp[0]);
 //   addRGB(viewer,activeVision.ptrPtCldGripper,"Gripper",vp[0]);

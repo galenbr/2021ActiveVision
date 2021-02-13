@@ -5,21 +5,21 @@
     <include>
       <uri>model://sun</uri>
     </include>
-    <include>
+    <!-- <include>
       <uri>model://ground_plane</uri>
-    </include>
+    </include> -->
     <!-- Wooden Table -->
     <include>
       <uri>model://tableAV</uri>
       <name>Wooden_Table</name>
-      <pose>1.5 0 0 0 0 1.57</pose>
+      <pose>0.55 0 -1.015 0 0 0.0</pose>
       <static>true</static>
     </include>
     <!-- Kinect -->
     <include>
       <uri>model://kinectAV</uri>
       <name>Kinect</name>
-      <pose>0.25 0 1.75 0 0.55 0</pose>
+      <pose>-0.7 0 0.735 0 0.55 0</pose>
       <static>true</static>
     </include>
   </world>

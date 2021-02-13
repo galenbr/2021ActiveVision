@@ -9,12 +9,13 @@
 typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
 
 int visualize = 0;
+pcl::PointXYZ table;
 
 Eigen::Affine3f tfKinect(std::vector<double> &pose){
   std::vector<double> cartesian = {0,0,0,0,0,0};
-  cartesian[0] = 1.5+pose[0]*sin(pose[2])*cos(pose[1]);
-  cartesian[1] = 0.0+pose[0]*sin(pose[2])*sin(pose[1]);
-  cartesian[2] = 1.0+pose[0]*cos(pose[2]);
+  cartesian[0] = ::table.x+pose[0]*sin(pose[2])*cos(pose[1]);
+  cartesian[1] = ::table.y+pose[0]*sin(pose[2])*sin(pose[1]);
+  cartesian[2] = ::table.z+pose[0]*cos(pose[2]);
   cartesian[3] = 0;
   cartesian[4] = M_PI/2-pose[2];
   cartesian[5] = M_PI+pose[1];
@@ -242,6 +243,11 @@ int main(int argc, char** argv){
 	if(::visualize != 0 && ::visualize != 1) ::visualize = 0;
 
  	ros::NodeHandle nh;
+  std::vector<double> tableCentre;
+  nh.getParam("/active_vision/environment/tableCentre", tableCentre);
+  ::table.x = tableCentre[0];
+  ::table.y = tableCentre[1];
+  ::table.z = tableCentre[2];
   ros::ServiceServer service = nh.advertiseService("/active_vision/heuristic_policy", heuristicPolicy);
   ROS_INFO("BFS Heuristic policy service ready.");
   ros::spin();

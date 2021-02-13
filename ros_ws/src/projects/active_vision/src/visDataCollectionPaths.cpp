@@ -21,7 +21,7 @@ void help(){
 
 void addArrows(std::vector<double> &homePose,std::string dirs,int &mode, ptCldVis::Ptr viewer, bool sphere, int vp){
   // Calculating the path and adding arrows
-  pcl::PointXYZ table,a1,a2; table.x = 1.5; table.y = 0; table.z = 1;
+  pcl::PointXYZ table,a1,a2; table.x = 0.55; table.y = 0; table.z = 0;
   std::vector<std::vector<double>> path = {homePose};
   std::vector<double> nextPose;
   for(int i = 0; i < dirs.length(); i++){
@@ -69,7 +69,7 @@ int main(int argc, char** argv){
   // }
 
   std::vector<double> homePose={1.4,M_PI,45*M_PI/180};
-  pcl::PointXYZ table; table.x = 1.5; table.y = 0; table.z = 1;
+  pcl::PointXYZ table; table.x = 0.55; table.y = 0; table.z = 0;
 
   // Setting up the point cloud visualizer
   ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer")); std::vector<int> vp;
