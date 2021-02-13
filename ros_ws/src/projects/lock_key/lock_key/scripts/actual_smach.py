@@ -8,6 +8,7 @@ import rospy
 import smach
 import actionlib
 import commander
+import tf
 import tf_conversions
 #Messages
 import geometry_msgs.msg
@@ -68,13 +69,13 @@ class GetPositions(smach.State):
         height_safety_offset_key=0.008
         height_safety_offset_lock=0.02
 
-        rospy.set_param("key_goal/x",response.key_pose.position.x-x_offset)
-        rospy.set_param("key_goal/y",response.key_pose.position.y-ee_to_link8_offset)
+        rospy.set_param("key_goal/x",response.key_pose.pose.position.x-x_offset)
+        rospy.set_param("key_goal/y",response.key_pose.pose.position.y-ee_to_link8_offset)
         # rospy.set_param("key_goal/z",0.1485)
-        rospy.set_param("key_goal/z",response.key_pose.position.z+height_safety_offset_key)
+        rospy.set_param("key_goal/z",response.key_pose.pose.position.z+height_safety_offset_key)
         #Convert quat to RPY, then set key_goal/roll, etc.
-        quaternion = (response.key_pose.orientation.x,response.key_pose.orientation.y,
-                      response.key_pose.orientation.z,response.key_pose.orientation.w)
+        quaternion = (response.key_pose.pose.orientation.x,response.key_pose.pose.orientation.y,
+                      response.key_pose.pose.orientation.z,response.key_pose.pose.orientation.w)
         euler = tf.transformations.euler_from_quaternion(quaternion)
         rospy.set_param("key_goal/roll",euler[0])
         rospy.set_param("key_goal/pitch",euler[1])
@@ -84,6 +85,9 @@ class GetPositions(smach.State):
         rospy.set_param("padlock_goal/y",response.lock_point.point.y)
         rospy.set_param("padlock_goal/z",response.lock_point.point.z+ee_to_link8_offset+height_safety_offset_lock)
         # rospy.set_param("padlock_goal/z",0.116+ee_to_link8_offset)
+
+        rospy.loginfo('Published key_goal with orientation')
+        rospy.sleep(5)
         return 'succeeded'
 
 class NavigateToPreKey(smach.State):

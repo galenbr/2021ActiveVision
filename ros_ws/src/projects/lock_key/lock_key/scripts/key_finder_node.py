@@ -121,11 +121,11 @@ class FinderPub:
                                                                  centroid_pixel=[0,0,255]) #Red 
         #Update img for lock (ignore orientation for now)
         img,self.lock_center,_=image_utils.color_change(img,
-                                                                 self.lock_search_box,
-                                                                 self.lock_min_hsv,
-                                                                 self.lock_max_hsv,
-                                                                 new_pixel=[0,255,0], #Green
-                                                                 centroid_pixel=[255,0,255]) #Pink
+                                                        self.lock_search_box,
+                                                        self.lock_min_hsv,
+                                                        self.lock_max_hsv,
+                                                        new_pixel=[0,255,0], #Green
+                                                        centroid_pixel=[255,0,255]) #Pink
         
         #Add search box to img for key
         img=image_utils.add_quad(img,self.key_search_box,color=[0,0,255]) #Red
@@ -145,7 +145,7 @@ class FinderPub:
         #Publish message
         self.key_pub.publish(key_msg)
         #Publish yaw
-        self.key_yaw_pub.publish(Float64(self.key_yaw-self.map_yaw_offset))
+        self.key_yaw_pub.publish(Float64(self.key_yaw+self.map_yaw_offset))
 
     def publish_lock_point(self,lock_disp):
         '''Publish lock position in terms of camera_color_optical_frame.'''

@@ -38,11 +38,11 @@ def lock_callback(lock_msg):
 
 def key_yaw_callback(key_yaw_msg):
 	global key_yaw
-	key_yaw.append(key_msg.data)
+	key_yaw.append(key_yaw_msg.data)
 
 # def lock_yaw_callback(lock_yaw_msg):
 # 	global lock_yaw
-# 	lock_yaw.append(lock_msg.data)
+# 	lock_yaw.append(lock_yaw_msg.data)
 
 def ave(data):
 	return sum(data)/len(data)
@@ -77,7 +77,7 @@ def get_poses(req):
 			response.key_pose.header=key_response.header
 			response.key_pose.pose.position=key_response.point
 			#Convert RPY (using 0,0,key_yaw) to Quaternion
-			key_quat=tf_conversions.transformations.quaternion_from_euler(0,0,key_yaw)
+			key_quat=tf_conversions.transformations.quaternion_from_euler(0,0,ave(key_yaw))
 			response.key_pose.pose.orientation.x = key_quat[0]
 			response.key_pose.pose.orientation.y = key_quat[1]
 			response.key_pose.pose.orientation.z = key_quat[2]
@@ -85,6 +85,9 @@ def get_poses(req):
 
 			response.lock_point=lock_response
 			pose_retrieved=True
+
+			print(response)
+			print(key_yaw)
 		#If call fails due to "Transform lookup in past" error, then try again
 		except TransformException:
 			pass
@@ -94,8 +97,8 @@ def lock_key_pose_server():
 	rospy.init_node('lock_and_key_poses_server')
 	rospy.Subscriber("/lock_point", PointStamped, lock_callback)
 	rospy.Subscriber("/key_point", PointStamped, key_callback)
-	rospy.Subscriber("/lock_yaw", Float64, lock_yaw_callback)
-	# rospy.Subscriber("/key_yaw", Float64, key_yaw_callback)
+	#rospy.Subscriber("/lock_yaw", Float64, lock_yaw_callback)
+	rospy.Subscriber("/key_yaw", Float64, key_yaw_callback)
 	s = rospy.Service('lock_and_key_poses', GetLockKeyPoses, get_poses)
 	print("Ready to retrieve poses.")
 	rospy.spin()
