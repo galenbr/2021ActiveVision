@@ -56,7 +56,9 @@
 //Moveit
 #include <moveit_planner/GetPose.h>
 #include <moveit_planner/MoveCart.h>
+#include <moveit_planner/MovePose.h>
 #include <moveit_planner/MoveJoint.h>
+#include <moveit_planner/Inv.h>
 #include <moveit_planner/SetVelocity.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <moveit/move_group_interface/move_group_interface.h>
@@ -176,6 +178,8 @@ private:
 public:
 
   ros::ServiceClient getPoseClient;
+  ros::ServiceClient poseClient;
+  ros::ServiceClient IKClient;
   ros::ServiceClient cartMoveClient;
   ros::ServiceClient velScalingClient;
   ros::ServiceClient jointSpaceClient;
@@ -277,13 +281,16 @@ public:
   void updateGripper(int index ,int choice);
 
   // 6A: Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
-  bool moveKinectCartesian(std::vector<double> pose);
+  bool moveKinectCartesian(std::vector<double> pose, bool execute = true);
 
   // 6B: Funtion to move the Kinect in a viewsphere which has the table cente as its centre
   // R (Radius)
   // Theta (Polar Angle) -> 0 to 2*PI
   // Phi (Azhimuthal angle) -> 0 to PI/2
-  bool moveKinectViewsphere(std::vector<double> pose);
+  bool moveKinectViewsphere(std::vector<double> pose, bool execute = true);
+
+  // Function to move franka
+  bool moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKinect ,bool execute, geometry_msgs::Pose &p);
 
   // 7: Function to read the kinect data.
   void readKinect();
