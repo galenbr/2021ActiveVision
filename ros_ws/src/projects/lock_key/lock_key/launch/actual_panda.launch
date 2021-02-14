@@ -6,6 +6,7 @@
   <node pkg="tf2_ros" type="static_transform_publisher" name="virtual_joint_broadcaster_2" args="0 0 0 0 0 0 map world" /> 
    <!-- EE -->
   <node pkg="tf2_ros" type="static_transform_publisher" name="virtual_joint_broadcaster_3" args="0 0 0 0 0 0 panda_EE end_effector_link" /> 
+
   <!-- Arguments -->
   <arg name="robot_ip" default="172.16.0.2" />
   <arg name="load_gripper" default="true" />
@@ -18,11 +19,15 @@
   <include file="$(find franka_control)/launch/franka_control.launch" >
     <arg name="robot_ip" value="$(arg robot_ip)" />
     <arg name="load_gripper" value="$(arg load_gripper)" />
+
+      <!-- NEED TO TEST. Load robot_description onto param server -->
+  <!-- <param name="robot_description" command="$(find xacro)/xacro --inorder $(find lock_key)/desc/actual_panda.xacro" /> -->
   </include>
 
   <include file="$(find panda_moveit_config)/launch/panda_moveit.launch">
     <arg name="load_gripper" value="$(arg load_gripper)" />
   </include>
+
 
   <!-- Launch moveit planning services -->
   <node name="moveit_planner" pkg="moveit_planner" type="main_node" args="panda_arm"/>
