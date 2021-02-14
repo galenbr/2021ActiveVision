@@ -237,6 +237,7 @@ environment::environment(ros::NodeHandle *nh){
       allOK *= ROSCheck("SERVICE","inverse_kinematics"); if(!allOK) continue;
       allOK *= ROSCheck("SERVICE","set_velocity_scaling"); if(!allOK) continue;
       allOK *= ROSCheck("SERVICE","move_to_joint_space"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","add_collision_object"); if(!allOK) continue;
       allOK *= ROSCheck("SERVICE","gripPosServer"); if(!allOK) continue;
     }
   }
@@ -252,6 +253,7 @@ environment::environment(ros::NodeHandle *nh){
   IKClient =  nh->serviceClient<moveit_planner::Inv>("inverse_kinematics");
   velScalingClient = nh->serviceClient<moveit_planner::SetVelocity>("set_velocity_scaling");
   jointSpaceClient = nh->serviceClient<moveit_planner::MoveJoint>("move_to_joint_space");
+  collisionClient = nh->serviceClient<moveit_planner::AddCollision>("add_collision_object");
   gripperPosClient = nh->serviceClient<franka_pos_grasping_gazebo::GripPos>("gripPosServer");
   // NOT USED (JUST FOR REFERENCE)
   /*subKinectRGB = nh->subscribe ("/camera/color/image_raw", 1, &environment::cbImgRgb, this);
@@ -782,6 +784,11 @@ void environment::dataExtract(){
   dataExtractPlaneSeg();
   dataColorCorrection();
 
+  if(simulationMode == "FRANKASIMULATION"){
+    editMoveItCollisions("TABLE","ADD");
+    editMoveItCollisions("OBJECT","ADD");
+  }
+
   // Generating the normals for the object point cloud. Used from grasp synthesis
   pcl::search::Search<pcl::PointXYZRGB>::Ptr KdTree{new pcl::search::KdTree<pcl::PointXYZRGB>};
   ne.setInputCloud(cPtrPtCldObject);
@@ -866,6 +873,7 @@ void environment::dataExtractPlaneSeg(){
   extract.filter(*ptrPtCldObject);
 
   // Getting the min and max co-ordinates of the object
+  pcl::compute3DCentroid(*ptrPtCldObject, cenObject);
   pcl::getMinMax3D(*ptrPtCldObject, minPtObj, maxPtObj);
 }
 
@@ -904,6 +912,7 @@ void environment::dataColorCorrection(){
   ptrPtCldObject->height = 1;
 
   // Getting the min and max co-ordinates of the object
+  pcl::compute3DCentroid(*ptrPtCldObject, cenObject);
   pcl::getMinMax3D(*ptrPtCldObject, minPtObj, maxPtObj);
 }
 
@@ -1279,6 +1288,52 @@ int environment::graspAndCollisionCheck(){
     }
   }
   return(nGrasp);
+}
+
+// 16: Modify moveit collision elements
+void environment::editMoveItCollisions(std::string object, std::string mode){
+
+  moveit_planner::AddCollision collisionObjMsg;
+
+  collisionObjMsg.request.collObject.header.frame_id = "/world";
+  collisionObjMsg.request.collObject.id = object;
+
+  if(mode == "ADD"){
+    shape_msgs::SolidPrimitive primitive;
+    primitive.type = primitive.BOX;
+    primitive.dimensions.resize(3);
+
+    geometry_msgs::Pose cube_pose;
+    cube_pose.orientation.x = 0;
+    cube_pose.orientation.y = 0;
+    cube_pose.orientation.z = 0;
+    cube_pose.orientation.w = 1;
+
+    if(object == "TABLE"){
+      primitive.dimensions[0] = (maxTable.x - minTable.x)*2;
+      primitive.dimensions[1] = (maxTable.y - minTable.y)*2;
+      primitive.dimensions[2] = (maxTable.z - minTable.z);
+
+      cube_pose.position.x = cenTable[0];
+      cube_pose.position.y = cenTable[1];
+      cube_pose.position.z = cenTable[2];
+    }else if(object == "OBJECT"){
+      primitive.dimensions[0] = (maxPtObj.x - minPtObj.x)*1.1;
+      primitive.dimensions[1] = (maxPtObj.y - minPtObj.y)*1.1;
+      primitive.dimensions[2] = (maxPtObj.z - minPtObj.z)*1.1;
+
+      cube_pose.position.x = cenObject[0];
+      cube_pose.position.y = cenObject[1];
+      cube_pose.position.z = cenObject[2];
+    }
+    collisionObjMsg.request.collObject.primitives.push_back(primitive);
+    collisionObjMsg.request.collObject.primitive_poses.push_back(cube_pose);
+    collisionObjMsg.request.collObject.operation = collisionObjMsg.request.collObject.ADD;
+  }else if(mode == "REMOVE"){
+    collisionObjMsg.request.collObject.operation = collisionObjMsg.request.collObject.REMOVE;
+  }
+
+  collisionClient.call(collisionObjMsg);
 }
 
 // ******************** ENVIRONMENT CLASS FUNCTIONS END ********************

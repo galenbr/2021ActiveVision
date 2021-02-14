@@ -995,6 +995,48 @@ void testObjectPickup(environment &av, int objID){
   std::cout << "*** End ***" << std::endl;
 }
 
+// 19: Testing moveit collision
+void testMoveItCollision(environment &av, int objID){
+  std::cout << "*** In moveit collision testing function ***" << std::endl;
+
+  if(av.simulationMode != "FRANKASIMULATION"){
+    std::cout << "Incorrect simulation mode... Closing" << std::endl;
+    std::cout << "*** End ***" << std::endl;
+    return;
+  }
+
+  av.spawnObject(objID,0,0);
+
+  // 4 kinect position to capture and fuse
+  std::vector<std::vector<double>> kinectPoses = {{0.7,-M_PI,M_PI/6},
+                                                  {0.7,-M_PI+0.11,M_PI/6},
+                                                  {0.7,-M_PI-0.11,M_PI/6}};
+  for (int i = 0; i < 3; i++) {
+    av.moveKinectViewsphere(kinectPoses[i]);
+    av.readKinect();
+    av.fuseLastData();
+  }
+  av.dataExtract();
+
+  int mode = 0;
+  int object = 0;
+  do{
+    std::cout << "Enter your choice 1:ADD, 2:REMOVE, 0:Exit : "; std::cin >> mode;
+    if(mode == 1){
+      std::cout << "Choose object 1:TABLE, 2:OBJECT : "; std::cin >> object;
+      if(object == 1)       av.editMoveItCollisions("TABLE","ADD");
+      else if(object == 2)  av.editMoveItCollisions("OBJECT","ADD");
+    }else if(mode == 2){
+      std::cout << "Choose object 1:TABLE, 2:OBJECT : "; std::cin >> object;
+      if(object == 1)       av.editMoveItCollisions("TABLE","REMOVE");
+      else if(object == 2)  av.editMoveItCollisions("OBJECT","REMOVE");
+    }
+  }while(mode != 0);
+
+  av.deleteObject(objID);
+  std::cout << "*** End ***" << std::endl;
+}
+
 int main (int argc, char** argv){
 
   // Initialize ROS
@@ -1025,9 +1067,10 @@ int main (int argc, char** argv){
   std::cout << "16 : Surface patch testing." << std::endl;
   std::cout << "17 : Gripper open close testing." << std::endl;
   std::cout << "18 : Testing object pickup." << std::endl;
+  std::cout << "19 : Testing moveit collision add/remove." << std::endl;
   std::cout << "Enter your choice : "; cin >> choice;
 
-  if (choice >= 5 && choice <= 13 || choice == 16 || choice == 18) {
+  if (choice >= 5 && choice <= 13 || choice == 16 || choice == 18 || choice == 19) {
     std::cout << "Objects available :" << std::endl;
     for(auto data: activeVision.objectDict){
         data.second.printObjectInfo();
@@ -1097,6 +1140,8 @@ int main (int argc, char** argv){
       testGripperOpenClose(activeVision);             break;
     case 18:
       testObjectPickup(activeVision,objID);           break;
+    case 19:
+      testMoveItCollision(activeVision,objID);        break;
     default:
       std::cout << "Invalid choice." << std::endl;
   }

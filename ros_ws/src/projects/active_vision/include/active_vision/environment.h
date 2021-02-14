@@ -60,11 +60,12 @@
 #include <moveit_planner/MoveJoint.h>
 #include <moveit_planner/Inv.h>
 #include <moveit_planner/SetVelocity.h>
-#include <moveit/planning_scene_interface/planning_scene_interface.h>
-#include <moveit/move_group_interface/move_group_interface.h>
-#include <actionlib/client/simple_action_client.h>
-#include <actionlib/client/terminal_state.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <moveit_planner/AddCollision.h>
+// #include <moveit/planning_scene_interface/planning_scene_interface.h>
+// #include <moveit/move_group_interface/move_group_interface.h>
+// #include <actionlib/client/simple_action_client.h>
+// #include <actionlib/client/terminal_state.h>
+// #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <franka_pos_grasping_gazebo/GripPos.h>
 
 // Typedef for convinience
@@ -184,6 +185,7 @@ public:
   ros::ServiceClient velScalingClient;
   ros::ServiceClient jointSpaceClient;
   ros::ServiceClient gripperPosClient;
+  ros::ServiceClient collisionClient;
   moveit_planner::SetVelocity velscale;
 
   // PtCld: Last recorded viewpoint
@@ -227,7 +229,7 @@ public:
   std::vector<graspPoint> graspsPossible;           // List of possible grasps
   pcl::PointXYZRGB minPtObj, maxPtObj;              // Min and Max x,y,z co-ordinates of the object
   pcl::PointXYZRGB minTable, maxTable;              // Min and Max x,y,z co-ordinates of the object
-  Eigen::Vector4f cenTable;
+  Eigen::Vector4f cenTable,cenObject;
   pcl::PointXYZRGB minPtGrp[3], maxPtGrp[3];        // Min and Max x,y,z co-ordinates of the gripper
   pcl::PointXYZRGB minPtCol[5], maxPtCol[5];        // Min and Max x,y,z co-ordinates of the gripper used for collision check
 
@@ -320,6 +322,10 @@ public:
 
   // 15: Grasp and Collision check combined
   int graspAndCollisionCheck();
+
+  // 16: Modify moveit collision elements
+  void editMoveItCollisions(std::string object, std::string mode);
+
 };
 
 // Function to do a single pass
