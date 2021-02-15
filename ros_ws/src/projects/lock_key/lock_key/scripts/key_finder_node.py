@@ -168,121 +168,127 @@ class FinderPub:
 
     def rgb_callback(self,raw_rgb_img):   
         '''Convert to cv2 format and store image.'''
-        self.header=raw_rgb_img.header
-        self.rgb_img=self.bridge.imgmsg_to_cv2(raw_rgb_img,desired_encoding="bgr8")
-        if self.rgb_img is not None:
-            self.rgb_received=True
+        try:
+            self.header=raw_rgb_img.header
+            self.rgb_img=self.bridge.imgmsg_to_cv2(raw_rgb_img,desired_encoding="bgr8")
+            if self.rgb_img is not None:
+                self.rgb_received=True
 
-        if (self.rgb_received and self.depth_received and self.rgb_camera_info_received) and \
-           (self.rgb_img is not None) and (self.depth_array is not None):
-            self.calculate_positions(self.rgb_img)
+            if (self.rgb_received and self.depth_received and self.rgb_camera_info_received) and \
+            (self.rgb_img is not None) and (self.depth_array is not None):
+                self.calculate_positions(self.rgb_img)
+        except:
+            rospy.loginfo('RGB Callback Exception')
 
     def rgb_info_callback(self,rgb_cam_info):   
         '''Store camera info. in Pinhole Model.'''
-        if not self.rgb_camera_info_received:
-            self.rgb_camera.fromCameraInfo(rgb_cam_info)
-            self.rgb_camera_info_received=True
-            rospy.loginfo('RGB Camera Info. Received')
+        try:
+            if not self.rgb_camera_info_received:
+                self.rgb_camera.fromCameraInfo(rgb_cam_info)
+                self.rgb_camera_info_received=True
+                rospy.loginfo('RGB Camera Info. Received')
 
-        # Convert object bounds from meters (in /camera_color_optical_frame)
-        # to pixels using Pinhole model
-        
-        # First Transform points from /camera_depth_optical_frame to /camera_color_optical_frame
-        bounds=rospy.get_param('bounds')
-        transformer=tf.TransformListener()
-        transformer.waitForTransform(bounds['frame'], 
-                                    "camera_color_optical_frame",
-                                    rospy.Time(0), rospy.Duration(4.0))
-        # This is for troubleshooting
-        # bounds={'key':{'min':{'x':0.1,'y':-0.08,'z':0.4},
-        #                'max':{'x':0.2,'y':0.0,'z':0.45}},
-        #        'lock':{'min':{'x':-0.12,'y':-0.08,'z':0.4},
-        #                'max':{'x':-0.05,'y':0.0,'z':0.45}},
-        #        'frame':'/camera_depth_optical_frame'}
-        key_min=PointStamped()
-        key_max=PointStamped()
-        lock_min=PointStamped()
-        lock_max=PointStamped()
-        #Define and add header (without timestamp)
-        h=Header()
-        h.frame_id=bounds['frame']
-        key_min.header=h
-        key_max.header=h
-        lock_min.header=h
-        lock_max.header=h
-        #Define points from params
-        key_min.point.x=bounds['key']['min']['x']
-        key_min.point.y=bounds['key']['min']['y']
-        key_min.point.z=bounds['key']['min']['z']
-        key_max.point.x=bounds['key']['max']['x']
-        key_max.point.y=bounds['key']['max']['y']
-        key_max.point.z=bounds['key']['max']['z']
-        lock_min.point.x=bounds['lock']['min']['x']
-        lock_min.point.y=bounds['lock']['min']['y']
-        lock_min.point.z=bounds['lock']['min']['z']
-        lock_max.point.x=bounds['lock']['max']['x']
-        lock_max.point.y=bounds['lock']['max']['y']
-        lock_max.point.z=bounds['lock']['max']['z']
-        #Calculate transformed points
-        key_min_transformed=PointStamped()
-        key_max_transformed=PointStamped()
-        lock_min_transformed=PointStamped()
-        lock_max_transformed=PointStamped()
-        key_min_transformed=transformer.transformPoint('camera_color_optical_frame',key_min)
-        key_max_transformed=transformer.transformPoint('camera_color_optical_frame',key_max)
-        lock_min_transformed=transformer.transformPoint('camera_color_optical_frame',lock_min)
-        lock_max_transformed=transformer.transformPoint('camera_color_optical_frame',lock_max)
+            # Convert object bounds from meters (in /camera_color_optical_frame)
+            # to pixels using Pinhole model
+            
+            # First Transform points from /camera_depth_optical_frame to /camera_color_optical_frame
+            bounds=rospy.get_param('bounds')
+            transformer=tf.TransformListener()
+            transformer.waitForTransform(bounds['frame'], 
+                                        "camera_color_optical_frame",
+                                        rospy.Time(0), rospy.Duration(4.0))
+            # This is for troubleshooting
+            # bounds={'key':{'min':{'x':0.1,'y':-0.08,'z':0.4},
+            #                'max':{'x':0.2,'y':0.0,'z':0.45}},
+            #        'lock':{'min':{'x':-0.12,'y':-0.08,'z':0.4},
+            #                'max':{'x':-0.05,'y':0.0,'z':0.45}},
+            #        'frame':'/camera_depth_optical_frame'}
+            key_min=PointStamped()
+            key_max=PointStamped()
+            lock_min=PointStamped()
+            lock_max=PointStamped()
+            #Define and add header (without timestamp)
+            h=Header()
+            h.frame_id=bounds['frame']
+            key_min.header=h
+            key_max.header=h
+            lock_min.header=h
+            lock_max.header=h
+            #Define points from params
+            key_min.point.x=bounds['key']['min']['x']
+            key_min.point.y=bounds['key']['min']['y']
+            key_min.point.z=bounds['key']['min']['z']
+            key_max.point.x=bounds['key']['max']['x']
+            key_max.point.y=bounds['key']['max']['y']
+            key_max.point.z=bounds['key']['max']['z']
+            lock_min.point.x=bounds['lock']['min']['x']
+            lock_min.point.y=bounds['lock']['min']['y']
+            lock_min.point.z=bounds['lock']['min']['z']
+            lock_max.point.x=bounds['lock']['max']['x']
+            lock_max.point.y=bounds['lock']['max']['y']
+            lock_max.point.z=bounds['lock']['max']['z']
+            #Calculate transformed points
+            key_min_transformed=PointStamped()
+            key_max_transformed=PointStamped()
+            lock_min_transformed=PointStamped()
+            lock_max_transformed=PointStamped()
+            key_min_transformed=transformer.transformPoint('camera_color_optical_frame',key_min)
+            key_max_transformed=transformer.transformPoint('camera_color_optical_frame',key_max)
+            lock_min_transformed=transformer.transformPoint('camera_color_optical_frame',lock_min)
+            lock_max_transformed=transformer.transformPoint('camera_color_optical_frame',lock_max)
 
-        #Get points in pixel coordinates
-        key_min_pix=self.rgb_camera.project3dToPixel((key_min_transformed.point.x,key_min_transformed.point.y,key_min_transformed.point.z))
-        key_max_pix=self.rgb_camera.project3dToPixel((key_max_transformed.point.x,key_max_transformed.point.y,key_max_transformed.point.z))
-        lock_min_pix=self.rgb_camera.project3dToPixel((lock_min_transformed.point.x,lock_min_transformed.point.y,lock_min_transformed.point.z))
-        lock_max_pix=self.rgb_camera.project3dToPixel((lock_max_transformed.point.x,lock_max_transformed.point.y,lock_max_transformed.point.z))
-        #Convert to list to make mutable
-        key_min_pix=list(key_min_pix)
-        key_max_pix=list(key_max_pix)
-        lock_min_pix=list(lock_min_pix)
-        lock_max_pix=list(lock_max_pix)
-        #Add padding to bounding boxes
-        image_max_x=640
-        image_max_y=480
-        pad_key_x_max=55
-        pad_key_x_min=0
-        pad_key_y=0
-        pad_lock_x=0
-        pad_lock_y=0
-        key_min_pix[0]=key_min_pix[0]-pad_key_x_min
-        key_max_pix[0]=key_max_pix[0]+pad_key_x_max
-        key_min_pix[1]=key_min_pix[1]-pad_key_y
-        key_max_pix[1]=key_max_pix[1]+pad_key_y
-        lock_min_pix[0]=lock_min_pix[0]-pad_lock_x
-        lock_max_pix[0]=lock_max_pix[0]+pad_lock_x
-        lock_min_pix[1]=lock_min_pix[1]-pad_lock_y
-        lock_max_pix[1]=lock_max_pix[1]+pad_lock_y
+            #Get points in pixel coordinates
+            key_min_pix=self.rgb_camera.project3dToPixel((key_min_transformed.point.x,key_min_transformed.point.y,key_min_transformed.point.z))
+            key_max_pix=self.rgb_camera.project3dToPixel((key_max_transformed.point.x,key_max_transformed.point.y,key_max_transformed.point.z))
+            lock_min_pix=self.rgb_camera.project3dToPixel((lock_min_transformed.point.x,lock_min_transformed.point.y,lock_min_transformed.point.z))
+            lock_max_pix=self.rgb_camera.project3dToPixel((lock_max_transformed.point.x,lock_max_transformed.point.y,lock_max_transformed.point.z))
+            #Convert to list to make mutable
+            key_min_pix=list(key_min_pix)
+            key_max_pix=list(key_max_pix)
+            lock_min_pix=list(lock_min_pix)
+            lock_max_pix=list(lock_max_pix)
+            #Add padding to bounding boxes
+            image_max_x=640
+            image_max_y=480
+            pad_key_x_max=55
+            pad_key_x_min=0
+            pad_key_y=0
+            pad_lock_x=0
+            pad_lock_y=0
+            key_min_pix[0]=key_min_pix[0]-pad_key_x_min
+            key_max_pix[0]=key_max_pix[0]+pad_key_x_max
+            key_min_pix[1]=key_min_pix[1]-pad_key_y
+            key_max_pix[1]=key_max_pix[1]+pad_key_y
+            lock_min_pix[0]=lock_min_pix[0]-pad_lock_x
+            lock_max_pix[0]=lock_max_pix[0]+pad_lock_x
+            lock_min_pix[1]=lock_min_pix[1]-pad_lock_y
+            lock_max_pix[1]=lock_max_pix[1]+pad_lock_y
 
-        #Check if we exceed image bounds, then set to 0, 480, 640, etc.
-        if key_min_pix[0]<0:
-            key_min_pix[0]=0
-        if key_max_pix[0]>image_max_x:
-            key_max_pix[0]=image_max_x
-        if key_min_pix[1]<0:
-            key_min_pix[1]=0
-        if key_max_pix[1]>image_max_y:
-            key_max_pix[1]=image_max_y
-        if lock_min_pix[0]<0:
-            lock_min_pix[0]=0
-        if lock_max_pix[0]>image_max_x:
-            lock_max_pix[0]=image_max_x
-        if lock_min_pix[1]<0:
-            lock_min_pix[1]=0
-        if lock_max_pix[1]>image_max_y:
-            lock_max_pix[1]=image_max_y
-        
-        self.key_search_box={'min':{'x':int(key_min_pix[0]),'y':int(key_min_pix[1])},
-                             'max':{'x':int(key_max_pix[0]),'y':int(key_max_pix[1])}}
+            #Check if we exceed image bounds, then set to 0, 480, 640, etc.
+            if key_min_pix[0]<0:
+                key_min_pix[0]=0
+            if key_max_pix[0]>image_max_x:
+                key_max_pix[0]=image_max_x
+            if key_min_pix[1]<0:
+                key_min_pix[1]=0
+            if key_max_pix[1]>image_max_y:
+                key_max_pix[1]=image_max_y
+            if lock_min_pix[0]<0:
+                lock_min_pix[0]=0
+            if lock_max_pix[0]>image_max_x:
+                lock_max_pix[0]=image_max_x
+            if lock_min_pix[1]<0:
+                lock_min_pix[1]=0
+            if lock_max_pix[1]>image_max_y:
+                lock_max_pix[1]=image_max_y
+            
+            self.key_search_box={'min':{'x':int(key_min_pix[0]),'y':int(key_min_pix[1])},
+                                'max':{'x':int(key_max_pix[0]),'y':int(key_max_pix[1])}}
 
-        self.lock_search_box={'min':{'x':int(lock_min_pix[0]),'y':int(lock_min_pix[1])},
-                              'max':{'x':int(lock_max_pix[0]),'y':int(lock_max_pix[1])}}
+            self.lock_search_box={'min':{'x':int(lock_min_pix[0]),'y':int(lock_min_pix[1])},
+                                'max':{'x':int(lock_max_pix[0]),'y':int(lock_max_pix[1])}}
+        except:
+            rospy.loginfo('RGB Info Callback Exception')
 
 def main():
     rospy.init_node('lock_key_finder_pub',anonymous=True)

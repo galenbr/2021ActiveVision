@@ -45,44 +45,31 @@ class Commander:
 		self.gripper_client = actionlib.SimpleActionClient('franka_gripper/grasp', 
 											  	      	   franka_gripper.msg.GraspAction)
 		rospy.loginfo('Waiting for actions, services, and TF listener')
-		if self.gazebo:
-			rospy.wait_for_service('get_pose')
-			self.get_pose_client = rospy.ServiceProxy('get_pose', GetPose)
-		else:
+		if not self.gazebo:
 			self.gripper_client.wait_for_server()
-			rospy.wait_for_service('get_transform')
-			self.get_tf_client = rospy.ServiceProxy('get_transform', GetTF)
+			
 		#Wait for services
+		rospy.wait_for_service('get_transform')
+		rospy.wait_for_service('get_pose')
 		rospy.wait_for_service('getWrench')
 		rospy.wait_for_service('getAveWrench')
-		rospy.wait_for_service('franka_control/set_load')
 		#Define service clients
+		self.get_tf_client = rospy.ServiceProxy('get_transform', GetTF)
+		self.get_pose_client = rospy.ServiceProxy('get_pose', GetPose)
 		self.get_wrench_client = rospy.ServiceProxy('getWrench', getWrench)
 		self.get_ave_wrench_client = rospy.ServiceProxy('getAveWrench', getAveWrench)
-		self.set_load_client = rospy.ServiceProxy('franka_control/set_load', SetLoad)
-		self.set_ee_client = rospy.ServiceProxy('franka_control/set_EE_frame', SetEEFrame)
 		self.transformer=tf.TransformListener()
 		rospy.loginfo('Initialized Commander Interface and Action Clients')
 
-		#Set Camera Load (E-Stop must be pushed in/on)
-		self.set_load()
-		rospy.loginfo('Set external camera load')
-
-		# #Set EE Frame
-		# self.move_group.set_end_effector_link('panda_hand')
-		# print self.robot.get_link_names()
-		# print "PANDA_ARM"
-		# print self.robot.get_link_names(group='panda_arm')
-		# print "PANDA_ARM_HAND"
-		# print self.robot.get_link_names(group='panda_arm_hand')
-		# print self.move_group.get_end_effector_link()
-		# print self.robot.get_group_names()
-		# self.set_ee_frame()
-		# rospy.loginfo('Set EE link for move_group')
+		#Set EE Frame
+		self.move_group.set_end_effector_link('panda_EE_control')
+		rospy.loginfo('Set EE link for move_group')
 
 	def __repr__(self):
 		'''Defines string representation of Commander object.'''
-		return self.group_name + " Commander:\n" + str(self.robot.get_current_state())
+		s=self.group_name + " Commander:\n" + str(self.robot.get_current_state())
+		s+="\nEE:" + str(self.move_group.get_end_effector_link())
+		return s
 
 	def add_table(self):
 		'''Adds table to planning scene.'''
@@ -135,9 +122,7 @@ class Commander:
 			return self.get_pose_client()
 		else:
 			ee_pose=geometry_msgs.msg.Pose()
-			ee_pose.position = self.get_tf_client("map","end_effector_link").pose.position
-			#Get orientation from panda_link8 rather than end_effector_link to avoid offset
-			ee_pose.orientation = self.get_tf_client("map","panda_link8").pose.orientation
+			ee_pose = self.get_tf_client("map","panda_EE_control")
 			return ee_pose
 
 	def move_relative(self,xyz_disp=(0.0,0.0,0.01),hold_xyz=[None,None,None],
@@ -209,7 +194,7 @@ class Commander:
 			self.get_ft_bias()
 		force=self.get_ft(remove_bias=True)['force'][axis]
 		#Use components of original point for accuracy
-		orig_point=self.get_tf_client("map","panda_link8").pose.position
+		orig_point=self.get_tf_client("map","panda_EE_control").pose.position
 		hold_xyz_pts=[None,None,None]
 		if hold_xyz[0]:
 			hold_xyz_pts[0]=orig_point.x
@@ -245,11 +230,8 @@ class Commander:
 		'''Move to pose in map frame.'''
 		#Set goal time for trajectory
 		self.set_goal_time(goal_time)
-		#TODO: Remove transformation from end_effector_link to panda_link8 (and correct actual_smach)
-			#transform point to panda_link8
-			#Add 0.103
 		#Plan to Pose goal
-		self.move_group.set_pose_target(pose_goal,"panda_link8")
+		self.move_group.set_pose_target(pose_goal) #default for 2nd arg is current end-effector link
 		#Execute
 		plan = self.move_group.go(wait=True)
 		# Stop movement, clear targets
@@ -264,7 +246,7 @@ class Commander:
 		if recalculate_bias:
 			self.get_ft_bias()
 		torque=self.get_ft(remove_bias=True)['torque'][axis]
-		orig_pose=self.get_tf_client("map","panda_link8").pose
+		orig_pose=self.get_tf_client("map","panda_EE_control").pose
 		#Define step goal
 		pose_goal = geometry_msgs.msg.Pose()
 		pose_goal.position=orig_pose.position
@@ -312,45 +294,6 @@ class Commander:
 		rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint6/goal',tol)
 		rospy.set_param('/position_joint_trajectory_controller/constraints/panda_joint7/goal',tol)
 
-	# def set_ee_frame(self):
-	# 	'''Sets EE frame for panda relative to panda_link8.'''
-	# 	#Get tf between end_effector_link and panda_link8
-	# 	print self.move_group.get_end_effector_link()
-	# 	print self.robot.get_group_names()
-	# 	req=SetEEFrameRequest()
-	# 	theta=-pi/2
-	# 	print('panda_link8 to EE frame')
-	# 	#Column major format (Rotate about z, translate along z)
-	# 	mat=np.array([cos(theta), sin(theta), 0.0, 0.0,
-	# 				  -sin(theta), cos(theta), 0.0,0.0,
-	# 				  0.0,0.0,1.0,0.0,
-	# 				  0.0,0.0,0.1034,1.0],dtype=np.float64)
-	# 	print(mat)
-	# 	req.F_T_EE=mat
-	# 	resp=self.set_ee_client(req) #https://frankaemika.github.io/libfranka/classfranka_1_1Robot.html#aec4abdefbc0f9a7400a36bfa0a6068af
-	# 	print(resp)
-	# 	print self.move_group.get_end_effector_link()
-
-	def set_load(self):
-		'''Sets external (D435) load for arm controllers to compensate for.'''
-		req=SetLoadRequest()
-		req.mass=0.072 #kg
-		req.F_x_center_load=np.array([0.040, -0.0175, 0.066],dtype=np.float64) #Translation from flange to load center of mass (m)
-		#D435 dimensions per datasheet
-		h=0.025 #m
-		d=0.025 #m
-		w=0.090 #m
-		#Inertia matrix for solid cuboid
-		xx=1.0/12.0*req.mass*(h**2+d**2)
-		yy=1.0/12.0*req.mass*(w**2+d**2)
-		zz=1.0/12.0*req.mass*(w**2+h**2)
-		req.load_inertia=np.array([xx,0,0,
-								   0,yy,0,
-								   0,0,zz],dtype=np.float64) #Inertia matrix kg*m^2
-
-		resp=self.set_load_client(req)
-		print(resp)
-
 	def set_vel_scale(self,vel_scale):
 		'''Sets velocity scaling (0,1] for motion.'''
 		self.move_group.set_max_velocity_scaling_factor(vel_scale)
@@ -375,7 +318,7 @@ class Commander:
 		#Set tight goal tolerances
 		self.set_joint_tol(0.01)
 		pose_goal = geometry_msgs.msg.Pose()
-		orig_pose=self.get_tf_client("map","panda_link8").pose
+		orig_pose=self.get_tf_client("map","panda_EE_control").pose
 		pose_goal=orig_pose
 		#Generate xy points for spiral
 		for x,y in self.spiral_gen(spiral_a,spiral_b,spiral_rot,max_iter,
@@ -405,18 +348,18 @@ class Commander:
 		self.move_group.clear_pose_targets()
 
 	def transform_ee_to_map(self,point):
-		'''Transforms point (x,y,z) in panda_link8 to map frame. Returns PointStamped.'''
+		'''Transforms point (x,y,z) in panda_EE_control to map frame. Returns PointStamped.'''
 		# Initialize objects
 		h = Header()
 		orig_point=geometry_msgs.msg.PointStamped()
 		#Define original point as PointStamped
-		h.frame_id='panda_link8'
+		h.frame_id='panda_EE_control'
 		orig_point.header=h
 		orig_point.point.x=point[0]
 		orig_point.point.y=point[1]
 		orig_point.point.z=point[2]
 		#Wait for transform to become available
-		self.transformer.waitForTransform("panda_link8", "map", rospy.Time(0), rospy.Duration(4.0))
+		self.transformer.waitForTransform("panda_EE_control", "map", rospy.Time(0), rospy.Duration(4.0))
 		#Calculate transformed point
 		return self.transformer.transformPoint('map',orig_point)
 		
@@ -430,19 +373,21 @@ if __name__ == '__main__':
 	#print panda
 
 	#Test move_to_pose method
-	# pose_goal = geometry_msgs.msg.Pose()
-	# goal_time = 0.5
-	# quat=tf_conversions.transformations.quaternion_from_euler(-1.5708, #roll
-	# 														  0.7854,  #pitch
-	# 														  0.0)     #yaw
-	# pose_goal.orientation.x = quat[0]
-	# pose_goal.orientation.y = quat[1]
-	# pose_goal.orientation.z = quat[2]
-	# pose_goal.orientation.w = quat[3]
-	# pose_goal.position.x = 0.3
-	# pose_goal.position.y = -0.2
-	# pose_goal.position.z = 0.48
-	# panda.move_to_pose(pose_goal,goal_time)
+	pose_goal = geometry_msgs.msg.Pose()
+	goal_time = 0.5
+	quat=tf_conversions.transformations.quaternion_from_euler(-1.5708, #roll
+															  0.0,  #pitch
+															  0.0)     #yaw
+	pose_goal.orientation.x = quat[0]
+	pose_goal.orientation.y = quat[1]
+	pose_goal.orientation.z = quat[2]
+	pose_goal.orientation.w = quat[3]
+	pose_goal.position.x = 0.3
+	pose_goal.position.y = 0.0
+	pose_goal.position.z = 0.48
+	print 'GOAL:'
+	print pose_goal
+	panda.move_to_pose(pose_goal,goal_time)
 	rospy.sleep(5)
 
 	#Test move_gripper method
@@ -463,7 +408,7 @@ if __name__ == '__main__':
 	#Test move_relative method
 	# panda.move_relative(xyz_disp=(0.0,0.0,0.001),goal_time=0.5)
 	# rospy.sleep(0.1)
-	# panda.move_home(goal_time=0.8)
+	panda.move_home(goal_time=0.8)
 	# print panda.get_ee_pose()
 	# print panda.move_group.get_end_effector_link()
 
