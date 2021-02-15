@@ -17,14 +17,15 @@
   <rosparam file="$(find lock_key)/config/actual_params.yaml" />
 
   <!-- Loads robot description, gripper, control params, and state publishers -->
-  <include file="$(find franka_control)/launch/franka_control_lockkey.launch" >
+  <include file="$(find lock_key)/launch/franka_control_lockkey.launch" >
     <arg name="robot_ip" value="$(arg robot_ip)" />
     <arg name="load_gripper" value="$(arg load_gripper)" />
   </include>
 
-  <include file="$(find panda_moveit_config)/launch/panda_moveit.launch">
+  <include file="$(find lock_key)/launch/panda_moveit.launch">
     <arg name="load_gripper" value="$(arg load_gripper)" />
   </include>
+  
   <!-- Launch moveit planning services -->
   <node name="moveit_planner" pkg="moveit_planner" type="main_node" args="panda_arm"/>
 
