@@ -122,7 +122,7 @@ class Commander:
 			return self.get_pose_client()
 		else:
 			ee_pose=geometry_msgs.msg.Pose()
-			ee_pose = self.get_tf_client("map","panda_EE_control")
+			ee_pose = self.get_tf_client("map","panda_EE_control").pose
 			return ee_pose
 
 	def move_relative(self,xyz_disp=(0.0,0.0,0.01),hold_xyz=[None,None,None],
@@ -232,10 +232,13 @@ class Commander:
 		self.set_goal_time(goal_time)
 		#Plan to Pose goal
 		self.move_group.set_pose_target(pose_goal) #default for 2nd arg is current end-effector link
-		#Execute
-		plan = self.move_group.go(wait=True)
-		# Stop movement, clear targets
-		self.stop_and_clear()
+		if self.move_group.plan().joint_trajectory.points:  # True if trajectory contains points
+ 			#Execute
+			self.move_group.go(wait=True)
+			# Stop movement, clear targets
+			self.stop_and_clear()
+		else:
+			rospy.logerr("Trajectory is empty. Planning was unsuccessful.")
 
 	def rotate_to_torque(self,step_angle,axis,max_angle,max_torque,
 						 max_iter=500,step_goal_time=0.5,recalculate_bias=True):

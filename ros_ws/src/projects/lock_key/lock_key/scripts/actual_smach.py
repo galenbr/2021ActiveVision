@@ -64,27 +64,26 @@ class GetPositions(smach.State):
         rospy.loginfo('Getting key pose and lock position from vision system...')
         response=get_poses()
         #Define offsets
-        ee_to_link8_offset=0.103
         x_offset=0.009 #Half of finger width
         height_safety_offset_key=0.008
         height_safety_offset_lock=0.02
 
         rospy.set_param("key_goal/x",response.key_pose.pose.position.x-x_offset)
-        rospy.set_param("key_goal/y",response.key_pose.pose.position.y-ee_to_link8_offset)
+        rospy.set_param("key_goal/y",response.key_pose.pose.position.y)
         # rospy.set_param("key_goal/z",0.1485)
         rospy.set_param("key_goal/z",response.key_pose.pose.position.z+height_safety_offset_key)
-        #Convert quat to RPY, then set key_goal/roll, etc.
-        quaternion = (response.key_pose.pose.orientation.x,response.key_pose.pose.orientation.y,
-                      response.key_pose.pose.orientation.z,response.key_pose.pose.orientation.w)
-        euler = tf.transformations.euler_from_quaternion(quaternion)
-        rospy.set_param("key_goal/roll",euler[0])
-        rospy.set_param("key_goal/pitch",euler[1])
-        rospy.set_param("key_goal/yaw",euler[2])
+        # #Convert quat to RPY, then set key_goal/roll, etc.
+        # quaternion = (response.key_pose.pose.orientation.x,response.key_pose.pose.orientation.y,
+        #               response.key_pose.pose.orientation.z,response.key_pose.pose.orientation.w)
+        # euler = tf.transformations.euler_from_quaternion(quaternion)
+        # rospy.set_param("key_goal/roll",euler[0])
+        # rospy.set_param("key_goal/pitch",euler[1])
+        # rospy.set_param("key_goal/yaw",euler[2])
 
         rospy.set_param("padlock_goal/x",response.lock_point.point.x-x_offset)
         rospy.set_param("padlock_goal/y",response.lock_point.point.y)
-        rospy.set_param("padlock_goal/z",response.lock_point.point.z+ee_to_link8_offset+height_safety_offset_lock)
-        # rospy.set_param("padlock_goal/z",0.116+ee_to_link8_offset)
+        rospy.set_param("padlock_goal/z",response.lock_point.point.z+height_safety_offset_lock)
+        # rospy.set_param("padlock_goal/z",0.116)
 
         rospy.loginfo('Published key_goal with orientation')
         rospy.sleep(5)
@@ -116,7 +115,7 @@ class NavigateToKey(smach.State):
         global panda
         rospy.loginfo('Navigating to Key...')
         #Make scale slower
-        panda.set_vel_scale(0.1)
+        panda.set_vel_scale(0.05)
         panda.move_to_plane(step=0.0018,axis='z',max_disp=0.2,max_force=2.0,max_iter=500,
 			    		    orientation=None,step_goal_time=0.5,recalculate_bias=True,
                             hold_xyz=[True,False,True])
@@ -154,7 +153,7 @@ class NavigateToPostKeyRotated(smach.State):
         global panda
         rospy.loginfo('Navigating to Post-Key Rotated...')
         #Make scale slower
-        panda.set_vel_scale(0.1)
+        panda.set_vel_scale(0.05)
         # Retrieve goal position from param server
         goal=rospy.get_param("key_goal")
         goal['x']+=goal['post_x_offset']
@@ -184,6 +183,7 @@ class NavigateToPreLockFar(smach.State):
         rospy.loginfo('Navigating to Pre-Lock Far...')
         #Make scale faster
         panda.set_vel_scale(0.15)
+        panda.move_home(goal_time=1.0)
         # Retrieve goal position from param server
         goal=rospy.get_param("padlock_goal")
         goal['x']+=goal['pre_x_offset_far']
@@ -232,6 +232,8 @@ class SpiralMotion(smach.State):
     def execute(self, userdata):
         global panda
         rospy.loginfo('Starting Spiral Motion...')
+        #Make scale slower
+        panda.set_vel_scale(0.05)
         a=rospy.get_param("spiral/a")
         b=rospy.get_param("spiral/b")
         min_spiral_force=rospy.get_param("spiral/min_spiral_force")
