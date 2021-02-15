@@ -76,3 +76,7 @@ target_link_libraries(owi_const_vel_node ${catkin_LIBRARIES})
 add_executable(owi_positioning_node src/position.cpp)
 add_dependencies(owi_positioning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(owi_positioning_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+
+add_executable(owi_sys_id_node src/system_identification.cpp)
+add_dependencies(owi_sys_id_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(owi_sys_id_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})

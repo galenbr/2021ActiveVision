@@ -14,6 +14,13 @@ const_vel_exp: {
 owi_controller: {
   goal_x: 250,
   goal_y: 300,
-  start_x: 150,
-  start_y: 200,
+  # start_x: 150,
+  # start_y: 200,
+  start_x: 185,
+  start_y: 42,
+}
+
+sys_id: {
+  j1_vel: 0.0,
+  j2_vel: -0.5,
 }

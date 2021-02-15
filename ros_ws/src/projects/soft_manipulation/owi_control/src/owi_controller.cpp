@@ -123,7 +123,7 @@ void update_Jr(const geometry_msgs::Point &msg){
     float jr2 = - l2*sin((th1 + th2)*PI);
     float jr3 = l1*cos(th1*PI) + l2*cos((th1 + th2)*PI);
     float jr4 = l2*cos((th1 + th2)*PI);
-    
+   
     Jr << jr1, jr2,
           jr3, jr4;
 
