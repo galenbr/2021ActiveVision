@@ -247,6 +247,14 @@
       <axis xyz="0 0 0"/>
     </joint>
 
+    <link name="${arm_id}_EE_control"/>
+
+    <joint name="${arm_id}_joint8" type="fixed">
+      <origin rpy="0 0 0" xyz="0 0 0.1034"/>
+      <parent link="${arm_id}_link8"/>
+      <child link="${arm_id}_EE_control"/>
+      <axis xyz="0 0 0"/>
+    </joint>
 
     <!-- Transmissions of the robot arm - to be able to move each joint ============== -->
     <transmission name="tran1">

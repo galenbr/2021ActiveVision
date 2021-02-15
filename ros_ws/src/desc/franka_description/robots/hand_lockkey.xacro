@@ -58,7 +58,19 @@
             <inertia ixx="0.03" iyy="0.03" izz="0.03" ixy="0.0" ixz="0.0" iyz="0.0" />
         </inertial>
     </link>
-  
+    <!-- <link name="${ns}_end_effector">
+      <visual>
+        <origin xyz="0 0 0.1034" rpy="0 0 0"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 ${pi}"/>
+      </collision>
+	<inertial>
+            <mass value="0.1" />
+            <inertia ixx="0.03" iyy="0.03" izz="0.03" ixy="0.0" ixz="0.0" iyz="0.0" />
+        </inertial>
+    </link> -->
+
   <gazebo reference="panda_leftfinger">
     <kp>1000000.0</kp>
     <kd>1.0</kd>
@@ -108,6 +120,10 @@
       <limit effort="1000" lower="0.0" upper="0.04" velocity="0.1"/>
       <mimic joint="${ns}_finger_joint1" />
     </joint>
+    <!-- <joint name="${ns}_ee_fixed" type="fixed">
+      <parent link="${ns}_hand"/>
+      <child link="${ns}_end_effector"/>
+    </joint> -->
 
     <transmission name="f_t_1">
       <type>transmission_interface/SimpleTransmission</type>
