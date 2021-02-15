@@ -16,21 +16,18 @@
   <!-- Set Parameters so other nodes can access them -->
   <rosparam file="$(find lock_key)/config/actual_params.yaml" />
 
-  <include file="$(find franka_control)/launch/franka_control.launch" >
+  <!-- Loads robot description, gripper, control params, and state publishers -->
+  <include file="$(find franka_control)/launch/franka_control_lockkey.launch" >
     <arg name="robot_ip" value="$(arg robot_ip)" />
     <arg name="load_gripper" value="$(arg load_gripper)" />
-
-      <!-- NEED TO TEST. Load robot_description onto param server -->
-  <!-- <param name="robot_description" command="$(find xacro)/xacro --inorder $(find lock_key)/desc/actual_panda.xacro" /> -->
   </include>
 
   <include file="$(find panda_moveit_config)/launch/panda_moveit.launch">
     <arg name="load_gripper" value="$(arg load_gripper)" />
   </include>
-
-
   <!-- Launch moveit planning services -->
   <node name="moveit_planner" pkg="moveit_planner" type="main_node" args="panda_arm"/>
+
   <!-- Start get pose node (for EE tip position) -->
   <node name="get_pose" type="pose_node" pkg="moveit_planner" />
   <!-- Start get wrench node -->
