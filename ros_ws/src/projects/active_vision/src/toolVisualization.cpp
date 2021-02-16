@@ -72,7 +72,11 @@ void setCamView(ptCldVis::Ptr viewer, std::vector<double> pose, pcl::PointXYZ &c
   temp.x = centre.x+pose[0]*sin(pose[2])*cos(pose[1]);
   temp.y = centre.y+pose[0]*sin(pose[2])*sin(pose[1]);
   temp.z = centre.z+pose[0]*cos(pose[2]);
-	viewer->setCameraPosition(temp.x,temp.y,temp.z,centre.x,centre.y,centre.z,0,0,1);
+  if(pose[2] == 0){
+    viewer->setCameraPosition(temp.x,temp.y,temp.z,centre.x,centre.y,centre.z,cos(pose[1]+M_PI),sin(pose[1]),0);
+  }else{
+    viewer->setCameraPosition(temp.x,temp.y,temp.z,centre.x,centre.y,centre.z,0,0,1);
+  }
 }
 
 void setCamView(ptCldVis::Ptr viewer, std::vector<double> pose, pcl::PointXYZ &centre, int vp){
@@ -81,7 +85,11 @@ void setCamView(ptCldVis::Ptr viewer, std::vector<double> pose, pcl::PointXYZ &c
   temp.x = centre.x+pose[0]*sin(pose[2])*cos(pose[1]);
   temp.y = centre.y+pose[0]*sin(pose[2])*sin(pose[1]);
   temp.z = centre.z+pose[0]*cos(pose[2]);
-	viewer->setCameraPosition(temp.x,temp.y,temp.z,centre.x,centre.y,centre.z,0,0,1,vp);
+  if(pose[2] == 0){
+    viewer->setCameraPosition(temp.x,temp.y,temp.z,centre.x,centre.y,centre.z,cos(pose[1]+M_PI),sin(pose[1]),0,vp);
+  }else{
+    viewer->setCameraPosition(temp.x,temp.y,temp.z,centre.x,centre.y,centre.z,0,0,1,vp);
+  }
 }
 
 void addViewsphere(ptCldVis::Ptr viewer, int vp, pcl::PointXYZ centre, double &rad, bool all){

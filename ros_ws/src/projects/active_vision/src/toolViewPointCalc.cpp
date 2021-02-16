@@ -17,10 +17,12 @@ std::vector<double> cartesianToSpherical(pcl::PointXYZ &point, pcl::PointXYZ &ce
 }
 
 bool checkValidPose(std::vector<double> pose){
-	return (pose[2] <= 86*M_PI/180);
+	return (pose[2] <= 85*M_PI/180);
 }
 
+// Dont check for this condition. It can go back to the same pose
 bool checkIfNewPose(std::vector<std::vector<double>> &oldPoses, std::vector<double> &pose, int type){
+  return true;
   for(int i = 0; i < oldPoses.size(); i++){
 		if(type == 1){
 			if(oldPoses[i] == pose) return false;
@@ -85,7 +87,9 @@ std::vector<double> calcExplorationPoseB(std::vector<double> &startPose, int dir
   pcl::PointXYZ endPoint;
 
   zAxis = stPoint.getVector3fMap(); zAxis.normalize();
-  xAxis = zAxis.cross(xyPlane); xAxis.normalize();
+  xAxis = zAxis.cross(xyPlane);
+  if(xAxis.norm() == 0) xAxis << sin(startPose[1]),cos(startPose[1]+M_PI),0;
+  xAxis.normalize();
   yAxis = zAxis.cross(xAxis);
 
 	std::vector<double> ratio={0,0};

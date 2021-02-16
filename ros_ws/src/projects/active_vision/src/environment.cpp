@@ -153,8 +153,8 @@ bool isContactPatchOk(ptCldColor::Ptr obj, ptCldNormal::Ptr normal, long int ptI
   cv::distanceTransform(surfacePatch, dt, cv::DIST_L2, 5, cv::DIST_LABEL_PIXEL);
   cv::minMaxLoc(dt, nullptr, &max_val, nullptr, &max_loc);
 
-  if(max_val >= patchWidth/2) return true;
-  else                        return false;
+  if(max_val >= patchWidth/1.9) return true;
+  else                          return false;
 
   // std::vector<std::vector<cv::Point>> contours;
   // cv::findContours(surfacePatch, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
@@ -212,6 +212,13 @@ void RGBtoHSV(float fR, float fG, float fB, float& fH, float& fS, float& fV){
   }
 
   if(fH < 0) fH = 360 + fH;
+}
+
+// Check if franka can reach the point
+bool checkFrankReach(ros::ServiceClient &IKClient, geometry_msgs::Pose &p){
+  moveit_planner::Inv poseIKMsg;
+  poseIKMsg.request.pose = p;
+  return IKClient.call(poseIKMsg);
 }
 
 // ******************** ENVIRONMENT CLASS FUNCTIONS START ********************
@@ -587,9 +594,6 @@ bool environment::moveKinectCartesian(std::vector<double> pose, bool execute){
     Eigen::Matrix3f rotMat;
     rotMat = Eigen::AngleAxisf(pose[5], Eigen::Vector3f::UnitZ()) * Eigen:: AngleAxisf(pose[4], Eigen::Vector3f::UnitY()) * Eigen::AngleAxisf(pose[3], Eigen::Vector3f::UnitX());
 
-    // Convert into quaternion
-    Eigen::Quaternionf quat(rotMat);
-
     // Incorporating the kinect translation offset
     Eigen::Matrix4f tfMat; tfMat.setIdentity();
     tfMat.block<3,3>(0,0) = rotMat;
@@ -600,6 +604,8 @@ bool environment::moveKinectCartesian(std::vector<double> pose, bool execute){
     geometry_msgs::Pose p;
     bool res = moveFranka(tfMat,"JOINT",true,execute,p);
     if(!res) return false;
+
+    boost::this_thread::sleep(boost::posix_time::milliseconds(250));
 
     lastKinectPoseCartesian = pose;
   }
@@ -653,9 +659,6 @@ bool environment::moveKinectViewsphere(std::vector<double> pose, bool execute){
     Eigen::Matrix3f rotMat;
     rotMat = Eigen::AngleAxisf(M_PI+pose[1], Eigen::Vector3f::UnitZ()) * Eigen:: AngleAxisf(M_PI/2-pose[2], Eigen::Vector3f::UnitY()) * Eigen::AngleAxisf(0, Eigen::Vector3f::UnitX());
 
-    // Convert into quaternion
-    Eigen::Quaternionf quat(rotMat);
-
     // Incorporating the kinect translation offset
     Eigen::Matrix4f tfMat; tfMat.setIdentity();
     tfMat.block<3,3>(0,0) = rotMat;
@@ -666,11 +669,12 @@ bool environment::moveKinectViewsphere(std::vector<double> pose, bool execute){
     geometry_msgs::Pose p;
     bool res = moveFranka(tfMat,"JOINT",true,execute,p);
     if(!res) return false;
+    boost::this_thread::sleep(boost::posix_time::milliseconds(250));
 
     lastKinectPoseViewsphere = pose;
-    lastKinectPoseCartesian = {p.position.x,
-                               p.position.y,
-                               p.position.z,
+    lastKinectPoseCartesian = {tfMat(0,3),
+                               tfMat(1,3),
+                               tfMat(2,3),
                                0,M_PI/2-pose[2],M_PI+pose[1]};
   }
   return true;
@@ -691,9 +695,7 @@ bool environment::moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKin
   p.position.x = tfMat(0,3);  p.position.y = tfMat(1,3);  p.position.z = tfMat(2,3);
   p.orientation.x = quat.x(); p.orientation.y = quat.y(); p.orientation.z = quat.z(); p.orientation.w = quat.w();
 
-  moveit_planner::Inv poseIKMsg;
-  poseIKMsg.request.pose = p;
-  if(!IKClient.call(poseIKMsg)) return false;
+  if(!checkFrankReach(IKClient,p)) return false;
 
   // Moveit move command.
   if(execute){
@@ -896,14 +898,14 @@ void environment::dataColorCorrection(){
   // pcl::compute3DCentroid(*ptrPtCldTable, cenTable);
   // pcl::getMinMax3D(*ptrPtCldTable, minTable, maxTable);
 
-  // Removing all green points from object
+  // Removing all green points from object and manipulator points
   for(int i = 0; i < ptrPtCldObject->points.size(); i++){
     float r,g,b,h,s,v;
     r = static_cast<float>(ptrPtCldObject->points[i].r);
     g = static_cast<float>(ptrPtCldObject->points[i].g);
     b = static_cast<float>(ptrPtCldObject->points[i].b);
     RGBtoHSV(r/255.0,g/255.0,b/255.0,h,s,v);
-    if(h >= 81 && h <=140){
+    if(h >= 81 && h <=140 || ptrPtCldObject->points[i].x <= 0.1){
       ptrPtCldObject->points.erase(ptrPtCldObject->points.begin()+i);
       i--;
     }
@@ -1102,6 +1104,7 @@ void environment::findGripperPose(int index){
   // Calculating the x,y,z axis which is at the midpoint of the fingers
   yAxis = graspsPossible[index].p1.getVector3fMap() - graspsPossible[index].p2.getVector3fMap(); yAxis.normalize();
   zAxis = yAxis.cross(xyPlane); zAxis.normalize();
+  if(zAxis[0] < 0) zAxis *= -1;
   xAxis = yAxis.cross(zAxis);
 
   // Finding RPY based on the axis directions
@@ -1150,8 +1153,11 @@ void environment::collisionCheck(){
     if(ptrPtCldCollided->size() > 0) continue;
 
     // Do gripper collision check for each orientation
+    // std::vector<int> orientations = {0,45,90,135,180,225,270,315};
+    std::vector<int> orientations = {90,45,135,270,225,315,0,180};
     for(int j = 0; (j < nOrientations) && (stop == false); j++){
-      graspsPossible[i].addnlPitch = j*(2*M_PI)/nOrientations;
+      // graspsPossible[i].addnlPitch = j*(2*M_PI)/nOrientations;
+      graspsPossible[i].addnlPitch = orientations[j]*M_PI/180;
       updateGripper(i,2);
       // Get concave hull of the gripper fingers and hand in sequence and check
       for(int k = 2; k >= 0; k--){
@@ -1320,11 +1326,11 @@ void environment::editMoveItCollisions(std::string object, std::string mode){
     }else if(object == "OBJECT"){
       primitive.dimensions[0] = (maxPtObj.x - minPtObj.x)*1.1;
       primitive.dimensions[1] = (maxPtObj.y - minPtObj.y)*1.1;
-      primitive.dimensions[2] = (maxPtObj.z - minPtObj.z)*1.1;
+      primitive.dimensions[2] = (maxPtObj.z)*1.1;
 
       cube_pose.position.x = cenObject[0];
       cube_pose.position.y = cenObject[1];
-      cube_pose.position.z = cenObject[2];
+      cube_pose.position.z = maxPtObj.z/2;
     }
     collisionObjMsg.request.collObject.primitives.push_back(primitive);
     collisionObjMsg.request.collObject.primitive_poses.push_back(cube_pose);
@@ -1334,6 +1340,93 @@ void environment::editMoveItCollisions(std::string object, std::string mode){
   }
 
   collisionClient.call(collisionObjMsg);
+}
+
+// 17: Object grasping pipeline
+void environment::graspObject(graspPoint graspData){
+
+  float clearanceX = (maxPtObj.x - minPtObj.x)/2.0;
+  float clearanceY = (maxPtObj.y - minPtObj.y)/2.0;
+  float clearanceZ = maxPtObj.z;
+  // float clearance = std::min(sqrt(pow(clearanceX,2)+pow(clearanceY,2)+pow(clearanceZ,2)),0.25);
+
+  Eigen::Affine3f tfGrasp = pcl::getTransformation(graspData.pose[0],graspData.pose[1],
+                                                   graspData.pose[2],graspData.pose[3],
+                                                   graspData.pose[4],graspData.pose[5])*
+                            pcl::getTransformation(0,0,0,0,graspData.addnlPitch,0)*
+                            pcl::getTransformation(0.0,0,-0.05-fingerZOffset,0,0,0)*
+                            pcl::getTransformation(0,0,0,0,-M_PI/2,-M_PI);
+  Eigen::Affine3f tfGraspMoveUp = tfGrasp; tfGraspMoveUp(2,3)+=0.2;
+  Eigen::Affine3f tfPreGrasp;
+
+  float clearance = 0;
+  do{
+    tfPreGrasp = tfGrasp*pcl::getTransformation(-1*clearance,0,0,0,0,0);
+    if(clearance >= 0.2) break;
+    clearance += 0.01;
+  }while((tfPreGrasp(0,3)>minPtObj.x && tfPreGrasp(0,3)<maxPtObj.x &&
+          tfPreGrasp(1,3)>minPtObj.y && tfPreGrasp(1,3)<maxPtObj.y &&
+          tfPreGrasp(2,3)>0.01       && tfPreGrasp(2,3)<maxPtObj.z));
+
+  clearance += 0.05;
+  tfPreGrasp = tfGrasp*pcl::getTransformation(-1*clearance,0,0,0,0,0);
+
+  geometry_msgs::Pose p;
+  franka_pos_grasping_gazebo::GripPos grasp;
+  bool res;
+
+  // Home
+  std::cout << "Home pose..." << std::endl;
+  res = moveKinectViewsphere({viewsphereRad,-M_PI,0});
+  grasp.request.finger_pos = 0.08/2.0;
+  gripperPosClient.call(grasp);                                 ros::Duration(3).sleep();
+  if(!res){
+    std::cout << "Out of reach" << std::endl;
+    return;
+  }
+
+  // Move to Pre-grasp
+  std::cout << "Pre Grasp..." << std::endl;
+  res = moveFranka(tfPreGrasp.matrix(),"JOINT",false,true,p);
+  editMoveItCollisions("OBJECT","REMOVE");
+  grasp.request.finger_pos = (graspData.gripperWidth+0.02)/2.0;
+  gripperPosClient.call(grasp);                                 ros::Duration(3).sleep();
+  if(!res){
+    std::cout << "Out of reach" << std::endl;
+    return;
+  }
+
+  // Move to Grasp and grasp
+  std::cout << "Grasp..." << std::endl;
+  res = moveFranka(tfGrasp.matrix(),"CARTESIAN",false,true,p);
+  grasp.request.finger_pos = (std::max(graspData.gripperWidth-1.2*voxelGridSize,0.005))/2.0;
+  gripperPosClient.call(grasp);                                 ros::Duration(3).sleep();
+  if(!res){
+    std::cout << "Out of reach" << std::endl;
+    return;
+  }
+
+  // Move straight up
+  std::cout << "Lift..." << std::endl;
+  res = moveFranka(tfGraspMoveUp.matrix(),"CARTESIAN",false,true,p);  ros::Duration(2).sleep();
+
+  // Go to same location and release
+  std::cout << "Place..." << std::endl;
+  res = moveFranka(tfGrasp.matrix(),"CARTESIAN",false,true,p);
+  grasp.request.finger_pos = (graspData.gripperWidth+0.04)/2.0;
+  gripperPosClient.call(grasp);                                   ros::Duration(3).sleep();
+
+  // Move to Post-grasp
+  std::cout << "Retreat..." << std::endl;
+  res = moveFranka(tfPreGrasp.matrix(),"CARTESIAN",false,true,p); ros::Duration(2).sleep();
+  editMoveItCollisions("OBJECT","ADD");
+
+  // Home
+  std::cout << "Home pose..." << std::endl;
+  res = moveKinectViewsphere({viewsphereRad,-M_PI,0});
+  grasp.request.finger_pos = 0.08/2.0;
+  gripperPosClient.call(grasp);                                   ros::Duration(3).sleep();
+
 }
 
 // ******************** ENVIRONMENT CLASS FUNCTIONS END ********************

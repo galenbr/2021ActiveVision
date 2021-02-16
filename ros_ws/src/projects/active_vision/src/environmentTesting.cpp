@@ -142,10 +142,10 @@ void testPtCldFuse(environment &av, int objID, int flag){
   viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
 
   // 4 kinect position to capture and fuse
-  std::vector<std::vector<double>> kinectPoses = {{1.0,-M_PI,M_PI/4},
-                                                  {1.0,-M_PI/2,M_PI/4},
-                                                  {1.0,0,M_PI/4},
-                                                  {1.0,M_PI/2,M_PI/4}};
+  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/4},
+                                                  {av.viewsphereRad,-M_PI/2,M_PI/4},
+                                                  {av.viewsphereRad,0,M_PI/4},
+                                                  {av.viewsphereRad,M_PI/2,M_PI/4}};
 
   for (int i = 0; i < 4; i++) {
     av.moveKinectViewsphere(kinectPoses[i]);
@@ -172,10 +172,10 @@ void testDataExtract(environment &av, int objID, int flag){
   av.spawnObject(objID,0,0);
 
   // 4 kinect position to capture and fuse
-  std::vector<std::vector<double>> kinectPoses = {{1.0,-M_PI,M_PI/4},
-                                                  {1.0,-M_PI/2,M_PI/4},
-                                                  {1.0,0,M_PI/4},
-                                                  {1.0,M_PI/2,M_PI/4}};
+  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/8},
+                                                  {av.viewsphereRad,-M_PI/2,M_PI/8},
+                                                  {av.viewsphereRad,0,M_PI/8},
+                                                  {av.viewsphereRad,M_PI/2,M_PI/8}};
   for (int i = 0; i < 4; i++) {
     av.moveKinectViewsphere(kinectPoses[i]);
     av.readKinect();
@@ -210,7 +210,7 @@ void testGenUnexpPtCld(environment &av, int objID, int flag){
   std::cout << "*** In unexplored point cloud generation testing function ***" << std::endl;
   av.spawnObject(objID,0,0);
 
-  std::vector<double> kinectPose = {1.0,-M_PI,M_PI/4};
+  std::vector<double> kinectPose = {av.viewsphereRad,-M_PI,M_PI/4};
   av.moveKinectViewsphere(kinectPose);
   av.readKinect();
   av.fuseLastData();
@@ -247,10 +247,10 @@ void testUpdateUnexpPtCld(environment &av, int objID, int flag){
   viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
 
   // 4 kinect position to capture and fuse
-  std::vector<std::vector<double>> kinectPoses = {{1.0,-M_PI,M_PI/4},
-                                                  {1.0,-M_PI/2,M_PI/4},
-                                                  {1.0,0,M_PI/4},
-                                                  {1.0,M_PI/2,M_PI/4}};
+  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/4},
+                                                  {av.viewsphereRad,-M_PI/2,M_PI/4},
+                                                  {av.viewsphereRad,0,M_PI/4},
+                                                  {av.viewsphereRad,M_PI/2,M_PI/4}};
   for (int i = 0; i < 4; i++) {
     av.moveKinectViewsphere(kinectPoses[i]);
     av.readKinect();
@@ -327,10 +327,10 @@ void testGraspsynthesis(environment &av, int objID, int flag){
   av.spawnObject(objID,0,0);
 
   // 4 kinect position
-  std::vector<std::vector<double>> kinectPoses = {{1.0,-M_PI,M_PI/4},
-                                                  {1.0,-M_PI/2,M_PI/4},
-                                                  {1.0,0,M_PI/4},
-                                                  {1.0,M_PI/2,M_PI/4}};
+  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/4},
+                                                  {av.viewsphereRad,-M_PI/2,M_PI/4},
+                                                  {av.viewsphereRad,0,M_PI/4},
+                                                  {av.viewsphereRad,M_PI/2,M_PI/4}};
 
   for (int i = 0; i < 4; i++) {
     av.moveKinectViewsphere(kinectPoses[i]);
@@ -609,7 +609,7 @@ void testSaveRollback(environment &av, int objID, int flag){
                                                  { 00, step},{-step, step},
                                                  {-step, 00},{-step,-step}};
 
-  std::vector<double> kinectPose = {1.0,-M_PI,M_PI/4};
+  std::vector<double> kinectPose = {av.viewsphereRad,-M_PI,M_PI/4};
   av.moveKinectViewsphere(kinectPose);
   av.readKinect();
   av.fuseLastData();
@@ -717,10 +717,10 @@ void testSavePCD(environment &av, int objID){
   av.loadGripper();
 
   // 4 kinect poses
-  std::vector<std::vector<double>> kinectPoses = {{1.0,-M_PI,M_PI/4},
-                                                  {1.0,-M_PI/2,M_PI/4},
-                                                  {1.0,0,M_PI/4},
-                                                  {1.0,M_PI/2,M_PI/4}};
+  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/4},
+                                                  {av.viewsphereRad,-M_PI/2,M_PI/4},
+                                                  {av.viewsphereRad,0,M_PI/4},
+                                                  {av.viewsphereRad,M_PI/2,M_PI/4}};
 
   for(int i = 0; i < 4; i++){
     singlePass(av, kinectPoses[i], i==0, true);
@@ -800,10 +800,10 @@ void testSurfacePatchAndCurvature(environment &av, int objID, int flag){
   av.spawnObject(objID,0,0.0/180.0*M_PI);
 
   // 4 kinect position to capture and fuse
-  std::vector<std::vector<double>> kinectPoses = {{1.0,-M_PI,M_PI/4},
-                                                  {1.0,-M_PI/2,M_PI/4},
-                                                  {1.0,0,M_PI/4},
-                                                  {1.0,M_PI/2,M_PI/4}};
+  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/4},
+                                                  {av.viewsphereRad,-M_PI/2,M_PI/4},
+                                                  {av.viewsphereRad,0,M_PI/4},
+                                                  {av.viewsphereRad,M_PI/2,M_PI/4}};
 
   for (int i = 0; i < 4; i++){
     av.moveKinectViewsphere(kinectPoses[i]);
@@ -892,104 +892,47 @@ void testObjectPickup(environment &av, int objID){
     std::cout << "*** End ***" << std::endl;
     return;
   }
-  franka_pos_grasping_gazebo::GripPos grasp;
 
   graspPoint graspData;
   if(objID == 2){
-    {graspData.pose = {0.551718,7.93952e-06,0.0479308,-1.5708,1.57031,1.5708};}
+    {graspData.pose = {0.451718,7.93952e-06,0.0479308,-1.5708,1.57031,1.5708};}
     graspData.addnlPitch = 1.5708;
     graspData.gripperWidth = 0.0475006;
   }else if(objID == 7){
-    {graspData.pose = {0.566138,0.0687767,0.0409107,-1.5708,1.5529,1.60483};}
+    {graspData.pose = {0.466138,0.0687767,0.0409107,-1.5708,1.5529,1.60483};}
     graspData.addnlPitch = 1.5708;
     graspData.gripperWidth = 0.0207021;
   }else if(objID == 8){
-    {graspData.pose = {0.546149,-0.0264734,0.142481,-1.5708,1.37201,3.12775};}
+    {graspData.pose = {0.446149,-0.0264734,0.142481,-1.5708,1.37201,3.12775};}
     graspData.addnlPitch = 3.14159;
     graspData.gripperWidth = 0.0460051;
   }else if(objID == 9){
-    {graspData.pose = {0.574497,-0.027417,0.0487696,1.5708,1.52962,2.15774};}
+    {graspData.pose = {0.474497,-0.027417,0.0487696,1.5708,1.52962,2.15774};}
     graspData.addnlPitch = 1.5708;
     graspData.gripperWidth = 0.0075;
   }else if(objID == 10){
-    {graspData.pose = {0.550668,0.00685909,0.115708,1.5708,1.5586,0.6982};}
+    {graspData.pose = {0.450668,0.00685909,0.115708,1.5708,1.5586,0.6982};}
     graspData.addnlPitch = 0;
     graspData.gripperWidth = 0.0606716;
   }else if(objID == 11){
-    {graspData.pose = {0.53062,-0.0600863,0.120164,-1.5708,1.44276,-0.116368};}
+    {graspData.pose = {0.43062,-0.0600863,0.120164,-1.5708,1.44276,-0.116368};}
     graspData.addnlPitch = 0;
     graspData.gripperWidth = 0.0692391;
   }else if(objID == 12){
-    {graspData.pose = {0.541044,0.0840552,0.0626893,1.5708,1.54494,0.707};}
+    {graspData.pose = {0.441044,0.0840552,0.0626893,1.5708,1.54494,0.707};}
     graspData.addnlPitch = 0;
     graspData.gripperWidth = 0.0739337;
   }else{
     return;
   }
 
-  Eigen::Affine3f tfHome = pcl::getTransformation(0.55,0,0.62,0,M_PI/2,0);
-
-  Eigen::Affine3f tfGrasp = pcl::getTransformation(graspData.pose[0],graspData.pose[1],
-                                                   graspData.pose[2],graspData.pose[3],
-                                                   graspData.pose[4],graspData.pose[5])*
-                            pcl::getTransformation(0,0,0,0,graspData.addnlPitch,0)*
-                            pcl::getTransformation(0.0,0,-0.05-av.fingerZOffset,0,0,0)*
-                            pcl::getTransformation(0,0,0,0,-M_PI/2,-M_PI);
-  Eigen::Affine3f tfGraspMoveUp = tfGrasp; tfGraspMoveUp(2,3)+=0.3;
-
-  Eigen::Affine3f tfPreGrasp2 = tfGrasp*pcl::getTransformation(-0.2,0,0,0,0,0);
-  Eigen::Affine3f tfPreGrasp1 = tfPreGrasp2; tfPreGrasp1(2,3) = 0.5;
-
-  geometry_msgs::Pose p;
-
   av.spawnObject(objID,0,0);
-
-  // Home
-  av.moveFranka(tfHome.matrix(),"JOINT",false,true,p);
-  grasp.request.finger_pos = 0.08/2.0;
-  av.gripperPosClient.call(grasp);
-  ros::Duration(2).sleep();
-
-  // Move to Pre-grasp
-  av.moveFranka(tfPreGrasp1.matrix(),"CARTESIAN",false,true,p);
-  av.moveFranka(tfPreGrasp2.matrix(),"CARTESIAN",false,true,p);
-  grasp.request.finger_pos = (graspData.gripperWidth+1.5*av.voxelGridSize)/2.0;
-  av.gripperPosClient.call(grasp);
-  ros::Duration(2).sleep();
-
-  // Move to Grasp
-  av.moveFranka(tfGrasp.matrix(),"CARTESIAN",false,true,p);
-  ros::Duration(2).sleep();
-
-  // Gras3
-  grasp.request.finger_pos = (std::max(graspData.gripperWidth-1.2*av.voxelGridSize,0.005))/2.0;
-  av.gripperPosClient.call(grasp);
-  ros::Duration(3).sleep();
-
-  // Move straight up
-  av.moveFranka(tfGraspMoveUp.matrix(),"CARTESIAN",false,true,p);
-  ros::Duration(2).sleep();
-
-  // Go to same location
-  av.moveFranka(tfGrasp.matrix(),"CARTESIAN",false,true,p);
-  ros::Duration(2).sleep();
-
-  // Release
-  grasp.request.finger_pos = (graspData.gripperWidth+0.04)/2.0;
-  av.gripperPosClient.call(grasp);
-  ros::Duration(3).sleep();
-
-  // Move to Post-grasp
-  av.moveFranka(tfPreGrasp2.matrix(),"CARTESIAN",false,true,p);
-  av.moveFranka(tfPreGrasp1.matrix(),"CARTESIAN",false,true,p);
-  ros::Duration(2).sleep();
-
-  // Home
-  av.moveFranka(tfHome.matrix(),"JOINT",false,true,p);
-  grasp.request.finger_pos = 0.08/2.0;
-  av.gripperPosClient.call(grasp);
-  ros::Duration(2).sleep();
-
+  std::vector<double> kinectPose = {av.viewsphereRad,-M_PI,0};
+  av.moveKinectViewsphere(kinectPose);
+  av.readKinect();
+  av.fuseLastData();
+  av.dataExtract();
+  av.graspObject(graspData);
   av.deleteObject(objID);
 
   std::cout << "*** End ***" << std::endl;
@@ -1008,9 +951,9 @@ void testMoveItCollision(environment &av, int objID){
   av.spawnObject(objID,0,0);
 
   // 4 kinect position to capture and fuse
-  std::vector<std::vector<double>> kinectPoses = {{0.7,-M_PI,M_PI/6},
-                                                  {0.7,-M_PI+0.11,M_PI/6},
-                                                  {0.7,-M_PI-0.11,M_PI/6}};
+  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/6},
+                                                  {av.viewsphereRad,-M_PI+0.11,M_PI/6},
+                                                  {av.viewsphereRad,-M_PI-0.11,M_PI/6}};
   for (int i = 0; i < 3; i++) {
     av.moveKinectViewsphere(kinectPoses[i]);
     av.readKinect();

@@ -144,6 +144,8 @@ bool isContactPatchOk(ptCldColor::Ptr obj, ptCldNormal::Ptr normal, long int ptI
 
 void RGBtoHSV(float fR, float fG, float fB, float& fH, float& fS, float& fV);
 
+bool checkFrankReach(ros::ServiceClient &IKClient, geometry_msgs::Pose &p);
+
 // Class to store data of environment and its processing
 class environment{
 private:
@@ -325,6 +327,9 @@ public:
 
   // 16: Modify moveit collision elements
   void editMoveItCollisions(std::string object, std::string mode);
+
+  // 17: Object grasping pipeline
+  void graspObject(graspPoint graspData);
 
 };
 
