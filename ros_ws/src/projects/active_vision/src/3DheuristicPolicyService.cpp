@@ -56,7 +56,7 @@ Eigen::Affine3f tfKinect(std::vector<double> &pose){
   return(tfGazWorld * tfKinOptGaz);
 }
 
-geometry_msgs::Pose viewsphereToFranka(std::vector<double> &pose){
+geometry_msgs::Pose viewsphereToFranka(std::vector<double> &pose, bool isKinect){
 
   Eigen::Matrix3f rotMat;
   rotMat = Eigen::AngleAxisf(M_PI+pose[1], Eigen::Vector3f::UnitZ()) * Eigen:: AngleAxisf(M_PI/2-pose[2], Eigen::Vector3f::UnitY()) * Eigen::AngleAxisf(0, Eigen::Vector3f::UnitX());
@@ -69,6 +69,12 @@ geometry_msgs::Pose viewsphereToFranka(std::vector<double> &pose){
   tfMat(2,3) = ::table.z+pose[0]*cos(pose[2]);
 
   tfMat *= pcl::getTransformation(0,0,0,0,-M_PI/2,M_PI).matrix();
+  if(isKinect){
+    Eigen::Matrix4f kinectOffset; kinectOffset.setIdentity();
+    kinectOffset(0,3) = -0.05;
+    kinectOffset(2,3) = -0.05;
+    tfMat *= kinectOffset;
+  }
 
   Eigen::Quaternionf quat(tfMat.block<3,3>(0,0));
 
@@ -79,11 +85,11 @@ geometry_msgs::Pose viewsphereToFranka(std::vector<double> &pose){
   return p;
 }
 
-bool checkPoseOK(std::vector<double> &pose){
+bool checkPoseOK(std::vector<double> &pose, bool isKinect){
   bool check1 = checkValidPose(pose);
   bool check2 = true;
   if(::simulationMode == "FRANKASIMULATION"){
-    geometry_msgs::Pose p = viewsphereToFranka(pose);
+    geometry_msgs::Pose p = viewsphereToFranka(pose,isKinect);
     check2 = checkFrankReach(::IKClient,p);
   }
   return (check1 && check2);
@@ -438,8 +444,8 @@ std::set<int> findVisibleUsefulUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr unexp,
   return finalIndices;
 }
 
-int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double> &pose, int mode, int minVis, ptCldVis::Ptr viewer){
-// int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double> &pose, int mode, int minVis){
+// int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double> &pose, int mode, int minVis, ptCldVis::Ptr viewer){
+int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double> &pose, int mode, int minVis){
 
   static ptCldColor::Ptr usefulUnexp{new ptCldColor};
   extractUsefulUnexpPts(obj,unexp,usefulUnexp);
@@ -454,8 +460,8 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
   for(int i = 1 ; i <= 8; i++){
     std::vector<double> newPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0)); step[i-1] = 20;
 
-    if(checkPoseOK(newPose)) visibleIndices = findVisibleUsefulUnexp(obj,unexp,usefulUnexp,newPose);
-    else                        visibleIndices.clear();
+    if(checkPoseOK(newPose,true)) visibleIndices = findVisibleUsefulUnexp(obj,unexp,usefulUnexp,newPose);
+    else                          visibleIndices.clear();
     indices.push_back(visibleIndices);
   }
   for(int i = 0 ; i < 8; i++) res[i] = indices[i].size();
@@ -464,12 +470,12 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
   if(maxRes < minVis){
     for(int i = 1 ; i <= 8; i++){
       std::vector<double> newPose = calcExplorationPose(pose,i,mode,40*(M_PI/180.0)); step[i-1] = 40;
-      if(!checkPoseOK(newPose)){
+      if(!checkPoseOK(newPose,true)){
         newPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0)); step[i-1] = 20;
       }
 
-      if(checkPoseOK(newPose)) visibleIndices = findVisibleUsefulUnexp(obj,unexp,usefulUnexp,newPose);
-      else                        visibleIndices.clear();
+      if(checkPoseOK(newPose,true)) visibleIndices = findVisibleUsefulUnexp(obj,unexp,usefulUnexp,newPose);
+      else                          visibleIndices.clear();
       indices[i-1].insert(visibleIndices.begin(),visibleIndices.end());
     }
     for(int i = 0 ; i < 8; i++) res[i] = indices[i].size();
@@ -489,38 +495,36 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
   // std::cout << std::endl;
 
   // /***/
-  std::vector<int> vp;
-  setupViewer(viewer, 9, vp);
-  setCamView(viewer,{pose[0]/2,pose[1],pose[2]},::table,vp[0]);
-  addRGB(viewer,obj,"obj0",vp[0]);
-  addRGB(viewer,unexp,"unexp",vp[0]);
-  addRGB(viewer,usefulUnexp,"usefulUnexp",vp[0]);
-  viewer->removeCoordinateSystem();
-
-  ptCldColor::Ptr result{new ptCldColor};
-  for(int i = 1 ; i <= 8; i++){
-    result->clear();
-    for(auto idx : indices[i-1]){
-      result->points.push_back(usefulUnexp->points[idx]);
-      result->points.back().r = 255;
-      result->points.back().g = 255;
-      result->points.back().b = 255;
-    }
-    std::vector<double> newPose = calcExplorationPose(pose,i,mode,step[i-1]*(M_PI/180.0));
-    setCamView(viewer,{newPose[0]/2,newPose[1],newPose[2]},::table,vp[i]);
-    addRGB(viewer,obj,"obj"+std::to_string(i),vp[i]);
-    addRGB(viewer,result,"result"+std::to_string(i),vp[i]);
-    viewer->addText(std::to_string(i)+","+std::to_string(step[i-1])+","+std::to_string(res[i-1]),2,2,20,1,0,0,"data"+std::to_string(i),vp[i]);
-  }
-  viewer->spinOnce(100);
-  boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+  // std::vector<int> vp;
+  // setupViewer(viewer, 9, vp);
+  // setCamView(viewer,{pose[0]/2,pose[1],pose[2]},::table,vp[0]);
+  // addRGB(viewer,obj,"obj0",vp[0]);
+  // addRGB(viewer,unexp,"unexp",vp[0]);
+  // addRGB(viewer,usefulUnexp,"usefulUnexp",vp[0]);
+  // viewer->removeCoordinateSystem();
+  //
+  // ptCldColor::Ptr result{new ptCldColor};
+  // for(int i = 1 ; i <= 8; i++){
+  //   result->clear();
+  //   for(auto idx : indices[i-1]){
+  //     result->points.push_back(usefulUnexp->points[idx]);
+  //     result->points.back().r = 255;
+  //     result->points.back().g = 255;
+  //     result->points.back().b = 255;
+  //   }
+  //   std::vector<double> newPose = calcExplorationPose(pose,i,mode,step[i-1]*(M_PI/180.0));
+  //   setCamView(viewer,{newPose[0]/2,newPose[1],newPose[2]},::table,vp[i]);
+  //   addRGB(viewer,obj,"obj"+std::to_string(i),vp[i]);
+  //   addRGB(viewer,result,"result"+std::to_string(i),vp[i]);
+  //   viewer->addText(std::to_string(i)+","+std::to_string(step[i-1])+","+std::to_string(res[i-1]),2,2,20,1,0,0,"data"+std::to_string(i),vp[i]);
+  // }
   // while(!viewer->wasStopped()){
   //   viewer->spinOnce(100);
   //   boost::this_thread::sleep (boost::posix_time::microseconds(100000));
   // }
-  viewer->resetStoppedFlag();
-  viewer->removeAllPointClouds();
-  viewer->removeAllShapes();
+  // viewer->resetStoppedFlag();
+  // viewer->removeAllPointClouds();
+  // viewer->removeAllShapes();
   /***/
 
   return resDetailed[0][0];
@@ -590,6 +594,8 @@ int main (int argc, char** argv){
   environment activeVision(&nh);
   activeVision.loadGripper();
 
+  activeVision.moveKinectViewsphere({activeVision.viewsphereRad,-M_PI,0});
+
   // 4 kinect position to capture and fuse
   std::vector<std::vector<double>> kinectPoses = {{activeVision.viewsphereRad,M_PI,0},
                                                   {activeVision.viewsphereRad,M_PI/2,M_PI/4},
@@ -614,12 +620,12 @@ int main (int argc, char** argv){
   singlePass(activeVision,newPose,true,true,2);
   int minPtsVis;
 
-  ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
+  // ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
   int nSteps = 0;
   while(activeVision.selectedGrasp == -1 && nSteps <= 5){
     minPtsVis = 0.15*(activeVision.ptrPtCldObject->points.size());
-    dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,newPose,2,minPtsVis,viewer);
-    // dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,newPose,2,minPtsVis);
+    // dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,newPose,2,minPtsVis,viewer);
+    dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,newPose,2,minPtsVis);
     std::cout << "Direction selected : " << dir << std::endl;
 
     newPose = calcExplorationPose(newPose,dir,2);
@@ -627,6 +633,7 @@ int main (int argc, char** argv){
     nSteps++;
   }
 
+  ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
   std::vector<int> vp;
   setupViewer(viewer, 1, vp);
   setCamView(viewer,{kinectPoses[0][0],kinectPoses[0][1],kinectPoses[0][2]},::table,vp[0]);

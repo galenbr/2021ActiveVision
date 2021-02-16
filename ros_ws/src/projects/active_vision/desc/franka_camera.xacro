@@ -15,5 +15,5 @@
 
   <!-- <xacro:camera_gazebo_sensor xyz="0.05 -0.05 0" rpy="-1.57 -1.57 -0.785" parent="panda_link8" sensor_name="camera"/> -->
 
-  <xacro:camera_gazebo_sensor xyz="0.06 0 0" rpy="-1.57 -1.57 -1.57" parent="panda_hand" sensor_name="camera"/>
+  <xacro:camera_gazebo_sensor xyz="0.05 0 0.05" rpy="-1.57 -1.57 -1.57" parent="panda_hand" sensor_name="camera"/>
 </robot>

@@ -686,7 +686,8 @@ bool environment::moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKin
   tfMat *= pcl::getTransformation(0,0,0,0,-M_PI/2,M_PI).matrix();
   if(isKinect){
     Eigen::Matrix4f kinectOffset; kinectOffset.setIdentity();
-    kinectOffset(0,3) = -0.06;
+    kinectOffset(0,3) = -0.05;
+    kinectOffset(2,3) = -0.05;
     tfMat *= kinectOffset;
   }
 
@@ -1158,6 +1159,7 @@ void environment::collisionCheck(){
     for(int j = 0; (j < nOrientations) && (stop == false); j++){
       // graspsPossible[i].addnlPitch = j*(2*M_PI)/nOrientations;
       graspsPossible[i].addnlPitch = orientations[j]*M_PI/180;
+      if(simulationMode == "FRANKASIMULATION" && (!checkPreGrasp(graspsPossible[i]))) continue;
       updateGripper(i,2);
       // Get concave hull of the gripper fingers and hand in sequence and check
       for(int k = 2; k >= 0; k--){
@@ -1342,12 +1344,27 @@ void environment::editMoveItCollisions(std::string object, std::string mode){
   collisionClient.call(collisionObjMsg);
 }
 
-// 17: Object grasping pipeline
-void environment::graspObject(graspPoint graspData){
+// 17: Check is pregrasp is viable
+bool environment::checkPreGrasp(graspPoint &graspData){
+  Eigen::Affine3f tfGrasp = pcl::getTransformation(graspData.pose[0],graspData.pose[1],
+                                                   graspData.pose[2],graspData.pose[3],
+                                                   graspData.pose[4],graspData.pose[5])*
+                            pcl::getTransformation(0,0,0,0,graspData.addnlPitch,0)*
+                            pcl::getTransformation(0.0,0,-0.05-fingerZOffset,0,0,0)*
+                            pcl::getTransformation(0,0,0,0,-M_PI/2,-M_PI);
 
-  float clearanceX = (maxPtObj.x - minPtObj.x)/2.0;
-  float clearanceY = (maxPtObj.y - minPtObj.y)/2.0;
-  float clearanceZ = maxPtObj.z;
+  Eigen::Affine3f tfPreGrasp = tfGrasp*pcl::getTransformation(-1*0.3,0,0,0,0,0);
+
+  geometry_msgs::Pose p;
+  return moveFranka(tfPreGrasp.matrix(),"JOINT",false,false,p);
+}
+
+// 17: Object grasping pipeline
+void environment::graspObject(graspPoint &graspData){
+
+  // float clearanceX = (maxPtObj.x - minPtObj.x)/2.0;
+  // float clearanceY = (maxPtObj.y - minPtObj.y)/2.0;
+  // float clearanceZ = maxPtObj.z;
   // float clearance = std::min(sqrt(pow(clearanceX,2)+pow(clearanceY,2)+pow(clearanceZ,2)),0.25);
 
   Eigen::Affine3f tfGrasp = pcl::getTransformation(graspData.pose[0],graspData.pose[1],
@@ -1356,7 +1373,7 @@ void environment::graspObject(graspPoint graspData){
                             pcl::getTransformation(0,0,0,0,graspData.addnlPitch,0)*
                             pcl::getTransformation(0.0,0,-0.05-fingerZOffset,0,0,0)*
                             pcl::getTransformation(0,0,0,0,-M_PI/2,-M_PI);
-  Eigen::Affine3f tfGraspMoveUp = tfGrasp; tfGraspMoveUp(2,3)+=0.2;
+  Eigen::Affine3f tfGraspMoveUp = tfGrasp; tfGraspMoveUp(2,3)+=0.1;
   Eigen::Affine3f tfPreGrasp;
 
   float clearance = 0;

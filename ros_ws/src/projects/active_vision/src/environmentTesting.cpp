@@ -142,10 +142,10 @@ void testPtCldFuse(environment &av, int objID, int flag){
   viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
 
   // 4 kinect position to capture and fuse
-  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/4},
-                                                  {av.viewsphereRad,-M_PI/2,M_PI/4},
-                                                  {av.viewsphereRad,0,M_PI/4},
-                                                  {av.viewsphereRad,M_PI/2,M_PI/4}};
+  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/8},
+                                                  {av.viewsphereRad,-M_PI/2,M_PI/8},
+                                                  {av.viewsphereRad,0,M_PI/8},
+                                                  {av.viewsphereRad,M_PI/2,M_PI/8}};
 
   for (int i = 0; i < 4; i++) {
     av.moveKinectViewsphere(kinectPoses[i]);
@@ -210,7 +210,7 @@ void testGenUnexpPtCld(environment &av, int objID, int flag){
   std::cout << "*** In unexplored point cloud generation testing function ***" << std::endl;
   av.spawnObject(objID,0,0);
 
-  std::vector<double> kinectPose = {av.viewsphereRad,-M_PI,M_PI/4};
+  std::vector<double> kinectPose = {av.viewsphereRad,-M_PI,M_PI/8};
   av.moveKinectViewsphere(kinectPose);
   av.readKinect();
   av.fuseLastData();
@@ -247,10 +247,10 @@ void testUpdateUnexpPtCld(environment &av, int objID, int flag){
   viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
 
   // 4 kinect position to capture and fuse
-  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/4},
-                                                  {av.viewsphereRad,-M_PI/2,M_PI/4},
-                                                  {av.viewsphereRad,0,M_PI/4},
-                                                  {av.viewsphereRad,M_PI/2,M_PI/4}};
+  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/8},
+                                                  {av.viewsphereRad,-M_PI/2,M_PI/8},
+                                                  {av.viewsphereRad,0,M_PI/8},
+                                                  {av.viewsphereRad,M_PI/2,M_PI/8}};
   for (int i = 0; i < 4; i++) {
     av.moveKinectViewsphere(kinectPoses[i]);
     av.readKinect();
@@ -327,10 +327,10 @@ void testGraspsynthesis(environment &av, int objID, int flag){
   av.spawnObject(objID,0,0);
 
   // 4 kinect position
-  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/4},
-                                                  {av.viewsphereRad,-M_PI/2,M_PI/4},
-                                                  {av.viewsphereRad,0,M_PI/4},
-                                                  {av.viewsphereRad,M_PI/2,M_PI/4}};
+  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/8},
+                                                  {av.viewsphereRad,-M_PI/2,M_PI/8},
+                                                  {av.viewsphereRad,0,M_PI/8},
+                                                  {av.viewsphereRad,M_PI/2,M_PI/8}};
 
   for (int i = 0; i < 4; i++) {
     av.moveKinectViewsphere(kinectPoses[i]);
@@ -457,10 +457,10 @@ void testComplete(environment &av, int objID, int nVp, int graspMode, int flag, 
   av.loadGripper();
 
   // 4 kinect poses
-  std::vector<std::vector<double>> kinectPoses = {{1,-M_PI,M_PI/4},
-                                                  {1,-M_PI/2,M_PI/4},
-                                                  {1,0,M_PI/4},
-                                                  {1,M_PI/2,M_PI/4}};
+  std::vector<std::vector<double>> kinectPoses = {{1,-M_PI,M_PI/8},
+                                                  {1,-M_PI/2,M_PI/8},
+                                                  {1,0,M_PI/8},
+                                                  {1,M_PI/2,M_PI/8}};
 
   start[0] = std::chrono::high_resolution_clock::now();
 
@@ -609,7 +609,7 @@ void testSaveRollback(environment &av, int objID, int flag){
                                                  { 00, step},{-step, step},
                                                  {-step, 00},{-step,-step}};
 
-  std::vector<double> kinectPose = {av.viewsphereRad,-M_PI,M_PI/4};
+  std::vector<double> kinectPose = {av.viewsphereRad,-M_PI,M_PI/8};
   av.moveKinectViewsphere(kinectPose);
   av.readKinect();
   av.fuseLastData();
@@ -717,10 +717,10 @@ void testSavePCD(environment &av, int objID){
   av.loadGripper();
 
   // 4 kinect poses
-  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/4},
-                                                  {av.viewsphereRad,-M_PI/2,M_PI/4},
-                                                  {av.viewsphereRad,0,M_PI/4},
-                                                  {av.viewsphereRad,M_PI/2,M_PI/4}};
+  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/8},
+                                                  {av.viewsphereRad,-M_PI/2,M_PI/8},
+                                                  {av.viewsphereRad,0,M_PI/8},
+                                                  {av.viewsphereRad,M_PI/2,M_PI/8}};
 
   for(int i = 0; i < 4; i++){
     singlePass(av, kinectPoses[i], i==0, true);
@@ -800,10 +800,10 @@ void testSurfacePatchAndCurvature(environment &av, int objID, int flag){
   av.spawnObject(objID,0,0.0/180.0*M_PI);
 
   // 4 kinect position to capture and fuse
-  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/4},
-                                                  {av.viewsphereRad,-M_PI/2,M_PI/4},
-                                                  {av.viewsphereRad,0,M_PI/4},
-                                                  {av.viewsphereRad,M_PI/2,M_PI/4}};
+  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/8},
+                                                  {av.viewsphereRad,-M_PI/2,M_PI/8},
+                                                  {av.viewsphereRad,0,M_PI/8},
+                                                  {av.viewsphereRad,M_PI/2,M_PI/8}};
 
   for (int i = 0; i < 4; i++){
     av.moveKinectViewsphere(kinectPoses[i]);

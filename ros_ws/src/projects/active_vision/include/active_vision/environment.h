@@ -328,8 +328,11 @@ public:
   // 16: Modify moveit collision elements
   void editMoveItCollisions(std::string object, std::string mode);
 
+  // 17: Check is pregrasp is viable
+  bool checkPreGrasp(graspPoint &graspData);
+
   // 17: Object grasping pipeline
-  void graspObject(graspPoint graspData);
+  void graspObject(graspPoint &graspData);
 
 };
 
