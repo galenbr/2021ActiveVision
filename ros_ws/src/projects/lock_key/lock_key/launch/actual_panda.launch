@@ -29,6 +29,8 @@
   
   <!-- Launch moveit planning services -->
   <node name="moveit_planner" pkg="moveit_planner" type="main_node" args="panda_arm"/>
+  <!-- Enforce joint space planning for all plans (increases planning time) -->
+  <param name="panda_arm/enforce_joint_model_state_space" type="bool" value="true" />
 
   <!-- Start get pose node (for EE tip position) -->
   <node name="get_pose" type="pose_node" pkg="moveit_planner" />
