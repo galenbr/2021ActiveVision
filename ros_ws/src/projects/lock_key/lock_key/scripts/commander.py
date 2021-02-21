@@ -240,6 +240,32 @@ class Commander:
 		else:
 			rospy.logerr("Trajectory is empty. Planning was unsuccessful.")
 
+	def rotate_relative(self,axis,angle,goal_time=0.5):
+		'''Rotates end-effector relative to its current pose.'''
+		orig_pose=self.get_tf_client("map","panda_EE_control").pose
+		#Define step goal
+		pose_goal = geometry_msgs.msg.Pose()
+		pose_goal.position=orig_pose.position
+		current_or=orig_pose.orientation
+		euler = tf.transformations.euler_from_quaternion([current_or.x,
+														  current_or.y,
+														  current_or.z,
+														  current_or.w])
+		roll = euler[0]
+		pitch = euler[1]
+		yaw = euler[2]
+		#Update orientation
+		if axis=='x':
+			roll+=angle
+		elif axis=='y':
+			pitch+=angle
+		elif axis=='z':
+			yaw+=angle
+		#Convert back to Quat
+		pose_goal.orientation = geometry_msgs.msg.Quaternion(*tf_conversions.transformations.quaternion_from_euler(roll, pitch, yaw))
+
+		self.move_to_pose(pose_goal,goal_time=goal_time)
+
 	def rotate_to_torque(self,step_angle,axis,max_angle,max_torque,
 						 max_iter=500,step_goal_time=0.5,recalculate_bias=True):
 		'''Incrementally rotate end-effector until torque theshold is exceeded.'''

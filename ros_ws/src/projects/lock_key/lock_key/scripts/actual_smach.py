@@ -15,6 +15,7 @@ from math import radians
 import geometry_msgs.msg
 import lock_key.msg
 import lock_key_msgs.msg
+import sensor_msgs.msg
 #Services
 from lock_key_msgs.srv import GetLockKeyPoses, GetLockKeyPosesResponse
 import moveit_planner.srv
@@ -23,6 +24,8 @@ def restrict_base_joint(min_position=-1.0,max_position=1.0):
     '''Restricts base joint angle to specified range (radians).'''
     rospy.set_param("robot_description_planning/joint_limits/panda_joint1/min_position",min_position)
     rospy.set_param("robot_description_planning/joint_limits/panda_joint1/max_position",max_position)
+
+    #TODO: UPDATE TRAC_IK limits here also
 
 def move_to_pose_goal(x,y,z,roll,pitch,yaw,goal_time=0.5):
 	'''Moves EE to abs. pose in map frame. Wrapper for panda commander.'''
@@ -137,10 +140,10 @@ class NavigateToKey(smach.State):
         rospy.loginfo('Navigating to Key...')
         #Make scale slower
         panda.set_vel_scale(0.01)
-        #Restriction link0 movement
-        #TODO: Get current value rather than assume 0
-        current_pos=0.0
-        restrict_base_joint(current_pos-radians(0.01),current_pos+radians(0.01))
+        #Restrict link0 movement
+        joint_states=rospy.wait_for_message('/joint_states',sensor_msgs.msg.JointState)
+        current_link0_pos=joint_states.position[0]
+        restrict_base_joint(current_link0_pos-radians(0.01),current_link0_pos+radians(0.01))
         max_force=rospy.get_param("key_goal/Ft")
         panda.move_to_plane(step=0.0018,axis='z',max_disp=0.2,max_force=max_force,max_iter=500,
 			    		    orientation=None,step_goal_time=0.5,recalculate_bias=True,
@@ -230,9 +233,9 @@ class NavigateToPreLockClose(smach.State):
         #Make scale slower
         panda.set_vel_scale(0.1)
         #Restriction link0 movement
-        #TODO: Get current value rather than assume 0
-        current_pos=0.0
-        restrict_base_joint(current_pos-radians(0.01),current_pos+radians(0.01))
+        joint_states=rospy.wait_for_message('/joint_states',sensor_msgs.msg.JointState)
+        current_link0_pos=joint_states.position[0]
+        restrict_base_joint(current_link0_pos-radians(0.01),current_link0_pos+radians(0.01))
         # Retrieve goal position from param server
         goal=rospy.get_param("padlock_goal")
         goal['x']+=goal['pre_x_offset_close']
@@ -287,11 +290,14 @@ class FinalInsert(smach.State):
 		global panda
 		rospy.loginfo('Starting Final Insertion...')
 		rospy.loginfo('Retrieving parameters')
-		#Make scale faster
-		panda.set_vel_scale(0.2)
 		F_max=rospy.get_param("spiral/Fi")
 		max_disp=rospy.get_param("spiral/delta_max")
 		delta_step=rospy.get_param("spiral/delta_step_final")
+        #Jiggle key
+		panda.rotate_relative(axis='y',angle=radians(2),goal_time=2.0)
+		panda.rotate_relative(axis='y',angle=radians(-2),goal_time=2.0)
+		#Make scale faster
+		panda.set_vel_scale(0.2)
 		panda.move_to_plane(step=delta_step,axis='z',max_disp=max_disp,max_force=F_max,max_iter=500,
 			    		    orientation=None,step_goal_time=0.5,recalculate_bias=True,hold_xyz=[True,True,False])
 		rospy.sleep(1)
@@ -308,7 +314,7 @@ class RotateKey(smach.State):
 		d_pitch=rospy.get_param("padlock_goal/key_pitch")
 		d_yaw=rospy.get_param("padlock_goal/key_yaw")
 		# rotate_key(d_roll,d_pitch,d_yaw)
-		panda.rotate_to_torque(step_angle=-0.0174533,axis='z',max_angle=d_yaw,max_torque=1.0,
+		panda.rotate_to_torque(step_angle=-radians(1),axis='z',max_angle=d_yaw,max_torque=1.0,
 			   			       max_iter=500,step_goal_time=0.5,recalculate_bias=True)
 
         #Rotate key back
