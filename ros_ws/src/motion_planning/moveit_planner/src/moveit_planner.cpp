@@ -6,7 +6,7 @@
 
 #include "geometry_msgs/PoseStamped.h"
 
-namespace moveit_planner {  
+namespace moveit_planner {
   // Constructor/Destructor
   MoveitPlanner::MoveitPlanner(ros::NodeHandle& nh, const std::string& arm)
     : n{nh}, spinner{0}, armGroup{arm}, moveGroup{armGroup}, curScaling{1.0},
@@ -45,6 +45,20 @@ namespace moveit_planner {
       return false;
     }
   }
+  bool MoveitPlanner::getPoseClientCallback(moveit_planner::GetPose::Request& req,moveit_planner::GetPose::Response& res) {
+    return getPose(res.pose);
+  }
+
+  bool MoveitPlanner::namedStateCallback(moveit_planner::MoveNamedState::Request& req,moveit_planner::MoveNamedState::Response& res){
+    // std::map<std::string,double> jointValues = ;
+    moveGroup.setJointValueTarget(moveGroup.getNamedTargetValues(req.name));
+    auto errCode = moveGroup.plan(curPlan);
+    bool success = (errCode == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    if(!success) ROS_WARN_STREAM("ERROR MOVING TO NAMED STATE " << errCode);
+    else         moveGroup.execute(curPlan);
+    return success;
+  }
+
   bool MoveitPlanner::moveToPose(const geometry_msgs::Pose& p, const bool& exe) {
     moveGroup.setPoseTarget(p);
     auto errCode = moveGroup.plan(curPlan);
@@ -53,9 +67,23 @@ namespace moveit_planner {
       ROS_WARN_STREAM("ERROR MOVING TO POSE " << errCode);
     if(success && exe)
       moveGroup.execute(curPlan);
-    
+
     return success;
   }
+  bool MoveitPlanner::poseClientCallback(moveit_planner::MovePose::Request& req,moveit_planner::MovePose::Response& res) {
+    bool success = moveToPose(req.val, req.execute);
+
+    // Set timing info
+    res.planning_time = curPlan.planning_time_;
+    res.arrival_time =
+      curPlan.trajectory_
+      .joint_trajectory
+      .points.back()
+      .time_from_start;
+
+    return success;
+  }
+
   bool MoveitPlanner::moveToJointSpace(const std::vector<double>& jointPositions, bool exe) {
     moveGroup.setJointValueTarget(jointPositions);
     auto errCode = moveGroup.plan(curPlan);
@@ -67,6 +95,10 @@ namespace moveit_planner {
 
     return success;
   }
+  bool MoveitPlanner::jsClientCallback(moveit_planner::MoveJoint::Request& req,moveit_planner::MoveJoint::Response& res) {
+    return moveToJointSpace(req.val, req.execute);
+  }
+
   bool MoveitPlanner::cartesianMove(const std::vector<geometry_msgs::Pose>& p, double setTime, const bool& exe) {
     if(p.size() == 0)
       return true;		// Empty waypoints, nothing to execute
@@ -108,66 +140,11 @@ namespace moveit_planner {
     // TODO: Check how to get success
     return true;
   }
-  bool MoveitPlanner::addCollisionObjects(const std::vector<moveit_msgs::CollisionObject>& collObjs) {
-    planningSceneInterface.applyCollisionObjects(collObjs);
-
-    return true;
-  }
-  bool MoveitPlanner::setConstraints(const moveit_msgs::Constraints& constraints) {
-    moveGroup.setPathConstraints(constraints);
-
-    return true;
-  }
-  bool MoveitPlanner::ik(const geometry_msgs::Pose& pose, std::vector<double>& results) {
-    double timeout = 0.1;	// Time before quitting (no solution found)
-    int attempts = 2;		// Number of tries
-    bool found = curState->setFromIK(jointModelGroup, pose, attempts, timeout);
-
-    curState->copyJointGroupPositions(jointModelGroup, results);
-
-    return found;
-  }
-
-  bool MoveitPlanner::getPoseClientCallback(moveit_planner::GetPose::Request& req,
-					    moveit_planner::GetPose::Response& res) {
-    return getPose(res.pose);
-  }
-  bool MoveitPlanner::poseClientCallback(moveit_planner::MovePose::Request& req,
-					 moveit_planner::MovePose::Response& res) {
-    bool success = moveToPose(req.val, req.execute);
-
-    // Set timing info
-    res.planning_time = curPlan.planning_time_;
-    res.arrival_time =
-      curPlan.trajectory_
-      .joint_trajectory
-      .points.back()
-      .time_from_start;
-
-    return success;
-  }
-
-  bool MoveitPlanner::rotClientCallback(moveit_planner::MoveQuat::Request& req,
-					moveit_planner::MoveQuat::Response& res) {
-    geometry_msgs::PoseStamped curPose = moveGroup.getCurrentPose();
-    ROS_INFO_STREAM("Current pose: " << curPose);
-    geometry_msgs::Pose targetPose = curPose.pose;
-    targetPose.orientation = req.val;
-
-    return moveToPose(targetPose, req.execute);
-  }
-
-  bool MoveitPlanner::jsClientCallback(moveit_planner::MoveJoint::Request& req,
-				       moveit_planner::MoveJoint::Response& res) {
-    return moveToJointSpace(req.val, req.execute);
-  }
-
-  bool MoveitPlanner::cartesianMoveCallback(moveit_planner::MoveCart::Request& req,
-					    moveit_planner::MoveCart::Response& res) {
+  bool MoveitPlanner::cartesianMoveCallback(moveit_planner::MoveCart::Request& req,moveit_planner::MoveCart::Response& res) {
     return cartesianMove(req.val, req.time, req.execute);
   }
-  bool MoveitPlanner::distanceAwayCallback(moveit_planner::MoveAway::Request& req,
-					   moveit_planner::MoveAway::Response& res) {
+
+  bool MoveitPlanner::distanceAwayCallback(moveit_planner::MoveAway::Request& req,moveit_planner::MoveAway::Response& res) {
     geometry_msgs::Quaternion desiredQuat = req.pose.orientation;
 
     // Calculate z-axis direction
@@ -197,18 +174,23 @@ namespace moveit_planner {
 
     return success;
   }
-  bool MoveitPlanner::setVelocityCallback(moveit_planner::SetVelocity::Request& req,
-					  moveit_planner::SetVelocity::Response& res) {
+
+  bool MoveitPlanner::setVelocityCallback(moveit_planner::SetVelocity::Request& req,moveit_planner::SetVelocity::Response& res) {
     if(req.velScaling <= 0 || req.velScaling > 1) // Invalid scaling
       return false;
-    
+
     moveGroup.setMaxVelocityScalingFactor(req.velScaling);
     moveGroup.setMaxAccelerationScalingFactor(req.velScaling);
     curScaling = req.velScaling;
     return true;
   }
-  bool MoveitPlanner::addCollisionCallback(moveit_planner::AddCollision::Request& req,
-					   moveit_planner::AddCollision::Response& res) {
+
+  bool MoveitPlanner::addCollisionObjects(const std::vector<moveit_msgs::CollisionObject>& collObjs) {
+    planningSceneInterface.applyCollisionObjects(collObjs);
+
+    return true;
+  }
+  bool MoveitPlanner::addCollisionCallback(moveit_planner::AddCollision::Request& req, moveit_planner::AddCollision::Response& res) {
     // Place in a vector to use general private function
     std::vector<moveit_msgs::CollisionObject> collObjects;
     collObjects.push_back(req.collObject);
@@ -216,49 +198,78 @@ namespace moveit_planner {
     // Return whether it was successfull or not
     return addCollisionObjects(collObjects);
   }
-  bool MoveitPlanner::setConstraintsCallback(moveit_planner::SetConstraints::Request& req,
-					     moveit_planner::SetConstraints::Response& res) {
+
+  bool MoveitPlanner::setConstraints(const moveit_msgs::Constraints& constraints) {
+    moveGroup.setPathConstraints(constraints);
+    return true;
+  }
+  bool MoveitPlanner::setConstraintsCallback(moveit_planner::SetConstraints::Request& req, moveit_planner::SetConstraints::Response& res) {
     return setConstraints(req.constraints);
   }
-  bool MoveitPlanner::invClientCallback(moveit_planner::Inv::Request& req,
-					moveit_planner::Inv::Response& res) {
+
+  bool MoveitPlanner::clearConstraintsCallback(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res){
+    moveGroup.clearPathConstraints();
+    return true;
+  }
+
+  bool MoveitPlanner::ik(const geometry_msgs::Pose& pose, std::vector<double>& results) {
+    double timeout = 0.1;	// Time before quitting (no solution found)
+    int attempts = 2;		// Number of tries
+    bool found = curState->setFromIK(jointModelGroup, pose, attempts, timeout);
+
+    curState->copyJointGroupPositions(jointModelGroup, results);
+
+    return found;
+  }
+  bool MoveitPlanner::invClientCallback(moveit_planner::Inv::Request& req, moveit_planner::Inv::Response& res) {
     return ik(req.pose, res.joint_vals);
+  }
+
+  bool MoveitPlanner::ikWithSelfCollCheck(const geometry_msgs::Pose& pose, std::vector<double>& results) {
+    double timeout = 0.1;	// Time before quitting (no solution found)
+    int attempts = 2;		// Number of tries
+    bool ok = curState->setFromIK(jointModelGroup, pose, attempts, timeout);
+    curState->copyJointGroupPositions(jointModelGroup, results);
+
+    static planning_scene::PlanningScene planning_scene(robotModel);
+    collision_result.clear();
+    planning_scene.checkSelfCollision(collision_request, collision_result, *curState);
+    ok *= !(collision_result.collision);
+    // std::cout << "Test 2: Current state is " << collision_result.collision << std::endl;
+    return ok;
+  }
+  bool MoveitPlanner::invCollCheckClientCallback(moveit_planner::Inv::Request& req,moveit_planner::Inv::Response& res) {
+    return ikWithSelfCollCheck(req.pose, res.joint_vals);
+  }
+
+  bool MoveitPlanner::rotClientCallback(moveit_planner::MoveQuat::Request& req,moveit_planner::MoveQuat::Response& res) {
+    geometry_msgs::PoseStamped curPose = moveGroup.getCurrentPose();
+    ROS_INFO_STREAM("Current pose: " << curPose);
+    geometry_msgs::Pose targetPose = curPose.pose;
+    targetPose.orientation = req.val;
+
+    return moveToPose(targetPose, req.execute);
   }
 
   // Private
   void MoveitPlanner::setupServices() {
     // TOOD: Setup remaining services
-    poseClient = n.advertiseService("move_to_pose",
-				    &MoveitPlanner::poseClientCallback,
-				    this);
+    getPoseClient = n.advertiseService("get_pose", &MoveitPlanner::getPoseClientCallback, this);
+    namedStateClient = n.advertiseService("move_to_named_state", &MoveitPlanner::namedStateCallback, this);
+    poseClient = n.advertiseService("move_to_pose", &MoveitPlanner::poseClientCallback, this);
+    jsClient = n.advertiseService("move_to_joint_space", &MoveitPlanner::jsClientCallback, this);
+    cartesianClient = n.advertiseService("cartesian_move", &MoveitPlanner::cartesianMoveCallback, this);
+    distanceAwayClient = n.advertiseService("move_away_point", &MoveitPlanner::distanceAwayCallback, this);
+    velocityClient = n.advertiseService("set_velocity_scaling", &MoveitPlanner::setVelocityCallback, this);
+    addCollClient = n.advertiseService("add_collision_object", &MoveitPlanner::addCollisionCallback, this);
+    setConstClient = n.advertiseService("set_constraints", &MoveitPlanner::setConstraintsCallback, this);
+    clearConstClient = n.advertiseService("clear_constraints", &MoveitPlanner::clearConstraintsCallback, this);
+    invClient = n.advertiseService("inverse_kinematics", &MoveitPlanner::invClientCallback, this);
+    invCollCheckClient = n.advertiseService("inverse_kinematics_collision_check", &MoveitPlanner::invCollCheckClientCallback, this);
+
     // Not currently working, need to debug joint_states issue
-    // rotClient = n.advertiseService("move_to_orientation",
-    // 				   &MoveitPlanner::rotClientCallback,
-    // 				   this);
-    getPoseClient = n.advertiseService("get_pose",
-				       &MoveitPlanner::getPoseClientCallback,
-				       this);
-    jsClient = n.advertiseService("move_to_joint_space",
-				  &MoveitPlanner::jsClientCallback,
-				  this);
-    cartesianClient = n.advertiseService("cartesian_move",
-					 &MoveitPlanner::cartesianMoveCallback,
-					 this);
-    distanceAwayClient = n.advertiseService("move_away_point",
-					    &MoveitPlanner::distanceAwayCallback,
-					    this);
-    velocityClient = n.advertiseService("set_velocity_scaling",
-					&MoveitPlanner::setVelocityCallback,
-					this);
-    addCollClient = n.advertiseService("add_collision_object",
-				       &MoveitPlanner::addCollisionCallback,
-				       this);
-    setConstClient = n.advertiseService("set_constraints",
-					&MoveitPlanner::setConstraintsCallback,
-					this);
-    invClient = n.advertiseService("inverse_kinematics",
-				   &MoveitPlanner::invClientCallback,
-				   this);
+    // rotClient = n.advertiseService("move_to_orientation", &MoveitPlanner::rotClientCallback, this);
+
   }
 
   void MoveitPlanner::setupMoveit() {

@@ -31,6 +31,7 @@ add_service_files(
   SetVelocity.srv
   AddCollision.srv
   SetConstraints.srv
+  MoveNamedState.srv
 )
 
 generate_messages(

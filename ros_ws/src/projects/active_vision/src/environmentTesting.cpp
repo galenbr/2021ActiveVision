@@ -915,13 +915,13 @@ void testObjectPickup(environment &av, int objID){
     graspData.addnlPitch = 0;
     graspData.gripperWidth = 0.0606716;
   }else if(objID == 11){
-    {graspData.pose = {0.43062,-0.0600863,0.120164,-1.5708,1.44276,-0.116368};}
-    graspData.addnlPitch = 0;
-    graspData.gripperWidth = 0.0692391;
+    {graspData.pose = {0.447039,0.0451949,0.123947,1.5708,-1.56269,3.02644};}
+    graspData.addnlPitch = 3.14159;
+    graspData.gripperWidth = 0.0703883;
   }else if(objID == 12){
-    {graspData.pose = {0.441044,0.0840552,0.0626893,1.5708,1.54494,0.707};}
+    {graspData.pose = {0.448301,0.00138668,0.0637471,1.5708,-1.56918,0.548227};}
     graspData.addnlPitch = 0;
-    graspData.gripperWidth = 0.0739337;
+    graspData.gripperWidth = 0.0739628;
   }else{
     return;
   }
@@ -951,9 +951,9 @@ void testMoveItCollision(environment &av, int objID){
   av.spawnObject(objID,0,0);
 
   // 4 kinect position to capture and fuse
-  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/6},
-                                                  {av.viewsphereRad,-M_PI+0.11,M_PI/6},
-                                                  {av.viewsphereRad,-M_PI-0.11,M_PI/6}};
+  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/8},
+                                                  {av.viewsphereRad,-M_PI+0.11,M_PI/8},
+                                                  {av.viewsphereRad,-M_PI-0.11,M_PI/8}};
   for (int i = 0; i < 3; i++) {
     av.moveKinectViewsphere(kinectPoses[i]);
     av.readKinect();
@@ -977,6 +977,146 @@ void testMoveItCollision(environment &av, int objID){
   }while(mode != 0);
 
   av.deleteObject(objID);
+  std::cout << "*** End ***" << std::endl;
+}
+
+// 20: Testing moveit path constraints
+void testMoveitPathConstraint(environment &av){
+  std::cout << "*** In moveit path constraint testing function ***" << std::endl;
+
+  if(av.simulationMode != "FRANKASIMULATION"){
+    std::cout << "Incorrect simulation mode... Closing" << std::endl;
+    std::cout << "*** End ***" << std::endl;
+    return;
+  }
+  
+  av.clearAllConstraints();
+  geometry_msgs::Pose pTemp;
+  int flag;
+  bool res;
+  std::cout << "Choices Available :\n"<<
+               "\t1:Visibility Constraint\n"<<
+               "\t2:Orientataion Constraint"<< std::endl;
+  std::cin >> flag;
+  if(flag == 1){
+    av.addVisibilityConstraint();
+    std::vector<double> pose(3);
+    do{
+      std::cout << "Enter your choice 1:Viewsphere, 0:Exit : "; std::cin >> flag;
+      if(flag == 1){
+        std::cout << "Enter viewsphere co-ordinates with centre at (" <<
+                      av.tableCentre[0] << "," <<
+                      av.tableCentre[1] << "," <<
+                      av.tableCentre[2] << ")" << std::endl;
+        std::cout << "R (Radius) : ";                         std::cin >> pose[0];
+        std::cout << "Phi (Azhimuthal Angle) (0->2*PI) : ";   std::cin >> pose[1];
+        std::cout << "Theta (Polar Angle) (0->PI/2): ";       std::cin >> pose[2];
+        res = av.moveKinectViewsphere(pose);
+      }
+      std::cout << "Franka moved : " << std::boolalpha << res << std::endl;
+    }while(flag != 0);
+    av.clearAllConstraints();
+  }else if(flag == 2){
+    std::vector<double> pose(6);
+    std::cout << "Enter orientation pose data" << std::endl;
+    std::cout << "Roll : ";   std::cin >> pose[3];
+    std::cout << "Pitch : ";  std::cin >> pose[4];
+    std::cout << "Yaw : ";    std::cin >> pose[5];
+    Eigen::Affine3f tf = pcl::getTransformation(0.5,0,0.5,pose[3],pose[4],pose[5]);
+    av.moveFranka(tf.matrix(),"JOINT",false,true,pTemp);
+    av.addOrientationConstraint(tf);
+    do{
+      std::cout << "Enter your choice 1:Cartesian, 0:Exit : "; std::cin >> flag;
+      if(flag == 1){
+        std::cout << "Enter pose data" << std::endl;
+        std::cout << "X : ";      std::cin >> pose[0];
+        std::cout << "Y : ";      std::cin >> pose[1];
+        std::cout << "Z : ";      std::cin >> pose[2];
+        tf = pcl::getTransformation(pose[0],pose[1],pose[2],pose[3],pose[4],pose[5]);
+        res = av.moveFranka(tf.matrix(),"JOINT",false,true,pTemp);
+      }
+      std::cout << "Franka moved : " << std::boolalpha << res << std::endl;
+    }while(flag != 0);
+    av.clearAllConstraints();
+  }
+
+  // std::vector<double> cartPoseStart = {0.5,0,0.1,0,0,0};
+  // std::vector<double> cartPoseEnd = {0.5,0,0.5,0,0,0};
+  // geometry_msgs::Pose pTemp;
+  // Eigen::Affine3f tfStart = pcl::getTransformation(cartPoseStart[0],cartPoseStart[1],cartPoseStart[2],
+  //                                                  cartPoseStart[3],cartPoseStart[4],cartPoseStart[5]);
+  //
+  // Eigen::Affine3f tfEnd = pcl::getTransformation(cartPoseEnd[0],cartPoseEnd[1],cartPoseEnd[2],
+  //                                                cartPoseEnd[3],cartPoseEnd[4],cartPoseEnd[5]);
+  //
+  // pcl::Normal direction;
+  // direction.normal_x = cartPoseEnd[0] - cartPoseStart[0];
+  // direction.normal_y = cartPoseEnd[1] - cartPoseStart[1];
+  // direction.normal_z = cartPoseEnd[2] - cartPoseStart[2];
+  //
+  // pcl::PointXYZRGB midPoint;
+  // midPoint.x = (cartPoseEnd[0] + cartPoseStart[0])/2;
+  // midPoint.y = (cartPoseEnd[1] + cartPoseStart[1])/2;
+  // midPoint.z = (cartPoseEnd[2] + cartPoseStart[2])/2;
+  //
+  // float distance = sqrt(pow(direction.normal_x,2)+pow(direction.normal_y,2)+pow(direction.normal_z,2));
+  //
+  // Eigen::Affine3f tf = calcTfFromNormal(direction,midPoint);
+  // Eigen::Matrix4f tfMat = tf.matrix();
+  // Eigen::Quaternionf quat(tfMat.block<3,3>(0,0));
+  //
+  // moveit_planner::AddCollision collisionObjMsg;
+  // collisionObjMsg.request.collObject.header.frame_id = "/world";
+  // collisionObjMsg.request.collObject.id = "object";
+  //
+
+  // moveit_msgs::PositionConstraint posConstraint;
+  //
+  // posConstraint.header.frame_id = "/world";
+  // posConstraint.link_name = "panda_hand";
+  // posConstraint.weight = 1.0;
+  //
+  // shape_msgs::SolidPrimitive primitive;
+  // primitive.type = primitive.BOX;
+  // primitive.dimensions.resize(3);
+  // primitive.dimensions[0] = distance+0.1;
+  // primitive.dimensions[1] = 0.1;
+  // primitive.dimensions[2] = 0.1;
+  // posConstraint.constraint_region.primitives.push_back(primitive);
+  //
+  // geometry_msgs::Pose pose;
+  // pose.position.x = midPoint.x;
+  // pose.position.y = midPoint.y;
+  // pose.position.z = midPoint.z;
+  // pose.orientation.x = quat.x();
+  // pose.orientation.y = quat.y();
+  // pose.orientation.z = quat.z();
+  // pose.orientation.w = quat.w();
+  // posConstraint.constraint_region.primitive_poses.push_back(pose);
+  //
+  // constraintsMsg.request.constraints.position_constraints.push_back(posConstraint);
+  //
+  // collisionObjMsg.request.collObject.primitives.push_back(primitive);
+  // collisionObjMsg.request.collObject.primitive_poses.push_back(pose);
+  // collisionObjMsg.request.collObject.operation = collisionObjMsg.request.collObject.ADD;
+  // av.collisionClient.call(collisionObjMsg);
+  // int flag;
+  // std::cout << "xxxx " ; std::cin >> flag;
+  //
+  // collisionObjMsg.request.collObject.operation = collisionObjMsg.request.collObject.REMOVE;
+  // av.collisionClient.call(collisionObjMsg);
+  //
+  // av.moveFranka(tfStart.matrix(),"JOINT",false,true,pTemp);
+  // ros::Duration(2).sleep();
+  // std::cout << "xxxx " ; std::cin >> flag;
+  // // av.addOrientationConstraint(tfEnd.matrix());
+  // // av.setConstClient.call(constraintsMsg);
+  //
+  // av.moveFranka(tfEnd.matrix(),"JOINT",false,true,pTemp);
+  // ros::Duration(2).sleep();
+  // std::cout << "xxxx " ; std::cin >> flag;
+  // av.clearAllConstraints();
+
   std::cout << "*** End ***" << std::endl;
 }
 
@@ -1011,9 +1151,10 @@ int main (int argc, char** argv){
   std::cout << "17 : Gripper open close testing." << std::endl;
   std::cout << "18 : Testing object pickup." << std::endl;
   std::cout << "19 : Testing moveit collision add/remove." << std::endl;
+  std::cout << "20 : Testing moveit constraint." << std::endl;
   std::cout << "Enter your choice : "; cin >> choice;
 
-  if (choice >= 5 && choice <= 13 || choice == 16 || choice == 18 || choice == 19) {
+  if((choice >= 5 && choice <= 13) || choice == 16 || (choice >= 18 && choice <= 19)){
     std::cout << "Objects available :" << std::endl;
     for(auto data: activeVision.objectDict){
         data.second.printObjectInfo();
@@ -1085,6 +1226,8 @@ int main (int argc, char** argv){
       testObjectPickup(activeVision,objID);           break;
     case 19:
       testMoveItCollision(activeVision,objID);        break;
+    case 20:
+      testMoveitPathConstraint(activeVision);         break;
     default:
       std::cout << "Invalid choice." << std::endl;
   }

@@ -17,7 +17,7 @@
       <visual>
         <origin xyz="0.05 0.0 0.05" rpy="-${pi/2} -${pi/2} -${pi/2}"/>
         <geometry>
-          <mesh filename="package://active_vision/models/kinectAV/meshes/kinect.dae"/>
+          <mesh filename="package://active_vision/models/kinectAV/meshes/realsense.stl"/>
         </geometry>
       </visual>
       <collision>

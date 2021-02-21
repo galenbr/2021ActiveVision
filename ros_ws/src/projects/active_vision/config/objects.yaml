@@ -75,12 +75,12 @@ objectsInfo: {
     Filename: YCB003,
     Description: 003_cracker_box,
     nPoses: 1,
-    Pose1: [0.018,0.00,0.00,0,180],
+    Pose1: [0.106,0.00,0.00,0,180],
   },
   ID12: {
     Filename: YCB005,
     Description: 005_tomato_soup_can,
     nPoses: 1,
-    Pose1: [0.015,0.00,0.00,0,1],
+    Pose1: [0.05,0.00,0.00,0,1],
   },
 }

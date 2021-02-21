@@ -121,7 +121,7 @@ def generate_sdf(object_name, data_type, object_mass, x, y, z, ixx, ixy, ixz, iy
   <model name=\"""" + file_name + """\">
     <link name="link">
       <inertial>
-        <pose>""" + str(x) + """ """ + str(y) + """ """ + str(z) + """ 0 0 0</pose>
+        <pose>0 0 0 0 0 0</pose>
         <inertia>
           <ixx>""" + str(ixx) + """</ixx>
           <ixy>""" + str(ixy) + """</ixy>
@@ -133,7 +133,7 @@ def generate_sdf(object_name, data_type, object_mass, x, y, z, ixx, ixy, ixz, iy
         <mass>""" + str(object_mass) + """</mass>
       </inertial>
       <collision name="collision">
-        <pose>0 0 0 0 0 0</pose>
+        <pose>""" + str(-x) + """ """ + str(-y) + """ """ + str(-z) + """ 0 0 0</pose>
         <geometry>
           <mesh>
             <uri>file:///""" + data_path + """/""" + object_name + """/""" + data_type + """/nontextured.stl</uri>
@@ -157,7 +157,7 @@ def generate_sdf(object_name, data_type, object_mass, x, y, z, ixx, ixy, ixz, iy
         </surface>
       </collision>
       <visual name="visual">
-        <pose>0 0 0 0 0 0</pose>
+        <pose>""" + str(-x) + """ """ + str(-y) + """ """ + str(-z) + """ 0 0 0</pose>
         <geometry>
           <mesh>
             <uri>file:///""" + data_path + """/""" + object_name + """/""" + data_type + """/nontextured.stl</uri>
@@ -199,9 +199,9 @@ if __name__ == "__main__":
                 object_name = file_line.split()[0]
                 object_mass = file_line.split()[1]
                 if len(file_line.split()) == 11:
-                    x = file_line.split()[2]
-                    y = file_line.split()[3]
-                    z = file_line.split()[4]
+                    x = float(file_line.split()[2])
+                    y = float(file_line.split()[3])
+                    z = float(file_line.split()[4])
                     ixx = file_line.split()[5]
                     ixy = file_line.split()[6]
                     ixz = file_line.split()[7]

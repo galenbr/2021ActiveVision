@@ -256,7 +256,9 @@ std::set<int> findVisibleUsefulUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr unexp,
   cpBoxObj2.setMin(cpBoxMin.getVector4fMap());
   cpBoxObj2.setMax(cpBoxMax.getVector4fMap());
 
-  for(int i = 0; i < tempUsefulUnexp->points.size(); i++){
+  int stepSize = std::max(1,int(round(double(tempUsefulUnexp->size())/1000.0)));
+
+  for(int i = 0; i < tempUsefulUnexp->points.size(); i+=stepSize){
     // indicesOK.clear(); indicesNotOK.clear();
     projPts.clear(); projPts.push_back(cv::Point(w/2,w/2));
 
@@ -449,13 +451,14 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
 
   static ptCldColor::Ptr usefulUnexp{new ptCldColor};
   extractUsefulUnexpPts(obj,unexp,usefulUnexp);
-
   int threshold = 75;
   std::set<int> visibleIndices;
   std::vector<std::set<int>> indices;
   std::vector<int> res = {0,0,0,0,0,0,0,0};
   std::vector<int> step = {0,0,0,0,0,0,0,0};
   int maxRes = 0;
+
+  int stepSize = std::max(1,int(round(double(usefulUnexp->size())/1000.0)));
 
   for(int i = 1 ; i <= 8; i++){
     std::vector<double> newPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0)); step[i-1] = 20;
@@ -467,15 +470,16 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
   for(int i = 0 ; i < 8; i++) res[i] = indices[i].size();
   maxRes = *std::max_element(res.begin(), res.end());
 
-  if(maxRes < minVis){
+  if(maxRes*stepSize < minVis){
     for(int i = 1 ; i <= 8; i++){
       std::vector<double> newPose = calcExplorationPose(pose,i,mode,40*(M_PI/180.0)); step[i-1] = 40;
       if(!checkPoseOK(newPose,true)){
         newPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0)); step[i-1] = 20;
       }
 
-      if(checkPoseOK(newPose,true)) visibleIndices = findVisibleUsefulUnexp(obj,unexp,usefulUnexp,newPose);
-      else                          visibleIndices.clear();
+      std::vector<double> goToPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0));
+      if(checkPoseOK(goToPose,true)) visibleIndices = findVisibleUsefulUnexp(obj,unexp,usefulUnexp,newPose);
+      else                           visibleIndices.clear();
       indices[i-1].insert(visibleIndices.begin(),visibleIndices.end());
     }
     for(int i = 0 ; i < 8; i++) res[i] = indices[i].size();
@@ -513,7 +517,7 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
   //     result->points.back().b = 255;
   //   }
   //   std::vector<double> newPose = calcExplorationPose(pose,i,mode,step[i-1]*(M_PI/180.0));
-  //   setCamView(viewer,{newPose[0]/2,newPose[1],newPose[2]},::table,vp[i]);
+  //   setCamView(viewer,{newPose[0],newPose[1],newPose[2]},::table,vp[i]);
   //   addRGB(viewer,obj,"obj"+std::to_string(i),vp[i]);
   //   addRGB(viewer,result,"result"+std::to_string(i),vp[i]);
   //   viewer->addText(std::to_string(i)+","+std::to_string(step[i-1])+","+std::to_string(res[i-1]),2,2,20,1,0,0,"data"+std::to_string(i),vp[i]);
@@ -594,14 +598,6 @@ int main (int argc, char** argv){
   environment activeVision(&nh);
   activeVision.loadGripper();
 
-  activeVision.moveKinectViewsphere({activeVision.viewsphereRad,-M_PI,0});
-
-  // 4 kinect position to capture and fuse
-  std::vector<std::vector<double>> kinectPoses = {{activeVision.viewsphereRad,M_PI,0},
-                                                  {activeVision.viewsphereRad,M_PI/2,M_PI/4},
-                                                  {activeVision.viewsphereRad,0,M_PI/4},
-                                                  {activeVision.viewsphereRad,M_PI/2,M_PI/4}};
-
   // Delay to ensure all publishers and subscribers are connected
   boost::this_thread::sleep(boost::posix_time::milliseconds(500));
 
@@ -614,7 +610,7 @@ int main (int argc, char** argv){
   int pose = std::atoi(argv[2]);
   int yaw = std::atoi(argv[3]);
   int dir;
-  std::vector<double> newPose = kinectPoses[0];
+  std::vector<double> newPose = {activeVision.viewsphereRad,M_PI,M_PI/8};
   activeVision.spawnObject(objID,pose,yaw*M_PI/180);
 
   singlePass(activeVision,newPose,true,true,2);
@@ -636,7 +632,7 @@ int main (int argc, char** argv){
   ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
   std::vector<int> vp;
   setupViewer(viewer, 1, vp);
-  setCamView(viewer,{kinectPoses[0][0],kinectPoses[0][1],kinectPoses[0][2]},::table,vp[0]);
+  setCamView(viewer,{newPose[0],newPose[1],newPose[2]},::table,vp[0]);
   activeVision.updateGripper(activeVision.selectedGrasp,0);
   addRGB(viewer,activeVision.ptrPtCldEnv,"Env",vp[0]);
   addRGB(viewer,activeVision.ptrPtCldUnexp,"Unexp",vp[0]);
@@ -646,11 +642,11 @@ int main (int argc, char** argv){
   boost::this_thread::sleep (boost::posix_time::microseconds(100000));
 
   if(::simulationMode == "FRANKASIMULATION") activeVision.graspObject(activeVision.graspsPossible[activeVision.selectedGrasp]);
-
-  // while(!viewer->wasStopped()){
-  //   viewer->spinOnce(100);
-  //   boost::this_thread::sleep (boost::posix_time::microseconds(100000));
-  // }
+  std::cout << "Press Q to exit" << std::endl;
+  while(!viewer->wasStopped()){
+    viewer->spinOnce(100);
+    boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+  }
 
   activeVision.deleteObject(objID);
   boost::this_thread::sleep(boost::posix_time::milliseconds(500));

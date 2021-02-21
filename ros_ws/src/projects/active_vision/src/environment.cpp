@@ -31,11 +31,16 @@ graspPoint::graspPoint(){
   gripperWidth = 0.05;      // Gripper width for the grasp
   pose = {0,0,0,0,0,0};     // Base pose of the gripper from where additional pitch is used to change its orientation
   addnlPitch = 0;           // Pitch relative to the Base Pose
+  distance = 999;           // Pitch relative to the Base Pose
 }
 
 // Function to compare grasp point for sorting
 bool compareGrasp(graspPoint A, graspPoint B){
-  return(A.distance < B.distance);
+  if(abs(A.distance - B.distance) <= 0.005){
+    return(A.quality > B.quality);
+  }else{
+    return(A.distance < B.distance);
+  }
 }
 // ***END***
 
@@ -61,22 +66,12 @@ Eigen::Vector3f getTranslation(const Eigen::Affine3f& tf){
 }
 
 Eigen::Affine3f calcTfFromNormal(pcl::Normal normal, pcl::PointXYZRGB point){
-  Eigen::Matrix3f rot;
-  Eigen::Vector3f trans;
 
   Eigen::Matrix4f tfMat; tfMat.setIdentity();
   Eigen::Affine3f tf;
-
-  Eigen::Vector3f xAxis,yAxis,zAxis,xyPlane(0,0,1);
-
-  xAxis = {normal.normal_x,normal.normal_y,normal.normal_z}; xAxis.normalize();
-  yAxis = xAxis.cross(xyPlane); yAxis.normalize();
-  zAxis = xAxis.cross(yAxis);
-
-  rot << xAxis[0], yAxis[0], zAxis[0],
-         xAxis[1], yAxis[1], zAxis[1],
-         xAxis[2], yAxis[2], zAxis[2];
-  trans = point.getVector3fMap();
+  Eigen::Matrix3f rot;
+  Eigen::Vector3f trans;
+  calcTfFromNormal(normal, point, rot, trans);
 
   tfMat.block<3,3>(0,0) = rot;
   tfMat.block<3,1>(0,3) = trans;
@@ -92,7 +87,9 @@ void calcTfFromNormal(pcl::Normal normal, pcl::PointXYZRGB point, Eigen::Matrix3
   Eigen::Vector3f xAxis,yAxis,zAxis,xyPlane(0,0,1);
 
   xAxis = {normal.normal_x,normal.normal_y,normal.normal_z}; xAxis.normalize();
-  yAxis = xAxis.cross(xyPlane); yAxis.normalize();
+  yAxis = xAxis.cross(xyPlane);
+  if(yAxis.norm() == 0) yAxis << normal.normal_x,0,0;
+  yAxis.normalize();
   zAxis = xAxis.cross(yAxis);
 
   rot << xAxis[0], yAxis[0], zAxis[0],
@@ -241,11 +238,14 @@ environment::environment(ros::NodeHandle *nh){
       allOK *= ROSCheck("SERVICE","get_pose"); if(!allOK) continue;
       allOK *= ROSCheck("SERVICE","move_to_pose"); if(!allOK) continue;
       allOK *= ROSCheck("SERVICE","cartesian_move"); if(!allOK) continue;
-      allOK *= ROSCheck("SERVICE","inverse_kinematics"); if(!allOK) continue;
-      allOK *= ROSCheck("SERVICE","set_velocity_scaling"); if(!allOK) continue;
-      allOK *= ROSCheck("SERVICE","move_to_joint_space"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","inverse_kinematics_collision_check"); if(!allOK) continue;
+      // allOK *= ROSCheck("SERVICE","set_velocity_scaling"); if(!allOK) continue;
+      // allOK *= ROSCheck("SERVICE","move_to_joint_space"); if(!allOK) continue;
       allOK *= ROSCheck("SERVICE","add_collision_object"); if(!allOK) continue;
       allOK *= ROSCheck("SERVICE","gripPosServer"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","set_constraints"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","clear_constraints"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","move_to_named_state"); if(!allOK) continue;
     }
   }
 
@@ -254,14 +254,19 @@ environment::environment(ros::NodeHandle *nh){
   gazeboSpawnModel = nh->serviceClient< gazebo_msgs::SpawnModel> ("/gazebo/spawn_sdf_model");
   gazeboCheckModel = nh->serviceClient< gazebo_msgs::GetModelState> ("/gazebo/get_model_state");
   gazeboDeleteModel = nh->serviceClient< gazebo_msgs::DeleteModel> ("/gazebo/delete_model");
+
   getPoseClient = nh->serviceClient<moveit_planner::GetPose>("get_pose");
   poseClient = nh->serviceClient<moveit_planner::MovePose>("move_to_pose");
   cartMoveClient = nh->serviceClient<moveit_planner::MoveCart>("cartesian_move");
-  IKClient =  nh->serviceClient<moveit_planner::Inv>("inverse_kinematics");
-  velScalingClient = nh->serviceClient<moveit_planner::SetVelocity>("set_velocity_scaling");
-  jointSpaceClient = nh->serviceClient<moveit_planner::MoveJoint>("move_to_joint_space");
+  IKClient =  nh->serviceClient<moveit_planner::Inv>("inverse_kinematics_collision_check");
+  // velScalingClient = nh->serviceClient<moveit_planner::SetVelocity>("set_velocity_scaling");
+  // jointSpaceClient = nh->serviceClient<moveit_planner::MoveJoint>("move_to_joint_space");
   collisionClient = nh->serviceClient<moveit_planner::AddCollision>("add_collision_object");
   gripperPosClient = nh->serviceClient<franka_pos_grasping_gazebo::GripPos>("gripPosServer");
+  setConstClient = nh->serviceClient<moveit_planner::SetConstraints>("set_constraints");
+  clearConstClient = nh->serviceClient<std_srvs::Empty>("clear_constraints");
+  namedStateClient = nh->serviceClient<moveit_planner::MoveNamedState>("move_to_named_state");
+
   // NOT USED (JUST FOR REFERENCE)
   /*subKinectRGB = nh->subscribe ("/camera/color/image_raw", 1, &environment::cbImgRgb, this);
   subKinectDepth = nh->subscribe ("/camera/depth/image_raw", 1, &environment::cbImgDepth, this);*/
@@ -301,6 +306,11 @@ environment::environment(ros::NodeHandle *nh){
   nh->getParam("/active_vision/environment/graspCurvatureConstraint", graspCurvatureConstraint);
   nh->getParam("/active_vision/environment/graspSurPatchConstraint", graspSurPatchConstraint);
   ros::Rate r(60);
+
+  if(simulationMode == "FRANKASIMULATION"){
+    moveFrankaHome();
+    addVisibilityConstraint();
+  }
 }
 
 // Function to reset the environment
@@ -308,6 +318,10 @@ void environment::reset(){
   ptrPtCldEnv->clear();
   ptrPtCldUnexp->clear();
   configurations.clear();
+  if(simulationMode == "FRANKASIMULATION"){
+    moveFrankaHome();
+    addVisibilityConstraint();
+  }
 }
 
 // Store the configuration
@@ -736,6 +750,81 @@ bool environment::moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKin
   return true;
 }
 
+void environment::moveFrankaHome(){
+  std::cout << "Moving to home pose..." << std::endl;
+  static franka_pos_grasping_gazebo::GripPos grasp; grasp.request.finger_pos = 0.08/2.0;
+  static moveit_planner::MoveNamedState namedState; namedState.request.name = "Home";
+  namedStateClient.call(namedState);
+  gripperPosClient.call(grasp);
+  ros::Duration(1).sleep();
+}
+
+void environment::addVisibilityConstraint(){
+  moveit_msgs::VisibilityConstraint visConstraint;
+  visConstraint.target_radius = 0.125;
+
+  geometry_msgs::Pose pose;
+  pose.orientation.x = 0;
+  pose.orientation.y = 0;
+  pose.orientation.z = 0;
+  pose.orientation.w = 1;
+
+  geometry_msgs::PoseStamped tgtPose;
+  tgtPose.header.frame_id = "panda_link0";
+  pose.position.x = 0.45;
+  pose.position.y = 0;
+  pose.position.z = 0;
+  tgtPose.pose = pose;
+  visConstraint.target_pose = tgtPose;
+
+  visConstraint.cone_sides = 4;
+
+  geometry_msgs::PoseStamped sensorPose;
+  sensorPose.header.frame_id = "panda_hand";
+  pose.position.x = 0.05;
+  pose.position.y = 0;
+  pose.position.z = 0.05;
+  sensorPose.pose = pose;
+  visConstraint.sensor_pose = sensorPose;
+
+  visConstraint.max_view_angle = 0.85*M_PI/2;
+
+  visConstraint.sensor_view_direction = visConstraint.SENSOR_Z;
+
+  visConstraint.weight = 1.0;
+
+  moveit_planner::SetConstraints constraintsMsg;
+  constraintsMsg.request.constraints.visibility_constraints = {visConstraint};
+
+  setConstClient.call(constraintsMsg);
+}
+
+void environment::addOrientationConstraint(Eigen::Affine3f tf){
+  tf = tf*pcl::getTransformation(0,0,0,0,-M_PI/2,M_PI);
+  Eigen::Quaternionf quat(tf.matrix().block<3,3>(0,0));
+
+  moveit_planner::SetConstraints constraintsMsg;
+  moveit_msgs::OrientationConstraint orientConstraint;
+  orientConstraint.header.frame_id = "/world";
+  orientConstraint.link_name = "panda_hand";
+  orientConstraint.orientation.x = quat.x();
+  orientConstraint.orientation.y = quat.y();
+  orientConstraint.orientation.z = quat.z();
+  orientConstraint.orientation.w = quat.w();
+  orientConstraint.absolute_x_axis_tolerance = 0.01;
+  orientConstraint.absolute_y_axis_tolerance = 0.01;
+  orientConstraint.absolute_z_axis_tolerance = 0.01;
+  orientConstraint.weight = 1.0;
+
+  constraintsMsg.request.constraints.orientation_constraints = {orientConstraint};
+  setConstClient.call(constraintsMsg);
+}
+
+void environment::clearAllConstraints(){
+  std_srvs::Empty emptyMsg;
+  clearConstClient.call(emptyMsg);
+}
+
 // 7: Function to read the kinect data.
 void environment::readKinect(){
   readFlag[0] = 1; // readFlag[1] = 1; readFlag[2] = 1;
@@ -1014,11 +1103,12 @@ void environment::graspsynthesis(){
   Eigen::Vector4f temp1;
   pcl::compute3DCentroid(*ptrPtCldObject, temp1);
   centroidObj.x = temp1[0]; centroidObj.y = temp1[1]; centroidObj.z = temp1[2];
+  int stepSize = std::max(1,int(round(double(ptrPtCldObject->size())/1000.0)));
   // Using brute force search
   // Checking for each pair of points (alternate points skipped to speedup the process)
-  for(int i = 0; i < ptrPtCldObject->size()-1; i++){
+  for(int i = 0; i < ptrPtCldObject->size()-1; i+=stepSize){
     if(useForGrasp[i] == false) continue;
-    for(int j = i+1; j < ptrPtCldObject->size(); j++){
+    for(int j = i+1; j < ptrPtCldObject->size(); j+=stepSize){
       if(useForGrasp[j] == false) continue;
 
       graspTemp.p1 = ptrPtCldObject->points[i];
@@ -1049,17 +1139,20 @@ void environment::graspsynthesis(){
       centroidGrasp.y = (graspTemp.p1.y + graspTemp.p2.y) / 2;
       centroidGrasp.z = (graspTemp.p1.z + graspTemp.p2.z) / 2;
       graspTemp.distance = pcl::euclideanDistance(centroidGrasp,centroidObj);
+      // graspTemp.distance = sqrt(pow(centroidObj.x-centroidGrasp.x,2)+pow(centroidObj.y-centroidGrasp.y,2));
 
       // Push this into the vector
       graspsPossible.push_back(graspTemp);
     }
   }
 
+  std::sort(graspsPossible.begin(),graspsPossible.end(),compareGrasp);
+
   // For thin objects grasp pair would not be feasible, so each point is considered as a grasp pair
   // Adding these grasps in the end
   Eigen::Vector3f xyPlaneA(0,0,1);
   Eigen::Vector3f xyPlaneB(0,0,-1);
-  for(int i = 0; i < ptrPtCldObject->size(); i++){
+  for(int i = 0; i < ptrPtCldObject->size(); i+=stepSize){
     if(useForGrasp[i] == false) continue;
 
     A = std::min(pcl::getAngle3D(xyPlaneA,ptrObjNormal->points[i].getNormalVector3fMap()),
@@ -1089,11 +1182,11 @@ void environment::graspsynthesis(){
     centroidGrasp.y = (graspTemp.p1.y + graspTemp.p2.y) / 2;
     centroidGrasp.z = (graspTemp.p1.z + graspTemp.p2.z) / 2;
     graspTemp.distance = pcl::euclideanDistance(centroidGrasp,centroidObj);
+    // graspTemp.distance = sqrt(pow(centroidObj.x-centroidGrasp.x,2)+pow(centroidObj.y-centroidGrasp.y,2));
 
     graspsPossible.push_back(graspTemp);
   }
 
-  std::sort(graspsPossible.begin(),graspsPossible.end(),compareGrasp);
 }
 
 // 13: Given a grasp point pair find the gripper orientation
@@ -1233,6 +1326,7 @@ int environment::graspAndCollisionCheck(){
       centroidGrasp.y = (graspTemp.p1.y + graspTemp.p2.y) / 2;
       centroidGrasp.z = (graspTemp.p1.z + graspTemp.p2.z) / 2;
       graspTemp.distance = pcl::euclideanDistance(centroidGrasp,centroidObj);
+      // graspTemp.distance = sqrt(pow(centroidObj.x-centroidGrasp.x,2)+pow(centroidObj.y-centroidGrasp.y,2));
 
       nGrasp++;
       // Push this into the vector
@@ -1283,6 +1377,7 @@ int environment::graspAndCollisionCheck(){
     centroidGrasp.y = (graspTemp.p1.y + graspTemp.p2.y) / 2;
     centroidGrasp.z = (graspTemp.p1.z + graspTemp.p2.z) / 2;
     graspTemp.distance = pcl::euclideanDistance(centroidGrasp,centroidObj);
+    // graspTemp.distance = sqrt(pow(centroidObj.x-centroidGrasp.x,2)+pow(centroidObj.y-centroidGrasp.y,2));
 
     nGrasp++;
     if (graspsPossible.size() == 0){
@@ -1308,34 +1403,43 @@ void environment::editMoveItCollisions(std::string object, std::string mode){
 
   if(mode == "ADD"){
     shape_msgs::SolidPrimitive primitive;
-    primitive.type = primitive.BOX;
-    primitive.dimensions.resize(3);
 
-    geometry_msgs::Pose cube_pose;
-    cube_pose.orientation.x = 0;
-    cube_pose.orientation.y = 0;
-    cube_pose.orientation.z = 0;
-    cube_pose.orientation.w = 1;
+    geometry_msgs::Pose pose;
+    pose.orientation.x = 0;
+    pose.orientation.y = 0;
+    pose.orientation.z = 0;
+    pose.orientation.w = 1;
 
     if(object == "TABLE"){
+      primitive.type = primitive.BOX;
+      primitive.dimensions.resize(3);
       primitive.dimensions[0] = (maxTable.x - minTable.x)*2;
       primitive.dimensions[1] = (maxTable.y - minTable.y)*2;
       primitive.dimensions[2] = (maxTable.z - minTable.z);
 
-      cube_pose.position.x = cenTable[0];
-      cube_pose.position.y = cenTable[1];
-      cube_pose.position.z = cenTable[2];
+      pose.position.x = cenTable[0];
+      pose.position.y = cenTable[1];
+      pose.position.z = cenTable[2];
     }else if(object == "OBJECT"){
-      primitive.dimensions[0] = (maxPtObj.x - minPtObj.x)*1.1;
-      primitive.dimensions[1] = (maxPtObj.y - minPtObj.y)*1.1;
-      primitive.dimensions[2] = (maxPtObj.z)*1.1;
+      // Object size limited to 25x25x25 cm
 
-      cube_pose.position.x = cenObject[0];
-      cube_pose.position.y = cenObject[1];
-      cube_pose.position.z = maxPtObj.z/2;
+      // primitive.type = primitive.BOX;
+      // primitive.dimensions.resize(3);
+      // primitive.dimensions[0] = (maxPtObj.x - minPtObj.x)*1.1;
+      // primitive.dimensions[1] = (maxPtObj.y - minPtObj.y)*1.1;
+      // primitive.dimensions[2] = (maxPtObj.z)*1.1;
+
+      primitive.type = primitive.CYLINDER;
+      primitive.dimensions.resize(2);
+      primitive.dimensions[0] = 0.25;
+      primitive.dimensions[1] = std::min(double(std::max(maxPtObj.x - minPtObj.x,maxPtObj.y - minPtObj.y)),0.25)/2.0;
+
+      pose.position.x = cenObject[0];
+      pose.position.y = cenObject[1];
+      pose.position.z = 0.125;
     }
     collisionObjMsg.request.collObject.primitives.push_back(primitive);
-    collisionObjMsg.request.collObject.primitive_poses.push_back(cube_pose);
+    collisionObjMsg.request.collObject.primitive_poses.push_back(pose);
     collisionObjMsg.request.collObject.operation = collisionObjMsg.request.collObject.ADD;
   }else if(mode == "REMOVE"){
     collisionObjMsg.request.collObject.operation = collisionObjMsg.request.collObject.REMOVE;
@@ -1350,10 +1454,25 @@ bool environment::checkPreGrasp(graspPoint &graspData){
                                                    graspData.pose[2],graspData.pose[3],
                                                    graspData.pose[4],graspData.pose[5])*
                             pcl::getTransformation(0,0,0,0,graspData.addnlPitch,0)*
-                            pcl::getTransformation(0.0,0,-0.05-fingerZOffset,0,0,0)*
+                            pcl::getTransformation(0.0,0,-0.0447-fingerZOffset,0,0,0)*
                             pcl::getTransformation(0,0,0,0,-M_PI/2,-M_PI);
 
-  Eigen::Affine3f tfPreGrasp = tfGrasp*pcl::getTransformation(-1*0.3,0,0,0,0,0);
+  Eigen::Affine3f tfPreGrasp;
+
+  float clearance = 0;
+  // do{
+  //   tfPreGrasp = tfGrasp*pcl::getTransformation(-clearance+0.05+fingerZOffset,0,0,0,0,0);
+  //   clearance += 0.01;
+  // }while((tfPreGrasp(0,3)>tableCentre[0]-0.125 && tfPreGrasp(0,3)<tableCentre[0]+0.125 &&
+  //         tfPreGrasp(1,3)>tableCentre[1]-0.125 && tfPreGrasp(1,3)<tableCentre[1]+0.125 &&
+  //         tfPreGrasp(2,3)>0.01                 && tfPreGrasp(2,3)<tableCentre[2]+0.25));
+  do{
+    tfPreGrasp = tfGrasp*pcl::getTransformation(-clearance+0.0447+fingerZOffset,0,0,0,0,0);
+    clearance += 0.01;
+  }while((sqrt(pow(tfPreGrasp(0,3)-tableCentre[0],2) + pow(tfPreGrasp(1,3)-tableCentre[1],2)) <= 0.13 &&
+          tfPreGrasp(2,3)>0 && tfPreGrasp(2,3)<tableCentre[2]+0.25));
+
+  tfPreGrasp = tfGrasp*pcl::getTransformation(-clearance,0,0,0,0,0);
 
   geometry_msgs::Pose p;
   return moveFranka(tfPreGrasp.matrix(),"JOINT",false,false,p);
@@ -1362,87 +1481,85 @@ bool environment::checkPreGrasp(graspPoint &graspData){
 // 17: Object grasping pipeline
 void environment::graspObject(graspPoint &graspData){
 
-  // float clearanceX = (maxPtObj.x - minPtObj.x)/2.0;
-  // float clearanceY = (maxPtObj.y - minPtObj.y)/2.0;
-  // float clearanceZ = maxPtObj.z;
-  // float clearance = std::min(sqrt(pow(clearanceX,2)+pow(clearanceY,2)+pow(clearanceZ,2)),0.25);
-
   Eigen::Affine3f tfGrasp = pcl::getTransformation(graspData.pose[0],graspData.pose[1],
                                                    graspData.pose[2],graspData.pose[3],
                                                    graspData.pose[4],graspData.pose[5])*
                             pcl::getTransformation(0,0,0,0,graspData.addnlPitch,0)*
-                            pcl::getTransformation(0.0,0,-0.05-fingerZOffset,0,0,0)*
+                            pcl::getTransformation(0.0,0,-0.0447-fingerZOffset,0,0,0)*
                             pcl::getTransformation(0,0,0,0,-M_PI/2,-M_PI);
+
+  if(tfGrasp(2,2) < 0)      tfGrasp = tfGrasp*pcl::getTransformation(0,0,0,M_PI,0,0);
+
+  // std::cout << tfGrasp(0,0) << "," << tfGrasp(0,1) << "," << tfGrasp(0,2) << "\n"
+  //           << tfGrasp(1,0) << "," << tfGrasp(1,1) << "," << tfGrasp(2,2) << "\n"
+  //           << tfGrasp(2,0) << "," << tfGrasp(2,1) << "," << tfGrasp(3,2) << std::endl;
+
   Eigen::Affine3f tfGraspMoveUp = tfGrasp; tfGraspMoveUp(2,3)+=0.1;
   Eigen::Affine3f tfPreGrasp;
 
   float clearance = 0;
   do{
-    tfPreGrasp = tfGrasp*pcl::getTransformation(-1*clearance,0,0,0,0,0);
-    if(clearance >= 0.2) break;
+    tfPreGrasp = tfGrasp*pcl::getTransformation(-clearance+0.0447+fingerZOffset,0,0,0,0,0);
     clearance += 0.01;
-  }while((tfPreGrasp(0,3)>minPtObj.x && tfPreGrasp(0,3)<maxPtObj.x &&
-          tfPreGrasp(1,3)>minPtObj.y && tfPreGrasp(1,3)<maxPtObj.y &&
-          tfPreGrasp(2,3)>0.01       && tfPreGrasp(2,3)<maxPtObj.z));
+  }while((sqrt(pow(tfPreGrasp(0,3)-tableCentre[0],2) + pow(tfPreGrasp(1,3)-tableCentre[1],2)) <= 0.13 &&
+          tfPreGrasp(2,3)>0 && tfPreGrasp(2,3)<tableCentre[2]+0.25));
 
-  clearance += 0.05;
-  tfPreGrasp = tfGrasp*pcl::getTransformation(-1*clearance,0,0,0,0,0);
+  tfPreGrasp = tfGrasp*pcl::getTransformation(-clearance,0,0,0,0,0);
+  Eigen::Affine3f tfPreGrasp1 = tfPreGrasp; tfPreGrasp1(2,3)=std::max(0.37,double(tfPreGrasp1(2,3)));
 
   geometry_msgs::Pose p;
   franka_pos_grasping_gazebo::GripPos grasp;
   bool res;
 
-  // Home
-  std::cout << "Home pose..." << std::endl;
-  res = moveKinectViewsphere({viewsphereRad,-M_PI,0});
-  grasp.request.finger_pos = 0.08/2.0;
-  gripperPosClient.call(grasp);                                 ros::Duration(3).sleep();
-  if(!res){
-    std::cout << "Out of reach" << std::endl;
-    return;
-  }
+  moveFrankaHome();
+  clearAllConstraints();
 
   // Move to Pre-grasp
-  std::cout << "Pre Grasp..." << std::endl;
+  std::cout << "Moving to Pre Grasp 1 ..." << std::endl;
+  res = moveFranka(tfPreGrasp1.matrix(),"JOINT",false,true,p);
+  std::cout << "Moving to Pre Grasp 2 ..." << std::endl;
   res = moveFranka(tfPreGrasp.matrix(),"JOINT",false,true,p);
   editMoveItCollisions("OBJECT","REMOVE");
-  grasp.request.finger_pos = (graspData.gripperWidth+0.02)/2.0;
-  gripperPosClient.call(grasp);                                 ros::Duration(3).sleep();
+  grasp.request.finger_pos = (graspData.gripperWidth+0.04)/2.0;
+  gripperPosClient.call(grasp);
+  ros::Duration(3).sleep();
   if(!res){
     std::cout << "Out of reach" << std::endl;
     return;
   }
 
   // Move to Grasp and grasp
-  std::cout << "Grasp..." << std::endl;
+  std::cout << "Moving to Grasp..." << std::endl;
   res = moveFranka(tfGrasp.matrix(),"CARTESIAN",false,true,p);
-  grasp.request.finger_pos = (std::max(graspData.gripperWidth-1.2*voxelGridSize,0.005))/2.0;
-  gripperPosClient.call(grasp);                                 ros::Duration(3).sleep();
+  grasp.request.finger_pos = (std::max(graspData.gripperWidth-1.5*voxelGridSize,0.005))/2.0;
+  gripperPosClient.call(grasp);
+  ros::Duration(3).sleep();
   if(!res){
     std::cout << "Out of reach" << std::endl;
     return;
   }
 
   // Move straight up
-  std::cout << "Lift..." << std::endl;
-  res = moveFranka(tfGraspMoveUp.matrix(),"CARTESIAN",false,true,p);  ros::Duration(2).sleep();
+  std::cout << "Lifting..." << std::endl;
+  res = moveFranka(tfGraspMoveUp.matrix(),"CARTESIAN",false,true,p);
+  ros::Duration(2).sleep();
 
   // Go to same location and release
-  std::cout << "Place..." << std::endl;
+  std::cout << "Placing it back..." << std::endl;
   res = moveFranka(tfGrasp.matrix(),"CARTESIAN",false,true,p);
   grasp.request.finger_pos = (graspData.gripperWidth+0.04)/2.0;
-  gripperPosClient.call(grasp);                                   ros::Duration(3).sleep();
+  gripperPosClient.call(grasp);
+  ros::Duration(3).sleep();
 
   // Move to Post-grasp
-  std::cout << "Retreat..." << std::endl;
-  res = moveFranka(tfPreGrasp.matrix(),"CARTESIAN",false,true,p); ros::Duration(2).sleep();
+  std::cout << "Moving to Retreat 1..." << std::endl;
+  res = moveFranka(tfPreGrasp.matrix(),"CARTESIAN",false,true,p);
   editMoveItCollisions("OBJECT","ADD");
+  std::cout << "Moving to Retreat 2..." << std::endl;
+  res = moveFranka(tfPreGrasp1.matrix(),"JOINT",false,true,p);
+  ros::Duration(2).sleep();
 
-  // Home
-  std::cout << "Home pose..." << std::endl;
-  res = moveKinectViewsphere({viewsphereRad,-M_PI,0});
-  grasp.request.finger_pos = 0.08/2.0;
-  gripperPosClient.call(grasp);                                   ros::Duration(3).sleep();
+  moveFrankaHome();
 
 }
 

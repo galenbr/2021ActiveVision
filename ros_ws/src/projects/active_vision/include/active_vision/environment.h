@@ -57,10 +57,14 @@
 #include <moveit_planner/GetPose.h>
 #include <moveit_planner/MoveCart.h>
 #include <moveit_planner/MovePose.h>
-#include <moveit_planner/MoveJoint.h>
+// #include <moveit_planner/MoveJoint.h>
 #include <moveit_planner/Inv.h>
-#include <moveit_planner/SetVelocity.h>
+// #include <moveit_planner/SetVelocity.h>
 #include <moveit_planner/AddCollision.h>
+#include <moveit_planner/SetConstraints.h>
+#include <moveit_planner/MoveNamedState.h>
+#include <std_srvs/Empty.h>
+
 // #include <moveit/planning_scene_interface/planning_scene_interface.h>
 // #include <moveit/move_group_interface/move_group_interface.h>
 // #include <actionlib/client/simple_action_client.h>
@@ -184,11 +188,14 @@ public:
   ros::ServiceClient poseClient;
   ros::ServiceClient IKClient;
   ros::ServiceClient cartMoveClient;
-  ros::ServiceClient velScalingClient;
-  ros::ServiceClient jointSpaceClient;
+  // ros::ServiceClient velScalingClient;
+  // ros::ServiceClient jointSpaceClient;
   ros::ServiceClient gripperPosClient;
   ros::ServiceClient collisionClient;
-  moveit_planner::SetVelocity velscale;
+  ros::ServiceClient setConstClient;
+  ros::ServiceClient clearConstClient;
+  ros::ServiceClient namedStateClient;
+  // moveit_planner::SetVelocity velscale;
 
   // PtCld: Last recorded viewpoint
   ptCldColor::Ptr ptrPtCldLast{new ptCldColor};      ptCldColor::ConstPtr cPtrPtCldLast{ptrPtCldLast};
@@ -295,6 +302,10 @@ public:
 
   // Function to move franka
   bool moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKinect ,bool execute, geometry_msgs::Pose &p);
+  void moveFrankaHome();
+  void addVisibilityConstraint();
+  void addOrientationConstraint(Eigen::Affine3f tf);
+  void clearAllConstraints();
 
   // 7: Function to read the kinect data.
   void readKinect();
