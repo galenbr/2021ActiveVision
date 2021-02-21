@@ -11,15 +11,28 @@ import matplotlib.pyplot as plt
 from scipy.ndimage import label
 from scipy.stats import trim_mean
 
-def get_orientation(data):
+def get_distance(pt1,pt2):
+    '''Returns distance between two points.'''
+    return sqrt((pt2[1]-pt1[1])**2+(pt2[0]-pt1[0])**2)
+
+def get_orientation(data, data_center, search_radius=50):
     '''Returns orientation (radians) CCW from horizontal using PCA.'''
+    filtered_data=[]
+    # Reduce region to pixels within "search_radius" of data_center
+    #TODO: USE ARRAY OPERATIONS (np.where) rather than loop
+    for ii in range(len(data)):
+        if get_distance(data[ii],(data_center[1],data_center[0]))<=search_radius:
+            filtered_data.append(data[ii])
+    filtered_data=np.array(filtered_data)
     # Perform PCA analysis
     mean = np.empty((0))
-    mean, eigenvectors = cv2.PCACompute(data, mean)
+    mean, eigenvectors, eigenvalues = cv2.PCACompute2(filtered_data, mean)
     # Calculate angle
     angle = atan2(eigenvectors[0,1], eigenvectors[0,0])
-    
-    return angle
+    # Calculate center
+    cntr = (int(mean[0,1]), int(mean[0,0]))
+
+    return angle, eigenvectors, eigenvalues, cntr
 
 def drawAxis(img, p_, q_, colour, scale):
     '''Draw Axis from PCA.'''
@@ -40,27 +53,6 @@ def drawAxis(img, p_, q_, colour, scale):
     p[1] = q[1] + 9 * sin(angle - pi / 4)
     cv2.line(img, (int(p[0]), int(p[1])), (int(q[0]), int(q[1])), colour, 1, cv2.LINE_AA)
 
-def perform_pca(img,gray=None):
-    '''Identify contours of objects. Finds and plots axes of principal
-    components.'''
-    if gray is None:
-         # Convert image to grayscale
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # Convert image to binary
-    _, bw = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-    contours, _ = cv2.findContours(bw, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-    # countours_in_box=[]
-    for i, c in enumerate(contours):
-        # Calculate the area of each contour
-        area = cv2.contourArea(c)
-        # Ignore contours that are too small or too large
-        if area < 1e2 or 1e5 < area: #Original: 1e2 - 1e5
-            continue
-   # for i, c in enumerate(contours_in_box):
-   #       # Draw each contour only for visualisation purposes
-   #      cv2.drawContours(img, contours, i, (0, 0, 255), 2)
-   #      # Find the orientation of each shape
-   #      getOrientation(c, img)
     return img
 
 def draw_circles(img,search_box): 
@@ -99,7 +91,7 @@ def draw_circles(img,search_box):
     return img
 
 def color_change(img,search_box,min_hsv=[150,0,0],max_hsv=[255,150,150],
-                 new_pixel=[255,0,0],centroid_pixel=[255,0,255]):
+                 new_pixel=[255,0,0],centroid_pixel=[255,0,255],show_pca=False):
     '''Change pixels within a certain color range to a new color.'''
     #Convert input to arrays
     min_hsv=np.array(min_hsv)
@@ -132,9 +124,23 @@ def color_change(img,search_box,min_hsv=[150,0,0],max_hsv=[255,150,150],
 
     #Calculate orientation (radians) of final_region
     reg=np.array(final_region,dtype=np.float64)
-    orientation=get_orientation(reg.T)
-    
-    return new_img, center, orientation
+    reg=reg.T
+    search_radius=50
+    orientation, eigenvectors, eigenvalues, cntr=get_orientation(reg,center,search_radius=search_radius)
+    if show_pca:
+        #Draw axes from PCA
+        pca_img1=copy.deepcopy(new_img)
+        p1 = (cntr[0] + 0.02 * eigenvectors[0,1] * eigenvalues[0,0], cntr[1] + 0.02 * eigenvectors[0,0] * eigenvalues[0,0])
+        p2 = (cntr[0] - 0.02 * eigenvectors[1,1] * eigenvalues[1,0], cntr[1] - 0.02 * eigenvectors[1,0] * eigenvalues[1,0])
+        pca_img1=drawAxis(new_img, cntr, p1, (0, 255, 0), 10)
+        final_img = drawAxis(pca_img1, cntr, p2, (255, 255, 0), 50)
+        #Show red line where orientation is measured from
+        final_img =cv2.line(final_img, cntr, (int(cntr[0]+25*sin(orientation)), int(cntr[1]+25*cos(orientation))), (0,0,255), 2, cv2.LINE_AA)
+        #Show search PCA-inclusion radius
+        final_img = cv2.circle(final_img, center, search_radius, (0,0,255), 1)
+        return final_img, center, orientation
+    else:
+        return new_img, center, orientation
 
 def find_color(img,min_hsv,max_hsv):
     '''Identify pixels in image within a color range.'''

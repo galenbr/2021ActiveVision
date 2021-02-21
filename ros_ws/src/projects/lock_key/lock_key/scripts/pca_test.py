@@ -38,14 +38,18 @@ class Pic:
         img, key_center, key_or=self.update_img(raw_img)
         if show:
             cv2.imshow('Object Centers', img)
-        print('Center: '+str(key_center),', Orien.: '+str(degrees(key_or)))
+        print('Center: '+str(key_center),', Orien.: '+str(degrees(key_or)-90))
+
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
 if __name__=='__main__':
     #Define input parameters
-    search_box={'min':{'x':int(0),'y':int(0)},
-                'max':{'x':int(200),'y':int(175)}}
-    hsv={'key':{'min':[0,int(0.5*255),int(0*255)],
-                'max':[10,int(255),int(255)]}}
-    filepath=r"C:\Users\craig\Pictures\key1.JPG"
+    search_box={'min':{'x':int(60),'y':int(60)},
+                'max':{'x':int(300),'y':int(200)}}
+    hsv={'key':{'min':[0,int(0),int(95)],
+                'max':[100,int(255),int(255)]}}
+    # filepath=r"C:\Users\craig\Pictures\key1.JPG"
+    filepath='/home/pandarobot/Desktop/key_image4.png'
     p=Pic(filepath, search_box, hsv['key']['min'], hsv['key']['max'])
     p.visualize(show=True)

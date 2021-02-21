@@ -117,15 +117,17 @@ class FinderPub:
                                                                  self.key_search_box,
                                                                  self.key_min_hsv,
                                                                  self.key_max_hsv,
-                                                                 new_pixel=[255,0,0], #Blue
-                                                                 centroid_pixel=[0,0,255]) #Red 
+                                                                 new_pixel=[0,255,255], #Yellow, Blue:[255,0,0]
+                                                                 centroid_pixel=[0,0,255], #Red 
+                                                                 show_pca=True)
         #Update img for lock (ignore orientation for now)
         img,self.lock_center,_=image_utils.color_change(img,
                                                         self.lock_search_box,
                                                         self.lock_min_hsv,
                                                         self.lock_max_hsv,
                                                         new_pixel=[0,255,0], #Green
-                                                        centroid_pixel=[255,0,255]) #Pink
+                                                        centroid_pixel=[255,0,255],  #Pink
+                                                        show_pca=False)
         
         #Add search box to img for key
         img=image_utils.add_quad(img,self.key_search_box,color=[0,0,255]) #Red
@@ -168,17 +170,17 @@ class FinderPub:
 
     def rgb_callback(self,raw_rgb_img):   
         '''Convert to cv2 format and store image.'''
-        try:
-            self.header=raw_rgb_img.header
-            self.rgb_img=self.bridge.imgmsg_to_cv2(raw_rgb_img,desired_encoding="bgr8")
-            if self.rgb_img is not None:
-                self.rgb_received=True
+        # try:
+        self.header=raw_rgb_img.header
+        self.rgb_img=self.bridge.imgmsg_to_cv2(raw_rgb_img,desired_encoding="bgr8")
+        if self.rgb_img is not None:
+            self.rgb_received=True
 
-            if (self.rgb_received and self.depth_received and self.rgb_camera_info_received) and \
-            (self.rgb_img is not None) and (self.depth_array is not None):
-                self.calculate_positions(self.rgb_img)
-        except:
-            rospy.loginfo('RGB Callback Exception')
+        if (self.rgb_received and self.depth_received and self.rgb_camera_info_received) and \
+        (self.rgb_img is not None) and (self.depth_array is not None):
+            self.calculate_positions(self.rgb_img)
+        # except:
+        #     rospy.loginfo('RGB Callback Exception')
 
     def rgb_info_callback(self,rgb_cam_info):   
         '''Store camera info. in Pinhole Model.'''
