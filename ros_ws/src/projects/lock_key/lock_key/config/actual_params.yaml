@@ -103,4 +103,4 @@ spiral:
   # Sleep time between force-torque samples [seconds]
   ft_sleep: 0.05
   # Minimum downward (negative) spiral force for detecting padlock/hole [Newtons]
-  min_spiral_force: -1.25 # pegboard: -0.6, padlock: -2.0
+  min_spiral_force: -1.5 # pegboard: -0.6, padlock: -2.0
