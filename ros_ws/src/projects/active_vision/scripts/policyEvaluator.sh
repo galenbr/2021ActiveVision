@@ -29,8 +29,9 @@ csvDataRec='dataRec.csv'
 csvParams='parameters.csv'
 csvStorageSummary='storageSummary.csv'
 
-objectID=(3)
-nDataPoints=100
+simulationMode="FRANKASIMULATION" # SIMULATION / FRANKASIMULATION / FRANKA
+objectID=(2 3)
+nDataPoints=10
 
 # "RANDOM" "PCA_LR" "PCA_LDA" "PCA_LDA_LR" "HEURISTIC")
 # List all the policies to be tested with the prefix "Policy"
@@ -91,7 +92,7 @@ printf "Started at yyyy/mm/dd hh:mm:ss format %s\n" "$now"
 printf "Starting gazebo ...\n"
 gnome-terminal -- bash -c 'screen -d -R -S session-environment' & sleep 5
 # Starting the gazebo and loading the parameters
-screen -S session-environment -X stuff $'roslaunch active_vision workspace.launch visual:="OFF"\n'
+screen -S session-environment -X stuff $'roslaunch active_vision workspace.launch visual:="OFF" simulationMode:="'$simulationMode'"\n'
 sleep 10
 
 # Looping over the objects and testing each policy for each.

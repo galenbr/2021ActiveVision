@@ -12,6 +12,7 @@ int testAll;
 int maxSteps;
 int nSaved;
 int HAFstVecGridSize;
+std::string simulationMode;
 
 void updateRouteData(environment &env, RouteData &data, bool save ,std::string name){
 	data.success = (env.selectedGrasp != -1);
@@ -48,13 +49,15 @@ void findGrasp(environment &kinectControl, int object, int objPoseCode, int objY
 	std::fstream fout;
  	fout.open(dir+saveLocation, std::ios::out | std::ios::app);
 
- 	std::vector<double> startPose = {kinectControl.viewsphereRad, 180*(M_PI/180.0), 45*(M_PI/180.0)};
+ 	std::vector<double> startPose = {kinectControl.viewsphereRad,M_PI,M_PI/7};
+	kinectControl.moveKinectViewsphere(startPose);
 	std::vector<double> nextPose;
 	RouteData home, current;
 
 	static ptCldVis::Ptr viewer(new ptCldVis("PCL Viewer"));
 	static std::vector<int> vp;
 	setupViewer(viewer, 2, vp);
+	viewer->removeCoordinateSystem();
 	static keyboardEvent keyPress(viewer,2);
 
 	kinectControl.moveObject(object,objPoseCode,objYaw*(M_PI/180.0));
@@ -277,6 +280,8 @@ int main(int argc, char** argv){
 		::testAll = 0;
 	}
 
+	nh.getParam("/active_vision/simulationMode", ::simulationMode);
+
 	kinectControl.spawnObject(objID,0,0);
 	::nSaved = 0;
 	std::chrono::high_resolution_clock::time_point start, end;
@@ -290,6 +295,14 @@ int main(int argc, char** argv){
 		std::cin >> objYaw;
 
 		findGrasp(kinectControl, objID, objPoseCode, objYaw, dir, csvName, policy);
+
+		if(kinectControl.selectedGrasp != -1) std::cout << "Grasp found." << std::endl;
+		else																  std::cout << "Grasp not found." << std::endl;
+
+		if(::simulationMode == "FRANKASIMULATION" && kinectControl.selectedGrasp != -1){
+			std::cout << "Simulating the grasp found." << std::endl;
+			kinectControl.graspObject(kinectControl.graspsPossible[kinectControl.selectedGrasp]);
+		}
 	}else{
 		// Reading the yawValues csv file
 		std::string yawAnglesCSVDir;
@@ -310,6 +323,7 @@ int main(int argc, char** argv){
 
 		int uniformYawStepSize; nh.getParam("/active_vision/policyTester/uniformYawStepSize", uniformYawStepSize);
 		int nDataPoints; nh.getParam("/active_vision/policyTester/nDataPoints", nDataPoints);
+		if(::simulationMode == "FRANKASIMULATION") nDataPoints = 3;
 		for(int objPoseCode = 0; objPoseCode < kinectControl.objectDict[objID].nPoses; objPoseCode+=1){
 			int tempNDataPoints = nDataPoints;
 

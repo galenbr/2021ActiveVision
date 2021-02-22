@@ -619,9 +619,11 @@ bool environment::moveKinectCartesian(std::vector<double> pose, bool execute){
     bool res = moveFranka(tfMat,"JOINT",true,execute,p);
     if(!res) return false;
 
-    boost::this_thread::sleep(boost::posix_time::milliseconds(250));
-
-    lastKinectPoseCartesian = pose;
+    if(execute){
+      // Storing the kinect pose
+      boost::this_thread::sleep(boost::posix_time::milliseconds(250));
+      lastKinectPoseCartesian = pose;
+    }
   }
   return true;
 }
@@ -683,13 +685,17 @@ bool environment::moveKinectViewsphere(std::vector<double> pose, bool execute){
     geometry_msgs::Pose p;
     bool res = moveFranka(tfMat,"JOINT",true,execute,p);
     if(!res) return false;
-    boost::this_thread::sleep(boost::posix_time::milliseconds(250));
 
-    lastKinectPoseViewsphere = pose;
-    lastKinectPoseCartesian = {tfMat(0,3),
-                               tfMat(1,3),
-                               tfMat(2,3),
-                               0,M_PI/2-pose[2],M_PI+pose[1]};
+    if(execute){
+      boost::this_thread::sleep(boost::posix_time::milliseconds(250));
+      // Storing the kinect pose
+      lastKinectPoseViewsphere = pose;
+      lastKinectPoseCartesian = {tfMat(0,3),
+                                 tfMat(1,3),
+                                 tfMat(2,3),
+                                 0,M_PI/2-pose[2],M_PI+pose[1]};
+    }
+
   }
   return true;
 
@@ -734,7 +740,6 @@ bool environment::moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKin
     float frankaX = tfMat(0,3)-frankaOffset[0];
     float frankaY = tfMat(1,3)-frankaOffset[1];
     float frankaZ = tfMat(2,3)-frankaOffset[2];
-    // float reach = sqrt(pow(frankaX,2)+pow(frankaY,2)+pow(frankaZ-0.3,2));
 
     float positionError = sqrt(pow(curPose.response.pose.position.x-frankaX,2) +
                                pow(curPose.response.pose.position.y-frankaY,2) +

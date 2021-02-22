@@ -55,6 +55,7 @@ int main(int argc, char** argv){
   else if(visual == 2) setupViewer(viewer, 3, vp);
   viewer->setCameraPosition(-2,0,7,table.x,table.y,table.z,0,0,1);
   keyboardEvent keyPress(viewer,1); keyPress.help();
+  viewer->removeCoordinateSystem();
 
   int i = 0;
   while(keyPress.ok){

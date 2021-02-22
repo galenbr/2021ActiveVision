@@ -25,7 +25,7 @@ bool compareDirections(std::vector<int> A, std::vector<int> B){
     }
 
     if(isADiagonal && !isBDiagonal){
-      if(abs(A[2]-B[2]) >= 20) return (A[2] > B[21]);
+      if(abs(A[2]-B[2]) >= 20) return (A[2] > B[2]);
       else                     return true;
     }
 
@@ -56,7 +56,7 @@ Eigen::Affine3f tfKinect(std::vector<double> &pose){
   return(tfGazWorld * tfKinOptGaz);
 }
 
-geometry_msgs::Pose viewsphereToFranka(std::vector<double> &pose, bool isKinect){
+geometry_msgs::Pose viewsphereToFranka(std::vector<double> &pose){
 
   Eigen::Matrix3f rotMat;
   rotMat = Eigen::AngleAxisf(M_PI+pose[1], Eigen::Vector3f::UnitZ()) * Eigen:: AngleAxisf(M_PI/2-pose[2], Eigen::Vector3f::UnitY()) * Eigen::AngleAxisf(0, Eigen::Vector3f::UnitX());
@@ -69,12 +69,10 @@ geometry_msgs::Pose viewsphereToFranka(std::vector<double> &pose, bool isKinect)
   tfMat(2,3) = ::table.z+pose[0]*cos(pose[2]);
 
   tfMat *= pcl::getTransformation(0,0,0,0,-M_PI/2,M_PI).matrix();
-  if(isKinect){
-    Eigen::Matrix4f kinectOffset; kinectOffset.setIdentity();
-    kinectOffset(0,3) = -0.05;
-    kinectOffset(2,3) = -0.05;
-    tfMat *= kinectOffset;
-  }
+  Eigen::Matrix4f kinectOffset; kinectOffset.setIdentity();
+  kinectOffset(0,3) = -0.05;
+  kinectOffset(2,3) = -0.05;
+  tfMat *= kinectOffset;
 
   Eigen::Quaternionf quat(tfMat.block<3,3>(0,0));
 
@@ -85,11 +83,11 @@ geometry_msgs::Pose viewsphereToFranka(std::vector<double> &pose, bool isKinect)
   return p;
 }
 
-bool checkPoseOK(std::vector<double> &pose, bool isKinect){
+bool checkKinectOK(std::vector<double> &pose){
   bool check1 = checkValidPose(pose);
   bool check2 = true;
   if(::simulationMode == "FRANKASIMULATION"){
-    geometry_msgs::Pose p = viewsphereToFranka(pose,isKinect);
+    geometry_msgs::Pose p = viewsphereToFranka(pose);
     check2 = checkFrankReach(::IKClient,p);
   }
   return (check1 && check2);
@@ -461,10 +459,11 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
   int stepSize = std::max(1,int(round(double(usefulUnexp->size())/1000.0)));
 
   for(int i = 1 ; i <= 8; i++){
-    std::vector<double> newPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0)); step[i-1] = 20;
+    visibleIndices.clear();
+    std::vector<double> goToPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0));
 
-    if(checkPoseOK(newPose,true)) visibleIndices = findVisibleUsefulUnexp(obj,unexp,usefulUnexp,newPose);
-    else                          visibleIndices.clear();
+    std::vector<double> newPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0)); step[i-1] = 20;
+    if(checkKinectOK(goToPose)) visibleIndices = findVisibleUsefulUnexp(obj,unexp,usefulUnexp,newPose);
     indices.push_back(visibleIndices);
   }
   for(int i = 0 ; i < 8; i++) res[i] = indices[i].size();
@@ -472,14 +471,12 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
 
   if(maxRes*stepSize < minVis){
     for(int i = 1 ; i <= 8; i++){
-      std::vector<double> newPose = calcExplorationPose(pose,i,mode,40*(M_PI/180.0)); step[i-1] = 40;
-      if(!checkPoseOK(newPose,true)){
-        newPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0)); step[i-1] = 20;
-      }
-
+      visibleIndices.clear();
       std::vector<double> goToPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0));
-      if(checkPoseOK(goToPose,true)) visibleIndices = findVisibleUsefulUnexp(obj,unexp,usefulUnexp,newPose);
-      else                           visibleIndices.clear();
+
+      std::vector<double> newPose = calcExplorationPose(pose,i,mode,40*(M_PI/180.0)); step[i-1] = 40;
+      if(!checkKinectOK(newPose)) newPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0)); step[i-1] = 20;
+      if(checkKinectOK(goToPose)) visibleIndices = findVisibleUsefulUnexp(obj,unexp,usefulUnexp,newPose);
       indices[i-1].insert(visibleIndices.begin(),visibleIndices.end());
     }
     for(int i = 0 ; i < 8; i++) res[i] = indices[i].size();
@@ -491,11 +488,10 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
     else            res[i] = 100;
   }
 
-
   std::vector<std::vector<int>> resDetailed;
   for(int i = 0 ; i < 8; i++) resDetailed.push_back({i+1,45*i,res[i]});
   std::sort(resDetailed.begin(),resDetailed.end(),compareDirections);
-  // for(int i = 0 ; i < 8; i++) std::cout << resDetailed[i][0] << ",";
+  // for(int i = 0 ; i < 8; i++) std::cout << resDetailed[i][0] << ":" << resDetailed[i][2] << ",";
   // std::cout << std::endl;
 
   // /***/
@@ -509,6 +505,7 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
   //
   // ptCldColor::Ptr result{new ptCldColor};
   // for(int i = 1 ; i <= 8; i++){
+  //   if(res[i-1] == 0) continue;
   //   result->clear();
   //   for(auto idx : indices[i-1]){
   //     result->points.push_back(usefulUnexp->points[idx]);
@@ -535,119 +532,120 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
   // return std::distance(res.begin(), std::max_element(res.begin(), res.end())) + 1;
 }
 
-// bool heuristicPolicy(active_vision::heuristicPolicySRV::Request  &req,
-//                      active_vision::heuristicPolicySRV::Response &res){
-//
-//   static ptCldColor::Ptr obj{new ptCldColor};
-//   static ptCldColor::Ptr unexp{new ptCldColor};
-//   static std::vector<std::vector<double>> path;
-//   static std::vector<double> temp;
-//   static int mode;
-//   static std::vector<int> nUnexp;
-//
-//   pcl::fromROSMsg(req.object, *obj);
-//   pcl::fromROSMsg(req.unexplored, *unexp);
-//   temp = req.path.data; path.clear();
-//   for(int i = 0; i < temp.size(); i=i+3){
-//     path.push_back({temp[i],temp[i+1],temp[i+2]});
-//   }
-//   mode = req.mode;
-//
-//   res.direction = findDirection(obj,unexp,path.back(),mode,req.minPtsVis)-1;
-//
-//   ROS_INFO_STREAM("Heuristic Policy Service Called. Direction -> "<< dirLookup[res.direction+1]);
-//
-//   return true;
-// }
-//
-// int main(int argc, char** argv){
-//   ros::init(argc, argv, "HeuristicPolicyServer");
-//
-//   ros::NodeHandle nh;
-//   nh.getParam("/active_vision/environment/voxelGridSize", ::voxelGridSize);
-//   nh.getParam("/active_vision/policyTester/heuristicDiagonalPref", ::heuristicDiagonalPref);
-//   nh.getParam("/active_vision/policyTester/heuristicDiagonalPref", ::heuristicDiagonalPref);
-//   nh.getParam("/active_vision/simulationMode", ::simulationMode);
-//   std::vector<double> tableCentre;
-//   nh.getParam("/active_vision/environment/tableCentre", tableCentre);
-//   ::IKClient =  nh.serviceClient<moveit_planner::Inv>("inverse_kinematics");
-//   ::table.x = tableCentre[0];
-//   ::table.y = tableCentre[1];
-//   ::table.z = tableCentre[2];
-//
-//   ros::ServiceServer service = nh.advertiseService("/active_vision/heuristic_policy", heuristicPolicy);
-//   ROS_INFO("3D Heuristic policy service ready.");
-//   ros::spin();
-//   return 0;
-//  }
+bool heuristicPolicy(active_vision::heuristicPolicySRV::Request  &req,
+                     active_vision::heuristicPolicySRV::Response &res){
 
-int main (int argc, char** argv){
-  // Initialize ROS
-  ros::init(argc, argv, "Test");
+  static ptCldColor::Ptr obj{new ptCldColor};
+  static ptCldColor::Ptr unexp{new ptCldColor};
+  static std::vector<std::vector<double>> path;
+  static std::vector<double> temp;
+  static int mode;
+  static std::vector<int> nUnexp;
+
+  pcl::fromROSMsg(req.object, *obj);
+  pcl::fromROSMsg(req.unexplored, *unexp);
+  temp = req.path.data; path.clear();
+  for(int i = 0; i < temp.size(); i=i+3){
+    path.push_back({temp[i],temp[i+1],temp[i+2]});
+  }
+  mode = req.mode;
+
+  res.direction = findDirection(obj,unexp,path.back(),mode,req.minPtsVis)-1;
+
+  ROS_INFO_STREAM("Heuristic Policy Service Called. Direction -> "<< dirLookup[res.direction+1]);
+
+  return true;
+}
+
+int main(int argc, char** argv){
+  ros::init(argc, argv, "HeuristicPolicyServer");
+
   ros::NodeHandle nh;
   nh.getParam("/active_vision/environment/voxelGridSize", ::voxelGridSize);
+  nh.getParam("/active_vision/policyTester/heuristicDiagonalPref", ::heuristicDiagonalPref);
   nh.getParam("/active_vision/policyTester/heuristicDiagonalPref", ::heuristicDiagonalPref);
   nh.getParam("/active_vision/simulationMode", ::simulationMode);
   std::vector<double> tableCentre;
   nh.getParam("/active_vision/environment/tableCentre", tableCentre);
-
-  ::IKClient =  nh.serviceClient<moveit_planner::Inv>("inverse_kinematics");
+  ::IKClient =  nh.serviceClient<moveit_planner::Inv>("inverse_kinematics_collision_check");
   ::table.x = tableCentre[0];
   ::table.y = tableCentre[1];
   ::table.z = tableCentre[2];
-  environment activeVision(&nh);
-  activeVision.loadGripper();
 
-  // Delay to ensure all publishers and subscribers are connected
-  boost::this_thread::sleep(boost::posix_time::milliseconds(500));
+  ros::ServiceServer service = nh.advertiseService("/active_vision/heuristic_policy", heuristicPolicy);
+  ROS_INFO("3D Heuristic policy service ready.");
+  ros::spin();
+  return 0;
+ }
 
-  if(argc != 4){
-    std::cout << "ERROR. Incorrect number of arguments." << std::endl;
-    return(-1);
-  }
-
-  int objID = std::atoi(argv[1]);
-  int pose = std::atoi(argv[2]);
-  int yaw = std::atoi(argv[3]);
-  int dir;
-  std::vector<double> newPose = {activeVision.viewsphereRad,M_PI,M_PI/8};
-  activeVision.spawnObject(objID,pose,yaw*M_PI/180);
-
-  singlePass(activeVision,newPose,true,true,2);
-  int minPtsVis;
-
-  // ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
-  int nSteps = 0;
-  while(activeVision.selectedGrasp == -1 && nSteps <= 5){
-    minPtsVis = 0.15*(activeVision.ptrPtCldObject->points.size());
-    // dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,newPose,2,minPtsVis,viewer);
-    dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,newPose,2,minPtsVis);
-    std::cout << "Direction selected : " << dir << std::endl;
-
-    newPose = calcExplorationPose(newPose,dir,2);
-    singlePass(activeVision,newPose,false,true,2);
-    nSteps++;
-  }
-
-  ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
-  std::vector<int> vp;
-  setupViewer(viewer, 1, vp);
-  setCamView(viewer,{newPose[0],newPose[1],newPose[2]},::table,vp[0]);
-  activeVision.updateGripper(activeVision.selectedGrasp,0);
-  addRGB(viewer,activeVision.ptrPtCldEnv,"Env",vp[0]);
-  addRGB(viewer,activeVision.ptrPtCldUnexp,"Unexp",vp[0]);
-  addRGB(viewer,activeVision.ptrPtCldGripper,"Gripper",vp[0]);
-  viewer->removeCoordinateSystem();
-  viewer->spinOnce(100);
-  boost::this_thread::sleep (boost::posix_time::microseconds(100000));
-
-  if(::simulationMode == "FRANKASIMULATION") activeVision.graspObject(activeVision.graspsPossible[activeVision.selectedGrasp]);
-  std::cout << "Press Q to exit" << std::endl;
-  while(!viewer->wasStopped()){
-    viewer->spinOnce(100);
-    boost::this_thread::sleep (boost::posix_time::microseconds(100000));
-  }
-
-  activeVision.deleteObject(objID);
-  boost::this_thread::sleep(boost::posix_time::milliseconds(500));
-}
+// int main (int argc, char** argv){
+//   // Initialize ROS
+//   ros::init(argc, argv, "Test");
+//   ros::NodeHandle nh;
+//   nh.getParam("/active_vision/environment/voxelGridSize", ::voxelGridSize);
+//   nh.getParam("/active_vision/policyTester/heuristicDiagonalPref", ::heuristicDiagonalPref);
+//   nh.getParam("/active_vision/simulationMode", ::simulationMode);
+//   std::vector<double> tableCentre;
+//   nh.getParam("/active_vision/environment/tableCentre", tableCentre);
+//
+//   ::IKClient =  nh.serviceClient<moveit_planner::Inv>("inverse_kinematics_collision_check");
+//   ::table.x = tableCentre[0];
+//   ::table.y = tableCentre[1];
+//   ::table.z = tableCentre[2];
+//   environment activeVision(&nh);
+//   activeVision.loadGripper();
+//
+//   // Delay to ensure all publishers and subscribers are connected
+//   boost::this_thread::sleep(boost::posix_time::milliseconds(500));
+//
+//   if(argc != 4){
+//     std::cout << "ERROR. Incorrect number of arguments." << std::endl;
+//     return(-1);
+//   }
+//
+//   int objID = std::atoi(argv[1]);
+//   int pose = std::atoi(argv[2]);
+//   int yaw = std::atoi(argv[3]);
+//   int dir;
+//   std::vector<double> newPose = {activeVision.viewsphereRad,M_PI,M_PI/7};
+//   activeVision.spawnObject(objID,pose,yaw*M_PI/180);
+//
+//   singlePass(activeVision,newPose,true,true,2);
+//   int minPtsVis;
+//
+//   // ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
+//
+//   int nSteps = 0;
+//   while(activeVision.selectedGrasp == -1 && nSteps <= 5){
+//     minPtsVis = 0.15*(activeVision.ptrPtCldObject->points.size());
+//     // dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,newPose,2,minPtsVis,viewer);
+//     dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,newPose,2,minPtsVis);
+//     std::cout << "Direction selected : " << dir << std::endl;
+//
+//     newPose = calcExplorationPose(newPose,dir,2);
+//     singlePass(activeVision,newPose,false,true,2);
+//     nSteps++;
+//   }
+//
+//   if(::simulationMode == "FRANKASIMULATION") activeVision.graspObject(activeVision.graspsPossible[activeVision.selectedGrasp]);
+//
+//   // std::vector<int> vp;
+//   // setupViewer(viewer, 1, vp);
+//   // setCamView(viewer,{newPose[0],newPose[1],newPose[2]},::table,vp[0]);
+//   // activeVision.updateGripper(activeVision.selectedGrasp,0);
+//   // addRGB(viewer,activeVision.ptrPtCldEnv,"Env",vp[0]);
+//   // addRGB(viewer,activeVision.ptrPtCldUnexp,"Unexp",vp[0]);
+//   // addRGB(viewer,activeVision.ptrPtCldGripper,"Gripper",vp[0]);
+//   // viewer->removeCoordinateSystem();
+//   // viewer->spinOnce(100);
+//   // boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+//   //
+//   // std::cout << "Press Q to exit" << std::endl;
+//   // while(!viewer->wasStopped()){
+//   //   viewer->spinOnce(100);
+//   //   boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+//   // }
+//
+//   activeVision.deleteObject(objID);
+//   boost::this_thread::sleep(boost::posix_time::milliseconds(500));
+// }

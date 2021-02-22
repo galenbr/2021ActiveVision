@@ -102,7 +102,7 @@ void addViewsphere(ptCldVis::Ptr viewer, int vp, pcl::PointXYZ centre, double &r
         temp.y = centre.y+rad*sin(polarAngle*(M_PI/180.0))*sin(azimuthalAngle*(M_PI/180.0));
         temp.z = centre.z+rad*cos(polarAngle*(M_PI/180.0));
         vCtr++;
-        viewer->addSphere(temp,0.02,0,0,0.75,"Sph_"+std::to_string(vCtr),vp);
+        // viewer->addSphere(temp,0.02,0,0,0.75,"Sph_"+std::to_string(vCtr),vp);
       }
     }
   }
