@@ -8,6 +8,7 @@ void testSpawnDeleteObj(environment &av){
   std::cout << "*** In object spawn and delete testing function ***" << std::endl;
   int flag = 0;
   for(auto data: av.objectDict){
+    if(data.second.fileName.substr(0,3) != "YCB") continue;
     for(int j = 0; j < data.second.nPoses; j++) {
       av.spawnObject(data.second.ID,j,0);
       printf("Object %d/%d with configuration %d/%d spawned. Enter any key to continue. ",
@@ -457,10 +458,10 @@ void testComplete(environment &av, int objID, int nVp, int graspMode, int flag, 
   av.loadGripper();
 
   // 4 kinect poses
-  std::vector<std::vector<double>> kinectPoses = {{1,-M_PI,M_PI/8},
-                                                  {1,-M_PI/2,M_PI/8},
-                                                  {1,0,M_PI/8},
-                                                  {1,M_PI/2,M_PI/8}};
+  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/8},
+                                                  {av.viewsphereRad,-M_PI/2,M_PI/8},
+                                                  {av.viewsphereRad,0,M_PI/8},
+                                                  {av.viewsphereRad,M_PI/2,M_PI/8}};
 
   start[0] = std::chrono::high_resolution_clock::now();
 
@@ -989,7 +990,7 @@ void testMoveitPathConstraint(environment &av){
     std::cout << "*** End ***" << std::endl;
     return;
   }
-  
+
   av.clearAllConstraints();
   geometry_msgs::Pose pTemp;
   int flag;
@@ -1155,9 +1156,9 @@ int main (int argc, char** argv){
   std::cout << "Enter your choice : "; cin >> choice;
 
   if((choice >= 5 && choice <= 13) || choice == 16 || (choice >= 18 && choice <= 19)){
-    std::cout << "Objects available :" << std::endl;
+    std::cout << "YCB Objects available :" << std::endl;
     for(auto data: activeVision.objectDict){
-        data.second.printObjectInfo();
+        if(data.second.fileName.substr(0,3) == "YCB") data.second.printObjectInfo();
     }
     std::cout << "Enter your choice : "; std::cin>>objID;
     if(choice == 11){

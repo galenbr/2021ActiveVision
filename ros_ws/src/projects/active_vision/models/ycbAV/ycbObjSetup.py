@@ -29,8 +29,6 @@ objects_to_download = ["003_cracker_box",
                        "024_bowl",
                        "025_mug",
                        "035_power_drill",
-                       "036_wood_block",
-                       "051_large_clamp",
                        "055_baseball",
                        "072-a_toy_airplane"]
 
@@ -106,7 +104,7 @@ def check_url(url):
         return False
 
 def generate_sdf(object_name, data_type, object_mass, x, y, z, ixx, ixy, ixz, iyy, iyz, izz ,data_path):
-    file_name = "YCB"+object_name[0:3]
+    file_name = "YCB"+object_name.split("_")[0]
     if os.access(data_path+"/sdf", os.F_OK) == False:
     	try:
     		os.mkdir(data_path+ "/sdf")

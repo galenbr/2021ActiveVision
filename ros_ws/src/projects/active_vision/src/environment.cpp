@@ -792,7 +792,7 @@ void environment::addVisibilityConstraint(){
   sensorPose.pose = pose;
   visConstraint.sensor_pose = sensorPose;
 
-  visConstraint.max_view_angle = 0.85*M_PI/2;
+  visConstraint.max_view_angle = 85*M_PI/180;
 
   visConstraint.sensor_view_direction = visConstraint.SENSOR_Z;
 
@@ -1202,6 +1202,7 @@ void environment::findGripperPose(int index){
 
   // Calculating the x,y,z axis which is at the midpoint of the fingers
   yAxis = graspsPossible[index].p1.getVector3fMap() - graspsPossible[index].p2.getVector3fMap(); yAxis.normalize();
+  if(yAxis[1] < 0) yAxis *= -1;
   zAxis = yAxis.cross(xyPlane); zAxis.normalize();
   if(zAxis[0] < 0) zAxis *= -1;
   xAxis = yAxis.cross(zAxis);
@@ -1232,7 +1233,11 @@ void environment::collisionCheck(){
   cpBox.setInputCloud(ptrPtCldCollCheck);
 
   bool stop = false;
-  int nOrientations = 8;
+  int nOrientations;
+  std::vector<int> orientations;
+  // nOrientations = 8; orientations = {0,45,90,135,180,225,270,315};
+  // nOrientations = 8; orientations = {90,45,135,0,180,315,225,270};
+  nOrientations = 8; orientations = {90,68,112,45,135,22,157,0,180};
   // Loop through all the possible grasps available
   for(int i = 0; (i < graspsPossible.size()) && (stop == false); i++){
     findGripperPose(i);
@@ -1252,8 +1257,6 @@ void environment::collisionCheck(){
     if(ptrPtCldCollided->size() > 0) continue;
 
     // Do gripper collision check for each orientation
-    // std::vector<int> orientations = {0,45,90,135,180,225,270,315};
-    std::vector<int> orientations = {90,45,135,270,225,315,0,180};
     for(int j = 0; (j < nOrientations) && (stop == false); j++){
       // graspsPossible[i].addnlPitch = j*(2*M_PI)/nOrientations;
       graspsPossible[i].addnlPitch = orientations[j]*M_PI/180;
@@ -1471,11 +1474,12 @@ bool environment::checkPreGrasp(graspPoint &graspData){
   // }while((tfPreGrasp(0,3)>tableCentre[0]-0.125 && tfPreGrasp(0,3)<tableCentre[0]+0.125 &&
   //         tfPreGrasp(1,3)>tableCentre[1]-0.125 && tfPreGrasp(1,3)<tableCentre[1]+0.125 &&
   //         tfPreGrasp(2,3)>0.01                 && tfPreGrasp(2,3)<tableCentre[2]+0.25));
+  float rad = std::min(double(std::max(maxPtObj.x - minPtObj.x,maxPtObj.y - minPtObj.y)),0.25)/2.0;
   do{
     tfPreGrasp = tfGrasp*pcl::getTransformation(-clearance+0.0447+fingerZOffset,0,0,0,0,0);
     clearance += 0.01;
-  }while((sqrt(pow(tfPreGrasp(0,3)-tableCentre[0],2) + pow(tfPreGrasp(1,3)-tableCentre[1],2)) <= 0.13 &&
-          tfPreGrasp(2,3)>0 && tfPreGrasp(2,3)<tableCentre[2]+0.25));
+  }while((sqrt(pow(tfPreGrasp(0,3)-cenObject[0],2) + pow(tfPreGrasp(1,3)-cenObject[1],2)) <= rad &&
+          tfPreGrasp(2,3)>0 && tfPreGrasp(2,3)<0.25));
 
   tfPreGrasp = tfGrasp*pcl::getTransformation(-clearance,0,0,0,0,0);
 
@@ -1503,66 +1507,91 @@ void environment::graspObject(graspPoint &graspData){
   Eigen::Affine3f tfPreGrasp;
 
   float clearance = 0;
+  float rad = std::min(double(std::max(maxPtObj.x - minPtObj.x,maxPtObj.y - minPtObj.y)),0.25)/2.0;
   do{
     tfPreGrasp = tfGrasp*pcl::getTransformation(-clearance+0.0447+fingerZOffset,0,0,0,0,0);
     clearance += 0.01;
-  }while((sqrt(pow(tfPreGrasp(0,3)-tableCentre[0],2) + pow(tfPreGrasp(1,3)-tableCentre[1],2)) <= 0.13 &&
-          tfPreGrasp(2,3)>0 && tfPreGrasp(2,3)<tableCentre[2]+0.25));
+  }while((sqrt(pow(tfPreGrasp(0,3)-cenObject[0],2) + pow(tfPreGrasp(1,3)-cenObject[1],2)) <= rad &&
+          tfPreGrasp(2,3)>0 && tfPreGrasp(2,3)<0.25));
 
   tfPreGrasp = tfGrasp*pcl::getTransformation(-clearance,0,0,0,0,0);
   Eigen::Affine3f tfPreGrasp1 = tfPreGrasp; tfPreGrasp1(2,3)=std::max(0.37,double(tfPreGrasp1(2,3)));
 
   geometry_msgs::Pose p;
   franka_pos_grasping_gazebo::GripPos grasp;
-  bool res;
+  bool res = true;
+
+  clearAllConstraints();
+  if(simulationMode == "FRANKASIMULATION"){
+    editMoveItCollisions("TABLE","ADD");
+    editMoveItCollisions("OBJECT","ADD");
+  }
 
   moveFrankaHome();
-  clearAllConstraints();
 
   // Move to Pre-grasp
-  std::cout << "Moving to Pre Grasp 1 ..." << std::endl;
-  res = moveFranka(tfPreGrasp1.matrix(),"JOINT",false,true,p);
-  std::cout << "Moving to Pre Grasp 2 ..." << std::endl;
-  res = moveFranka(tfPreGrasp.matrix(),"JOINT",false,true,p);
-  editMoveItCollisions("OBJECT","REMOVE");
-  grasp.request.finger_pos = (graspData.gripperWidth+0.04)/2.0;
-  gripperPosClient.call(grasp);
-  ros::Duration(3).sleep();
-  if(!res){
-    std::cout << "Out of reach" << std::endl;
-    return;
+
+  if(res){
+    std::cout << "Moving to Pre Grasp 1 ..." << std::endl;
+    res = moveFranka(tfPreGrasp1.matrix(),"JOINT",false,true,p);
+    ros::Duration(1).sleep();
+  }
+  if(res){
+    std::cout << "Moving to Pre Grasp 2 ..." << std::endl;
+    res = moveFranka(tfPreGrasp.matrix(),"JOINT",false,true,p);
+    ros::Duration(1).sleep();
+    if(!res){
+      tfPreGrasp = tfGrasp*pcl::getTransformation(-clearance-0.07,0,0,0,0,0);
+      res = moveFranka(tfPreGrasp.matrix(),"JOINT",false,true,p);
+      ros::Duration(1).sleep();
+    }
+    if(!res){
+      tfPreGrasp = tfGrasp*pcl::getTransformation(-clearance-0.15,0,0,0,0,0);
+      res = moveFranka(tfPreGrasp.matrix(),"JOINT",false,true,p);
+      ros::Duration(1).sleep();
+    }
+
+    editMoveItCollisions("OBJECT","REMOVE");
+    grasp.request.finger_pos = (graspData.gripperWidth+0.04)/2.0;
+    gripperPosClient.call(grasp);
+    ros::Duration(1).sleep();
   }
 
   // Move to Grasp and grasp
-  std::cout << "Moving to Grasp..." << std::endl;
-  res = moveFranka(tfGrasp.matrix(),"CARTESIAN",false,true,p);
-  grasp.request.finger_pos = (std::max(graspData.gripperWidth-1.5*voxelGridSize,0.005))/2.0;
-  gripperPosClient.call(grasp);
-  ros::Duration(3).sleep();
-  if(!res){
-    std::cout << "Out of reach" << std::endl;
-    return;
+  if(res){
+    std::cout << "Moving to Grasp..." << std::endl;
+    res = moveFranka(tfGrasp.matrix(),"CARTESIAN",false,true,p);
+    ros::Duration(1).sleep();
+    // grasp.request.finger_pos = (std::max(graspData.gripperWidth-1.5*voxelGridSize,0.005))/2.0;
+    // gripperPosClient.call(grasp);
+    // ros::Duration(1).sleep();
   }
 
   // Move straight up
-  std::cout << "Lifting..." << std::endl;
-  res = moveFranka(tfGraspMoveUp.matrix(),"CARTESIAN",false,true,p);
-  ros::Duration(2).sleep();
+  // std::cout << "Lifting..." << std::endl;
+  // res = moveFranka(tfGraspMoveUp.matrix(),"CARTESIAN",false,true,p);
+  // ros::Duration(2).sleep();
 
   // Go to same location and release
-  std::cout << "Placing it back..." << std::endl;
-  res = moveFranka(tfGrasp.matrix(),"CARTESIAN",false,true,p);
-  grasp.request.finger_pos = (graspData.gripperWidth+0.04)/2.0;
-  gripperPosClient.call(grasp);
-  ros::Duration(3).sleep();
+  // std::cout << "Placing it back..." << std::endl;
+  // res = moveFranka(tfGrasp.matrix(),"CARTESIAN",false,true,p);
+  // grasp.request.finger_pos = (graspData.gripperWidth+0.04)/2.0;
+  // gripperPosClient.call(grasp);
+  // ros::Duration(3).sleep();
 
   // Move to Post-grasp
-  std::cout << "Moving to Retreat 1..." << std::endl;
-  res = moveFranka(tfPreGrasp.matrix(),"CARTESIAN",false,true,p);
-  editMoveItCollisions("OBJECT","ADD");
-  std::cout << "Moving to Retreat 2..." << std::endl;
-  res = moveFranka(tfPreGrasp1.matrix(),"JOINT",false,true,p);
-  ros::Duration(2).sleep();
+  if(res){
+    std::cout << "Moving to Retreat 1..." << std::endl;
+    res = moveFranka(tfPreGrasp.matrix(),"CARTESIAN",false,true,p);
+    ros::Duration(1).sleep();
+
+    editMoveItCollisions("OBJECT","ADD");
+  }
+  if(res){
+    std::cout << "Moving to Retreat 2..." << std::endl;
+    res = moveFranka(tfPreGrasp1.matrix(),"JOINT",false,true,p);
+    ros::Duration(1).sleep();
+  }
 
   moveFrankaHome();
 

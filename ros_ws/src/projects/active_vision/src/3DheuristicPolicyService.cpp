@@ -613,13 +613,13 @@ int main(int argc, char** argv){
 //   singlePass(activeVision,newPose,true,true,2);
 //   int minPtsVis;
 //
-//   // ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
+//   ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
 //
 //   int nSteps = 0;
 //   while(activeVision.selectedGrasp == -1 && nSteps <= 5){
 //     minPtsVis = 0.15*(activeVision.ptrPtCldObject->points.size());
-//     // dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,newPose,2,minPtsVis,viewer);
-//     dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,newPose,2,minPtsVis);
+//     dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,newPose,2,minPtsVis,viewer);
+//     // dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,newPose,2,minPtsVis);
 //     std::cout << "Direction selected : " << dir << std::endl;
 //
 //     newPose = calcExplorationPose(newPose,dir,2);
@@ -627,24 +627,23 @@ int main(int argc, char** argv){
 //     nSteps++;
 //   }
 //
-//   if(::simulationMode == "FRANKASIMULATION") activeVision.graspObject(activeVision.graspsPossible[activeVision.selectedGrasp]);
+//   std::vector<int> vp;
+//   setupViewer(viewer, 1, vp);
+//   setCamView(viewer,{newPose[0],newPose[1],newPose[2]},::table,vp[0]);
+//   activeVision.updateGripper(activeVision.selectedGrasp,0);
+//   addRGB(viewer,activeVision.ptrPtCldEnv,"Env",vp[0]);
+//   addRGB(viewer,activeVision.ptrPtCldUnexp,"Unexp",vp[0]);
+//   addRGB(viewer,activeVision.ptrPtCldGripper,"Gripper",vp[0]);
+//   viewer->removeCoordinateSystem();
+//   viewer->spinOnce(100);
+//   boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+//   std::cout << "Press Q to exit" << std::endl;
+//   while(!viewer->wasStopped()){
+//     viewer->spinOnce(100);
+//     boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+//   }
 //
-//   // std::vector<int> vp;
-//   // setupViewer(viewer, 1, vp);
-//   // setCamView(viewer,{newPose[0],newPose[1],newPose[2]},::table,vp[0]);
-//   // activeVision.updateGripper(activeVision.selectedGrasp,0);
-//   // addRGB(viewer,activeVision.ptrPtCldEnv,"Env",vp[0]);
-//   // addRGB(viewer,activeVision.ptrPtCldUnexp,"Unexp",vp[0]);
-//   // addRGB(viewer,activeVision.ptrPtCldGripper,"Gripper",vp[0]);
-//   // viewer->removeCoordinateSystem();
-//   // viewer->spinOnce(100);
-//   // boost::this_thread::sleep (boost::posix_time::microseconds(100000));
-//   //
-//   // std::cout << "Press Q to exit" << std::endl;
-//   // while(!viewer->wasStopped()){
-//   //   viewer->spinOnce(100);
-//   //   boost::this_thread::sleep (boost::posix_time::microseconds(100000));
-//   // }
+//   if(::simulationMode == "FRANKASIMULATION") activeVision.graspObject(activeVision.graspsPossible[activeVision.selectedGrasp]);
 //
 //   activeVision.deleteObject(objID);
 //   boost::this_thread::sleep(boost::posix_time::milliseconds(500));
