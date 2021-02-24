@@ -229,12 +229,21 @@ environment::environment(ros::NodeHandle *nh){
   while(!allOK){
     boost::this_thread::sleep(boost::posix_time::seconds(1));
     allOK  = true;
-    allOK *= ROSCheck("NODE","/gazebo"); if(!allOK) continue;
-    allOK *= ROSCheck("SERVICE","/gazebo/set_model_state"); if(!allOK) continue;  // This a gazebo subscribed topic / gazebo service
-    allOK *= ROSCheck("TOPIC","/camera/depth/points"); if(!allOK) continue;
-    allOK *= ROSCheck("SERVICE","/gazebo/spawn_sdf_model"); if(!allOK) continue;
-    allOK *= ROSCheck("SERVICE","/gazebo/delete_model"); if(!allOK) continue;
-    if(simulationMode == "FRANKASIMULATION"){
+    if(simulationMode == "SIMULATION"){
+      allOK *= ROSCheck("NODE","/gazebo"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","/gazebo/set_model_state"); if(!allOK) continue;  // This a gazebo subscribed topic / gazebo service
+      allOK *= ROSCheck("TOPIC","/camera/depth/points"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","/gazebo/get_model_state"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","/gazebo/spawn_sdf_model"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","/gazebo/delete_model"); if(!allOK) continue;
+    }else if(simulationMode == "FRANKASIMULATION"){
+      allOK *= ROSCheck("NODE","/gazebo"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","/gazebo/set_model_state"); if(!allOK) continue;  // This a gazebo subscribed topic / gazebo service
+      allOK *= ROSCheck("TOPIC","/camera/depth/points"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","/gazebo/get_model_state"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","/gazebo/spawn_sdf_model"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","/gazebo/delete_model"); if(!allOK) continue;
+
       allOK *= ROSCheck("SERVICE","get_pose"); if(!allOK) continue;
       allOK *= ROSCheck("SERVICE","move_to_pose"); if(!allOK) continue;
       allOK *= ROSCheck("SERVICE","cartesian_move"); if(!allOK) continue;
@@ -246,26 +255,54 @@ environment::environment(ros::NodeHandle *nh){
       allOK *= ROSCheck("SERVICE","set_constraints"); if(!allOK) continue;
       allOK *= ROSCheck("SERVICE","clear_constraints"); if(!allOK) continue;
       allOK *= ROSCheck("SERVICE","move_to_named_state"); if(!allOK) continue;
+    }else if(simulationMode == "FRANKA"){
+      allOK *= ROSCheck("TOPIC","/camera/depth/color/points"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","get_pose"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","move_to_pose"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","cartesian_move"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","inverse_kinematics_collision_check"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","add_collision_object"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","set_constraints"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","clear_constraints"); if(!allOK) continue;
+      allOK *= ROSCheck("SERVICE","move_to_named_state"); if(!allOK) continue;
     }
   }
 
-  pubObjPose = nh->advertise<gazebo_msgs::ModelState> ("/gazebo/set_model_state", 1);
-  subKinectPtCld = nh->subscribe ("/camera/depth/points", 1, &environment::cbPtCld, this);
-  gazeboSpawnModel = nh->serviceClient< gazebo_msgs::SpawnModel> ("/gazebo/spawn_sdf_model");
-  gazeboCheckModel = nh->serviceClient< gazebo_msgs::GetModelState> ("/gazebo/get_model_state");
-  gazeboDeleteModel = nh->serviceClient< gazebo_msgs::DeleteModel> ("/gazebo/delete_model");
+  if(simulationMode == "SIMULATION"){
+    pubObjPose = nh->advertise<gazebo_msgs::ModelState> ("/gazebo/set_model_state", 1);
+    subKinectPtCld = nh->subscribe ("/camera/depth/points", 1, &environment::cbPtCld, this);
+    gazeboSpawnModel = nh->serviceClient< gazebo_msgs::SpawnModel> ("/gazebo/spawn_sdf_model");
+    gazeboCheckModel = nh->serviceClient< gazebo_msgs::GetModelState> ("/gazebo/get_model_state");
+    gazeboDeleteModel = nh->serviceClient< gazebo_msgs::DeleteModel> ("/gazebo/delete_model");
+  }else if(simulationMode == "FRANKASIMULATION"){
+    pubObjPose = nh->advertise<gazebo_msgs::ModelState> ("/gazebo/set_model_state", 1);
+    subKinectPtCld = nh->subscribe ("/camera/depth/points", 1, &environment::cbPtCld, this);
+    gazeboSpawnModel = nh->serviceClient< gazebo_msgs::SpawnModel> ("/gazebo/spawn_sdf_model");
+    gazeboCheckModel = nh->serviceClient< gazebo_msgs::GetModelState> ("/gazebo/get_model_state");
+    gazeboDeleteModel = nh->serviceClient< gazebo_msgs::DeleteModel> ("/gazebo/delete_model");
 
-  getPoseClient = nh->serviceClient<moveit_planner::GetPose>("get_pose");
-  poseClient = nh->serviceClient<moveit_planner::MovePose>("move_to_pose");
-  cartMoveClient = nh->serviceClient<moveit_planner::MoveCart>("cartesian_move");
-  IKClient =  nh->serviceClient<moveit_planner::Inv>("inverse_kinematics_collision_check");
-  // velScalingClient = nh->serviceClient<moveit_planner::SetVelocity>("set_velocity_scaling");
-  // jointSpaceClient = nh->serviceClient<moveit_planner::MoveJoint>("move_to_joint_space");
-  collisionClient = nh->serviceClient<moveit_planner::AddCollision>("add_collision_object");
-  gripperPosClient = nh->serviceClient<franka_pos_grasping_gazebo::GripPos>("gripPosServer");
-  setConstClient = nh->serviceClient<moveit_planner::SetConstraints>("set_constraints");
-  clearConstClient = nh->serviceClient<std_srvs::Empty>("clear_constraints");
-  namedStateClient = nh->serviceClient<moveit_planner::MoveNamedState>("move_to_named_state");
+    getPoseClient = nh->serviceClient<moveit_planner::GetPose>("get_pose");
+    poseClient = nh->serviceClient<moveit_planner::MovePose>("move_to_pose");
+    cartMoveClient = nh->serviceClient<moveit_planner::MoveCart>("cartesian_move");
+    IKClient =  nh->serviceClient<moveit_planner::Inv>("inverse_kinematics_collision_check");
+    // velScalingClient = nh->serviceClient<moveit_planner::SetVelocity>("set_velocity_scaling");
+    // jointSpaceClient = nh->serviceClient<moveit_planner::MoveJoint>("move_to_joint_space");
+    collisionClient = nh->serviceClient<moveit_planner::AddCollision>("add_collision_object");
+    gripperPosClient = nh->serviceClient<franka_pos_grasping_gazebo::GripPos>("gripPosServer");
+    setConstClient = nh->serviceClient<moveit_planner::SetConstraints>("set_constraints");
+    clearConstClient = nh->serviceClient<std_srvs::Empty>("clear_constraints");
+    namedStateClient = nh->serviceClient<moveit_planner::MoveNamedState>("move_to_named_state");
+  }else if(simulationMode == "FRANKA"){
+    subKinectPtCld = nh->subscribe ("/camera/depth/color/points", 1, &environment::cbPtCld, this);
+    getPoseClient = nh->serviceClient<moveit_planner::GetPose>("get_pose");
+    poseClient = nh->serviceClient<moveit_planner::MovePose>("move_to_pose");
+    cartMoveClient = nh->serviceClient<moveit_planner::MoveCart>("cartesian_move");
+    IKClient =  nh->serviceClient<moveit_planner::Inv>("inverse_kinematics_collision_check");
+    collisionClient = nh->serviceClient<moveit_planner::AddCollision>("add_collision_object");
+    setConstClient = nh->serviceClient<moveit_planner::SetConstraints>("set_constraints");
+    clearConstClient = nh->serviceClient<std_srvs::Empty>("clear_constraints");
+    namedStateClient = nh->serviceClient<moveit_planner::MoveNamedState>("move_to_named_state");
+  }
 
   // NOT USED (JUST FOR REFERENCE)
   /*subKinectRGB = nh->subscribe ("/camera/color/image_raw", 1, &environment::cbImgRgb, this);
@@ -307,7 +344,7 @@ environment::environment(ros::NodeHandle *nh){
   nh->getParam("/active_vision/environment/graspSurPatchConstraint", graspSurPatchConstraint);
   ros::Rate r(60);
 
-  if(simulationMode == "FRANKASIMULATION"){
+  if(simulationMode != "SIMULATION"){
     moveFrankaHome();
     addVisibilityConstraint();
   }
@@ -318,7 +355,7 @@ void environment::reset(){
   ptrPtCldEnv->clear();
   ptrPtCldUnexp->clear();
   configurations.clear();
-  if(simulationMode == "FRANKASIMULATION"){
+  if(simulationMode != "SIMULATION"){
     moveFrankaHome();
     addVisibilityConstraint();
   }
@@ -397,6 +434,9 @@ void cbImgDepth (const sensor_msgs::ImageConstPtr& msg){
 
 // 2A: Spawning objects in gazebo on the table centre for a given pose option and yaw
 void environment::spawnObject(int objectID, int choice, float yaw){
+
+  if(simulationMode == "FRANKA") return;
+
   gazebo_msgs::SpawnModel spawnObj;
   gazebo_msgs::GetModelState checkObj;
   geometry_msgs::Pose pose;
@@ -439,6 +479,9 @@ void environment::spawnObject(int objectID, int choice, float yaw){
 
 // 2B: Function to move the object. Same args as spawnObject
 void environment::moveObject(int objectID, int choice, float yaw){
+
+  if(simulationMode == "FRANKA") return;
+
   gazebo_msgs::GetModelState checkObj;
 
   if(choice >= objectDict[objectID].nPoses){
@@ -481,6 +524,9 @@ void environment::moveObject(int objectID, int choice, float yaw){
 
 // 3: Deleting objects in gazebo
 void environment::deleteObject(int objectID){
+
+  if(simulationMode == "FRANKA") return;
+
   gazebo_msgs::DeleteModel deleteObj;
   deleteObj.request.model_name = objectDict[objectID].description;
 
@@ -602,7 +648,7 @@ bool environment::moveKinectCartesian(std::vector<double> pose, bool execute){
     // Storing the kinect pose
     lastKinectPoseCartesian = pose;
   }
-  else if(simulationMode == "FRANKASIMULATION"){
+  else if(simulationMode == "FRANKASIMULATION" || simulationMode == "FRANKA"){
     // Create Matrix3x3 from Euler Angles
     // Additional rotation of PI about Z and -PI/2 about Y so that kinect frame orientation aligns with the gripper
     Eigen::Matrix3f rotMat;
@@ -668,7 +714,7 @@ bool environment::moveKinectViewsphere(std::vector<double> pose, bool execute){
                                ModelState.pose.position.z,
                                0,M_PI/2-pose[2],M_PI+pose[1]};
   }
-  else if(simulationMode == "FRANKASIMULATION"){
+  else if(simulationMode == "FRANKASIMULATION" || simulationMode == "FRANKA"){
 
     // Create Matrix3x3 from Euler Angles
     // Additional rotation of PI about Z and -PI/2 about Y so that kinect frame orientation aligns with the gripper
@@ -758,7 +804,7 @@ bool environment::moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKin
 void environment::moveFrankaHome(){
   std::cout << "Moving to home pose..." << std::endl;
   static franka_pos_grasping_gazebo::GripPos grasp; grasp.request.finger_pos = 0.08/2.0;
-  static moveit_planner::MoveNamedState namedState; namedState.request.name = "Home";
+  static moveit_planner::MoveNamedState namedState; namedState.request.name = "ready";
   namedStateClient.call(namedState);
   gripperPosClient.call(grasp);
   ros::Duration(1).sleep();
@@ -881,7 +927,7 @@ void environment::dataExtract(){
   dataExtractPlaneSeg();
   dataColorCorrection();
 
-  if(simulationMode == "FRANKASIMULATION"){
+  if(simulationMode != "SIMULATION"){
     editMoveItCollisions("TABLE","ADD");
     editMoveItCollisions("OBJECT","ADD");
   }
@@ -1260,7 +1306,7 @@ void environment::collisionCheck(){
     for(int j = 0; (j < nOrientations) && (stop == false); j++){
       // graspsPossible[i].addnlPitch = j*(2*M_PI)/nOrientations;
       graspsPossible[i].addnlPitch = orientations[j]*M_PI/180;
-      if(simulationMode == "FRANKASIMULATION" && (!checkPreGrasp(graspsPossible[i]))) continue;
+      if(simulationMode != "SIMULATION" && (!checkPreGrasp(graspsPossible[i]))) continue;
       updateGripper(i,2);
       // Get concave hull of the gripper fingers and hand in sequence and check
       for(int k = 2; k >= 0; k--){
@@ -1522,7 +1568,7 @@ void environment::graspObject(graspPoint &graspData){
   bool res = true;
 
   clearAllConstraints();
-  if(simulationMode == "FRANKASIMULATION"){
+  if(simulationMode != "SIMULATION"){
     editMoveItCollisions("TABLE","ADD");
     editMoveItCollisions("OBJECT","ADD");
   }
