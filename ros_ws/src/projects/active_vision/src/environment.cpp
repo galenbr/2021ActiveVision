@@ -344,10 +344,7 @@ environment::environment(ros::NodeHandle *nh){
   nh->getParam("/active_vision/environment/graspSurPatchConstraint", graspSurPatchConstraint);
   ros::Rate r(60);
 
-  if(simulationMode != "SIMULATION"){
-    moveFrankaHome();
-    addVisibilityConstraint();
-  }
+  if(simulationMode != "SIMULATION") moveFrankaHome();
 }
 
 // Function to reset the environment
@@ -355,10 +352,7 @@ void environment::reset(){
   ptrPtCldEnv->clear();
   ptrPtCldUnexp->clear();
   configurations.clear();
-  if(simulationMode != "SIMULATION"){
-    moveFrankaHome();
-    addVisibilityConstraint();
-  }
+  if(simulationMode != "SIMULATION") moveFrankaHome();
 }
 
 // Store the configuration
@@ -752,8 +746,9 @@ bool environment::moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKin
   tfMat *= pcl::getTransformation(0,0,0,0,-M_PI/2,M_PI).matrix();
   if(isKinect){
     Eigen::Matrix4f kinectOffset; kinectOffset.setIdentity();
-    kinectOffset(0,3) = -0.05;
-    kinectOffset(2,3) = -0.05;
+    kinectOffset(0,3) = -0.0300;
+    kinectOffset(1,3) = -0.0175;
+    kinectOffset(2,3) = -0.0700;
     tfMat *= kinectOffset;
   }
 
@@ -766,6 +761,7 @@ bool environment::moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKin
 
   // Moveit move command.
   if(execute){
+    if(isKinect) addVisibilityConstraint();
     if(mode == "JOINT"){
       moveit_planner::MovePose movePoseMsg;
       movePoseMsg.request.val = p;
@@ -778,7 +774,7 @@ bool environment::moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKin
       moveCartMsg.request.execute = true;
       cartMoveClient.call(moveCartMsg);
     }
-
+    if(isKinect) clearAllConstraints();
     moveit_planner::GetPose curPose;
     getPoseClient.call(curPose);
 
@@ -832,9 +828,9 @@ void environment::addVisibilityConstraint(){
 
   geometry_msgs::PoseStamped sensorPose;
   sensorPose.header.frame_id = "panda_hand";
-  pose.position.x = 0.05;
-  pose.position.y = 0;
-  pose.position.z = 0.05;
+  pose.position.x = 0.0300;
+  pose.position.y = 0.0175;
+  pose.position.z = 0.0700;
   sensorPose.pose = pose;
   visConstraint.sensor_pose = sensorPose;
 

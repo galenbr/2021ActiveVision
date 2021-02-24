@@ -22,25 +22,38 @@ void testSpawnDeleteObj(environment &av){
   std::cout << "*** End ***" << std::endl;
 }
 
-// 3: A test function to check if the "moveKinect" functions are working
-void testKinectMovement(environment &av){
+// 3: A test function to check if the kinect / franka movement functions are working
+void testMovement(environment &av){
   std::cout << "*** In kinect movement testing function ***" << std::endl;
   int flag = 0;
   av.spawnObject(2,1,0);
   bool res;
   do {
-    std::cout << "Enter your choice 1:Cartesian, 2:Viewsphere, 0:Exit : "; std::cin >> flag;
+    std::cout << "Enter your choice 1:Franka cartesian, 2:Kinect viewsphere, 0:Exit : "; std::cin >> flag;
+    av.moveFrankaHome();
     if (flag == 1) {
       std::vector<double> pose(6);
-      std::cout << "Enter kinect pose data" << std::endl;
+      double addnlPitch;
+      std::cout << "Enter gripper pose data (Grasp Pose Data Type)" << std::endl;
       std::cout << "X : ";      std::cin >> pose[0];
       std::cout << "Y : ";      std::cin >> pose[1];
       std::cout << "Z : ";      std::cin >> pose[2];
       std::cout << "Roll : ";   std::cin >> pose[3];
       std::cout << "Pitch : ";  std::cin >> pose[4];
       std::cout << "Yaw : ";    std::cin >> pose[5];
+      std::cout << "Addnl Pitch: "; std::cin >> addnlPitch;
 
-      res = av.moveKinectCartesian(pose);
+      Eigen::Affine3f tfGrasp = pcl::getTransformation(pose[0],pose[1],
+                                                       pose[2],pose[3],
+                                                       pose[4],pose[5])*
+                                pcl::getTransformation(0,0,0,0,addnlPitch,0)*
+                                pcl::getTransformation(0.0,0,-0.0447-av.fingerZOffset,0,0,0)*
+                                pcl::getTransformation(0,0,0,0,-M_PI/2,-M_PI);
+
+      if(tfGrasp(2,2) < 0)      tfGrasp = tfGrasp*pcl::getTransformation(0,0,0,M_PI,0,0);
+
+      geometry_msgs::Pose pDummy;
+      res = av.moveFranka(tfGrasp.matrix(),"JOINT",false,true,pDummy);
     } else if(flag == 2){
       std::vector<double> pose(3);
       std::cout << "Enter viewsphere co-ordinates with centre at (" <<
@@ -1135,7 +1148,7 @@ int main (int argc, char** argv){
   std::cout << "Available choices for test functions : " << std::endl;
   std::cout << "1  : Spawn and delete objects and its configurations on the table." << std::endl;
   std::cout << "2  : Load and view the gripper model." << std::endl;
-  std::cout << "3  : Move the kinect to a custom position." << std::endl;
+  std::cout << "3  : Move the realsense/franka to a custom position." << std::endl;
   std::cout << "4  : Continuously move the kinect in a viewsphere with centre on the table." << std::endl;
   std::cout << "5  : Read and view the data from kinect." << std::endl;
   std::cout << "6  : Read and fuse the data from 4 different viewpoints." << std::endl;
@@ -1187,7 +1200,7 @@ int main (int argc, char** argv){
     case 2:
       testGripper(activeVision,1,0.05);               break;
     case 3:
-      testKinectMovement(activeVision);               break;
+      testMovement(activeVision);                     break;
     case 4:
       testMoveKinectInViewsphere(activeVision);       break;
     case 5:
