@@ -747,9 +747,13 @@ bool environment::moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKin
   if(isKinect){
     Eigen::Matrix4f kinectOffset; kinectOffset.setIdentity();
     kinectOffset(0,3) = -0.0300;
-    kinectOffset(1,3) = -0.0175;
+    kinectOffset(1,3) = 0.0175;
     kinectOffset(2,3) = -0.0700;
     tfMat *= kinectOffset;
+  }
+
+  if(simulationMode == "FRANKA"){
+    tfMat *= pcl::getTransformation(0,0,0,0,0,M_PI/4).matrix();
   }
 
   Eigen::Quaternionf quat(tfMat.block<3,3>(0,0));
@@ -761,20 +765,24 @@ bool environment::moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKin
 
   // Moveit move command.
   if(execute){
+    bool res = true;
     if(isKinect) addVisibilityConstraint();
     if(mode == "JOINT"){
       moveit_planner::MovePose movePoseMsg;
       movePoseMsg.request.val = p;
       movePoseMsg.request.execute = true;
-      poseClient.call(movePoseMsg);
+      res = poseClient.call(movePoseMsg);
     }else if(mode == "CARTESIAN"){
       moveit_planner::MoveCart moveCartMsg;
       moveCartMsg.request.val.push_back(p);
       moveCartMsg.request.time = 0;
       moveCartMsg.request.execute = true;
-      cartMoveClient.call(moveCartMsg);
+      res = cartMoveClient.call(moveCartMsg);
     }
     if(isKinect) clearAllConstraints();
+
+    if(simulationMode == "FRANKA") return res;
+
     moveit_planner::GetPose curPose;
     getPoseClient.call(curPose);
 
@@ -782,6 +790,22 @@ bool environment::moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKin
     float frankaX = tfMat(0,3)-frankaOffset[0];
     float frankaY = tfMat(1,3)-frankaOffset[1];
     float frankaZ = tfMat(2,3)-frankaOffset[2];
+
+    // std::cout << curPose.response.pose.position.x << "," <<
+    //              curPose.response.pose.position.y << "," <<
+    //              curPose.response.pose.position.z << "," <<
+    //              curPose.response.pose.orientation.x << "," <<
+    //              curPose.response.pose.orientation.y << "," <<
+    //              curPose.response.pose.orientation.z << "," <<
+    //              curPose.response.pose.orientation.w << std::endl;
+    
+    // std::cout << frankaX << "," <<
+    //              frankaY << "," <<
+    //              frankaZ << "," <<
+    //              quat.x() << "," <<
+    //              quat.y() << "," <<
+    //              quat.z() << "," <<
+    //              quat.w() << std::endl;
 
     float positionError = sqrt(pow(curPose.response.pose.position.x-frankaX,2) +
                                pow(curPose.response.pose.position.y-frankaY,2) +
@@ -1539,7 +1563,7 @@ void environment::graspObject(graspPoint &graspData){
                             pcl::getTransformation(0.0,0,-0.0447-fingerZOffset,0,0,0)*
                             pcl::getTransformation(0,0,0,0,-M_PI/2,-M_PI);
 
-  if(tfGrasp(2,2) < 0)      tfGrasp = tfGrasp*pcl::getTransformation(0,0,0,M_PI,0,0);
+  // if(tfGrasp(2,2) < 0)      tfGrasp = tfGrasp*pcl::getTransformation(0,0,0,M_PI,0,0);
 
   // std::cout << tfGrasp(0,0) << "," << tfGrasp(0,1) << "," << tfGrasp(0,2) << "\n"
   //           << tfGrasp(1,0) << "," << tfGrasp(1,1) << "," << tfGrasp(2,2) << "\n"

@@ -49,8 +49,10 @@ void testMovement(environment &av){
                                 pcl::getTransformation(0,0,0,0,addnlPitch,0)*
                                 pcl::getTransformation(0.0,0,-0.0447-av.fingerZOffset,0,0,0)*
                                 pcl::getTransformation(0,0,0,0,-M_PI/2,-M_PI);
-
-      if(tfGrasp(2,2) < 0)      tfGrasp = tfGrasp*pcl::getTransformation(0,0,0,M_PI,0,0);
+      // std::cout << tfGrasp(0,0) << "," << tfGrasp(0,1) << "," <<tfGrasp(0,2) << std::endl;
+      // std::cout << tfGrasp(1,0) << "," << tfGrasp(1,1) << "," <<tfGrasp(1,2) << std::endl;
+      // std::cout << tfGrasp(2,0) << "," << tfGrasp(2,1) << "," <<tfGrasp(2,2) << std::endl;
+      // if(tfGrasp(2,2) < 0)      tfGrasp = tfGrasp*pcl::getTransformation(0,0,0,M_PI,0,0);
 
       geometry_msgs::Pose pDummy;
       res = av.moveFranka(tfGrasp.matrix(),"JOINT",false,true,pDummy);
@@ -901,7 +903,7 @@ void testGripperOpenClose(environment &av){
 // 18: Testing object pickup
 void testObjectPickup(environment &av, int objID){
   std::cout << "*** In object pickup function ***" << std::endl;
-  if(av.simulationMode != "FRANKASIMULATION"){
+  if(av.simulationMode == "SIMULATION"){
     std::cout << "Incorrect simulation mode... Closing" << std::endl;
     std::cout << "*** End ***" << std::endl;
     return;
