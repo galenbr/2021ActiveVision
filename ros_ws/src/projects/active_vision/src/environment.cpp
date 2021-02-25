@@ -781,6 +781,8 @@ bool environment::moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKin
     }
     if(isKinect) clearAllConstraints();
 
+    ros::Duration(1).sleep();
+
     if(simulationMode == "FRANKA") return res;
 
     moveit_planner::GetPose curPose;
@@ -798,7 +800,7 @@ bool environment::moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKin
     //              curPose.response.pose.orientation.y << "," <<
     //              curPose.response.pose.orientation.z << "," <<
     //              curPose.response.pose.orientation.w << std::endl;
-    
+
     // std::cout << frankaX << "," <<
     //              frankaY << "," <<
     //              frankaZ << "," <<
@@ -821,13 +823,43 @@ bool environment::moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKin
   return true;
 }
 
+void environment::moveGripper(double Grasp_Width){
+  if(simulationMode == "FRANKA"){
+    actionlib::SimpleActionClient<franka_gripper::GraspAction> ac("franka_gripper/grasp", true);
+    ac.waitForServer();
+
+    franka_gripper::GraspGoal goal;
+    goal.width = Grasp_Width;   // Distance between fingers [m]
+    goal.speed = 0.1;           // Closing speed. [m/s]
+    goal.force = 40;            // Grasping (continuous) force [N]
+    goal.epsilon.inner = 0.05;  // Maximum tolerated deviation when the actual grasped width is
+                                // smaller than the commanded grasp width.
+    goal.epsilon.outer = 0.05;  // Maximum tolerated deviation when the actual grasped width is
+                                // larger than the commanded grasp width.
+    ac.sendGoal(goal);          // Sending the Grasp command to gripper
+
+    bool finished_before_timeout = ac.waitForResult(ros::Duration(5));
+
+    if (finished_before_timeout){
+    ROS_INFO("Gripper action finished.");
+    }
+    else {
+    ROS_INFO("Gripper action did not finish before the time out.");
+    }
+  }else if(simulationMode == "FRANKASIMULATION"){
+    franka_pos_grasping_gazebo::GripPos grasp;
+    grasp.request.finger_pos = Grasp_Width/2.0;
+    gripperPosClient.call(grasp);
+    ros::Duration(1).sleep();
+  }
+
+}
+
 void environment::moveFrankaHome(){
   std::cout << "Moving to home pose..." << std::endl;
-  static franka_pos_grasping_gazebo::GripPos grasp; grasp.request.finger_pos = 0.08/2.0;
   static moveit_planner::MoveNamedState namedState; namedState.request.name = "ready";
   namedStateClient.call(namedState);
-  gripperPosClient.call(grasp);
-  ros::Duration(1).sleep();
+  moveGripper(0.08);
 }
 
 void environment::addVisibilityConstraint(){
@@ -1584,7 +1616,6 @@ void environment::graspObject(graspPoint &graspData){
   Eigen::Affine3f tfPreGrasp1 = tfPreGrasp; tfPreGrasp1(2,3)=std::max(0.37,double(tfPreGrasp1(2,3)));
 
   geometry_msgs::Pose p;
-  franka_pos_grasping_gazebo::GripPos grasp;
   bool res = true;
 
   clearAllConstraints();
@@ -1595,8 +1626,12 @@ void environment::graspObject(graspPoint &graspData){
 
   moveFrankaHome();
 
-  // Move to Pre-grasp
+  if(simulationMode == "FRANKA"){
+    int temp;
+    std::cout << "Enter any key after disconneting the realsense. "; std::cin >> temp;
+  }
 
+  // Move to Pre-grasp
   if(res){
     std::cout << "Moving to Pre Grasp 1 ..." << std::endl;
     res = moveFranka(tfPreGrasp1.matrix(),"JOINT",false,true,p);
@@ -1605,58 +1640,44 @@ void environment::graspObject(graspPoint &graspData){
   if(res){
     std::cout << "Moving to Pre Grasp 2 ..." << std::endl;
     res = moveFranka(tfPreGrasp.matrix(),"JOINT",false,true,p);
-    ros::Duration(1).sleep();
     if(!res){
       tfPreGrasp = tfGrasp*pcl::getTransformation(-clearance-0.07,0,0,0,0,0);
       res = moveFranka(tfPreGrasp.matrix(),"JOINT",false,true,p);
-      ros::Duration(1).sleep();
     }
     if(!res){
       tfPreGrasp = tfGrasp*pcl::getTransformation(-clearance-0.15,0,0,0,0,0);
       res = moveFranka(tfPreGrasp.matrix(),"JOINT",false,true,p);
-      ros::Duration(1).sleep();
     }
-
     editMoveItCollisions("OBJECT","REMOVE");
-    grasp.request.finger_pos = (graspData.gripperWidth+0.04)/2.0;
-    gripperPosClient.call(grasp);
-    ros::Duration(1).sleep();
+    moveGripper(graspData.gripperWidth+0.04);
   }
 
   // Move to Grasp and grasp
   if(res){
     std::cout << "Moving to Grasp..." << std::endl;
     res = moveFranka(tfGrasp.matrix(),"CARTESIAN",false,true,p);
-    ros::Duration(1).sleep();
-    // grasp.request.finger_pos = (std::max(graspData.gripperWidth-1.5*voxelGridSize,0.005))/2.0;
-    // gripperPosClient.call(grasp);
-    // ros::Duration(1).sleep();
+    moveGripper(std::max(graspData.gripperWidth-1.5*voxelGridSize,0.005));
   }
 
   // Move straight up
   // std::cout << "Lifting..." << std::endl;
   // res = moveFranka(tfGraspMoveUp.matrix(),"CARTESIAN",false,true,p);
-  // ros::Duration(2).sleep();
 
   // Go to same location and release
   // std::cout << "Placing it back..." << std::endl;
   // res = moveFranka(tfGrasp.matrix(),"CARTESIAN",false,true,p);
-  // grasp.request.finger_pos = (graspData.gripperWidth+0.04)/2.0;
-  // gripperPosClient.call(grasp);
-  // ros::Duration(3).sleep();
+  moveGripper(graspData.gripperWidth+0.04);
 
   // Move to Post-grasp
   if(res){
     std::cout << "Moving to Retreat 1..." << std::endl;
     res = moveFranka(tfPreGrasp.matrix(),"CARTESIAN",false,true,p);
-    ros::Duration(1).sleep();
 
     editMoveItCollisions("OBJECT","ADD");
   }
   if(res){
     std::cout << "Moving to Retreat 2..." << std::endl;
     res = moveFranka(tfPreGrasp1.matrix(),"JOINT",false,true,p);
-    ros::Duration(1).sleep();
   }
 
   moveFrankaHome();

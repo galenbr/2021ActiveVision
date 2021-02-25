@@ -72,6 +72,10 @@
 // #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <franka_pos_grasping_gazebo/GripPos.h>
 
+#include <actionlib/client/simple_action_client.h>
+#include <actionlib/client/terminal_state.h>
+#include <franka_gripper/GraspAction.h>
+
 // Typedef for convinience
 typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
 typedef pcl::PointCloud<pcl::Normal> ptCldNormal;
@@ -302,6 +306,7 @@ public:
 
   // Function to move franka
   bool moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKinect ,bool execute, geometry_msgs::Pose &p);
+  void moveGripper(double Grasp_Width);
   void moveFrankaHome();
   void addVisibilityConstraint();
   void addOrientationConstraint(Eigen::Affine3f tf);
