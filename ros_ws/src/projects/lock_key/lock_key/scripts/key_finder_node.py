@@ -26,14 +26,13 @@ class FinderPub:
         self.key_max_hsv=self.hsv['key']['max']
         self.key_center=None
         self.key_center_depth=None
-        self.key_yaw=None
+        self.key_angle=None
         self.lock_search_box=None
         self.lock_min_hsv=self.hsv['lock']['min']
         self.lock_max_hsv=self.hsv['lock']['max']
         self.lock_center=None
         self.lock_center_depth=None
         #self.lock_yaw=None
-        self.map_yaw_offset=pi/2
         self.rgb_camera=image_geometry.PinholeCameraModel()
         self.rgb_camera_info_received=False
         self.rgb_image=None
@@ -53,7 +52,7 @@ class FinderPub:
                                        queue_size=1)
         self.lock_pub = rospy.Publisher('lock_point', PointStamped, 
                                         queue_size=1)
-        self.key_yaw_pub = rospy.Publisher('key_yaw', Float64, 
+        self.key_angle_pub = rospy.Publisher('key_angle', Float64, 
                                            queue_size=1)
         # self.lock_yaw_pub = rospy.Publisher('lock_yaw', Float64, 
         #                                     queue_size=1)
@@ -113,7 +112,7 @@ class FinderPub:
     def get_centers(self,img):
         '''Compute object centers and adds visuals to image.'''
         #Update img for key
-        img,self.key_center,self.key_yaw=image_utils.color_change(img,
+        img,self.key_center,self.key_angle=image_utils.color_change(img,
                                                                  self.key_search_box,
                                                                  self.key_min_hsv,
                                                                  self.key_max_hsv,
@@ -147,7 +146,7 @@ class FinderPub:
         #Publish message
         self.key_pub.publish(key_msg)
         #Publish yaw
-        self.key_yaw_pub.publish(Float64(self.key_yaw+self.map_yaw_offset))
+        self.key_angle_pub.publish(Float64(self.key_angle))
 
     def publish_lock_point(self,lock_disp):
         '''Publish lock position in terms of camera_color_optical_frame.'''
@@ -160,7 +159,7 @@ class FinderPub:
         #Publish message
         self.lock_pub.publish(lock_msg)
         #Publish yaw
-        # self.lock_yaw_pub.publish(Float64(self.lock_yaw-self.map_yaw_offset))
+        # self.lock_yaw_pub.publish(Float64(self.lock_yaw))
 
     def publish_vis(self,vis_img):
         '''Define and publish visualization image'''

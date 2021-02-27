@@ -5,16 +5,16 @@ key_goal:
   # y: -0.2255
   # z: 0.1485 #peg: 0.1665, key: 0.165
   # Key grasping orientation in [radians]
-  roll: -1.5708 #Hor.: -1.5708, Vertical: 3.1416
-  pitch: 0.0 #Hor.: 0.7854, Vertical: 0.0
-  yaw:   0.0    #Hor.: (Panda: 0.0), Vertical: (Gazebo:0.0, Panda: -0.7854)
+  # roll: -1.5708 #Hor.: -1.5708, Vertical: 3.1416
+  # pitch: 0.0 #Hor.: 0.7854, Vertical: 0.0
+  # yaw:   0.0    #Hor.: (Panda: 0.0), Vertical: (Gazebo:0.0, Panda: -0.7854)
   # Distance offsets for pre-grasp [meters]
-  pre_x_offset_far: 0.0
-  pre_y_offset_far: -0.1 #Hor.: -0.05, Vertical:0.0
-  pre_z_offset_far: 0.0 #Hor.: 0.0, Vertical: 0.15
-  pre_x_offset_close: 0.0
-  pre_y_offset_close: -0.02 #Hor.: -0.05, Vertical:0.0
-  pre_z_offset_close: 0.0 #Hor.: 0.0, Vertical: 0.15
+  # pre_x_offset_far: 0.0
+  # pre_y_offset_far: -0.1 #Hor.: -0.05, Vertical:0.0
+  # pre_z_offset_far: 0.0 #Hor.: 0.0, Vertical: 0.15
+  # pre_x_offset_close: 0.0
+  # pre_y_offset_close: -0.02 #Hor.: -0.05, Vertical:0.0
+  # pre_z_offset_close: 0.0 #Hor.: 0.0, Vertical: 0.15
   # Distance offsets for post-grasp [meters]
   post_x_offset: 0.0
   post_y_offset: 0.0

@@ -10,12 +10,13 @@ import actionlib
 import commander
 import tf
 import tf_conversions
-from math import radians
+from math import cos, pi, radians, sin
 #Messages
 import geometry_msgs.msg
 import lock_key.msg
 import lock_key_msgs.msg
 import sensor_msgs.msg
+import std_msgs.msg
 #Services
 from lock_key_msgs.srv import GetLockKeyPoses, GetLockKeyPosesResponse
 import moveit_planner.srv
@@ -66,6 +67,37 @@ def get_poses():
 	rospy.loginfo(response)
 	return response
 
+def truncate_angle(angle):
+    '''Converts angle to be in 0 to 2*pi range.'''
+    while (angle>(2*pi)) or (angle<0.0):
+        if angle>(2*pi):
+            angle-=(2*pi)
+        elif angle<0.0:
+            angle+=(2*pi)
+        else:
+            pass
+    return angle
+
+def get_xy_signs(angle):
+    '''Returns signs of x-y offsets given angle.'''
+    # if ((angle>=0.0) and angle<pi/2):
+    #     x_sign=1.0
+    #     y_sign=-1.0
+    # elif ((angle>=pi/2) and angle<pi):
+    #     x_sign=1.0
+    #     y_sign=1.0
+    # elif ((angle>=pi) and angle<3*pi/2):
+    #     x_sign=-1.0
+    #     y_sign=1.0
+    # elif angle>=3*pi/2:
+    #     x_sign=-1.0
+    #     y_sign=-1.0
+    # else:
+    #     print('Angle outside of expected range')
+    x_sign=1.0
+    y_sign=1.0
+    return x_sign, y_sign
+
 class GetPositions(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
@@ -73,29 +105,68 @@ class GetPositions(smach.State):
         rospy.loginfo('Getting key pose and lock position from vision system...')
         response=get_poses()
         #Define offsets
-        x_offset=0.0045 #Quarter of finger width? Check TF tree
+        #x_offset=0.0045 #Quarter of finger width? Check TF tree
         height_safety_offset_key=0.02
         height_safety_offset_lock=0.02
+        key_far_offset=0.1
+        key_close_offset=0.02
 
-        rospy.set_param("key_goal/x",response.key_pose.pose.position.x-x_offset) #
+        rospy.set_param("key_goal/x",response.key_pose.pose.position.x) #-x_offset
         rospy.set_param("key_goal/y",response.key_pose.pose.position.y)
-        # rospy.set_param("key_goal/z",0.1485)
         rospy.set_param("key_goal/z",response.key_pose.pose.position.z+height_safety_offset_key)
-        # #Convert quat to RPY, then set key_goal/roll, etc.
-        # quaternion = (response.key_pose.pose.orientation.x,response.key_pose.pose.orientation.y,
-        #               response.key_pose.pose.orientation.z,response.key_pose.pose.orientation.w)
-        # euler = tf.transformations.euler_from_quaternion(quaternion)
-        # rospy.set_param("key_goal/roll",euler[0])
-        # rospy.set_param("key_goal/pitch",euler[1])
-        # rospy.set_param("key_goal/yaw",euler[2])
+        
+        #Convert quat to RPY, then set key_goal/roll, etc.
+        quaternion = (response.key_pose.pose.orientation.x,response.key_pose.pose.orientation.y,
+                      response.key_pose.pose.orientation.z,response.key_pose.pose.orientation.w)
+        euler = tf.transformations.euler_from_quaternion(quaternion)
+        roll=truncate_angle(euler[0])
+        pitch=truncate_angle(euler[1])
+        yaw=truncate_angle(euler[2])
+        rospy.set_param("key_goal/roll",roll)
+        rospy.set_param("key_goal/pitch",pitch)
+        #rospy.set_param("key_goal/yaw",yaw)
+        
+        rospy.loginfo('*********KEY ANGLES (RPY) *********')
+        rospy.loginfo(roll)
+        rospy.loginfo(pitch)
+        rospy.loginfo(yaw)
 
-        rospy.set_param("padlock_goal/x",response.lock_point.point.x-x_offset) #
+        #Calculate far/close offsets for key based on orientation
+        x_sign, y_sign=get_xy_signs(yaw)
+        
+        rospy.loginfo('********* XY SIGNS *********')
+        rospy.loginfo(x_sign)
+        rospy.loginfo(y_sign)
+
+        x_offset_far=x_sign*key_far_offset*cos(yaw)
+        y_offset_far=y_sign*key_far_offset*sin(yaw)
+        rospy.set_param("key_goal/pre_x_offset_far",x_offset_far)
+        rospy.set_param("key_goal/pre_y_offset_far",y_offset_far)
+        rospy.set_param("key_goal/pre_z_offset_far",0.0)
+        
+        rospy.loginfo('********* XY FAR OFFSET *********')
+        rospy.loginfo(x_offset_far)
+        rospy.loginfo(y_offset_far)
+
+        x_offset_close=x_sign*key_close_offset*cos(yaw)
+        y_offset_close=y_sign*key_close_offset*sin(yaw)
+        rospy.set_param("key_goal/pre_x_offset_close",x_offset_close)
+        rospy.set_param("key_goal/pre_y_offset_close",y_offset_close)
+        rospy.set_param("key_goal/pre_z_offset_close",0.0)
+        
+        rospy.loginfo('********* XY CLOSE OFFSET *********')
+        rospy.loginfo(x_offset_close)
+        rospy.loginfo(y_offset_close)
+
+        rospy.set_param("key_goal/yaw",yaw-pi/2)
+
+        rospy.set_param("padlock_goal/x",response.lock_point.point.x) #-x_offset
         rospy.set_param("padlock_goal/y",response.lock_point.point.y)
         rospy.set_param("padlock_goal/z",response.lock_point.point.z+height_safety_offset_lock)
-        # rospy.set_param("padlock_goal/z",0.116)
 
         rospy.loginfo('Published key_goal with orientation')
         rospy.sleep(5)
+        # return 'failed'
         return 'succeeded'
 
 class NavigateToPreKeyFar(smach.State):
@@ -147,7 +218,7 @@ class NavigateToKey(smach.State):
         max_force=rospy.get_param("key_goal/Ft")
         panda.move_to_plane(step=0.0018,axis='z',max_disp=0.2,max_force=max_force,max_iter=500,
 			    		    orientation=None,step_goal_time=0.5,recalculate_bias=True,
-                            hold_xyz=[True,False,True])
+                            hold_xyz=[False,False,True])
         # # Retrieve goal position from param server
         # goal=rospy.get_param("key_goal")
         # # Call movement action
@@ -390,38 +461,38 @@ def main():
 	                           transitions={'succeeded':'NavigateToPostKeyRotated',  
 	                                        'failed':'NavigateToPostKey'})
 		smach.StateMachine.add('NavigateToPostKeyRotated', NavigateToPostKeyRotated(), 
-	                           transitions={'succeeded':'NavigateToPreLockFar',  
+	                           transitions={'succeeded':'NavigateToHome',  
 	                                        'failed':'NavigateToPostKey'})
-		smach.StateMachine.add('NavigateToPreLockFar', NavigateToPreLockFar(), 
-	                           transitions={'succeeded':'NavigateToPreLockClose', 
-	                                        'failed':'NavigateToPreLockFar'})
-		smach.StateMachine.add('NavigateToPreLockClose', NavigateToPreLockClose(), 
-	                           transitions={'succeeded':'SpiralInsert_SM',
-	                                        'failed':'NavigateToPreLockClose'})
+		# smach.StateMachine.add('NavigateToPreLockFar', NavigateToPreLockFar(), 
+	    #                        transitions={'succeeded':'NavigateToPreLockClose', 
+	    #                                     'failed':'NavigateToPreLockFar'})
+		# smach.StateMachine.add('NavigateToPreLockClose', NavigateToPreLockClose(), 
+	    #                        transitions={'succeeded':'SpiralInsert_SM',
+	    #                                     'failed':'NavigateToPreLockClose'})
 
-		# Create the sub SMACH state machine
-		sm_sub = smach.StateMachine(outcomes=['succeeded','failed'])
-		with sm_sub:
-			smach.StateMachine.add('PlaneDetection', PlaneDetection(), 
-									transitions={'succeeded':'SpiralMotion'})
-			smach.StateMachine.add('SpiralMotion', SpiralMotion(), 
-									transitions={'succeeded':'FinalInsert'})
-			smach.StateMachine.add('FinalInsert', FinalInsert(), 
-									transitions={'succeeded':'RotateKey'})												 
-			smach.StateMachine.add('RotateKey', RotateKey(), 
-									transitions={'succeeded':'succeeded',  
-												 'failed':'failed'})
+		# # Create the sub SMACH state machine
+		# sm_sub = smach.StateMachine(outcomes=['succeeded','failed'])
+		# with sm_sub:
+		# 	smach.StateMachine.add('PlaneDetection', PlaneDetection(), 
+		# 							transitions={'succeeded':'SpiralMotion'})
+		# 	smach.StateMachine.add('SpiralMotion', SpiralMotion(), 
+		# 							transitions={'succeeded':'FinalInsert'})
+		# 	smach.StateMachine.add('FinalInsert', FinalInsert(), 
+		# 							transitions={'succeeded':'RotateKey'})												 
+		# 	smach.StateMachine.add('RotateKey', RotateKey(), 
+		# 							transitions={'succeeded':'succeeded',  
+		# 										 'failed':'failed'})
 
-		smach.StateMachine.add('SpiralInsert_SM', sm_sub, 
-	                           transitions={'succeeded':'OpenGripper',  
-	                                        'failed':'NavigateToPreLockFar'})
+		# smach.StateMachine.add('SpiralInsert_SM', sm_sub, 
+	    #                        transitions={'succeeded':'OpenGripper',  
+	    #                                     'failed':'NavigateToPreLockFar'})
 
-		smach.StateMachine.add('OpenGripper', OpenGripper(), 
-	                           transitions={'succeeded':'NavigateToPostLock',  
-	                                        'failed':'OpenGripper'})
-		smach.StateMachine.add('NavigateToPostLock', NavigateToPostLock(), 
-	                           transitions={'succeeded':'NavigateToHome',
-	                                        'failed':'NavigateToPostLock'})
+		# smach.StateMachine.add('OpenGripper', OpenGripper(), 
+	    #                        transitions={'succeeded':'NavigateToPostLock',  
+	    #                                     'failed':'OpenGripper'})
+		# smach.StateMachine.add('NavigateToPostLock', NavigateToPostLock(), 
+	    #                        transitions={'succeeded':'NavigateToHome',
+	    #                                     'failed':'NavigateToPostLock'})
 		smach.StateMachine.add('NavigateToHome', NavigateToHome(), 
 	                           transitions={'succeeded':'complete',  
 	                                        'failed':'NavigateToHome'})

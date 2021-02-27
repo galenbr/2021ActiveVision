@@ -21,7 +21,7 @@ key_point={'x':deque(maxlen=nsamples),
 lock_point={'x':deque(maxlen=nsamples),
 		    'y':deque(maxlen=nsamples),
 		    'z':deque(maxlen=nsamples)}
-key_yaw=deque(maxlen=nsamples)
+key_angle=deque(maxlen=nsamples)
 # lock_yaw=deque(maxlen=nsamples)
 
 def key_callback(key_msg):
@@ -36,9 +36,9 @@ def lock_callback(lock_msg):
 	lock_point['y'].append(lock_msg.point.y)
 	lock_point['z'].append(lock_msg.point.z)
 
-def key_yaw_callback(key_yaw_msg):
-	global key_yaw
-	key_yaw.append(key_yaw_msg.data)
+def key_angle_callback(key_angle_msg):
+	global key_angle
+	key_angle.append(key_angle_msg.data)
 
 # def lock_yaw_callback(lock_yaw_msg):
 # 	global lock_yaw
@@ -49,7 +49,7 @@ def ave(data):
 
 def get_poses(req):
 	'''Returns poses of lock and key from vision system.'''
-	global key_point, lock_point, key_yaw
+	global key_point, lock_point, key_angle
 	pose_retrieved=False
 	while not pose_retrieved:
 		try:
@@ -76,8 +76,8 @@ def get_poses(req):
 			#Build key_pose msg
 			response.key_pose.header=key_response.header
 			response.key_pose.pose.position=key_response.point
-			#Convert RPY (using 0,0,key_yaw) to Quaternion
-			key_quat=tf_conversions.transformations.quaternion_from_euler(0,0,ave(key_yaw))
+			#Convert RPY to Quaternion
+			key_quat=tf_conversions.transformations.quaternion_from_euler(-1.5708,0,ave(key_angle))
 			response.key_pose.pose.orientation.x = key_quat[0]
 			response.key_pose.pose.orientation.y = key_quat[1]
 			response.key_pose.pose.orientation.z = key_quat[2]
@@ -87,7 +87,7 @@ def get_poses(req):
 			pose_retrieved=True
 
 			print(response)
-			print(key_yaw)
+			print(key_angle)
 		#If call fails due to "Transform lookup in past" error, then try again
 		except TransformException:
 			pass
@@ -98,7 +98,7 @@ def lock_key_pose_server():
 	rospy.Subscriber("/lock_point", PointStamped, lock_callback)
 	rospy.Subscriber("/key_point", PointStamped, key_callback)
 	#rospy.Subscriber("/lock_yaw", Float64, lock_yaw_callback)
-	rospy.Subscriber("/key_yaw", Float64, key_yaw_callback)
+	rospy.Subscriber("/key_angle", Float64, key_angle_callback)
 	s = rospy.Service('lock_and_key_poses', GetLockKeyPoses, get_poses)
 	print("Ready to retrieve poses.")
 	rospy.spin()
