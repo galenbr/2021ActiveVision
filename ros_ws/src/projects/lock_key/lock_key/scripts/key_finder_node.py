@@ -14,6 +14,7 @@ from std_msgs.msg import Header, Float64
 from cv_bridge import CvBridge, CvBridgeError
 from math import pi
 import tf
+from scipy.stats import trim_mean
 
 class FinderPub:
     '''Finds lock and key from RGBD data.'''
@@ -80,9 +81,16 @@ class FinderPub:
             rospy.loginfo('Lock Not Found in Frame')
         #Key
         try:
-            #TODO: Find alternative to "-100 pixel" hack for getting depth of table for scaling
-            self.key_center_depth=self.depth_array[self.key_center[1],
-                                                   self.key_center[0]-100]
+            #Identify local area (square around key center) to get depth
+            num_pixels=15
+            ymin=self.key_center[1]-num_pixels
+            ymax=self.key_center[1]+num_pixels
+            xmin=self.key_center[0]-num_pixels
+            xmax=self.key_center[0]+num_pixels
+            depth_region=self.depth_array[ymin:ymax,
+                                          xmin:xmax]
+            # Mean is trimmed on both tails
+            self.key_center_depth=trim_mean(depth_region,0.4,axis=None)
             # Get normalized XYZ displacement (in camera_color_optical_frame)
             key_disp=self.rgb_camera.projectPixelTo3dRay(self.key_center)
             # Get scale from depth

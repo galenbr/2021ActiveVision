@@ -78,26 +78,6 @@ def truncate_angle(angle):
             pass
     return angle
 
-def get_xy_signs(angle):
-    '''Returns signs of x-y offsets given angle.'''
-    # if ((angle>=0.0) and angle<pi/2):
-    #     x_sign=1.0
-    #     y_sign=-1.0
-    # elif ((angle>=pi/2) and angle<pi):
-    #     x_sign=1.0
-    #     y_sign=1.0
-    # elif ((angle>=pi) and angle<3*pi/2):
-    #     x_sign=-1.0
-    #     y_sign=1.0
-    # elif angle>=3*pi/2:
-    #     x_sign=-1.0
-    #     y_sign=-1.0
-    # else:
-    #     print('Angle outside of expected range')
-    x_sign=1.0
-    y_sign=1.0
-    return x_sign, y_sign
-
 class GetPositions(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
@@ -132,14 +112,8 @@ class GetPositions(smach.State):
         rospy.loginfo(yaw)
 
         #Calculate far/close offsets for key based on orientation
-        x_sign, y_sign=get_xy_signs(yaw)
-        
-        rospy.loginfo('********* XY SIGNS *********')
-        rospy.loginfo(x_sign)
-        rospy.loginfo(y_sign)
-
-        x_offset_far=x_sign*key_far_offset*cos(yaw)
-        y_offset_far=y_sign*key_far_offset*sin(yaw)
+        x_offset_far=-key_far_offset*cos(yaw)
+        y_offset_far=-key_far_offset*sin(yaw)
         rospy.set_param("key_goal/pre_x_offset_far",x_offset_far)
         rospy.set_param("key_goal/pre_y_offset_far",y_offset_far)
         rospy.set_param("key_goal/pre_z_offset_far",0.0)
@@ -148,8 +122,8 @@ class GetPositions(smach.State):
         rospy.loginfo(x_offset_far)
         rospy.loginfo(y_offset_far)
 
-        x_offset_close=x_sign*key_close_offset*cos(yaw)
-        y_offset_close=y_sign*key_close_offset*sin(yaw)
+        x_offset_close=-key_close_offset*cos(yaw)
+        y_offset_close=-key_close_offset*sin(yaw)
         rospy.set_param("key_goal/pre_x_offset_close",x_offset_close)
         rospy.set_param("key_goal/pre_y_offset_close",y_offset_close)
         rospy.set_param("key_goal/pre_z_offset_close",0.0)
@@ -157,7 +131,7 @@ class GetPositions(smach.State):
         rospy.loginfo('********* XY CLOSE OFFSET *********')
         rospy.loginfo(x_offset_close)
         rospy.loginfo(y_offset_close)
-
+        #Set rotated yaw parameter after offset calcs are finished.
         rospy.set_param("key_goal/yaw",yaw-pi/2)
 
         rospy.set_param("padlock_goal/x",response.lock_point.point.x) #-x_offset

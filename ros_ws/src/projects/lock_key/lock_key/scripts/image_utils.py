@@ -5,9 +5,10 @@ Image processing utility functions
 
 import copy
 import cv2
-import numpy as np
 from math import atan2, cos, sin, sqrt, pi
 import matplotlib.pyplot as plt
+import numpy as np
+import rospy
 from scipy.ndimage import label
 from scipy.stats import trim_mean
 
@@ -15,7 +16,41 @@ def get_distance(pt1,pt2):
     '''Returns distance between two points.'''
     return sqrt((pt2[1]-pt1[1])**2+(pt2[0]-pt1[0])**2)
 
-def get_orientation(data, data_center, search_radius=50):
+def modify_key_angle(img, angle, key_data, cntr, search_radius):
+    '''Adds PI to angle if not pointing towards key tip.'''
+    #Identify the 2x pixel locations within search radius (along primary axis)
+    p1_max=np.array([cntr[0]+search_radius*sin(angle), cntr[1]+search_radius*cos(angle)],dtype=int)
+    p2_max=np.array([cntr[0]-search_radius*sin(angle), cntr[1]-search_radius*cos(angle)],dtype=int)
+    p1_max_swap=np.array([p1_max[1],p1_max[0]])
+    p2_max_swap=np.array([p2_max[1],p2_max[0]])
+    #Find closest key points to extreme points
+    p1=np.array(key_data[np.sum(np.square(np.abs(key_data-p1_max_swap)),1).argmin()],dtype=int)
+    p2=np.array(key_data[np.sum(np.square(np.abs(key_data-p2_max_swap)),1).argmin()],dtype=int)
+    p1=tuple((p1[1],p1[0]))
+    p2=tuple((p2[1],p2[0]))
+    #Draw points for visualization
+    img = cv2.circle(img, tuple(p1_max), 2, (0,0,255), 4)
+    img = cv2.circle(img, p1, 2, (255,0,0), 4)
+    img = cv2.circle(img, tuple(p2_max), 2, (0,0,255), 4)
+    img = cv2.circle(img, p2, 2, (0,255,0), 4)
+    # rospy.loginfo('*****')
+    # rospy.loginfo(tuple(p1_max))
+    # rospy.loginfo(p1)
+    # rospy.loginfo(tuple(p2_max))
+    # rospy.loginfo(p2)
+
+    #Find distances from key center to extreme datapoints along primary axis
+    d1=get_distance(cntr,p1)
+    d2=get_distance(cntr,p2)
+    #Assume longer distance is towards key tip
+    #If the angle is not already pointing away from key tip, then add PI
+    if d1<d2:
+        # rospy.loginfo('D1<D2, adding PI.')
+        return img, angle
+    else:
+        return img, angle+pi
+
+def get_orientation(img, data, data_center, search_radius=50):
     '''Returns orientation (radians) CCW from horizontal using PCA.'''
     filtered_data=[]
     # Reduce region to pixels within "search_radius" of data_center
@@ -32,7 +67,10 @@ def get_orientation(data, data_center, search_radius=50):
     # Calculate center
     cntr = (int(mean[0,1]), int(mean[0,0]))
 
-    return angle, eigenvectors, eigenvalues, cntr
+    #Rotate key angle by 180 if needed
+    img,angle=modify_key_angle(img,angle, filtered_data, data_center, search_radius)
+
+    return img, angle, eigenvectors, eigenvalues, cntr
 
 def drawAxis(img, p_, q_, colour, scale):
     '''Draw Axis from PCA.'''
@@ -120,14 +158,15 @@ def color_change(img,search_box,min_hsv=[150,0,0],max_hsv=[255,150,150],
         cv2.circle(new_img, center, 1, centroid_pixel, 6)
     except ValueError:
         center=(None,None)
+        rospy.loginfo("CENTROID FINDING FAILED")
         pass
 
     #Calculate orientation (radians) of final_region
     reg=np.array(final_region,dtype=np.float64)
     reg=reg.T
     search_radius=50
-    orientation, eigenvectors, eigenvalues, cntr=get_orientation(reg,center,search_radius=search_radius)
     if show_pca:
+        new_img, orientation, eigenvectors, eigenvalues, cntr=get_orientation(new_img,reg,center,search_radius=search_radius)
         #Draw axes from PCA
         pca_img1=copy.deepcopy(new_img)
         p1 = (cntr[0] + 0.02 * eigenvectors[0,1] * eigenvalues[0,0], cntr[1] + 0.02 * eigenvectors[0,0] * eigenvalues[0,0])
@@ -140,6 +179,7 @@ def color_change(img,search_box,min_hsv=[150,0,0],max_hsv=[255,150,150],
         final_img = cv2.circle(final_img, center, search_radius, (0,0,255), 1)
         return final_img, center, orientation
     else:
+        orientation=None
         return new_img, center, orientation
 
 def find_color(img,min_hsv,max_hsv):
