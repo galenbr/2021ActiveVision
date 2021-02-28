@@ -15,11 +15,11 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Boost REQUIRED)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
+ add_message_files(
+   FILES
+   PlaneCoefficients.msg
 #   Message2.msg
-# )
+ )
 
 ## Generate services in the 'srv' folder
  add_service_files(
