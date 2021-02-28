@@ -59,6 +59,19 @@ class FinderPub:
         #                                     queue_size=1)
         rospy.loginfo('Running lock and key finder node.')
 
+    def get_local_depth(self, center,px_offset=15,trim_portion=0.4):
+        '''Returns trimmed mean of depth array within square area around center.'''
+        #Identify local area (square around key center) to get depth
+        ymin=center[1]-px_offset
+        ymax=center[1]+px_offset
+        xmin=center[0]-px_offset
+        xmax=center[0]+px_offset
+        depth_region=self.depth_array[ymin:ymax,
+                                      xmin:xmax]
+        # Mean is trimmed on both tails
+        depth=trim_mean(depth_region,trim_portion,axis=None)
+        return depth
+
     def calculate_positions(self,img):
         '''Calculates centers of lock and key.'''
         # Get lock and key centers (in RGB image) in terms of pixels
@@ -66,9 +79,8 @@ class FinderPub:
         vis_img=self.get_centers(img)
         #Lock
         try:
-            # Get corresponding depth values (in meters)       
-            self.lock_center_depth=self.depth_array[self.lock_center[1],
-                                                    self.lock_center[0]]
+            #Get local depth    
+            self.lock_center_depth=self.get_local_depth(self.lock_center,px_offset=15,trim_portion=0.4)
             # Get normalized XYZ displacement (in camera_color_optical_frame)
             lock_disp=self.rgb_camera.projectPixelTo3dRay(self.lock_center)
             #Get scale from depth
@@ -81,16 +93,8 @@ class FinderPub:
             rospy.loginfo('Lock Not Found in Frame')
         #Key
         try:
-            #Identify local area (square around key center) to get depth
-            num_pixels=15
-            ymin=self.key_center[1]-num_pixels
-            ymax=self.key_center[1]+num_pixels
-            xmin=self.key_center[0]-num_pixels
-            xmax=self.key_center[0]+num_pixels
-            depth_region=self.depth_array[ymin:ymax,
-                                          xmin:xmax]
-            # Mean is trimmed on both tails
-            self.key_center_depth=trim_mean(depth_region,0.4,axis=None)
+            #Get local depth
+            self.key_center_depth=self.get_local_depth(self.key_center,px_offset=10,trim_portion=0.4)
             # Get normalized XYZ displacement (in camera_color_optical_frame)
             key_disp=self.rgb_camera.projectPixelTo3dRay(self.key_center)
             # Get scale from depth

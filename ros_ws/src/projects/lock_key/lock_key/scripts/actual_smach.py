@@ -86,7 +86,7 @@ class GetPositions(smach.State):
         response=get_poses()
         #Define offsets
         #x_offset=0.0045 #Quarter of finger width? Check TF tree
-        height_safety_offset_key=0.02
+        height_safety_offset_key=0.01 #0.02
         height_safety_offset_lock=0.02
         key_far_offset=0.1
         key_close_offset=0.02
@@ -118,9 +118,9 @@ class GetPositions(smach.State):
         rospy.set_param("key_goal/pre_y_offset_far",y_offset_far)
         rospy.set_param("key_goal/pre_z_offset_far",0.0)
         
-        rospy.loginfo('********* XY FAR OFFSET *********')
-        rospy.loginfo(x_offset_far)
-        rospy.loginfo(y_offset_far)
+        # rospy.loginfo('********* XY FAR OFFSET *********')
+        # rospy.loginfo(x_offset_far)
+        # rospy.loginfo(y_offset_far)
 
         x_offset_close=-key_close_offset*cos(yaw)
         y_offset_close=-key_close_offset*sin(yaw)
@@ -128,9 +128,9 @@ class GetPositions(smach.State):
         rospy.set_param("key_goal/pre_y_offset_close",y_offset_close)
         rospy.set_param("key_goal/pre_z_offset_close",0.0)
         
-        rospy.loginfo('********* XY CLOSE OFFSET *********')
-        rospy.loginfo(x_offset_close)
-        rospy.loginfo(y_offset_close)
+        # rospy.loginfo('********* XY CLOSE OFFSET *********')
+        # rospy.loginfo(x_offset_close)
+        # rospy.loginfo(y_offset_close)
         #Set rotated yaw parameter after offset calcs are finished.
         rospy.set_param("key_goal/yaw",yaw-pi/2)
 
@@ -435,38 +435,38 @@ def main():
 	                           transitions={'succeeded':'NavigateToPostKeyRotated',  
 	                                        'failed':'NavigateToPostKey'})
 		smach.StateMachine.add('NavigateToPostKeyRotated', NavigateToPostKeyRotated(), 
-	                           transitions={'succeeded':'NavigateToHome',  
+	                           transitions={'succeeded':'NavigateToPreLockFar',  
 	                                        'failed':'NavigateToPostKey'})
-		# smach.StateMachine.add('NavigateToPreLockFar', NavigateToPreLockFar(), 
-	    #                        transitions={'succeeded':'NavigateToPreLockClose', 
-	    #                                     'failed':'NavigateToPreLockFar'})
-		# smach.StateMachine.add('NavigateToPreLockClose', NavigateToPreLockClose(), 
-	    #                        transitions={'succeeded':'SpiralInsert_SM',
-	    #                                     'failed':'NavigateToPreLockClose'})
+		smach.StateMachine.add('NavigateToPreLockFar', NavigateToPreLockFar(), 
+	                           transitions={'succeeded':'NavigateToPreLockClose', 
+	                                        'failed':'NavigateToPreLockFar'})
+		smach.StateMachine.add('NavigateToPreLockClose', NavigateToPreLockClose(), 
+	                           transitions={'succeeded':'SpiralInsert_SM',
+	                                        'failed':'NavigateToPreLockClose'})
 
-		# # Create the sub SMACH state machine
-		# sm_sub = smach.StateMachine(outcomes=['succeeded','failed'])
-		# with sm_sub:
-		# 	smach.StateMachine.add('PlaneDetection', PlaneDetection(), 
-		# 							transitions={'succeeded':'SpiralMotion'})
-		# 	smach.StateMachine.add('SpiralMotion', SpiralMotion(), 
-		# 							transitions={'succeeded':'FinalInsert'})
-		# 	smach.StateMachine.add('FinalInsert', FinalInsert(), 
-		# 							transitions={'succeeded':'RotateKey'})												 
-		# 	smach.StateMachine.add('RotateKey', RotateKey(), 
-		# 							transitions={'succeeded':'succeeded',  
-		# 										 'failed':'failed'})
+		# Create the sub SMACH state machine
+		sm_sub = smach.StateMachine(outcomes=['succeeded','failed'])
+		with sm_sub:
+			smach.StateMachine.add('PlaneDetection', PlaneDetection(), 
+									transitions={'succeeded':'SpiralMotion'})
+			smach.StateMachine.add('SpiralMotion', SpiralMotion(), 
+									transitions={'succeeded':'FinalInsert'})
+			smach.StateMachine.add('FinalInsert', FinalInsert(), 
+									transitions={'succeeded':'RotateKey'})												 
+			smach.StateMachine.add('RotateKey', RotateKey(), 
+									transitions={'succeeded':'succeeded',  
+												 'failed':'failed'})
 
-		# smach.StateMachine.add('SpiralInsert_SM', sm_sub, 
-	    #                        transitions={'succeeded':'OpenGripper',  
-	    #                                     'failed':'NavigateToPreLockFar'})
+		smach.StateMachine.add('SpiralInsert_SM', sm_sub, 
+	                           transitions={'succeeded':'OpenGripper',  
+	                                        'failed':'NavigateToPreLockFar'})
 
-		# smach.StateMachine.add('OpenGripper', OpenGripper(), 
-	    #                        transitions={'succeeded':'NavigateToPostLock',  
-	    #                                     'failed':'OpenGripper'})
-		# smach.StateMachine.add('NavigateToPostLock', NavigateToPostLock(), 
-	    #                        transitions={'succeeded':'NavigateToHome',
-	    #                                     'failed':'NavigateToPostLock'})
+		smach.StateMachine.add('OpenGripper', OpenGripper(), 
+	                           transitions={'succeeded':'NavigateToPostLock',  
+	                                        'failed':'OpenGripper'})
+		smach.StateMachine.add('NavigateToPostLock', NavigateToPostLock(), 
+	                           transitions={'succeeded':'NavigateToHome',
+	                                        'failed':'NavigateToPostLock'})
 		smach.StateMachine.add('NavigateToHome', NavigateToHome(), 
 	                           transitions={'succeeded':'complete',  
 	                                        'failed':'NavigateToHome'})

@@ -88,8 +88,8 @@ spiral:
   delta_max: 0.2
   # Distance to move EE in Z each step during plane detection [meters]
   delta_step: 0.00075
-  # Distance to move EE in Z each step during final isnert [meters]
-  delta_step_final: 0.005
+  # Distance to move EE in Z each step during final insert [meters]
+  delta_step_final: 0.003 #0.005
   # Initial distance from spiral origin [meters]
   a: 0.0
   # Distance between spiral turns [meters]
