@@ -109,7 +109,7 @@
       <geometry>
 	<box size="${width} ${width} ${height3}"/>
       </geometry>
-      <material name="orange"/>
+      <material name="black"/>
     </visual>
 
     <inertial>
