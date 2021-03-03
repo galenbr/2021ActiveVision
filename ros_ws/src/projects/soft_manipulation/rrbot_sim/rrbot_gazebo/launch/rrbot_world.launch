@@ -31,4 +31,8 @@
   <!-- Launch RViz to view pointclouds -->
   <node type="rviz" name="rviz" pkg="rviz" args="-d $(find rrbot_gazebo)/rviz/kinect_view.rviz" />
 
+  <!-- Launch rrbot pcl -->
+  <include file="$(find rrbot_pcl)/launch/rrbot_pcl.launch">
+  </include>
+
 </launch>
