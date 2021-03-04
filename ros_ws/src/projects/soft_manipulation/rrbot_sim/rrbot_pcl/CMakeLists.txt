@@ -34,6 +34,7 @@ add_service_files(
   FILES
   cloudMsg.srv
   processCloud.srv
+  concaveHull.srv
 #   Service2.srv
 )
 
@@ -53,13 +54,16 @@ link_directories(${PCL_LIBRARY_DIRS})
 add_executable(get_cloud_node src/get_cloud.cpp)
 add_executable(rrbot_pcl_node src/main.cpp)
 add_executable(process_cloud_node src/process_cloud.cpp)
+add_executable(concave_hull_node src/concave_hull.cpp)
 
 ## Add cmake target dependencies of the executable
 add_dependencies(get_cloud_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(rrbot_pcl_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(process_cloud_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(concave_hull_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(get_cloud_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 target_link_libraries(rrbot_pcl_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 target_link_libraries(process_cloud_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(concave_hull_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
