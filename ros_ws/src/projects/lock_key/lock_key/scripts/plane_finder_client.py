@@ -6,7 +6,10 @@ ROS node for calling plane finder service.
 import rospy
 from sensor_msgs.msg import PointCloud2
 from sensor_msgs import point_cloud2 as pc2
+from lock_key_msgs.msg import PlaneCoefficients
+from std_msgs.msg import Float64
 import lock_key_msgs.srv
+from math import asin, atan2
 
 class CloudClient:
     '''Calls Find Planes Service.'''
@@ -15,9 +18,17 @@ class CloudClient:
                                       PointCloud2,self.pc2_callback,
                                       queue_size=1)
         self.key_cloud_pub = rospy.Publisher('key_cloud', PointCloud2, 
-                                            queue_size=1)
+                                             queue_size=1)
         self.lock_cloud_pub = rospy.Publisher('lock_cloud', PointCloud2, 
-                                            queue_size=1)
+                                              queue_size=1)
+        self.lock_cloud_plane_pub = rospy.Publisher('lock_plane_cloud', PointCloud2, 
+                                                    queue_size=1)
+        self.lock_coeffs_pub = rospy.Publisher('lock_coeffs', PlaneCoefficients, 
+                                                queue_size=1)
+        self.lock_pitch_pub = rospy.Publisher('lock_pitch', Float64, 
+                                                queue_size=1)
+        self.lock_yaw_pub = rospy.Publisher('lock_yaw', Float64, 
+                                                queue_size=1)
         rospy.loginfo('Running plane finder client.')
 
     def call_find_planes(self,pc2_msg):
@@ -31,6 +42,7 @@ class CloudClient:
         #Identify and print the min/maxes of XYZ
         key_xs=[]; key_ys=[]; key_zs=[]
         lock_xs=[]; lock_ys=[]; lock_zs=[]
+        #TODO: Do this faster. Vector operations or something
         for p in pc2.read_points(response.key_cloud, field_names = ("x", "y", "z"), skip_nans=True):
             key_xs.append(p[0])
             key_ys.append(p[1])
@@ -51,9 +63,24 @@ class CloudClient:
         try:
             self.key_cloud_pub.publish(response.key_cloud)
             self.lock_cloud_pub.publish(response.lock_cloud)
+            self.lock_cloud_plane_pub.publish(response.lock_plane_cloud)
+            plane_coeffs=self.convert_plane_coeffs(response.lock_plane_coeffs)
+            #Calculate plane orientation from plane coeffs.
+            self.lock_pitch_pub.publish(Float64(asin(-plane_coeffs.b)))
+            self.lock_yaw_pub.publish(Float64(atan2(plane_coeffs.a,plane_coeffs.c)))
+
+            self.lock_coeffs_pub.publish(plane_coeffs)
         except:
             print 'Error publishing key or lock point cloud'
         rospy.sleep(0.2)
+
+    def convert_plane_coeffs(self, coeffs_msg):
+        coeffs=PlaneCoefficients()
+        coeffs.a=coeffs_msg.a/coeffs_msg.d
+        coeffs.b=coeffs_msg.b/coeffs_msg.d
+        coeffs.c=coeffs_msg.c/coeffs_msg.d
+        coeffs.d=0.0
+        return coeffs
 
     def pc2_callback(self,pc2_msg):
     	'''PointCloud2 Message Callback passthrough function.'''

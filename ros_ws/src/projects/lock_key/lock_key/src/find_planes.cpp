@@ -1,6 +1,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
 #include "lock_key_msgs/FindPlanes.h"
+#include "lock_key_msgs/PlaneCoefficients.h"
 #include <iostream>
 // PCL Includes for conversion
 #include <pcl_conversions/pcl_conversions.h>
@@ -50,15 +51,25 @@ bool plane_service_callback(lock_key_msgs::FindPlanes::Request &req, lock_key_ms
     // TO DO: Put in a function
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_f (new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_f2 (new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::SACSegmentation<pcl::PointXYZRGB> seg;
+    pcl::SACSegmentation<pcl::PointXYZRGB> seg2;
     pcl::PointIndices::Ptr inliers(new pcl::PointIndices); 
+    pcl::PointIndices::Ptr inliers2(new pcl::PointIndices); 
     pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+    pcl::ModelCoefficients::Ptr coefficients2 (new pcl::ModelCoefficients);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_plane (new pcl::PointCloud<pcl::PointXYZRGB> ());
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_plane2 (new pcl::PointCloud<pcl::PointXYZRGB> ());
     seg.setOptimizeCoefficients(true);
     seg.setModelType(pcl::SACMODEL_PLANE);
     seg.setMethodType(pcl::SAC_RANSAC);
     seg.setMaxIterations(100);
     seg.setDistanceThreshold(0.01); //0.001
+    seg2.setOptimizeCoefficients(true);
+    seg2.setModelType(pcl::SACMODEL_PLANE);
+    seg2.setMethodType(pcl::SAC_RANSAC);
+    seg2.setMaxIterations(100);
+    seg2.setDistanceThreshold(0.005); //0.001
 
     int i=0, nr_points = (int) cloud_filtered->points.size ();
     while (cloud_filtered->points.size () > 0.3 * nr_points){
@@ -78,7 +89,7 @@ bool plane_service_callback(lock_key_msgs::FindPlanes::Request &req, lock_key_ms
 
         // Get the points associated with the planar surface
         extract.filter (*cloud_plane);
-        std::cout << "PointCloud representing the planar component: " << cloud_plane->points.size () << " data points." << std::endl;
+        std::cout << "PointCloud representing the main planar component: " << cloud_plane->points.size () << " data points." << std::endl;
 
         // Remove the planar inliers, extract the rest
         extract.setNegative (true);
@@ -123,27 +134,62 @@ bool plane_service_callback(lock_key_msgs::FindPlanes::Request &req, lock_key_ms
         j++;
     }
 
-    //UPDATE THE .SRV FILE and UPDATE THE SECTION BELOW TO SEND 
-    //BOTH POINT CLOUDS.
+    //Do plane detection again for lock plane
+    int i2=0, nr_points2 = (int) cloud_cluster_lock->points.size ();
+    std::cout << "Starting lock plane detection." << std::endl;
+    while (cloud_cluster_lock->points.size () > 0.3 * nr_points2){
+        // Segment the largest planar component from the remaining cloud
+        seg2.setInputCloud (cloud_cluster_lock);
+        seg2.segment (*inliers2, *coefficients2);
+        if (inliers2->indices.size () == 0){
+            std::cout << "Could not estimate a planar model for the given dataset." << std::endl;
+            break;
+        }
 
-    //DO PLANE DETECTION AGAIN???
+        // Extract the planar inliers from the input cloud
+        pcl::ExtractIndices<pcl::PointXYZRGB> extract;
+        extract.setInputCloud (cloud_cluster_lock);
+        extract.setIndices (inliers2);
+        extract.setNegative (false);
+
+        // Get the points associated with the planar surface
+        extract.filter (*cloud_plane2);
+        std::cout << "PointCloud representing the lock's planar component: " << cloud_plane2->points.size () << " data points." << std::endl;
+
+        // Remove the planar outliers, extract the rest
+        extract.setNegative (true);
+        extract.filter (*cloud_f2);
+        *cloud_cluster_lock = *cloud_f2;
+    }
+    std::cout << "Past lock plane detection." << std::endl;
 
     // Convert Cloud Cluster to PCL
     // TO DO: put in function
-    sensor_msgs::PointCloud2 ret_key, ret_lock;
-    pcl::PCLPointCloud2 temppc2_key, temppc2_lock;
+    sensor_msgs::PointCloud2 ret_key, ret_lock, ret_lock_plane;
+    //lock_key_msgs::PlaneCoefficients ret_lock_plane_coeffs;
+    pcl::PCLPointCloud2 temppc2_key, temppc2_lock, temppc2_lock_plane;
     pcl::toPCLPointCloud2(*cloud_cluster_key, temppc2_key); //*cloud_cluster, *cloud_filtered, *cloud_plane
-    pcl::toPCLPointCloud2(*cloud_cluster_lock, temppc2_lock); //*cloud_cluster, *cloud_filtered, *cloud_plane
+    //Using filtered lock plane for both topics for now...
+    pcl::toPCLPointCloud2(*cloud_plane2, temppc2_lock); //*cloud_cluster, *cloud_filtered, *cloud_plane
+    pcl::toPCLPointCloud2(*cloud_plane2, temppc2_lock_plane);
     pcl_conversions::fromPCL(temppc2_key, ret_key);
     pcl_conversions::fromPCL(temppc2_lock, ret_lock);
+    pcl_conversions::fromPCL(temppc2_lock_plane, ret_lock_plane);
 
     // Fill up the return object
     ret_key.header.stamp = ros::Time();
     ret_key.header.frame_id = frameID;
     ret_lock.header.stamp = ros::Time();
     ret_lock.header.frame_id = frameID;
+    ret_lock_plane.header.stamp = ros::Time();
+    ret_lock_plane.header.frame_id = frameID;
     res.key_cloud = ret_key;
     res.lock_cloud = ret_lock;
+    res.lock_plane_cloud = ret_lock_plane;
+    res.lock_plane_coeffs.a=coefficients2->values[0];
+    res.lock_plane_coeffs.b=coefficients2->values[1];
+    res.lock_plane_coeffs.c=coefficients2->values[2];
+    res.lock_plane_coeffs.d=coefficients2->values[3];
 
     return true;
 

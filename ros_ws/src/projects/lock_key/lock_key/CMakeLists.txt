@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   pcl_conversions
   sensor_msgs
+  lock_key_msgs
   moveit_planner
   moveit_ros_planning_interface
   moveit_msgs
