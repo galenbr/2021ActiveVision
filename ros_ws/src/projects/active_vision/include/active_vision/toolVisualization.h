@@ -44,6 +44,7 @@ public:
   void help();
   void keyboardEventOccurredA(const pcl::visualization::KeyboardEvent &event, void*);
   void keyboardEventOccurredB(const pcl::visualization::KeyboardEvent &event, void*);
+  void pointPickingEventOccurred(const pcl::visualization::PointPickingEvent& event, void*);
 };
 
 #endif

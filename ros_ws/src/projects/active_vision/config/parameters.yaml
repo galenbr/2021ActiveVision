@@ -39,7 +39,7 @@ policyTester: {
 environment: {
     tableCentre: [0.45,0,0],      # Co-ordinates of table centre
     fingerZOffset: 0.0584,        # Z axis offset between gripper hand and finger
-    viewsphereRad: 0.60,
+    viewsphereRad: 0.50,
     voxelGridSize: 0.0075,        # Voxel Grid size for environment
     voxelGridSizeUnexp: 0.0075,   # Voxel Grid size for unexplored point cloud
     scale: 3,                     # Scale value for unexplored point cloud generation

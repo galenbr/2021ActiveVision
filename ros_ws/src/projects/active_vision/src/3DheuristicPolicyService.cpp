@@ -71,7 +71,7 @@ geometry_msgs::Pose viewsphereToFranka(std::vector<double> &pose){
   tfMat *= pcl::getTransformation(0,0,0,0,-M_PI/2,M_PI).matrix();
   Eigen::Matrix4f kinectOffset; kinectOffset.setIdentity();
   kinectOffset(0,3) = -0.0300;
-  kinectOffset(1,3) = 0.0175;
+  kinectOffset(1,3) = -0.0175;
   kinectOffset(2,3) = -0.0700;
   tfMat *= kinectOffset;
 

@@ -3,11 +3,20 @@
   <arg name="json_file_path"        default=""/>
   <arg name="camera"                default="camera"/>
 
-  <!-- Red Mount: Broadcast Static Transform between panda_hand and camera_link (y: -0.0175)-->
-  <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="hand_to_camera" args="0.067 -0.0275 0 3.14159 -1.57079 0 panda_hand camera_link" /> -->
-  <!-- Green Mount: Broadcast Static Transform between panda_hand and camera_link-->
-  <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="realsense_link_broadcaster"
-        args="0.040 -0.0175 0.066 3.1415 -1.571 0 panda_hand camera_link" /> -->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="realsense_link_broadcaster1"
+        args="0.03 -0.0175 0.06 3.1415 -1.571 0 panda_hand camera_link_temp" />
+
+  <node pkg="tf2_ros" type="static_transform_publisher" name="realsense_link_broadcaster2"
+        args="0 0 0 0.509155 -0.498664 0.505453 -0.486428 camera_link_temp camera_link_temp1" />
+
+  <node pkg="tf2_ros" type="static_transform_publisher" name="realsense_link_broadcaster3"
+        args="0 0 0 1.5707 -1.5707 0 camera_link_temp1 camera_link" />
+
+  <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="realsense_link_broadcaster1"
+        args="0.03 -0.0175 0.06 3.1415 -1.571 0 panda_hand camera_link_temp" /> -->
+  <!-- Accounting for slight pitch -->
+  <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="realsense_link_broadcaster2"
+        args="0 0 0 0 0.028 0 camera_link_temp camera_link" /> -->
 
   <group ns="$(arg camera)">
     <include file="$(find realsense2_camera)/launch/includes/nodelet.launch.xml">
@@ -27,6 +36,7 @@
       <arg name="enable_gyro"       value="false"/>
       <arg name="enable_accel"      value="false"/>
       <arg name="enable_pointcloud" value="true"/>
+      <arg name="ordered_pc"        value="true"/>
       <arg name="enable_sync"       value="true"/>
       <arg name="tf_prefix"         value="$(arg camera)"/>
       <arg name="align_depth"       value="true"/>

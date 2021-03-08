@@ -23,6 +23,7 @@
 
 // PCL specific includes
 #include <pcl_ros/point_cloud.h>
+#include <pcl_ros/impl/transforms.hpp>
 #include <pcl/io/ply_io.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -44,6 +45,9 @@
 #include <pcl/segmentation/extract_polygonal_prism_data.h>
 #include <pcl/surface/convex_hull.h>
 #include <pcl/features/normal_3d.h>
+#include <pcl/registration/icp.h>
+#include <pcl/registration/icp_nl.h>
+#include <pcl/registration/transforms.h>
 
 //Gazebo specific includes
 #include <gazebo_msgs/SetModelState.h>
@@ -75,6 +79,8 @@
 #include <actionlib/client/simple_action_client.h>
 #include <actionlib/client/terminal_state.h>
 #include <franka_gripper/GraspAction.h>
+#include <franka_gripper/MoveAction.h>
+#include <tf/transform_listener.h>
 
 // Typedef for convinience
 typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
@@ -200,6 +206,7 @@ public:
   ros::ServiceClient clearConstClient;
   ros::ServiceClient namedStateClient;
   // moveit_planner::SetVelocity velscale;
+  tf::TransformListener listener;
 
   // PtCld: Last recorded viewpoint
   ptCldColor::Ptr ptrPtCldLast{new ptCldColor};      ptCldColor::ConstPtr cPtrPtCldLast{ptrPtCldLast};
@@ -306,7 +313,7 @@ public:
 
   // Function to move franka
   bool moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKinect ,bool execute, geometry_msgs::Pose &p);
-  void moveGripper(double Grasp_Width);
+  void moveGripper(double Grasp_Width, bool grasp = false);
   void moveFrankaHome();
   void addVisibilityConstraint();
   void addOrientationConstraint(Eigen::Affine3f tf);
@@ -317,6 +324,7 @@ public:
 
   // 8: Function to Fuse last data with existing data
   void fuseLastData();
+  void ICPRegistration();
 
   // 9: Extracting the major plane (Table) and object
   void dataExtract();

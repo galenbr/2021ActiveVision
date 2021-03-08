@@ -46,7 +46,7 @@ void setupViewer(ptCldVis::Ptr viewer, int nVps, std::vector<int> &vp){
   for(int i = 0; i < nVps; i++){
     viewer->setBackgroundColor(0.5,0.5,0.5,vp[i]);
   }
-  viewer->addCoordinateSystem(1.0);
+  viewer->addCoordinateSystem(0.5);
 }
 
 // Fuction to add a rgb point cloud
@@ -122,6 +122,7 @@ keyboardEvent::keyboardEvent(ptCldVis::Ptr viewer, int num){
     viewer->registerKeyboardCallback(&keyboardEvent::keyboardEventOccurredA, *this);
   else if(type == 2)
     viewer->registerKeyboardCallback(&keyboardEvent::keyboardEventOccurredB, *this);
+  viewer->registerPointPickingCallback(&keyboardEvent::pointPickingEventOccurred, *this);
 }
 
 void keyboardEvent::keyboardEventOccurredA(const pcl::visualization::KeyboardEvent &event, void*){
@@ -164,6 +165,13 @@ void keyboardEvent::keyboardEventOccurredB(const pcl::visualization::KeyboardEve
     mode %= 2;
     if(mode == 0) mode = 2;
   }
+}
+
+void keyboardEvent::pointPickingEventOccurred(const pcl::visualization::PointPickingEvent& event, void*){
+  float x, y, z;
+  if (event.getPointIndex() == -1) return;
+  event.getPoint(x, y, z);
+  std::cout << "[INOF] Point coordinate ( " << x << ", " << y << ", " << z << ")" << std::endl;
 }
 
 void keyboardEvent::help(){

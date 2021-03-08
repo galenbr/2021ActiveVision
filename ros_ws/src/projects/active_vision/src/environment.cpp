@@ -302,6 +302,9 @@ environment::environment(ros::NodeHandle *nh){
     setConstClient = nh->serviceClient<moveit_planner::SetConstraints>("set_constraints");
     clearConstClient = nh->serviceClient<std_srvs::Empty>("clear_constraints");
     namedStateClient = nh->serviceClient<moveit_planner::MoveNamedState>("move_to_named_state");
+
+    listener.waitForTransform("panda_link0","camera_depth_optical_frame",ros::Time(0),ros::Duration(1.0));
+    listener.waitForTransform("camera_depth_optical_frame","panda_link0",ros::Time(0),ros::Duration(1.0));
   }
 
   // NOT USED (JUST FOR REFERENCE)
@@ -316,9 +319,16 @@ environment::environment(ros::NodeHandle *nh){
 
   // Camera projection matrix
   projectionMat.resize(3,4);
-  projectionMat << 554.254691191187, 0.0, 320.5, -0.0,
-                   0.0, 554.254691191187, 240.5, 0.0,
-                   0.0, 0.0, 1.0, 0.0;
+  if(simulationMode != "SIMULATION"){
+    projectionMat << 383.28009033203125, 0.0, 323.4447021484375, 0.0,
+                     0.0, 383.28009033203125, 237.4062042236328, 0.0,
+                     0.0, 0.0, 1.0, 0.0;
+  }else{
+    projectionMat << 554.254691191187, 0.0, 320.5, 0.0,
+                     0.0, 554.254691191187, 240.5, 0.0,
+                     0.0, 0.0, 1.0, 0.0;
+  }
+
 
   path = ros::package::getPath("active_vision");  // Path to the active_vision package folder
 
@@ -344,7 +354,11 @@ environment::environment(ros::NodeHandle *nh){
   nh->getParam("/active_vision/environment/graspSurPatchConstraint", graspSurPatchConstraint);
   ros::Rate r(60);
 
-  if(simulationMode != "SIMULATION") moveFrankaHome();
+  if(simulationMode != "SIMULATION"){
+    moveFrankaHome();
+    editMoveItCollisions("TABLE","ADD");
+    maxGripperWidth += 0.015;
+  }
 }
 
 // Function to reset the environment
@@ -661,7 +675,10 @@ bool environment::moveKinectCartesian(std::vector<double> pose, bool execute){
 
     if(execute){
       // Storing the kinect pose
-      boost::this_thread::sleep(boost::posix_time::milliseconds(250));
+      if(simulationMode != "FRANKA")
+        boost::this_thread::sleep(boost::posix_time::milliseconds(250));
+      else
+        boost::this_thread::sleep(boost::posix_time::milliseconds(2000));
       lastKinectPoseCartesian = pose;
     }
   }
@@ -727,7 +744,10 @@ bool environment::moveKinectViewsphere(std::vector<double> pose, bool execute){
     if(!res) return false;
 
     if(execute){
-      boost::this_thread::sleep(boost::posix_time::milliseconds(250));
+      if(simulationMode != "FRANKA")
+        boost::this_thread::sleep(boost::posix_time::milliseconds(250));
+      else
+        boost::this_thread::sleep(boost::posix_time::milliseconds(2000));
       // Storing the kinect pose
       lastKinectPoseViewsphere = pose;
       lastKinectPoseCartesian = {tfMat(0,3),
@@ -747,8 +767,8 @@ bool environment::moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKin
   if(isKinect){
     Eigen::Matrix4f kinectOffset; kinectOffset.setIdentity();
     kinectOffset(0,3) = -0.0300;
-    kinectOffset(1,3) = 0.0175;
-    kinectOffset(2,3) = -0.0700;
+    kinectOffset(1,3) = +0.0175;
+    kinectOffset(2,3) = -0.0600;
     tfMat *= kinectOffset;
   }
 
@@ -761,6 +781,16 @@ bool environment::moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKin
   p.position.x = tfMat(0,3);  p.position.y = tfMat(1,3);  p.position.z = tfMat(2,3);
   p.orientation.x = quat.x(); p.orientation.y = quat.y(); p.orientation.z = quat.z(); p.orientation.w = quat.w();
 
+  // if(execute){
+  //   std::cout << p.position.x << "," <<
+  //                p.position.y << "," <<
+  //                p.position.z << "," <<
+  //                p.orientation.x << "," <<
+  //                p.orientation.y << "," <<
+  //                p.orientation.z << "," <<
+  //                p.orientation.w << std::endl;
+  // }
+  
   if(!checkFrankReach(IKClient,p)) return false;
 
   // Moveit move command.
@@ -779,27 +809,18 @@ bool environment::moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKin
       moveCartMsg.request.execute = true;
       res = cartMoveClient.call(moveCartMsg);
     }
-    if(isKinect) clearAllConstraints();
+    
+    if(isKinect){
+      moveGripper(0.08);
+      clearAllConstraints();
+    }
 
     ros::Duration(1).sleep();
-
-    if(simulationMode == "FRANKA") return res;
-
-    moveit_planner::GetPose curPose;
-    getPoseClient.call(curPose);
 
     float frankaOffset[3] = {0.0,0.0,0.0};
     float frankaX = tfMat(0,3)-frankaOffset[0];
     float frankaY = tfMat(1,3)-frankaOffset[1];
     float frankaZ = tfMat(2,3)-frankaOffset[2];
-
-    // std::cout << curPose.response.pose.position.x << "," <<
-    //              curPose.response.pose.position.y << "," <<
-    //              curPose.response.pose.position.z << "," <<
-    //              curPose.response.pose.orientation.x << "," <<
-    //              curPose.response.pose.orientation.y << "," <<
-    //              curPose.response.pose.orientation.z << "," <<
-    //              curPose.response.pose.orientation.w << std::endl;
 
     // std::cout << frankaX << "," <<
     //              frankaY << "," <<
@@ -808,6 +829,19 @@ bool environment::moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKin
     //              quat.y() << "," <<
     //              quat.z() << "," <<
     //              quat.w() << std::endl;
+
+    if(simulationMode == "FRANKA") return res;
+
+    moveit_planner::GetPose curPose;
+    getPoseClient.call(curPose);
+
+    // std::cout << curPose.response.pose.position.x << "," <<
+    //              curPose.response.pose.position.y << "," <<
+    //              curPose.response.pose.position.z << "," <<
+    //              curPose.response.pose.orientation.x << "," <<
+    //              curPose.response.pose.orientation.y << "," <<
+    //              curPose.response.pose.orientation.z << "," <<
+    //              curPose.response.pose.orientation.w << std::endl;
 
     float positionError = sqrt(pow(curPose.response.pose.position.x-frankaX,2) +
                                pow(curPose.response.pose.position.y-frankaY,2) +
@@ -823,28 +857,39 @@ bool environment::moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKin
   return true;
 }
 
-void environment::moveGripper(double Grasp_Width){
+void environment::moveGripper(double Grasp_Width, bool grasp){
   if(simulationMode == "FRANKA"){
-    actionlib::SimpleActionClient<franka_gripper::GraspAction> ac("franka_gripper/grasp", true);
-    ac.waitForServer();
+    if(grasp){
+      actionlib::SimpleActionClient<franka_gripper::GraspAction> ac("franka_gripper/grasp", true);
+      ac.waitForServer();
 
-    franka_gripper::GraspGoal goal;
-    goal.width = Grasp_Width;   // Distance between fingers [m]
-    goal.speed = 0.1;           // Closing speed. [m/s]
-    goal.force = 40;            // Grasping (continuous) force [N]
-    goal.epsilon.inner = 0.05;  // Maximum tolerated deviation when the actual grasped width is
-                                // smaller than the commanded grasp width.
-    goal.epsilon.outer = 0.05;  // Maximum tolerated deviation when the actual grasped width is
-                                // larger than the commanded grasp width.
-    ac.sendGoal(goal);          // Sending the Grasp command to gripper
+      franka_gripper::GraspGoal goal;
+      goal.width = Grasp_Width;   // Distance between fingers [m]
+      goal.speed = 0.1;           // Closing speed. [m/s]
+      goal.force = 40;            // Grasping (continuous) force [N]
+      goal.epsilon.inner = 0.05;  // Maximum tolerated deviation when the actual grasped width is
+                                  // smaller than the commanded grasp width.
+      goal.epsilon.outer = 0.05;  // Maximum tolerated deviation when the actual grasped width is
+                                  // larger than the commanded grasp width.
+      ac.sendGoal(goal);          // Sending the Grasp command to gripper
 
-    bool finished_before_timeout = ac.waitForResult(ros::Duration(5));
+      bool finished_before_timeout = ac.waitForResult(ros::Duration(5));
 
-    if (finished_before_timeout){
-    ROS_INFO("Gripper action finished.");
-    }
-    else {
-    ROS_INFO("Gripper action did not finish before the time out.");
+      // if (finished_before_timeout){
+      // ROS_INFO("Gripper action finished.");
+      // }
+      // else {
+      // ROS_INFO("Gripper action did not finish before the time out.");
+      // }
+    }else{
+      actionlib::SimpleActionClient<franka_gripper::MoveAction> ac("franka_gripper/move", true);
+      ac.waitForServer();
+
+      franka_gripper::MoveGoal goal;
+      goal.width = Grasp_Width;   // Distance between fingers [m]
+      goal.speed = 0.1;           // Closing speed. [m/s]
+      ac.sendGoal(goal);
+      bool finished_before_timeout = ac.waitForResult(ros::Duration(5));
     }
   }else if(simulationMode == "FRANKASIMULATION"){
     franka_pos_grasping_gazebo::GripPos grasp;
@@ -940,49 +985,96 @@ void environment::readKinect(){
 // 8: Function to Fuse last data with existing data
 void environment::fuseLastData(){
   ptrPtCldTemp->clear();
-  // Transform : Kinect Gazebo Frame to Gazebo World frame
-  tfGazWorld = pcl::getTransformation(lastKinectPoseCartesian[0],lastKinectPoseCartesian[1],lastKinectPoseCartesian[2],\
-                                      lastKinectPoseCartesian[3],lastKinectPoseCartesian[4],lastKinectPoseCartesian[5]);
 
-  // Apply transformation
-  Eigen::Affine3f tf = tfGazWorld * tfKinOptGaz;
-  pcl::transformPointCloud(*ptrPtCldLast, *ptrPtCldTemp, tf);
-
-  // Downsample using voxel grid
-  voxelGrid.setInputCloud(cPtrPtCldTemp);
-  voxelGrid.setLeafSize(voxelGridSize, voxelGridSize, voxelGridSize);
-  voxelGrid.filter(*ptrPtCldTemp);
-
-  // Use registration to further align the point pointclouds
-  // Skipping this for now as using simulation
-
-  // Fuse the two pointclouds (except for the first time) and downsample again
-  if (ptrPtCldEnv->width == 0) {
-    *ptrPtCldEnv = *ptrPtCldTemp;
+  if(simulationMode != "FRANKA"){
+    // Transform : Kinect Gazebo Frame to Gazebo World frame
+    tfGazWorld = pcl::getTransformation(lastKinectPoseCartesian[0],lastKinectPoseCartesian[1],lastKinectPoseCartesian[2],\
+                                        lastKinectPoseCartesian[3],lastKinectPoseCartesian[4],lastKinectPoseCartesian[5]);
+    // Apply transformation
+    Eigen::Affine3f tf = tfGazWorld * tfKinOptGaz;
+    pcl::transformPointCloud(*ptrPtCldLast, *ptrPtCldTemp, tf);
   }else{
-    *ptrPtCldEnv += *ptrPtCldTemp;
-    voxelGrid.setInputCloud(cPtrPtCldEnv);
-    voxelGrid.setLeafSize(voxelGridSize, voxelGridSize, voxelGridSize);
-    voxelGrid.filter(*ptrPtCldEnv);
+    ICPRegistration();
+    tf::StampedTransform transform;
+    listener.lookupTransform("panda_link0", "camera_depth_optical_frame", ros::Time(0), transform);
+    pcl_ros::transformPointCloud(*ptrPtCldLast, *ptrPtCldTemp, transform);
   }
 
-  // Using pass through filter to remove ground plane (Not needed with the current setup)
-  // pass.setInputCloud(cPtrPtCldEnv);
-  // pass.setFilterFieldName("z"); pass.setFilterLimits(0.2,10);
-  // pass.filter(*ptrPtCldEnv);
+  // Fuse the two pointclouds (except for the first time) and downsample again
+  if(ptrPtCldEnv->width == 0) *ptrPtCldEnv = *ptrPtCldTemp;
+  else                        *ptrPtCldEnv += *ptrPtCldTemp;
 
+  // Downsample using voxel grid
+  voxelGrid.setInputCloud(cPtrPtCldEnv);
+  voxelGrid.setLeafSize(voxelGridSize, voxelGridSize, voxelGridSize);
+  voxelGrid.filter(*ptrPtCldEnv);
+
+  // Using pass through filter to focus on the required region
+  pass.setInputCloud(cPtrPtCldEnv);
+  pass.setFilterFieldName("x"); pass.setFilterLimits( 0.20,0.70); pass.filter(*ptrPtCldEnv);
+  pass.setFilterFieldName("y"); pass.setFilterLimits(-0.25,0.25); pass.filter(*ptrPtCldEnv);
+  pass.setFilterFieldName("z"); pass.setFilterLimits(-0.02,0.30); pass.filter(*ptrPtCldEnv);
   ptrPtCldTemp->clear();
+}
+
+void environment::ICPRegistration(){
+  if(ptrPtCldEnv->width == 0) return;
+
+  ptCldColor::Ptr ptrPtCldSrc{new ptCldColor}; ptCldColor::ConstPtr cPtrPtCldSrc{ptrPtCldSrc};
+  *ptrPtCldSrc = *ptrPtCldLast;
+  voxelGrid.setInputCloud(cPtrPtCldSrc);
+  voxelGrid.setLeafSize(voxelGridSize, voxelGridSize, voxelGridSize);
+  voxelGrid.filter(*ptrPtCldSrc);
+
+  ptCldColor::Ptr ptrPtCldTgt{new ptCldColor}; ptCldColor::ConstPtr cPtrPtCldTgt{ptrPtCldTgt};
+  *ptrPtCldTgt = *ptrPtCldEnv;
+
+  tf::StampedTransform transform;
+  listener.lookupTransform("camera_depth_optical_frame", "panda_link0", ros::Time(0), transform);
+  pcl_ros::transformPointCloud(*ptrPtCldTgt, *ptrPtCldTgt, transform);
+
+  pass.setInputCloud(cPtrPtCldSrc);
+  pass.setFilterFieldName("x"); pass.setFilterLimits(-0.2,0.2); pass.filter(*ptrPtCldSrc);
+  pass.setFilterFieldName("y"); pass.setFilterLimits(-0.2,0.2); pass.filter(*ptrPtCldSrc);
+  // pass.setFilterFieldName("z"); pass.setFilterLimits(0,1); pass.filter(*ptrPtCldSrc);
+
+  pass.setInputCloud(cPtrPtCldTgt);
+  pass.setFilterFieldName("x"); pass.setFilterLimits(-0.2,0.2); pass.filter(*ptrPtCldTgt);
+  pass.setFilterFieldName("y"); pass.setFilterLimits(-0.2,0.2); pass.filter(*ptrPtCldTgt);
+  // pass.setFilterFieldName("z"); pass.setFilterLimits(0.01,1); pass.filter(*ptrPtCldTgt);
+
+  for(int i = 0; i < ptrPtCldTgt->size(); i++) {
+    ptrPtCldTgt->points[i].g = 0;
+    ptrPtCldTgt->points[i].b = 0;
+    ptrPtCldTgt->points[i].r = 255;
+  }
+
+  pcl::IterativeClosestPointNonLinear<pcl::PointXYZRGB, pcl::PointXYZRGB> reg;
+  reg.setInputSource(ptrPtCldSrc);
+  reg.setInputTarget(ptrPtCldTgt);
+  reg.setTransformationEpsilon(1e-6);
+  reg.setMaxCorrespondenceDistance(0.02);
+
+  Eigen::Matrix4f Ti = Eigen::Matrix4f::Identity(), prev;
+  reg.setMaximumIterations(30);
+  reg.align(*ptrPtCldSrc);
+  Ti = reg.getFinalTransformation();
+
+  pcl::transformPointCloud(*ptrPtCldLast, *ptrPtCldLast, Ti);
+
+  // Eigen::Affine3f fineT(Ti);
+  // float tx, ty, tz, rx, ry, rz;
+  // pcl::getTranslationAndEulerAngles(fineT, tx, ty, tz, rx, ry, rz);
+  // std::cerr << "Translation (x, y, z)       : " << tx << ", " << ty << ", " << tz << endl;
+  // std::cerr << "Rotation (roll, pitch, yaw) : " << rx << ", " << ry << ", " << rz << endl << endl;
 }
 
 // 9: Extracting the major plane (Table) and object
 void environment::dataExtract(){
   dataExtractPlaneSeg();
-  dataColorCorrection();
+  if(simulationMode != "FRANKA") dataColorCorrection();
 
-  if(simulationMode != "SIMULATION"){
-    editMoveItCollisions("TABLE","ADD");
-    editMoveItCollisions("OBJECT","ADD");
-  }
+  if(simulationMode != "SIMULATION") editMoveItCollisions("OBJECT","ADD");
 
   // Generating the normals for the object point cloud. Used from grasp synthesis
   pcl::search::Search<pcl::PointXYZRGB>::Ptr KdTree{new pcl::search::KdTree<pcl::PointXYZRGB>};
@@ -1057,8 +1149,8 @@ void environment::dataExtractPlaneSeg(){
   // Using polygonal prism and hull the extract object above the table
   prism.setInputCloud(cPtrPtCldObject);
   prism.setInputPlanarHull(cPtrPtCldHull);
-  prism.setViewPoint(cenTable[0],cenTable[1],cenTable[2]+1);        // Ensuring normals point above the table
-  prism.setHeightLimits(0,1.5f);                                    // Z height (min, max) in m
+  prism.setViewPoint(tableCentre[0],tableCentre[1],tableCentre[2]+1);        // Ensuring normals point above the table
+  prism.setHeightLimits(0.01,1.5f);                                 // Z height (min, max) in m
   prism.segment(*objectIndices);
 
   // Using extract to get the point cloud
@@ -1123,7 +1215,7 @@ void environment::genUnexploredPtCld(){
   // Note: Z scale is only used on +z axis
   minUnexp[0] = (minPtObj.x-std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.30f));
   minUnexp[1] = (minPtObj.y-std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.30f));
-  minUnexp[2] = cenTable[2]-0.01;
+  minUnexp[2] = tableCentre[2]-0.01;
   maxUnexp[0] = (maxPtObj.x+std::max((scale-1)*(maxPtObj.x-minPtObj.x)/2,0.30f));
   maxUnexp[1] = (maxPtObj.y+std::max((scale-1)*(maxPtObj.y-minPtObj.y)/2,0.30f));
   maxUnexp[2] = (maxPtObj.z+std::max((scale-1)*(maxPtObj.z-minPtObj.z)/2,0.25f));
@@ -1143,10 +1235,17 @@ void environment::genUnexploredPtCld(){
 
 // 11: Updating the unexplored point cloud
 void environment::updateUnexploredPtCld(){
-  // Transforming the point cloud to Kinect frame from world frame
-  Eigen::Affine3f tf = tfGazWorld*tfKinOptGaz;
-  Eigen::Affine3f tfTranspose = homoMatTranspose(tf);
-  pcl::transformPointCloud(*ptrPtCldUnexp, *ptrPtCldTemp, tfTranspose);
+
+  if(simulationMode != "FRANKA"){
+    // Transforming the point cloud to Kinect frame from world frame
+    Eigen::Affine3f tf = tfGazWorld*tfKinOptGaz;
+    Eigen::Affine3f tfTranspose = homoMatTranspose(tf);
+    pcl::transformPointCloud(*ptrPtCldUnexp, *ptrPtCldTemp, tfTranspose);
+  }else{
+    tf::StampedTransform transform;
+    listener.lookupTransform("camera_depth_optical_frame", "panda_link0", ros::Time(0), transform);
+    pcl_ros::transformPointCloud(*ptrPtCldUnexp, *ptrPtCldTemp, transform);
+  }
 
   Eigen::Vector4f ptTemp;
   Eigen::Vector3f proj;
@@ -1171,7 +1270,7 @@ void environment::updateUnexploredPtCld(){
         projIndex = proj[1]*(ptrPtCldLast->width)+proj[0];
         // If the z value of unexplored pt is greater than the corresponding
         // projected point in Kinect Raw data then that point is occluded.
-        if(ptrPtCldLast->points[projIndex].z <= ptTemp[2]*0.99){
+        if(ptrPtCldLast->points[projIndex].z > 0.10 && ptrPtCldLast->points[projIndex].z <= ptTemp[2]*0.99){
           occludedIndices->indices.push_back(i);
         }
       }
@@ -1300,9 +1399,7 @@ void environment::findGripperPose(int index){
 
   // Calculating the x,y,z axis which is at the midpoint of the fingers
   yAxis = graspsPossible[index].p1.getVector3fMap() - graspsPossible[index].p2.getVector3fMap(); yAxis.normalize();
-  if(yAxis[1] < 0) yAxis *= -1;
   zAxis = yAxis.cross(xyPlane); zAxis.normalize();
-  if(zAxis[0] < 0) zAxis *= -1;
   xAxis = yAxis.cross(zAxis);
 
   // Finding RPY based on the axis directions
@@ -1376,6 +1473,8 @@ void environment::collisionCheck(){
       if(ptrPtCldCollided->size() == 0){
         selectedGrasp = i;
         stop = true;
+        // std::cout << "fff..." << checkPreGrasp(graspsPossible[i]) << "***" << std::endl;
+        // std::cout << selectedGrasp << std::endl;
       }
     }
   }
@@ -1519,13 +1618,13 @@ void environment::editMoveItCollisions(std::string object, std::string mode){
     if(object == "TABLE"){
       primitive.type = primitive.BOX;
       primitive.dimensions.resize(3);
-      primitive.dimensions[0] = (maxTable.x - minTable.x)*2;
-      primitive.dimensions[1] = (maxTable.y - minTable.y)*2;
-      primitive.dimensions[2] = (maxTable.z - minTable.z);
+      primitive.dimensions[0] = 0.7;
+      primitive.dimensions[1] = 0.7;
+      primitive.dimensions[2] = 0.01;
 
-      pose.position.x = cenTable[0];
-      pose.position.y = cenTable[1];
-      pose.position.z = cenTable[2];
+      pose.position.x = tableCentre[0];
+      pose.position.y = tableCentre[1];
+      pose.position.z = tableCentre[2];
     }else if(object == "OBJECT"){
       // Object size limited to 25x25x25 cm
 
@@ -1537,12 +1636,12 @@ void environment::editMoveItCollisions(std::string object, std::string mode){
 
       primitive.type = primitive.CYLINDER;
       primitive.dimensions.resize(2);
-      primitive.dimensions[0] = 0.25;
+      primitive.dimensions[0] = std::min(maxPtObj.z*1.1,0.25);
       primitive.dimensions[1] = std::min(double(std::max(maxPtObj.x - minPtObj.x,maxPtObj.y - minPtObj.y)),0.25)/2.0;
 
       pose.position.x = cenObject[0];
       pose.position.y = cenObject[1];
-      pose.position.z = 0.125;
+      pose.position.z = primitive.dimensions[0]/2;
     }
     collisionObjMsg.request.collObject.primitives.push_back(primitive);
     collisionObjMsg.request.collObject.primitive_poses.push_back(pose);
@@ -1559,19 +1658,21 @@ bool environment::checkPreGrasp(graspPoint &graspData){
   Eigen::Affine3f tfGrasp = pcl::getTransformation(graspData.pose[0],graspData.pose[1],
                                                    graspData.pose[2],graspData.pose[3],
                                                    graspData.pose[4],graspData.pose[5])*
-                            pcl::getTransformation(0,0,0,0,graspData.addnlPitch,0)*
-                            pcl::getTransformation(0.0,0,-0.0447-fingerZOffset,0,0,0)*
-                            pcl::getTransformation(0,0,0,0,-M_PI/2,-M_PI);
+                            pcl::getTransformation(0,0,0,0,graspData.addnlPitch,0);
+
+  if(tfGrasp(0,0) < 0) tfGrasp = tfGrasp*pcl::getTransformation(0,0,0,0,0,M_PI);
+  // Checking approach vector
+  Eigen::Vector3f approachVec(tfGrasp(0,2),tfGrasp(1,2),tfGrasp(2,2));
+  Eigen::Vector3f refApproachVec(1,0,0);
+  float angle = abs(pcl::getAngle3D(approachVec,refApproachVec,true));
+  if(angle < 60 || (180-angle) < 40 ) return false;
+
+  tfGrasp = tfGrasp * pcl::getTransformation(0.0,0,-0.0447-fingerZOffset,0,0,0)*
+                      pcl::getTransformation(0,0,0,0,-M_PI/2,-M_PI);
 
   Eigen::Affine3f tfPreGrasp;
 
   float clearance = 0;
-  // do{
-  //   tfPreGrasp = tfGrasp*pcl::getTransformation(-clearance+0.05+fingerZOffset,0,0,0,0,0);
-  //   clearance += 0.01;
-  // }while((tfPreGrasp(0,3)>tableCentre[0]-0.125 && tfPreGrasp(0,3)<tableCentre[0]+0.125 &&
-  //         tfPreGrasp(1,3)>tableCentre[1]-0.125 && tfPreGrasp(1,3)<tableCentre[1]+0.125 &&
-  //         tfPreGrasp(2,3)>0.01                 && tfPreGrasp(2,3)<tableCentre[2]+0.25));
   float rad = std::min(double(std::max(maxPtObj.x - minPtObj.x,maxPtObj.y - minPtObj.y)),0.25)/2.0;
   do{
     tfPreGrasp = tfGrasp*pcl::getTransformation(-clearance+0.0447+fingerZOffset,0,0,0,0,0);
@@ -1582,20 +1683,28 @@ bool environment::checkPreGrasp(graspPoint &graspData){
   tfPreGrasp = tfGrasp*pcl::getTransformation(-clearance,0,0,0,0,0);
 
   geometry_msgs::Pose p;
-  return moveFranka(tfPreGrasp.matrix(),"JOINT",false,false,p);
+  return (moveFranka(tfGrasp.matrix(),"JOINT",false,false,p) * 
+          moveFranka(tfPreGrasp.matrix(),"JOINT",false,false,p));
 }
 
 // 17: Object grasping pipeline
 void environment::graspObject(graspPoint &graspData){
 
+  if(simulationMode == "FRANKA"){
+    graspData.pose[0] += 0.01;
+    graspData.pose[1] += 0.01;
+  }
+  
   Eigen::Affine3f tfGrasp = pcl::getTransformation(graspData.pose[0],graspData.pose[1],
                                                    graspData.pose[2],graspData.pose[3],
                                                    graspData.pose[4],graspData.pose[5])*
-                            pcl::getTransformation(0,0,0,0,graspData.addnlPitch,0)*
-                            pcl::getTransformation(0.0,0,-0.0447-fingerZOffset,0,0,0)*
-                            pcl::getTransformation(0,0,0,0,-M_PI/2,-M_PI);
+                            pcl::getTransformation(0,0,0,0,graspData.addnlPitch,0);
 
-  // if(tfGrasp(2,2) < 0)      tfGrasp = tfGrasp*pcl::getTransformation(0,0,0,M_PI,0,0);
+  if(tfGrasp(0,0) < 0) tfGrasp = tfGrasp*pcl::getTransformation(0,0,0,0,0,M_PI);
+
+  tfGrasp = tfGrasp * pcl::getTransformation(0.0,0,-0.0447-fingerZOffset,0,0,0)*
+                      pcl::getTransformation(0,0,0,0,-M_PI/2,-M_PI);
+
 
   // std::cout << tfGrasp(0,0) << "," << tfGrasp(0,1) << "," << tfGrasp(0,2) << "\n"
   //           << tfGrasp(1,0) << "," << tfGrasp(1,1) << "," << tfGrasp(2,2) << "\n"
@@ -1626,60 +1735,72 @@ void environment::graspObject(graspPoint &graspData){
 
   moveFrankaHome();
 
-  if(simulationMode == "FRANKA"){
-    int temp;
-    std::cout << "Enter any key after disconneting the realsense. "; std::cin >> temp;
-  }
+  int temp;
 
   // Move to Pre-grasp
   if(res){
-    std::cout << "Moving to Pre Grasp 1 ..." << std::endl;
+    std::cout << "Moving to Pre Grasp 1 ...";
     res = moveFranka(tfPreGrasp1.matrix(),"JOINT",false,true,p);
+    std::cout << res << std::endl;
     ros::Duration(1).sleep();
   }
-  if(res){
-    std::cout << "Moving to Pre Grasp 2 ..." << std::endl;
+  
+  std::cout << "Moving to Pre Grasp 2 ...";
+  res = moveFranka(tfPreGrasp.matrix(),"JOINT",false,true,p);
+  if(!res){
+    tfPreGrasp = tfGrasp*pcl::getTransformation(-clearance-0.07,0,0,0,0,0);
     res = moveFranka(tfPreGrasp.matrix(),"JOINT",false,true,p);
-    if(!res){
-      tfPreGrasp = tfGrasp*pcl::getTransformation(-clearance-0.07,0,0,0,0,0);
-      res = moveFranka(tfPreGrasp.matrix(),"JOINT",false,true,p);
-    }
-    if(!res){
-      tfPreGrasp = tfGrasp*pcl::getTransformation(-clearance-0.15,0,0,0,0,0);
-      res = moveFranka(tfPreGrasp.matrix(),"JOINT",false,true,p);
-    }
-    editMoveItCollisions("OBJECT","REMOVE");
-    moveGripper(graspData.gripperWidth+0.04);
   }
+  if(!res){
+    tfPreGrasp = tfGrasp*pcl::getTransformation(-clearance-0.15,0,0,0,0,0);
+    res = moveFranka(tfPreGrasp.matrix(),"JOINT",false,true,p);
+  }
+  std::cout << res << std::endl;
+  editMoveItCollisions("OBJECT","REMOVE");
+  moveGripper(graspData.gripperWidth+0.04);
 
   // Move to Grasp and grasp
   if(res){
-    std::cout << "Moving to Grasp..." << std::endl;
+    std::cin >> temp;
+    std::cout << "Moving to Grasp...";
     res = moveFranka(tfGrasp.matrix(),"CARTESIAN",false,true,p);
-    moveGripper(std::max(graspData.gripperWidth-1.5*voxelGridSize,0.005));
+    if(simulationMode == "FRANKA"){
+      moveGripper(graspData.gripperWidth-voxelGridSize-0.01,true);
+    }else{
+      moveGripper(graspData.gripperWidth-1.5*voxelGridSize,true);
+    }
+    std::cout << res << std::endl;
   }
 
   // Move straight up
-  // std::cout << "Lifting..." << std::endl;
-  // res = moveFranka(tfGraspMoveUp.matrix(),"CARTESIAN",false,true,p);
+  if(res){
+    std::cin >> temp;
+    std::cout << "Lifting...";
+    res = moveFranka(tfGraspMoveUp.matrix(),"CARTESIAN",false,true,p);
+    std::cout << res << std::endl;
+  }
 
   // Go to same location and release
-  // std::cout << "Placing it back..." << std::endl;
-  // res = moveFranka(tfGrasp.matrix(),"CARTESIAN",false,true,p);
-  moveGripper(graspData.gripperWidth+0.04);
+  if(res){
+    std::cin >> temp;
+    std::cout << "Placing it back...";
+    res = moveFranka(tfGrasp.matrix(),"CARTESIAN",false,true,p);
+    std::cout << res << std::endl;
+    moveGripper(graspData.gripperWidth+0.04);
+  }
 
   // Move to Post-grasp
   if(res){
-    std::cout << "Moving to Retreat 1..." << std::endl;
+    std::cout << "Moving to Retreat 1...";
     res = moveFranka(tfPreGrasp.matrix(),"CARTESIAN",false,true,p);
-
+    std::cout << res << std::endl;
     editMoveItCollisions("OBJECT","ADD");
   }
-  if(res){
-    std::cout << "Moving to Retreat 2..." << std::endl;
-    res = moveFranka(tfPreGrasp1.matrix(),"JOINT",false,true,p);
-  }
-
+  
+  std::cout << "Moving to Retreat 2...";
+  res = moveFranka(tfPreGrasp1.matrix(),"JOINT",false,true,p);
+  std::cout << res << std::endl;
+  
   moveFrankaHome();
 
 }

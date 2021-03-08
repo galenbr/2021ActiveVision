@@ -155,15 +155,19 @@ void testPtCldFuse(environment &av, int objID, int flag){
   // Setting up the point cloud visualizer
   ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer")); std::vector<int> vp;
   setupViewer(viewer, 4, vp);
+  keyboardEvent keyPress(viewer,1);
   viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
 
   // 4 kinect position to capture and fuse
-  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/8},
-                                                  {av.viewsphereRad,-M_PI/2,M_PI/8},
-                                                  {av.viewsphereRad,0,M_PI/8},
-                                                  {av.viewsphereRad,M_PI/2,M_PI/8}};
+  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/10},
+                                                  {av.viewsphereRad,-M_PI/2,M_PI/10},
+                                                  {av.viewsphereRad,0,M_PI/10},
+                                                  {av.viewsphereRad,M_PI/2,M_PI/10}};
 
-  for (int i = 0; i < 4; i++) {
+  kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/8},
+                 {av.viewsphereRad,-M_PI-M_PI/4,M_PI/7},
+                 {av.viewsphereRad,-M_PI+M_PI/4,M_PI/7}};
+  for (int i = 0; i < 3; i++) {
     av.moveKinectViewsphere(kinectPoses[i]);
     av.readKinect();
     av.fuseLastData();
@@ -171,6 +175,7 @@ void testPtCldFuse(environment &av, int objID, int flag){
       addRGB(viewer,av.cPtrPtCldEnv,"Fuse "+std::to_string(i),vp[i]);
     }
   }
+  if(av.simulationMode == "FRANKA") av.moveFrankaHome();
   if (flag == 1){
     std::cout << "Close viewer to continue." << std::endl;
     while (!viewer->wasStopped ()){
@@ -189,16 +194,19 @@ void testDataExtract(environment &av, int objID, int flag){
 
   // 4 kinect position to capture and fuse
   std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/8},
-                                                  {av.viewsphereRad,-M_PI/2,M_PI/8},
-                                                  {av.viewsphereRad,0,M_PI/8},
-                                                  {av.viewsphereRad,M_PI/2,M_PI/8}};
-  for (int i = 0; i < 4; i++) {
+                                                  {av.viewsphereRad,-M_PI/2,M_PI/10},
+                                                  {av.viewsphereRad,0,M_PI/10},
+                                                  {av.viewsphereRad,M_PI/2,M_PI/10}};
+  kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/8},
+                 {av.viewsphereRad,-M_PI-M_PI/4,M_PI/7},
+                 {av.viewsphereRad,-M_PI+M_PI/4,M_PI/7}};
+  for (int i = 0; i < 3; i++){
     av.moveKinectViewsphere(kinectPoses[i]);
     av.readKinect();
     av.fuseLastData();
   }
   av.dataExtract();
-
+  if(av.simulationMode == "FRANKA") av.moveFrankaHome();
   if(flag==1){
     // Setting up the point cloud visualizer
     ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer")); std::vector<int> vp;
@@ -226,13 +234,21 @@ void testGenUnexpPtCld(environment &av, int objID, int flag){
   std::cout << "*** In unexplored point cloud generation testing function ***" << std::endl;
   av.spawnObject(objID,0,0);
 
-  std::vector<double> kinectPose = {av.viewsphereRad,-M_PI,M_PI/8};
-  av.moveKinectViewsphere(kinectPose);
-  av.readKinect();
-  av.fuseLastData();
+  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/8},
+                                                  {av.viewsphereRad,-M_PI/2,M_PI/10},
+                                                  {av.viewsphereRad,0,M_PI/10},
+                                                  {av.viewsphereRad,M_PI/2,M_PI/10}};
+  kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/8},
+                 {av.viewsphereRad,-M_PI-M_PI/4,M_PI/7},
+                 {av.viewsphereRad,-M_PI+M_PI/4,M_PI/7}};
+  for (int i = 0; i < 3; i++){
+    av.moveKinectViewsphere(kinectPoses[i]);
+    av.readKinect();
+    av.fuseLastData();
+  }
   av.dataExtract();
   av.genUnexploredPtCld();
-
+  if(av.simulationMode == "FRANKA") av.moveFrankaHome();
   if(flag==1){
     // Setting up the point cloud visualizer
     ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer")); std::vector<int> vp;
@@ -267,7 +283,10 @@ void testUpdateUnexpPtCld(environment &av, int objID, int flag){
                                                   {av.viewsphereRad,-M_PI/2,M_PI/8},
                                                   {av.viewsphereRad,0,M_PI/8},
                                                   {av.viewsphereRad,M_PI/2,M_PI/8}};
-  for (int i = 0; i < 4; i++) {
+  kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/8},
+                 {av.viewsphereRad,-M_PI-M_PI/4,M_PI/7},
+                 {av.viewsphereRad,-M_PI+M_PI/4,M_PI/7}};
+  for (int i = 0; i < 3; i++) {
     av.moveKinectViewsphere(kinectPoses[i]);
     av.readKinect();
     av.fuseLastData();
@@ -281,6 +300,7 @@ void testUpdateUnexpPtCld(environment &av, int objID, int flag){
       addRGB(viewer,av.ptrPtCldUnexp,"Unexp "+std::to_string(i),vp[i]);
     }
   }
+  if(av.simulationMode == "FRANKA") av.moveFrankaHome();
   if (flag == 1){
     std::cout << "Close viewer to continue." << std::endl;
     while (!viewer->wasStopped ()){
@@ -478,11 +498,15 @@ void testComplete(environment &av, int objID, int nVp, int graspMode, int flag, 
                                                   {av.viewsphereRad,0,M_PI/8},
                                                   {av.viewsphereRad,M_PI/2,M_PI/8}};
 
+  kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/8},
+                 {av.viewsphereRad,-M_PI-M_PI/3,M_PI/7},
+                 {av.viewsphereRad,-M_PI+M_PI/3,M_PI/7}};
+
   start[0] = std::chrono::high_resolution_clock::now();
 
   start[1] = std::chrono::high_resolution_clock::now();
   // Read nViepoints and fuse them and update unexplord point cloud
-  for (int i = 0; i < nVp; i++){
+  for (int i = 0; i < 3; i++){
     av.moveKinectViewsphere(kinectPoses[i]);
     av.readKinect();
     av.fuseLastData();
@@ -492,6 +516,7 @@ void testComplete(environment &av, int objID, int nVp, int graspMode, int flag, 
     }
     av.updateUnexploredPtCld();
   }
+  if(av.simulationMode == "FRANKA") av.moveFrankaHome();
   end[1] = std::chrono::high_resolution_clock::now();
 
   std::cout << "Number of points in object point cloud : " << av.ptrPtCldObject->points.size() << std::endl;
@@ -573,6 +598,7 @@ void testComplete(environment &av, int objID, int nVp, int graspMode, int flag, 
     // Setting up the point cloud visualizer
     ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer")); std::vector<int> vp;
     setupViewer(viewer, 2, vp);
+    keyboardEvent keyPress(viewer,1);
     viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
 
     addRGB(viewer,av.ptrPtCldEnv,"Environment",vp[0]);
@@ -606,6 +632,8 @@ void testComplete(environment &av, int objID, int nVp, int graspMode, int flag, 
       boost::this_thread::sleep (boost::posix_time::microseconds(100000));
     }
   }
+
+  if(av.simulationMode != "SIMULATION" && av.selectedGrasp != -1) av.graspObject(av.graspsPossible[av.selectedGrasp]);
 
   av.deleteObject(objID);
   if(write == 1) outfile.close();
@@ -939,11 +967,14 @@ void testObjectPickup(environment &av, int objID){
     graspData.addnlPitch = 0;
     graspData.gripperWidth = 0.0739628;
   }else{
-    return;
+    {graspData.pose = {0.405151,-0.0112339,0.0975395,-1.5708,1.44629,-1.69696};}
+    graspData.addnlPitch = 0.785398;
+    graspData.gripperWidth = 0.0638898;
+    if(av.simulationMode != "FRANKA") return;
   }
 
   av.spawnObject(objID,0,0);
-  std::vector<double> kinectPose = {av.viewsphereRad,-M_PI,0};
+  std::vector<double> kinectPose = {av.viewsphereRad,-M_PI,M_PI/8};
   av.moveKinectViewsphere(kinectPose);
   av.readKinect();
   av.fuseLastData();
@@ -1136,6 +1167,139 @@ void testMoveitPathConstraint(environment &av){
   std::cout << "*** End ***" << std::endl;
 }
 
+void testICLRegistration(environment &av){
+  av.readKinect();
+  av.fuseLastData();
+
+  ptCldColor::Ptr ptrPtCldTgt{new ptCldColor};      ptCldColor::ConstPtr cPtrPtCldTgt{ptrPtCldTgt};
+  ptCldColor::Ptr ptrPtCldTgt1{new ptCldColor};
+  ptCldColor::Ptr ptrPtCldSrc1{new ptCldColor};
+  ptCldColor::Ptr ptrPtCldSrc{new ptCldColor};      ptCldColor::ConstPtr cPtrPtCldSrc{ptrPtCldSrc};
+
+  pcl::PointXYZRGB ptTemp;
+  ptTemp.r = 200;
+  for(float x = 0.20; x <= 0.70; x+=0.01){
+    for(float y = -0.25; y <= 0.25; y+=0.01){
+      ptTemp.x = x; ptTemp.y = y; ptTemp.z = 0;
+      ptrPtCldTgt->points.push_back(ptTemp);
+    }
+  }
+  ptrPtCldTgt->width = ptrPtCldTgt->points.size();
+  ptrPtCldTgt->height = 1;
+
+  Eigen::Affine3f tf = pcl::getTransformation(0.05,0.02,0.02,0,0,0);
+  // pcl::transformPointCloud(*ptrPtCldTgt,*ptrPtCldSrc,tf);
+  *ptrPtCldSrc = *av.ptrPtCldLast;
+
+  pcl::VoxelGrid<pcl::PointXYZRGB> voxelGrid;
+  voxelGrid.setInputCloud(cPtrPtCldSrc);
+  voxelGrid.setLeafSize(av.voxelGridSize, av.voxelGridSize, av.voxelGridSize);
+  voxelGrid.filter(*ptrPtCldSrc);
+
+  tf::StampedTransform transform;
+  av.listener.lookupTransform("camera_link", "camera_depth_optical_frame", ros::Time(0), transform);
+  pcl_ros::transformPointCloud(*ptrPtCldSrc, *ptrPtCldSrc, transform);
+  av.listener.lookupTransform("camera_link", "panda_link0", ros::Time(0), transform);
+  pcl_ros::transformPointCloud(*ptrPtCldTgt, *ptrPtCldTgt, transform);
+
+  pcl::PassThrough<pcl::PointXYZRGB> pass;
+  pass.setInputCloud(cPtrPtCldSrc);
+  pass.setFilterFieldName("x"); pass.setFilterLimits(0,1); pass.filter(*ptrPtCldSrc);
+  pass.setFilterFieldName("y"); pass.setFilterLimits(-0.15,0.15); pass.filter(*ptrPtCldSrc);
+  pass.setFilterFieldName("z"); pass.setFilterLimits(-0.15,0.15); pass.filter(*ptrPtCldSrc);
+
+  pass.setInputCloud(cPtrPtCldTgt);
+  pass.setFilterFieldName("x"); pass.setFilterLimits(0,1); pass.filter(*ptrPtCldTgt);
+  pass.setFilterFieldName("y"); pass.setFilterLimits(-0.15,0.15); pass.filter(*ptrPtCldTgt);
+  pass.setFilterFieldName("z"); pass.setFilterLimits(-0.15,0.15); pass.filter(*ptrPtCldTgt);
+
+  ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer")); std::vector<int> vp;
+  setupViewer(viewer, 1, vp);
+  // viewer->removeCoordinateSystem();
+  viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
+
+  addRGB(viewer,ptrPtCldSrc,"Src",vp[0]);
+  addRGB(viewer,ptrPtCldTgt,"Tgt",vp[0]);
+
+  while (!viewer->wasStopped ()){
+    viewer->spinOnce(100);
+    boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+  }
+
+  for (int i = 0; i < ptrPtCldSrc->size(); i++) {
+    ptrPtCldSrc->points[i].b = 255;
+    ptrPtCldSrc->points[i].r = 0;
+  }
+  *ptrPtCldTgt1 = *ptrPtCldTgt;
+  *ptrPtCldSrc1 = *ptrPtCldSrc;
+
+  // Align
+  pcl::IterativeClosestPointNonLinear<pcl::PointXYZRGB, pcl::PointXYZRGB> reg;
+  reg.setTransformationEpsilon(1e-9);
+  // Set the maximum distance between two correspondences (src<->tgt) to 10cm
+  // Note: adjust this based on the size of your datasets
+  reg.setMaxCorrespondenceDistance(0.02);
+
+  reg.setInputSource(ptrPtCldSrc);
+  reg.setInputTarget(ptrPtCldTgt);
+
+  // Run the same optimization in a loop and visualize the results
+  Eigen::Matrix4f Ti = Eigen::Matrix4f::Identity (), prev, targetToSource;
+  ptCldColor::Ptr reg_result = ptrPtCldSrc;
+
+  reg.setMaximumIterations(2);
+  for (int i = 0; i < 50; ++i){
+    PCL_INFO ("Iteration Nr. %d.\n", i);
+    ptrPtCldSrc = reg_result;
+    // Estimate
+    reg.setInputSource(ptrPtCldSrc);
+    reg.align(*reg_result);
+
+		//accumulate transformation between each Iteration
+    Ti = reg.getFinalTransformation() * Ti;
+
+		//if the difference between this transformation and the previous one
+		//is smaller than the threshold, refine the process by reducing
+		//the maximal correspondence distance
+    if (std::abs ((reg.getLastIncrementalTransformation () - prev).sum ()) < reg.getTransformationEpsilon ())
+      reg.setMaxCorrespondenceDistance (reg.getMaxCorrespondenceDistance () - 0.001);
+
+    prev = reg.getLastIncrementalTransformation ();
+
+  }
+  // targetToSource = Ti.inverse();
+
+  ptCldColor::Ptr ptrPtCldOp{new ptCldColor};
+  // Transform target back in source frame
+  pcl::transformPointCloud (*ptrPtCldSrc1, *ptrPtCldOp, Ti);
+  for (int i = 0; i < ptrPtCldOp->size(); i++) {
+    ptrPtCldOp->points[i].g = 255;
+    ptrPtCldOp->points[i].b = 0;
+    ptrPtCldOp->points[i].r = 0;
+  }
+
+  // ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer")); std::vector<int> vp;
+  // setupViewer(viewer, 1, vp);
+  // // viewer->removeCoordinateSystem();
+  // viewer->setCameraPosition(3,2,4,-1,-1,-1,-1,-1,1);
+
+  // addRGB(viewer,ptrPtCldSrc1,"Src",vp[0]);
+  // addRGB(viewer,ptrPtCldTgt1,"Tgt",vp[0]);
+  // addRGB(viewer,ptrPtCldOp,"Res",vp[0]);
+
+  Eigen::Affine3f fineT(Ti.inverse());
+  float tx, ty, tz, rx, ry, rz;
+  pcl::getTranslationAndEulerAngles(fineT, tx, ty, tz, rx, ry, rz);
+  std::cerr << "Translation (x, y, z)       : " << tx << ", " << ty << ", " << tz << endl;
+  std::cerr << "Rotation (roll, pitch, yaw) : " << rx << ", " << ry << ", " << rz << endl << endl;
+
+  // while (!viewer->wasStopped ()){
+  //   viewer->spinOnce(100);
+  //   boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+  // }
+}
+
+
 int main (int argc, char** argv){
 
   // Initialize ROS
@@ -1145,6 +1309,9 @@ int main (int argc, char** argv){
   environment activeVision(&nh);
   // Delay to ensure all publishers and subscribers are connected
   boost::this_thread::sleep(boost::posix_time::milliseconds(500));
+
+  // testICLRegistration(activeVision);
+  // return 1;
 
   int choice, objID, graspMode;
   std::cout << "Available choices for test functions : " << std::endl;
@@ -1171,11 +1338,16 @@ int main (int argc, char** argv){
   std::cout << "Enter your choice : "; cin >> choice;
 
   if((choice >= 5 && choice <= 13) || choice == 16 || (choice >= 18 && choice <= 19)){
-    std::cout << "YCB Objects available :" << std::endl;
-    for(auto data: activeVision.objectDict){
+    if(activeVision.simulationMode != "FRANKA"){
+      std::cout << "YCB Objects available :" << std::endl;
+      for(auto data: activeVision.objectDict){
         if(data.second.fileName.substr(0,3) == "YCB") data.second.printObjectInfo();
+      }
+      std::cout << "Enter your choice : "; std::cin>>objID;
+    }else{
+      objID = 1;
     }
-    std::cout << "Enter your choice : "; std::cin>>objID;
+
     if(choice == 11){
       std::cout << "Grasp Modes available :" << std::endl;
       std::cout << "1: Find all grasps -> Sort -> Collision check" << std::endl;
