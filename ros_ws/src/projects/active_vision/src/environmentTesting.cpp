@@ -329,12 +329,12 @@ void testGripper(environment &av, int flag, float width){
     // Setting up the point cloud visualizer
     ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer")); std::vector<int> vp;
     setupViewer(viewer, 1, vp);
-    viewer->removeCoordinateSystem();
     viewer->setCameraPosition(0.5,0,0,-1,0,0,0,0,1);
 
     // Adding the point cloud
     addRGB(viewer,av.cPtrPtCldGripper,"Gripper",vp[0]);
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 6; i++) {
+      if(i == 3 || i == 4) continue;
       viewer->addCube(av.minPtCol[i].x,av.maxPtCol[i].x,
                       av.minPtCol[i].y,av.maxPtCol[i].y,
                       av.minPtCol[i].z,av.maxPtCol[i].z,0.0,1.0,0.0,"Cube"+std::to_string(i),vp[0]);

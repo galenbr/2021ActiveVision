@@ -92,6 +92,8 @@ bool ROSCheck(std::string type, std::string name);
 struct graspPoint{
   float quality;
   float distance;
+  float lineDistance;
+  bool aboveCOG;
   float gripperWidth;
   pcl::PointXYZRGB p1;
   pcl::PointXYZRGB p2;
@@ -227,6 +229,7 @@ public:
 
   // PtCld: Gripper related
   ptCldColor::Ptr ptrPtCldGrpHnd{new ptCldColor};    ptCldColor::ConstPtr cPtrPtCldGrpHnd{ptrPtCldGrpHnd};
+  ptCldColor::Ptr ptrPtCldGrpCam{new ptCldColor};    ptCldColor::ConstPtr cPtrPtCldGrpCam{ptrPtCldGrpCam};
   ptCldColor::Ptr ptrPtCldGrpRfgr{new ptCldColor};   ptCldColor::ConstPtr cPtrPtCldGrpRfgr{ptrPtCldGrpRfgr};
   ptCldColor::Ptr ptrPtCldGrpLfgr{new ptCldColor};   ptCldColor::ConstPtr cPtrPtCldGrpLfgr{ptrPtCldGrpLfgr};
   ptCldColor::Ptr ptrPtCldGripper{new ptCldColor};   ptCldColor::ConstPtr cPtrPtCldGripper{ptrPtCldGripper};
@@ -250,8 +253,8 @@ public:
   pcl::PointXYZRGB minPtObj, maxPtObj;              // Min and Max x,y,z co-ordinates of the object
   pcl::PointXYZRGB minTable, maxTable;              // Min and Max x,y,z co-ordinates of the object
   Eigen::Vector4f cenTable,cenObject;
-  pcl::PointXYZRGB minPtGrp[3], maxPtGrp[3];        // Min and Max x,y,z co-ordinates of the gripper
-  pcl::PointXYZRGB minPtCol[5], maxPtCol[5];        // Min and Max x,y,z co-ordinates of the gripper used for collision check
+  pcl::PointXYZRGB minPtGrp[4], maxPtGrp[4];        // Min and Max x,y,z co-ordinates of the gripper
+  pcl::PointXYZRGB minPtCol[6], maxPtCol[6];        // Min and Max x,y,z co-ordinates of the gripper used for collision check
 
   std::map<int,objectInfo> objectDict;              // Dictionary to store object info
   double voxelGridSize;                             // Voxel Grid size for environment
