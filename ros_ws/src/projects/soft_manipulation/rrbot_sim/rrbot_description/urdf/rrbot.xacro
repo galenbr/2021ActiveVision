@@ -74,7 +74,7 @@
       <geometry>
 	<box size="${width} ${width} ${height2}"/>
       </geometry>
-      <material name="black"/>
+      <material name="red"/>
     </visual>
 
     <inertial>
@@ -109,7 +109,7 @@
       <geometry>
 	<box size="${width} ${width} ${height3}"/>
       </geometry>
-      <material name="black"/>
+      <material name="red"/>
     </visual>
 
     <inertial>
