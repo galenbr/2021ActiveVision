@@ -21,7 +21,6 @@ bool concaveHull(rrbot_pcl::concaveHull::Request &req, rrbot_pcl::concaveHull::R
     pcl::fromPCLPointCloud2(*pcl_pc2, *cloud);
 
     // Projecting all points to a plane
-    // TEMPORARY HACK
     for(int i = 0; i < cloud->points.size(); i++)
         cloud->points[i].z = 3.1; 
 
