@@ -30,7 +30,7 @@
             <format>B8G8R8</format>   <!-- Changed from RGB to BGR for better visualization in rviz -->
           </image>
           <clip>
-            <near>0.28</near>
+            <near>0.10</near>
             <far>3.0</far>
           </clip>
         </camera>
@@ -46,7 +46,7 @@
           <depthImageCameraInfoTopicName>/camera/depth/camera_info</depthImageCameraInfoTopicName>
           <pointCloudTopicName>/camera/depth/points</pointCloudTopicName>
           <frameName>camera_link</frameName>
-          <pointCloudCutoff>0.28</pointCloudCutoff>
+          <pointCloudCutoff>0.10</pointCloudCutoff>
           <pointCloudCutoffMax>3.0</pointCloudCutoffMax>
           <distortionK1>0</distortionK1>
           <distortionK2>0</distortionK2>

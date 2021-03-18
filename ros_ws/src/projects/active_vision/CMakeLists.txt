@@ -28,8 +28,8 @@ find_package(catkin REQUIRED COMPONENTS
   franka_gripper
   genmsg
   actionlib_msgs
-  # cv_bridge
-  # image_transport
+  cv_bridge
+  image_transport
   message_generation
 )
 
@@ -292,3 +292,7 @@ target_link_libraries(3DheuristicPolicyService active_vision ${catkin_LIBRARIES}
 # add_executable(bfs src/bfs.cpp)
 # add_dependencies(bfs active_vision ${catkin_EXPORTED_TARGETS})
 # target_link_libraries(bfs active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(rgbd_to_rgb src/rgbd_to_rgb.cpp)
+add_dependencies(rgbd_to_rgb active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(rgbd_to_rgb active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})

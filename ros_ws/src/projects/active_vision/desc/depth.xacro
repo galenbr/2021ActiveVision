@@ -46,7 +46,7 @@
 	    <format>B8G8R8</format>  <!--Changed format since channels were inverted, to go back, change to R8G8B8-->
 	  </image>
 	  <clip>
-	    <near>0.028</near>
+	    <near>0.01</near>
 	    <far>3</far>
 	  </clip>
 	</camera>
@@ -62,8 +62,8 @@
           <depthImageTopicName>/camera/depth/image_raw</depthImageTopicName>
           <depthImageCameraInfoTopicName>/camera/depth/camera_info</depthImageCameraInfoTopicName>
           <pointCloudTopicName>/camera/depth/points</pointCloudTopicName>
-          <frameName>camera_link</frameName>
-          <pointCloudCutoff>0.28</pointCloudCutoff>
+          <frameName>camera_optical_link</frameName>
+          <pointCloudCutoff>0.10</pointCloudCutoff>
           <pointCloudCutoffMax>3.0</pointCloudCutoffMax>
           <distortionK1>0</distortionK1>
           <distortionK2>0</distortionK2>
