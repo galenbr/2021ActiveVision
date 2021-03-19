@@ -8,6 +8,7 @@
 #include <pcl/filters/passthrough.h>
 
 bool processCloud(rrbot_pcl::processCloud::Request &req, rrbot_pcl::processCloud::Response &res){
+    ROS_INFO("Received processing request");
     
     // Convert sensor msgs pc2 to pcl pointcloud2
     pcl::PCLPointCloud2::Ptr pcl_pc2 (new pcl::PCLPointCloud2 ());
@@ -16,20 +17,21 @@ bool processCloud(rrbot_pcl::processCloud::Request &req, rrbot_pcl::processCloud
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::fromPCLPointCloud2(*pcl_pc2, *cloud);
 
+    ROS_INFO("Downsampling");
     // Downsampling
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_downsampled(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::VoxelGrid<pcl::PointXYZRGB> sor;
     sor.setInputCloud (cloud);
-    sor.setLeafSize(0.002f, 0.002f, 0.002f);
+    sor.setLeafSize(0.001f, 0.001f, 0.001f);
     sor.filter(*cloud_downsampled);
 
+    ROS_INFO("Filtering");
     // Filtering
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::PassThrough<pcl::PointXYZRGB> pass;
     pass.setInputCloud (cloud_downsampled);
     pass.setFilterFieldName ("z");
     pass.setFilterLimits (0.0, 3.1);
-    //pass.setFilterLimitsNegative (true);
     pass.filter (*cloud_filtered);
 
     // Convert Cloud Cluster to PCL for debugging filtered cloud
@@ -39,6 +41,7 @@ bool processCloud(rrbot_pcl::processCloud::Request &req, rrbot_pcl::processCloud
     pcl_conversions::fromPCL(temppc2, ret);
     res.pc2 = ret;
 
+    ROS_INFO("DONE");
 
     return true;
 }

@@ -1,3 +1,4 @@
-sensor_msgs/Image img
+sensor_msgs/PointCloud2 pc2
+bool view
 ---
-sensor_msgs/Image img
+geometry_msgs/Point skeleton

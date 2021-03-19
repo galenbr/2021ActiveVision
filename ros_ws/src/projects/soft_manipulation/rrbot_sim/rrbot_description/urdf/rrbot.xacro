@@ -103,14 +103,14 @@
 	<box size="${width} ${width} ${height3}"/>
       </geometry>
     </collision>
-
+<!-- 
     <visual>
       <origin xyz="0 0 ${height3/2 - axel_offset}" rpy="0 0 0"/>
       <geometry>
 	<box size="${width} ${width} ${height3}"/>
       </geometry>
       <material name="red"/>
-    </visual>
+    </visual> -->
 
     <inertial>
       <origin xyz="0 0 ${height3/2 - axel_offset}" rpy="0 0 0"/>
