@@ -56,36 +56,36 @@ public:
   }
   // initialize arm to a predefined pose
   bool initialize_pose(arm_controls::PoseChange::Request &req, arm_controls::PoseChange::Response &res){
-    // ros::service::waitForService("move_to_pose");
-    // ros::ServiceClient client_pose = n_.serviceClient<moveit_planner::MovePose>("move_to_pose");
-    // moveit_planner::MovePose srv;
-    // geometry_msgs::Pose goal;
-    // n_.getParam("arm_control_params/init_pose/x_pos", goal.position.x);
-    // n_.getParam("arm_control_params/init_pose/y_pos", goal.position.y);
-    // n_.getParam("arm_control_params/init_pose/z_pos", goal.position.z);
-    // n_.getParam("arm_control_params/init_pose/x_orn", goal.orientation.x);
-    // n_.getParam("arm_control_params/init_pose/y_orn", goal.orientation.y);
-    // n_.getParam("arm_control_params/init_pose/z_orn", goal.orientation.z);
-    // n_.getParam("arm_control_params/init_pose/w_orn", goal.orientation.w);
-    ros::service::waitForService("move_to_joint_space");
-    ros::ServiceClient client_pose = n_.serviceClient<moveit_planner::MoveJoint>("move_to_joint_space");
-    moveit_planner::MoveJoint srv;
-    float goal [7];
-    n_.getParam("arm_control_params/init_joint_ref/J1", goal[0]);
-    n_.getParam("arm_control_params/init_joint_ref/J2", goal[1]);
-    n_.getParam("arm_control_params/init_joint_ref/J3", goal[2]);
-    n_.getParam("arm_control_params/init_joint_ref/J4", goal[3]);
-    n_.getParam("arm_control_params/init_joint_ref/J5", goal[4]);
-    n_.getParam("arm_control_params/init_joint_ref/J6", goal[5]);
-    n_.getParam("arm_control_params/init_joint_ref/J7", goal[6]);
-    for (int i = 0; i < 7; i++) {
-      srv.request.val.push_back(goal[i]);
-    }
-    // srv.request.val = goal;
+    ros::service::waitForService("move_to_pose");
+    ros::ServiceClient client_pose = n_.serviceClient<moveit_planner::MovePose>("move_to_pose");
+    moveit_planner::MovePose srv;
+    geometry_msgs::Pose goal;
+    n_.getParam("arm_control_params/init_pose/x_pos", goal.position.x);
+    n_.getParam("arm_control_params/init_pose/y_pos", goal.position.y);
+    n_.getParam("arm_control_params/init_pose/z_pos", goal.position.z);
+    n_.getParam("arm_control_params/init_pose/x_orn", goal.orientation.x);
+    n_.getParam("arm_control_params/init_pose/y_orn", goal.orientation.y);
+    n_.getParam("arm_control_params/init_pose/z_orn", goal.orientation.z);
+    n_.getParam("arm_control_params/init_pose/w_orn", goal.orientation.w);
+    // ros::service::waitForService("move_to_joint_space");
+    // ros::ServiceClient client_pose = n_.serviceClient<moveit_planner::MoveJoint>("move_to_joint_space");
+    // moveit_planner::MoveJoint srv;
+    // float goal [7];
+    // n_.getParam("arm_control_params/init_joint_ref/J1", goal[0]);
+    // n_.getParam("arm_control_params/init_joint_ref/J2", goal[1]);
+    // n_.getParam("arm_control_params/init_joint_ref/J3", goal[2]);
+    // n_.getParam("arm_control_params/init_joint_ref/J4", goal[3]);
+    // n_.getParam("arm_control_params/init_joint_ref/J5", goal[4]);
+    // n_.getParam("arm_control_params/init_joint_ref/J6", goal[5]);
+    // n_.getParam("arm_control_params/init_joint_ref/J7", goal[6]);
+    // for (int i = 0; i < 7; i++) {
+    //   srv.request.val.push_back(goal[i]);
+    // }
+    srv.request.val = goal;
     srv.request.execute = req.execute;
     if (client_pose.call(srv)){
-      // pose = goal;
-      update_pose();
+      pose = goal;
+      // update_pose();
       ROS_INFO("Grasp pose reached");
       return true;
     }
@@ -97,36 +97,36 @@ public:
 
   // go to a grasping pose
   bool grasp_pose(arm_controls::PoseChange::Request &req, arm_controls::PoseChange::Response &res){
-    // ros::service::waitForService("move_to_pose");
-    // ros::ServiceClient client_pose = n_.serviceClient<moveit_planner::MovePose>("move_to_pose");
-    // moveit_planner::MovePose srv;
-    // geometry_msgs::Pose goal;
-    // n_.getParam("arm_control_params/grasp_pose/x_pos", goal.position.x);
-    // n_.getParam("arm_control_params/grasp_pose/y_pos", goal.position.y);
-    // n_.getParam("arm_control_params/grasp_pose/z_pos", goal.position.z);
-    // n_.getParam("arm_control_params/grasp_pose/x_orn", goal.orientation.x);
-    // n_.getParam("arm_control_params/grasp_pose/y_orn", goal.orientation.y);
-    // n_.getParam("arm_control_params/grasp_pose/z_orn", goal.orientation.z);
-    // n_.getParam("arm_control_params/grasp_pose/w_orn", goal.orientation.w);
-    ros::service::waitForService("move_to_joint_space");
-    ros::ServiceClient client_pose = n_.serviceClient<moveit_planner::MoveJoint>("move_to_joint_space");
-    moveit_planner::MoveJoint srv;
-    float goal [7];
-    n_.getParam("arm_control_params/grasp_joint_ref/J1", goal[0]);
-    n_.getParam("arm_control_params/grasp_joint_ref/J2", goal[1]);
-    n_.getParam("arm_control_params/grasp_joint_ref/J3", goal[2]);
-    n_.getParam("arm_control_params/grasp_joint_ref/J4", goal[3]);
-    n_.getParam("arm_control_params/grasp_joint_ref/J5", goal[4]);
-    n_.getParam("arm_control_params/grasp_joint_ref/J6", goal[5]);
-    n_.getParam("arm_control_params/grasp_joint_ref/J7", goal[6]);
-    for (int i = 0; i < 7; i++) {
-      srv.request.val.push_back(goal[i]);
-    }
-    // srv.request.val = goal;
+    ros::service::waitForService("move_to_pose");
+    ros::ServiceClient client_pose = n_.serviceClient<moveit_planner::MovePose>("move_to_pose");
+    moveit_planner::MovePose srv;
+    geometry_msgs::Pose goal;
+    n_.getParam("arm_control_params/grasp_pose/x_pos", goal.position.x);
+    n_.getParam("arm_control_params/grasp_pose/y_pos", goal.position.y);
+    n_.getParam("arm_control_params/grasp_pose/z_pos", goal.position.z);
+    n_.getParam("arm_control_params/grasp_pose/x_orn", goal.orientation.x);
+    n_.getParam("arm_control_params/grasp_pose/y_orn", goal.orientation.y);
+    n_.getParam("arm_control_params/grasp_pose/z_orn", goal.orientation.z);
+    n_.getParam("arm_control_params/grasp_pose/w_orn", goal.orientation.w);
+    // ros::service::waitForService("move_to_joint_space");
+    // ros::ServiceClient client_pose = n_.serviceClient<moveit_planner::MoveJoint>("move_to_joint_space");
+    // moveit_planner::MoveJoint srv;
+    // float goal [7];
+    // n_.getParam("arm_control_params/grasp_joint_ref/J1", goal[0]);
+    // n_.getParam("arm_control_params/grasp_joint_ref/J2", goal[1]);
+    // n_.getParam("arm_control_params/grasp_joint_ref/J3", goal[2]);
+    // n_.getParam("arm_control_params/grasp_joint_ref/J4", goal[3]);
+    // n_.getParam("arm_control_params/grasp_joint_ref/J5", goal[4]);
+    // n_.getParam("arm_control_params/grasp_joint_ref/J6", goal[5]);
+    // n_.getParam("arm_control_params/grasp_joint_ref/J7", goal[6]);
+    // for (int i = 0; i < 7; i++) {
+    //   srv.request.val.push_back(goal[i]);
+    // }
+    srv.request.val = goal;
     srv.request.execute = req.execute;
     if (client_pose.call(srv)){
-      // pose = goal;
-      update_pose();
+      pose = goal;
+      // update_pose();
       ROS_INFO("Grasp pose reached");
       return true;
     }
@@ -211,7 +211,7 @@ public:
     moveit_planner::MovePose srv;
     geometry_msgs::Pose goal;
     goal = pose;
-    goal.position.y += req.val;
+    goal.position.x += req.val;
     srv.request.val = goal;
     srv.request.execute = true;
     if (client_pose.call(srv)){
@@ -232,7 +232,7 @@ public:
     moveit_planner::MovePose srv;
     geometry_msgs::Pose goal;
     goal = pose;
-    goal.position.y -= req.val;
+    goal.position.x -= req.val;
     srv.request.val = goal;
     srv.request.execute = true;
     if (client_pose.call(srv)){
@@ -253,7 +253,7 @@ public:
     moveit_planner::MovePose srv;
     geometry_msgs::Pose goal;
     goal = pose;
-    goal.position.x += req.val;
+    goal.position.y -= req.val;
     srv.request.val = goal;
     srv.request.execute = true;
     if (client_pose.call(srv)){
@@ -274,7 +274,7 @@ public:
     moveit_planner::MovePose srv;
     geometry_msgs::Pose goal;
     goal = pose;
-    goal.position.x -= req.val;
+    goal.position.y += req.val;
     srv.request.val = goal;
     srv.request.execute = true;
     if (client_pose.call(srv)){

@@ -13,12 +13,12 @@
   <link name="block">
     <collision>
       <geometry>
-        <box size="0.03 0.02 0.04"/>
+        <box size="0.03 0.03 0.08"/>
       </geometry>
     </collision>
     <visual>
       <geometry>
-        <box size="0.03 0.02 0.04"/>
+        <box size="0.03 0.03 0.08"/>
       </geometry>
     </visual>
     <inertial>

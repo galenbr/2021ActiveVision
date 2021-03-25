@@ -3,7 +3,7 @@
 
   <!-- table parameters - used for object positioning -->
   <arg name="floor_height" value="0.026" />
-  <arg name="table_height" value="0.6" />
+  <arg name="table_height" value="0.425" />
   <arg name="table_center" value="0.7" />
   <arg name="table_width" value="1" />
   <arg name="table_length" value="0.6" />
@@ -26,14 +26,15 @@
   	args="-param robot_description -urdf -model franka_vf -z $(arg floor_height) -J panda_joint6 0.785398 -J panda_joint7 0.785398" />
 
   <!-- spawn table -->
-  <!-- <node name="spawn_floor_urdf" pkg="gazebo_ros" type="spawn_model"
-  	args="-file $(find manipulation_env)/desc/floor_table.urdf -urdf -model floor_table" /> -->
+  <node name="spawn_floor_urdf" pkg="gazebo_ros" type="spawn_model"
+  	args="-file $(find manipulation_env)/desc/floor_table.urdf -urdf -model floor_table" />
   <node name="spawn_table_urdf" pkg="gazebo_ros" type="spawn_model"
   	args="-file $(find manipulation_env)/desc/table_box.urdf -urdf -model table_surface" />
 
   <!-- spawn object -->
   <node name="spawn_object" pkg="gazebo_ros" type="spawn_model"
-  	args="-file $(find manipulation_env)/desc/rectangular_prism.urdf -urdf -model object -z $(arg table_height) -x 0.4 -y -0.4" />
+  	args="-file $(find manipulation_env)/desc/rectangular_prism.urdf -urdf -model object -z $(arg table_height) -x $(arg table_center)" />
+
 
   <!-- launch franka controllers -->
   <include file="$(find panda_moveit_controller)/launch/main.launch"/>
@@ -47,10 +48,10 @@
     <arg name="gripper_namespace" value="$(arg gripper_namespace)" />
   </include>
   <!-- launch moveit config -->
-  <include file="$(find vf_moveit_config2)/launch/move_group.launch" />
+  <!-- <include file="$(find ref_benchmark_moveit_config)/launch/move_group.launch" /> -->
   <!-- launch moveit planner -->
-  <node name="moveit_planner" type="main_node" pkg="moveit_planner" args="panda_arm"/>
+  <!-- <node name="moveit_planner" type="main_node" pkg="moveit_planner" args="panda_arm"/> -->
   <!-- launch manipulation sequence -->
-  <node name="manipulation_sequence" type="manip_seq" pkg="manipulation_exp"/>
+  <!-- <node name="manipulation_sequence" type="manip_seq" pkg="manipulation_exp"/> -->
 
 </launch>

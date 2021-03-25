@@ -1,21 +1,21 @@
 init_pose: {
   x_pos: 0.4,
-  y_pos: 0.0,
-  z_pos: 0.5,
-  x_orn: 0.0,
-  y_orn: 0.7071068,
-  z_orn: 0.0,
-  w_orn: 0.7071068
+  y_pos: -0.2,
+  z_pos: 0.61,
+  x_orn: -0.5,
+  y_orn: -0.5,
+  z_orn: 0.5,
+  w_orn: -0.5
 }
 
 grasp_pose: {
-  x_pos: 0.47,
-  y_pos: 0.0,
-  z_pos: 0.5,
-  x_orn: 0.0,
-  y_orn: 0.7071068,
-  z_orn: 0.0,
-  w_orn: 0.7071068
+  x_pos: 0.4,
+  y_pos: -0.3,
+  z_pos: 0.61,
+  x_orn: -0.5,
+  y_orn: -0.5,
+  z_orn: 0.5,
+  w_orn: -0.5
 }
 
 rest_pose: {
