@@ -1,0 +1,99 @@
+clear;
+clc
+
+%% Robot Model
+l1 = 90; l2 = 75;
+% th1 = 35; th2 = -35;
+syms th1 th2;
+eeXex = l1*cosd(th1) + l2*cosd(th1 + th2);
+eeYex = l1*sind(th1) + l2*sind(th1 + th2);
+
+j2Xex = l1*cosd(th1);
+j2Yex = l1*sind(th1);
+
+baseX = 0;
+baseY = 0;
+
+%% Estimation Variables
+goal_coeffs = zeros(1,4);
+old_coeffs = zeros(1,4);
+step = 2.5;
+t = 1;
+t_end = 15;
+th1_start = 35;
+th2_start = -35;
+r = zeros(1,2);
+old_r = [th1_start, th2_start];
+ds = zeros(15,4);
+dr = zeros(15,2);
+init_flag = false;
+
+%% Select feature points from skeleton
+[skelexX, skelexY, link1PtsexX, link1PtsexY, link2PtsexX, link2PtsexY] = skeleton(j2Xex, j2Yex, eeXex, eeYex);
+
+
+%% Move Robot locally
+while(t<=t_end)
+    skelX = eval(subs(skelexX, [th1, th2], [th1_start, th2_start]));
+    skelY = eval(subs(skelexY, [th1, th2], [th1_start, th2_start]));
+    link1PtsX = eval(subs(link1PtsexX, [th1, th2], [th1_start, th2_start]));
+    link1PtsY = eval(subs(link1PtsexY, [th1, th2], [th1_start, th2_start]));
+    link2PtsX = eval(subs(link2PtsexX, [th1, th2], [th1_start, th2_start]));
+    link2PtsY = eval(subs(link2PtsexY, [th1, th2], [th1_start, th2_start]));
+    eeX = eval(subs(eeXex, [th1, th2], [th1_start, th2_start]));
+    eeY = eval(subs(eeYex, [th1, th2], [th1_start, th2_start]));
+    j2X = eval(subs(j2Xex, th1, th1_start));
+    j2Y = eval(subs(j2Yex, th1, th1_start));
+    if(t <=3)
+        th1_start = th1_start + step;
+    elseif(t <=6)
+        th2_start = th2_start + step;
+    elseif(t <=9)
+        th1_start = th1_start + step;
+        th2_start = th2_start + step;
+    elseif(t <=12)
+        th1_start = th1_start + step;
+        th2_start = th2_start - step;
+    elseif(t <=15)
+        th1_start = th1_start - step;
+        th2_start = th2_start + step;
+    else
+        disp('Done collecting data')
+    end
+    r = [th1_start, th2_start];
+
+    %% Fit curve
+    [curve, coeffs] = fit_curve(skelX, skelY);
+    
+    %% Change in Robot Shape
+    % initialization step
+    if init_flag == false
+        old_coeffs = coeffs;
+        init_flag = true;
+    end
+    
+    ds(t,:) = shape_change(coeffs, old_coeffs);
+    old_coeffs = coeffs;
+    dr(t,:) = angle_change(r, old_r);
+
+    
+    %% Plots
+    figure(1)
+    
+    % Robot
+    plot([0, j2X, eeX], [0, j2Y, eeY], 'b');
+    hold on
+    
+    % Skeleton Points
+    plot(link1PtsX(:), link1PtsY(:), 'ro');
+    plot(link2PtsX(:), link2PtsY(:), 'ro');
+    
+    % Curve
+    plot(curve, 'g');
+%     hold off
+    %% Collect shape and pose data
+    t = t+1;
+end
+%% Estimate Shape Jacobian
+
+
