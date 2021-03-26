@@ -1,4 +1,4 @@
-clear;
+clear
 clc
 
 %% Robot Model
@@ -33,6 +33,7 @@ init_flag = false;
 
 
 %% Move Robot locally
+disp('Collecting shape data for small movements')
 while(t<=t_end)
     skelX = eval(subs(skelexX, [th1, th2], [th1_start, th2_start]));
     skelY = eval(subs(skelexY, [th1, th2], [th1_start, th2_start]));
@@ -57,9 +58,8 @@ while(t<=t_end)
     elseif(t <=15)
         th1_start = th1_start - step;
         th2_start = th2_start + step;
-    else
-        disp('Done collecting data')
     end
+        
     r = [th1_start, th2_start];
 
     %% Fit curve
@@ -75,6 +75,7 @@ while(t<=t_end)
     ds(t,:) = shape_change(coeffs, old_coeffs);
     old_coeffs = coeffs;
     dr(t,:) = angle_change(r, old_r);
+    old_r = r;
 
     
     %% Plots
@@ -94,6 +95,19 @@ while(t<=t_end)
     %% Collect shape and pose data
     t = t+1;
 end
+disp('Done collecting data')
+
+% Reset Time
+t = 1;
+
 %% Estimate Shape Jacobian
+disp('Beginning Shape Jacobian estimation process')
 
+% Inititalize estimation variables
+qhat = zeros(4,2);
 
+while t<=t_end
+    [J, qhat_cur] = compute_energy_functional(ds, dr, qhat, t)
+    qhat = qhat_cur;
+     t = t+1;
+end
