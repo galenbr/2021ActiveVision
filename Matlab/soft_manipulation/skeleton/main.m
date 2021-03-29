@@ -15,18 +15,17 @@ baseX = 0;
 baseY = 0;
 
 %% Estimation Variables
-goal_coeffs = zeros(1,4);
-old_coeffs = zeros(1,4);
+goal_coeffs = zeros(4,1);
+old_coeffs = zeros(4,1);
 step = 2.5;
 t = 1;
-t_end = 15;
+t_end = 3;
 th1_start = 35;
 th2_start = -35;
-r = zeros(1,2);
-old_r = [th1_start, th2_start];
-ds = zeros(15,4);
-dr = zeros(15,2);
-init_flag = false;
+r = zeros(2,1);
+old_r = [th1_start; th2_start];
+ds = zeros(t_end,4);
+dr = zeros(t_end,2);
 
 %% Select feature points from skeleton
 [skelexX, skelexY, link1PtsexX, link1PtsexY, link2PtsexX, link2PtsexY] = skeleton(j2Xex, j2Yex, eeXex, eeYex);
@@ -45,37 +44,36 @@ while(t<=t_end)
     eeY = eval(subs(eeYex, [th1, th2], [th1_start, th2_start]));
     j2X = eval(subs(j2Xex, th1, th1_start));
     j2Y = eval(subs(j2Yex, th1, th1_start));
-    if(t <=3)
+%     if(t <=3)
         th1_start = th1_start + step;
-    elseif(t <=6)
+%     elseif(t <=6)
         th2_start = th2_start + step;
-    elseif(t <=9)
-        th1_start = th1_start + step;
-        th2_start = th2_start + step;
-    elseif(t <=12)
-        th1_start = th1_start + step;
-        th2_start = th2_start - step;
-    elseif(t <=15)
-        th1_start = th1_start - step;
-        th2_start = th2_start + step;
-    end
+%     elseif(t <=9)
+%         th1_start = th1_start + step;
+%         th2_start = th2_start + step;
+%     elseif(t <=12)
+%         th1_start = th1_start + step;
+%         th2_start = th2_start - step;
+%     elseif(t <=15)
+%         th1_start = th1_start - step;
+%         th2_start = th2_start + step;
+%     end
         
-    r = [th1_start, th2_start];
+    r = [th1_start; th2_start];
 
     %% Fit curve
     [curve, coeffs] = fit_curve(skelX, skelY);
     
     %% Change in Robot Shape
     % initialization step
-    if init_flag == false
+    if t == 1
         old_coeffs = coeffs;
-        init_flag = true;
     end
     
     ds(t,:) = shape_change(coeffs, old_coeffs);
     old_coeffs = coeffs;
     dr(t,:) = angle_change(r, old_r);
-    old_r = r;
+%     old_r = r;
 
     
     %% Plots
@@ -107,7 +105,7 @@ disp('Beginning Shape Jacobian estimation process')
 qhat = zeros(4,2);
 
 while t<=t_end
-    [J, qhat_cur] = compute_energy_functional(ds, dr, qhat, t)
-    qhat = qhat_cur;
+    [J, qhat_dot] = compute_energy_functional(ds, dr, qhat, t, step)
+    qhat = qhat_dot + qhat;
      t = t+1;
 end
