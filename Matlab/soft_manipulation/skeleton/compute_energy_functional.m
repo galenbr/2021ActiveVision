@@ -4,7 +4,7 @@ function [J, qhat_dot] = compute_energy_functional(dS, dR, qhat, t, step)
 sz = size(dS);
 Ji = zeros(1,sz(2));
 J = 0;
-gamma = 0.1;
+gamma = 5e-6;
 eps = 1.0e-5;
 delr = [step; step];
 
