@@ -17,11 +17,11 @@ baseY = 0;
 %% Estimation Variables
 goal_coeffs = zeros(4,1);
 old_coeffs = zeros(4,1);
-step = 2.5;
+step = 0.1;
 t = 1;
-t_end = 5;
-th1_start = 35;
-th2_start = -35;
+t_end = 30;
+th1_start = 40;
+th2_start = -30;
 r = zeros(2,1);
 old_r = [th1_start; th2_start];
 ds = zeros(t_end,4);
@@ -45,9 +45,9 @@ while(t<=t_end)
     j2X = eval(subs(j2Xex, th1, th1_start));
     j2Y = eval(subs(j2Yex, th1, th1_start));
 %     if(t <=3)
-        th1_start = th1_start + step;
-%     elseif(t <=6)
-        th2_start = th2_start + step;
+%         th1_start = th1_start + step;
+% %     elseif(t <=6)
+%         th2_start = th2_start + step;
 %     elseif(t <=9)
 %         th1_start = th1_start + step;
 %         th2_start = th2_start + step;
@@ -58,9 +58,10 @@ while(t<=t_end)
 %         th1_start = th1_start - step;
 %         th2_start = th2_start + step;
 %     end
-        
+    th1_start = th1_start + sind(step);
+    th2_start = th2_start + sind(step);    
     r = [th1_start; th2_start];
-
+    step = step + 3;
     %% Fit curve
     [curve, coeffs] = fit_curve(skelX, skelY);
     
@@ -103,9 +104,12 @@ disp('Beginning Shape Jacobian estimation process')
 
 % Inititalize estimation variables
 qhat = zeros(4,2);
-
+Jplot = [];
 while t<=t_end
-    [J, qhat_dot] = compute_energy_functional(ds, dr, qhat, t, step)
+    [J, qhat_dot] = compute_energy_functional(ds, dr, qhat, t)
     qhat = qhat_dot + qhat;
      t = t+1;
+     Jplot = [Jplot; J];
 end
+figure()
+plot(Jplot)

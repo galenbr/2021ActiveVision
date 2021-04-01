@@ -1,12 +1,11 @@
-function [J, qhat_dot] = compute_energy_functional(dS, dR, qhat, t, step)
+function [J, qhat_dot] = compute_energy_functional(dS, dR, qhat, t)
 
 %% Variable declarations
 sz = size(dS);
 Ji = zeros(1,sz(2));
 J = 0;
-gamma = 5e-6;
+gamma = 10;
 eps = 1.0e-5;
-delr = [step; step];
 
 %% Energy Functional
 for i = 1:sz(2)
@@ -19,7 +18,7 @@ end
 for i = 1:sz(2)
     if(Ji(i) > eps)
         G = [dR*transpose(qhat(i,:)) - dS(:,i); dR(t,:)*transpose(qhat(i,:)) - dS(t,i)];
-        H = transpose([transpose(dR), delr]);
+        H = transpose([transpose(dR), transpose(dR(t,:))]);
         qhat(i,:) = -gamma*transpose(H)*G;
     end
 end
