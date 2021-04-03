@@ -22,14 +22,13 @@ step = 0.1;
 t = 1;
 t_end = 30;
 th1_start = 40;
-th2_start = -30;
+th2_start = -35;
 th1_ = th1_start;
 th2_ = th2_start;
 r = zeros(2,1);
 old_r = [th1_start; th2_start];
 ds = zeros(t_end,2);
 dr = zeros(t_end,2);
-
 
 %% Move Robot locally
 disp('Collecting shape data for small movements')
@@ -84,10 +83,10 @@ t = 1;
 disp('Beginning Shape Jacobian estimation process')
 
 % Inititalize estimation variables
- qhat = zeros(2,2);
-%  noise = [100*rand, 40*rand; 10*rand, 30*rand];
-%  Q = noise + [-l1*sind(th1_) - l2*sind(th1_+th2_), -l2*sind(th1_+th2_); l1*cosd(th1_) + l2*cosd(th1_+th2_), l2*cos(th1_+th2_)]
-%  qhat = Q;
+% qhat = zeros(2,2);
+noise = [100*rand, 40*rand; 10*rand, 30*rand];
+Q =  noise + [-l1*sind(th1_) - l2*sind(th1_+th2_), -l2*sind(th1_+th2_); l1*cosd(th1_) + l2*cosd(th1_+th2_), l2*cos(th1_+th2_)]
+qhat = Q;
 Jplot = [];
 while t<=t_end
     [J, qhat_dot] = compute_energy_functional(ds, dr, qhat, t);

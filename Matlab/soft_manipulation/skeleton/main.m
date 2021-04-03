@@ -19,13 +19,15 @@ goal_coeffs = zeros(4,1);
 old_coeffs = zeros(4,1);
 step = 0.1;
 t = 1;
-t_end = 30;
-th1_start = 40;
-th2_start = -30;
+t_end = 10;
+th1_st = 40;
+th2_st = -30;
 r = zeros(2,1);
-old_r = [th1_start; th2_start];
+old_r = [th1_st; th2_st];
 ds = zeros(t_end,4);
 dr = zeros(t_end,2);
+th1_start = th1_st;
+th2_start = th2_st;
 
 %% Select feature points from skeleton
 [skelexX, skelexY, link1PtsexX, link1PtsexY, link2PtsexX, link2PtsexY] = skeleton(j2Xex, j2Yex, eeXex, eeYex);
@@ -44,24 +46,12 @@ while(t<=t_end)
     eeY = eval(subs(eeYex, [th1, th2], [th1_start, th2_start]));
     j2X = eval(subs(j2Xex, th1, th1_start));
     j2Y = eval(subs(j2Yex, th1, th1_start));
-%     if(t <=3)
-%         th1_start = th1_start + step;
-% %     elseif(t <=6)
-%         th2_start = th2_start + step;
-%     elseif(t <=9)
-%         th1_start = th1_start + step;
-%         th2_start = th2_start + step;
-%     elseif(t <=12)
-%         th1_start = th1_start + step;
-%         th2_start = th2_start - step;
-%     elseif(t <=15)
-%         th1_start = th1_start - step;
-%         th2_start = th2_start + step;
-%     end
-    th1_start = th1_start + sind(step);
-    th2_start = th2_start + sind(step);    
+
+    th1_start = th1_st + sind(step);
+    th2_start = th2_st + sind(step);    
     r = [th1_start; th2_start];
     step = step + 3;
+    
     %% Fit curve
     [curve, coeffs] = fit_curve(skelX, skelY);
     
@@ -85,11 +75,11 @@ while(t<=t_end)
     hold on
     
     % Skeleton Points
-    plot(link1PtsX(:), link1PtsY(:), 'ro');
-    plot(link2PtsX(:), link2PtsY(:), 'ro');
+%     plot(link1PtsX(:), link1PtsY(:), 'ro');
+%     plot(link2PtsX(:), link2PtsY(:), 'ro');
     
     % Curve
-    plot(curve, 'g');
+%     plot(curve, 'g');
 %     hold off
     %% Collect shape and pose data
     t = t+1;
