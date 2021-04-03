@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-ROS Service Server for retrieving lock and key positions.
+ROS Service Server for retrieving average of the past 30
+lock and key positions. Publishes lock and key positions as topics.
+Publishes key yaw as a topic.
 """
 from __future__ import print_function
 
@@ -14,6 +16,7 @@ import tf
 from tf2_ros import TransformException
 import tf_conversions
 
+#Number of samples to use when average key/lock positions (and key angle)
 nsamples=30
 key_point={'x':deque(maxlen=nsamples),
 		   'y':deque(maxlen=nsamples),
@@ -25,26 +28,31 @@ key_angle=deque(maxlen=nsamples)
 # lock_yaw=deque(maxlen=nsamples)
 
 def key_callback(key_msg):
+	'''Adds latest key_msg to FIFO queue.'''
 	global key_point
 	key_point['x'].append(key_msg.point.x)
 	key_point['y'].append(key_msg.point.y)
 	key_point['z'].append(key_msg.point.z)
 
 def lock_callback(lock_msg):
+	'''Adds latest lock_msg to FIFO queue.'''
 	global lock_point
 	lock_point['x'].append(lock_msg.point.x)
 	lock_point['y'].append(lock_msg.point.y)
 	lock_point['z'].append(lock_msg.point.z)
 
 def key_angle_callback(key_angle_msg):
+	'''Adds latest key_angle_msg to FIFO queue.'''
 	global key_angle
 	key_angle.append(key_angle_msg.data)
 
 # def lock_yaw_callback(lock_yaw_msg):
+#	'''Adds latest lock_yaw_msg to FIFO queue.''
 # 	global lock_yaw
 # 	lock_yaw.append(lock_yaw_msg.data)
 
 def ave(data):
+	'''Calculates average'''
 	return sum(data)/len(data)
 
 def get_poses(req):
@@ -76,6 +84,8 @@ def get_poses(req):
 			#Build key_pose msg
 			response.key_pose.header=key_response.header
 			response.key_pose.pose.position=key_response.point
+			#TODO: Consider defining a heuristic to determine roll angle rather than
+			#hardcoding. Current value assumes "tooth-side up"
 			#Convert RPY to Quaternion
 			key_quat=tf_conversions.transformations.quaternion_from_euler(-1.5708,0,ave(key_angle))
 			response.key_pose.pose.orientation.x = key_quat[0]
@@ -97,6 +107,7 @@ def lock_key_pose_server():
 	rospy.init_node('lock_and_key_poses_server')
 	rospy.Subscriber("/lock_point", PointStamped, lock_callback)
 	rospy.Subscriber("/key_point", PointStamped, key_callback)
+	#TODO: Get lock_yaw (or maybe just use PCL plane detection and not do anything here)
 	#rospy.Subscriber("/lock_yaw", Float64, lock_yaw_callback)
 	rospy.Subscriber("/key_angle", Float64, key_angle_callback)
 	s = rospy.Service('lock_and_key_poses', GetLockKeyPoses, get_poses)

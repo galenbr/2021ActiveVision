@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-ROS node for lock and key segmentation and centroid finding
+ROS node for lock and key color segmentation and centroid finding.
+Publishes lock and key centroids from color segmentation. Publishes
+visualization image. Publishes key angle from PCA.
 """
 import cv2
 import image_utils
@@ -34,6 +36,7 @@ class FinderPub:
         self.lock_center=None
         self.lock_center_depth=None
         #self.lock_yaw=None
+        #Use image_geometry for camera calculations
         self.rgb_camera=image_geometry.PinholeCameraModel()
         self.rgb_camera_info_received=False
         self.rgb_image=None
@@ -128,7 +131,7 @@ class FinderPub:
                                                                  self.key_search_box,
                                                                  self.key_min_hsv,
                                                                  self.key_max_hsv,
-                                                                 new_pixel=[0,255,255], #Yellow, Blue:[255,0,0]
+                                                                 new_pixel=[0,255,255], #Yellow
                                                                  centroid_pixel=[0,0,255], #Red 
                                                                  show_pca=True)
         #Update img for lock (ignore orientation for now)
@@ -260,6 +263,8 @@ class FinderPub:
             key_max_pix=list(key_max_pix)
             lock_min_pix=list(lock_min_pix)
             lock_max_pix=list(lock_max_pix)
+
+            #TODO: Find a better way to define/pad bounding box
             #Add padding to bounding boxes
             image_max_x=640
             image_max_y=480

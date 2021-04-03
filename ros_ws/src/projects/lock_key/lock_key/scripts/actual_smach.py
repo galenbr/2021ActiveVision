@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-SMACH for key insertion procedure
+Defines SMACH/state machine for key insertion procedure.
 """
 from __future__ import print_function
 import rospy
@@ -23,6 +23,8 @@ import moveit_planner.srv
 
 def restrict_base_joint(min_position=-1.0,max_position=1.0):
     '''Restricts base joint angle to specified range (radians).'''
+
+    #TODO: Verify - Does this actually restrict the joints??
     rospy.set_param("robot_description_planning/joint_limits/panda_joint1/min_position",min_position)
     rospy.set_param("robot_description_planning/joint_limits/panda_joint1/max_position",max_position)
 
@@ -132,6 +134,8 @@ class GetPositions(smach.State):
         # rospy.loginfo(x_offset_close)
         # rospy.loginfo(y_offset_close)
         #Set rotated yaw parameter after offset calcs are finished.
+        #TODO: pi/2 is a hardcoded offset between the map and camera_link. This should
+        #be retrieved using tf instead.
         rospy.set_param("key_goal/yaw",yaw-pi/2)
 
         rospy.set_param("padlock_goal/x",response.lock_point.point.x) #-x_offset
@@ -431,7 +435,9 @@ def main():
 		smach.StateMachine.add('CloseGripper', CloseGripper(), 
 	                           transitions={'succeeded':'NavigateToPostKey',  
 	                                        'failed':'CloseGripper'})
-		smach.StateMachine.add('NavigateToPostKey', NavigateToPostKey(), 
+		#TODO: Should consolidate and "push_back" the next few motions
+        #to get a smoother/faster trajectory.
+        smach.StateMachine.add('NavigateToPostKey', NavigateToPostKey(), 
 	                           transitions={'succeeded':'NavigateToPostKeyRotated',  
 	                                        'failed':'NavigateToPostKey'})
 		smach.StateMachine.add('NavigateToPostKeyRotated', NavigateToPostKeyRotated(), 
