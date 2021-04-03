@@ -17,6 +17,7 @@ Key-in-Lock Insertion using FT sensing and RGBD vision.
 ### Simulation (using deprecated method)
 1. ```roslaunch lock_key sim.launch```
 2. ```roslaunch lock_key run.launch```
+
 **Note** commander.py should be able to be used with Gazebo by setting gazebo=True and modifying the ee_link. Current vision system does not work in simulation.
 
 ## Package contents
@@ -31,21 +32,21 @@ Contains core launch, src, and script files.
 #### trac-ik
 Provides an alternative IK solver to the inverse Jacobian methods in KDL. Seems to work better on actual arm.
 
-### Useful commands
+## Useful commands
 - Open/Close gripper on actual Panda (Set epsilon values to 0.05).
     - ```rostopic pub /franka_gripper/grasp/goal franka_gripper/GraspActionGoal ...```
 - Send commands to the arm through Rviz
 	- ```roslaunch panda_moveit_config panda_control_moveit_rviz.launch robot_ip:=172.16.0.2 load_gripper:=true```
 
-### Open Issues
-- Verify trac-ik respects joint limit parameters.
-- Finish adding insertion plane orientation capabilities to vision system.
-- Place additional constraints on lock plane detection (to not detect vertical planes).
-- Add "return key to table" to SMACH.
-- Make it easier to switch between Gazebo/Actual Panda development.
-- Improve color segmentation for key/lock finding.
-- Perform spiral search on any plane (not just horizontal).
-- Tune spiral search parameters for higher success rate.
-- Look for memory leaks. Is system stable over longer periods of time?
-- Move actions and srv definitions in lock_key to lock_key_msgs. Update affected src files.
-- Add collision objects to scene.
+## Open Issues
+- [ ] Verify trac-ik respects joint limit parameters.
+- [ ] Finish adding insertion plane orientation capabilities to vision system.
+- [ ] Place additional constraints on lock plane detection (to not detect vertical planes).
+- [ ] Add "return key to table" to SMACH.
+- [ ] Make it easier to switch between Gazebo/Actual Panda development.
+- [ ] Improve color segmentation for key/lock finding.
+- [ ] Perform spiral search on any plane (not just horizontal).
+- [ ] Tune spiral search parameters for higher success rate.
+- [ ] Look for memory leaks. Is system stable over longer periods of time?
+- [ ] Move actions and srv definitions in lock_key to lock_key_msgs. Update affected src files.
+- [ ] Add collision objects to scene.
