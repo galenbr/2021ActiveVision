@@ -57,6 +57,7 @@ void MainWindow::executeResetSequence(){
   ResetSequenceClient.call(srv_resetseq);
 }
 
+// Approach to a pre-grasp position
 void MainWindow::executePrepareGrasp(){
   manipulation_exp::Sequence srv_prepgrasp;
   srv_prepgrasp.request.start = 1;
@@ -73,6 +74,8 @@ void MainWindow::displayStartMessage(){
   start = text_start + "d1 & d2: " + d_init + "\n" + "z: " + z_init;
   ui->textEdit->setText(start);
 }
+
+// Execute a manipulation plan and report results
 
 void MainWindow::executePlan(){
 
@@ -98,6 +101,7 @@ void MainWindow::set_zVal(double val){
   zVal = val;
 }
 
+// Adjust arm to achieve desired state
 void MainWindow::executeAdjustArm(){
   manipulation_planning::ArmAdjust srv_armadjust;
   srv_armadjust.request.d = dVal;
@@ -105,6 +109,7 @@ void MainWindow::executeAdjustArm(){
   AdjustArmClient.call(srv_armadjust);
 }
 
+// Release the object
 void MainWindow::executeReleaseObject(){
 gripper_controls::Holdcommand srv_release;
 srv_release.request.left = 0.5;
@@ -112,7 +117,7 @@ srv_release.request.right = 0.5;
 ReleaseObjectClient.call(srv_release);
 }
 
-// Gazebo
+// Gazebo related operations
 void MainWindow::resetWorld(){
   std_srvs::Empty srv_reset;
   ResetWorldClient.call(srv_reset);

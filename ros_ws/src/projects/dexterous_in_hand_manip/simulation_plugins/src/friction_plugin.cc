@@ -15,7 +15,11 @@ namespace gazebo
 
     void Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf){
       this->model =_parent;
+      
       // various phyiscs property pointers
+      // Detailed information can be found on:
+      // https://osrf-distributions.s3.amazonaws.com/gazebo/api/dev/namespacegazebo_1_1physics.html
+
       physics::LinkPtr left_finger = model->GetLink("L2");
       physics::LinkPtr right_finger = model->GetLink("L1");
       physics::CollisionPtr col_left = left_finger->GetCollision("L2_collision");

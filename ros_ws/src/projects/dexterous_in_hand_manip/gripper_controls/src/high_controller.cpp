@@ -4,6 +4,7 @@
 int main(int argc, char **argv){
   ros::init(argc, argv, "High_level_action_server");
   ros::NodeHandle n;
+
   // to be able to run both arm+gripper and gripper
   std::string topic_js;
   if(argc == 1) {
@@ -16,7 +17,10 @@ int main(int argc, char **argv){
     ns = argv[1];
     topic_js = ns + "/joint_states";
   }
+
+  // Construct Hand object
   Hand my_hand(topic_js);
+  // Advertise services
   ros::ServiceServer service_slfd = n.advertiseService("Slide_Left_Finger_Down", &Hand::slide_left_down, &my_hand);
   ros::ServiceServer service_slfu = n.advertiseService("Slide_Left_Finger_Up", &Hand::slide_left_up, &my_hand);
   ros::ServiceServer service_srfd = n.advertiseService("Slide_Right_Finger_Down", &Hand::slide_right_down, &my_hand);

@@ -35,6 +35,8 @@ public:
   LowLvlController(){
     std::cout << "Controller object constructed" << std::endl;
   }
+
+  // Controller switch between position and effort controllers
   bool set_controller_type(gripper_controls::SetControlType::Request &req, gripper_controls::SetControlType::Response &res){
     l_finger_type = req.left;
     r_finger_type = req.right;
@@ -47,6 +49,7 @@ public:
     return 1;
   }
 
+  // Send effort commands
   bool set_effort(gripper_controls::SetControlValue::Request &req, gripper_controls::SetControlValue::Response &res){
     if(req.finger==0)
       l_finger_effort = req.value;
@@ -55,6 +58,8 @@ public:
     res.success = 1;
     return 1;
   }
+
+  // Send position commands
   bool set_pos(gripper_controls::SetControlValue::Request &req, gripper_controls::SetControlValue::Response &res){
     if(req.finger==0){
       l_finger_pos = req.value;
@@ -65,12 +70,13 @@ public:
     res.success = 1;
     return 1;
   }
+
+  // Switch friction
   bool friction_setter(gripper_controls::SetFriction::Request &req, gripper_controls::SetFriction::Response &res){
     ros::NodeHandle n;
     float high_friction{0};
     float low_friction{0};
-    // low_friction = low_fLim;
-    // high_friction = high_fLim;
+    // Read low an high friction values from parameter server
     n.getParam("/low_level/high_friction", high_friction);
     n.getParam("/low_level/low_friction", low_friction);
     // set predefined friction value depending on request --> high or low
@@ -90,36 +96,42 @@ public:
     ROS_INFO("Right %f",r_finger_friction);
     return 1;
   }
+  // Return controller type for finger
   int get_finger_type(int finger){
     if(finger==0)
       return l_finger_type;
     else
       return r_finger_type;
   }
+  // Return finger position reference
   float get_finger_pos(int finger){
     if(finger==0)
       return l_finger_pos;
     else
       return r_finger_pos;
   }
+  // Return finger torque reference
   float get_finger_effort(int finger){
     if(finger==0)
       return l_finger_effort;
     else
       return r_finger_effort;
   }
+  // Return finger friction state
   float get_finger_friction(int finger){
     if(finger==0)
       return l_finger_friction;
     else
       return r_finger_friction;
   }
+  // Return current finger torque
   int get_applied_effort(int finger){
     if(finger==0)
       return left_effort;
     else
       return right_effort;
   }
+  // Read finger torque and position from simulation
   void jsCallback(const sensor_msgs::JointState& msg){
     // get current effort and position
     left_effort = msg.effort[1];
@@ -127,6 +139,7 @@ public:
     left_position = msg.position[1];
     right_position = msg.position[0];
   }
+  // Update friction limits according to ros topic
   void fLimitsCallback(const simulation_ui::SimFriction& msg){
     low_fLim = msg.low;
     high_fLim = msg.high;

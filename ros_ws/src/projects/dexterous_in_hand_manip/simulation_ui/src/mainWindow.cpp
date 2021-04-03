@@ -150,6 +150,7 @@ void MainWindow::setSurfaceRadius(double surfaceRadius) {
   srv.request.param = surfaceRadius;
   setSurfaceRadiusClient.call(srv);
 }
+
 // Low level param
 void MainWindow::computeLowFriction(int val){
   double lowFriction{0.0};

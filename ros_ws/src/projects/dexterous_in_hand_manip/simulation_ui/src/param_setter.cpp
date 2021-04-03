@@ -80,29 +80,38 @@ int main(int argc, char **argv){
   ros::NodeHandle n;
   ParamSetter param_setter;
 
-
+  // Advertise services for UI
   ros::ServiceServer service_set_muTorsion = n.advertiseService("set_muTorsion", &ParamSetter::muTorsion_setter, &param_setter);
   ros::ServiceServer service_set_usePR = n.advertiseService("set_usePR", &ParamSetter::usePR_setter, &param_setter);
   ros::ServiceServer service_set_patchRadius = n.advertiseService("set_patchRadius", &ParamSetter::patchRadius_setter, &param_setter);
   ros::ServiceServer service_set_surfaceRadius = n.advertiseService("set_surfaceRadius", &ParamSetter::surfaceRadius_setter, &param_setter);
   ros::ServiceServer service_set_lowFriction = n.advertiseService("set_lowfriction", &ParamSetter::lowFriction_setter, &param_setter);
   ros::ServiceServer service_set_highFriction = n.advertiseService("set_highfriction", &ParamSetter::highFriction_setter, &param_setter);
+
+  // Publishers (simulation parameters and friction parameters)
   ros::Publisher param_pub = n.advertise<simulation_ui::SimParam>("/vf_hand/parameter_setter", 1000);
   ros::Publisher friction_pub = n.advertise<simulation_ui::SimFriction>("/vf_hand/friction_limits", 1000);
 
   ros::Rate loop_rate(10);
+
   while(ros::ok()){
 
+    // Get current parameters and generate parameter message
     simulation_ui::SimParam param_msg;
     param_msg.MuTorsion = param_setter.get_muTorsion();
     param_msg.usePR = param_setter.get_usePR();
     param_msg.PatchRadius = param_setter.get_patchRadius();
     param_msg.SurfaceRadius = param_setter.get_surfaceRadius();
+    // Publish parameter message
     param_pub.publish(param_msg);
+
+    // Get current friction limits and generate friction message
     simulation_ui::SimFriction friction_msg;
     friction_msg.low = param_setter.get_lowFriction();
     friction_msg.high = param_setter.get_highFriction();
+    //  Publish friction message
     friction_pub.publish(friction_msg);
+    
     ros::spinOnce();
     loop_rate.sleep();
   }
