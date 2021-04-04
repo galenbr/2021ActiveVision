@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Image processing utility functions
+Contains image processing utility functions using cv2.
 """
 
 import copy
@@ -33,12 +33,6 @@ def modify_key_angle(img, angle, key_data, cntr, search_radius):
     img = cv2.circle(img, p1, 2, (255,0,0), 4)
     img = cv2.circle(img, tuple(p2_max), 2, (0,0,255), 4)
     img = cv2.circle(img, p2, 2, (0,255,0), 4)
-    # rospy.loginfo('*****')
-    # rospy.loginfo(tuple(p1_max))
-    # rospy.loginfo(p1)
-    # rospy.loginfo(tuple(p2_max))
-    # rospy.loginfo(p2)
-
     #Find distances from key center to extreme datapoints along primary axis
     d1=get_distance(cntr,p1)
     d2=get_distance(cntr,p2)

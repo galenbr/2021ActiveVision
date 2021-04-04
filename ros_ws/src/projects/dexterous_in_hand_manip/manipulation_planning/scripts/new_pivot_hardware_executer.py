@@ -66,7 +66,7 @@ def get_pose():
         print("Service call failed: %s"%e)
 
     res = resp.link_state.pose
-    res.position.x = res.position.x + 0.107
+    res.position.y = res.position.y - 0.107
 
     return res
 
@@ -95,6 +95,17 @@ def move_down(val):
     # get ee pose: through gazebo/get_link_state, link name: panda_link7ref = get_pose()
     ref = get_pose()
     ref.position.z = ref.position.z - val
+    try:
+        mtp = rospy.ServiceProxy('franka_act/move_pose', ArmPose)
+        resp = mtp(ref)
+    except rospy.ServiceException as e:
+        print("Service call failed: %s"%e)
+
+def move_back(val):
+    print("testing move back", val)
+    # get ee pose: through gazebo/get_link_state, link name: panda_link7ref = get_pose()
+    ref = get_pose()
+    ref.position.y = ref.position.y + val
     try:
         mtp = rospy.ServiceProxy('franka_act/move_pose', ArmPose)
         resp = mtp(ref)
@@ -151,6 +162,15 @@ def pivot(theta_finger,dx,theta_pivot,dz,dl):
     #     # print(resp.link_state.pose.orientation,tr.quaternion_from_matrix(p_ee))
     # except rospy.ServiceException as e:
     #     print("Service call failed: %s"%e)
+
+    rospy.wait_for_service('set_friction')
+    sf = rospy.ServiceProxy('set_friction', SetFriction)
+    resp = sf(0,True)
+    resp = sf(1,True)
+    move_up(0.03)
+    time.sleep(5)
+    move_back(0.04)
+    time.sleep(5)
     p, q = pose_to_pq(get_pose())
     norm = np.linalg.norm(q)
     if np.abs(norm - 1.0) > 1e-3:
@@ -162,14 +182,14 @@ def pivot(theta_finger,dx,theta_pivot,dz,dl):
     g = tr.quaternion_matrix(q)
     g[0:3, -1] = p
     p_ee = g
-    # print(p_ee)
+    print(p_ee)
 
     # calculate transformation with theta_pivot = 0
     offset = 0.070
     T_ee_palm = get_transform(-np.pi/2,offset,0,np.pi/2)
     T_palm_contact = get_transform(theta_finger,0,dx,np.pi/2)
-    T_contact_dummy = get_transform(0-np.pi/2,0,dz,np.pi)
-    T_dummy_pivot = get_transform(np.pi/2,0,dl,0)
+    T_contact_dummy = get_transform(0-np.pi/2,0,dz,0)
+    T_dummy_pivot = get_transform(-np.pi/2,0,dl,np.pi)
     T_pivot_fixed = get_transform(0,0,0,0)
     # T_ee_palm = get_transform(0,0,offset,0)
     # T_palm_contact = get_transform(theta_finger-np.pi/2,0,dx,np.pi/2)
@@ -180,32 +200,23 @@ def pivot(theta_finger,dx,theta_pivot,dz,dl):
     p_fixed = np.matmul(p_ee,T_ee_fixed)
     # for theta_pivot in range(0,theta_pivot)
 
-    seg1_ang_pivot = np.arange(0,theta_pivot/2+np.pi/16,np.pi/16)
+    # seg1_ang_pivot = np.arange(0,theta_pivot/2+np.pi/16,np.pi/16)
     p_ee_path1 = []
-    for i in range(0,len(seg1_ang_pivot)):
-        pivot_angle = seg1_ang_pivot[i]
-        # T_contact_object = get_transform(angle,z,0,0)
-        T_contact_dummy = get_transform(0-np.pi/2,0,dz,np.pi)
-        # T_pivot_fixed = get_transform(angle,0,0,0)
-        T_pivot_fixed = get_transform(pivot_angle,0,0,0)
-        T_ee_fixed = np.matmul(T_ee_palm,np.matmul(T_palm_contact,np.matmul(T_contact_dummy,np.matmul(T_dummy_pivot,T_pivot_fixed))))
-        # p_ee_path.append(np.matmul(np.linalg.inv(T_ee_object),p_object))
-        p_ee_path1.append(np.matmul(p_fixed,np.linalg.inv(T_ee_fixed)))
+    # for i in range(0,len(seg1_ang_pivot)):
+    #     pivot_angle = seg1_ang_pivot[i]
+    #     # T_contact_object = get_transform(angle,z,0,0)
+    #     T_contact_dummy = get_transform(0-np.pi/2,0,dz,np.pi)
+    #     # T_pivot_fixed = get_transform(angle,0,0,0)
+    #     T_pivot_fixed = get_transform(pivot_angle,0,0,0)
+    #     T_ee_fixed = np.matmul(T_ee_palm,np.matmul(T_palm_contact,np.matmul(T_contact_dummy,np.matmul(T_dummy_pivot,T_pivot_fixed))))
+    #     # p_ee_path.append(np.matmul(np.linalg.inv(T_ee_object),p_object))
+    #     p_ee_path1.append(np.matmul(p_fixed,np.linalg.inv(T_ee_fixed)))
 
-    seg2_ang_pivot = np.arange(theta_pivot/2,theta_pivot+np.pi/16,np.pi/16)
-    seg2_ang_contact = np.arange(0,theta_pivot+np.pi/16,np.pi/8)
-    p_ee_path2 = []
-    for i in range(0,len(seg2_ang_pivot)):
-        contact_angle = seg2_ang_contact[i]
-        pivot_angle = seg2_ang_pivot[i]
-        # T_contact_object = get_transform(angle,z,0,0)
-        T_contact_dummy = get_transform(contact_angle-np.pi/2,0,dz,np.pi)
-        T_pivot_fixed = get_transform(pivot_angle,0,0,0)
-        T_ee_fixed = np.matmul(T_ee_palm,np.matmul(T_palm_contact,np.matmul(T_contact_dummy,np.matmul(T_dummy_pivot,T_pivot_fixed))))
-        # p_ee_path.append(np.matmul(np.linalg.inv(T_ee_object),p_object))
-        p_ee_path2.append(np.matmul(p_fixed,np.linalg.inv(T_ee_fixed)))
 
-    print(p_ee_path2[-1])
+    T_pivot_fixed = get_transform(theta_pivot/2,0,0,0)
+    T_ee_fixed = np.matmul(T_ee_palm,np.matmul(T_palm_contact,np.matmul(T_contact_dummy,np.matmul(T_dummy_pivot,T_pivot_fixed))))
+    p_ee_path1.append(np.matmul(p_fixed,np.linalg.inv(T_ee_fixed)))
+
     franka_ref1 = []
     for item in p_ee_path1:
         ref = Pose()
@@ -218,6 +229,65 @@ def pivot(theta_finger,dx,theta_pivot,dz,dl):
         ref.orientation.z = q[2]
         ref.orientation.w = q[3]
         franka_ref1.append(ref)
+
+    time.sleep(5)
+    rospy.wait_for_service('franka_act/move_pose')
+    for ref in franka_ref1:
+        try:
+            mtp = rospy.ServiceProxy('franka_act/move_pose', ArmPose)
+            resp = mtp(ref)
+        except rospy.ServiceException as e:
+            print("Service call failed: %s"%e)
+
+    print("First segment complete!")
+    time.sleep(5)
+    move_down(0.05)
+    time.sleep(5)
+    # seg2_ang_pivot = np.arange(theta_pivot/2,theta_pivot+np.pi/16,np.pi/16)
+    # seg2_ang_contact = np.arange(0,theta_pivot+np.pi/16,np.pi/8)
+    p, q = pose_to_pq(get_pose())
+    norm = np.linalg.norm(q)
+    if np.abs(norm - 1.0) > 1e-3:
+        raise ValueError(
+            "Received un-normalized quaternion (q = {0:s} ||q|| = {1:3.6f})".format(
+                str(q), np.linalg.norm(q)))
+    elif np.abs(norm - 1.0) > 1e-6:
+        q = q / norm
+    g = tr.quaternion_matrix(q)
+    g[0:3, -1] = p
+    p_ee = g
+
+    T_ee_palm = get_transform(-np.pi/2,offset,0,np.pi/2)
+    T_palm_contact = get_transform(theta_finger,0,dx,np.pi/2)
+    T_contact_dummy = get_transform(0-np.pi/2,0,dz,0)
+    T_dummy_pivot = get_transform(-np.pi/2,0,dl,np.pi)
+    T_pivot_fixed = get_transform(theta_pivot/2,0,0,0)
+    # T_ee_palm = get_transform(0,0,offset,0)
+    # T_palm_contact = get_transform(theta_finger-np.pi/2,0,dx,np.pi/2)
+    # T_contact_object = get_transform(0,z,0,0)
+    T_ee_fixed = np.matmul(T_ee_palm,np.matmul(T_palm_contact,np.matmul(T_contact_dummy,np.matmul(T_dummy_pivot,T_pivot_fixed))))
+    # print(T_ee_object)
+    # get object pose: p_object = T*p_ee
+    p_fixed = np.matmul(p_ee,T_ee_fixed)
+
+    p_ee_path2 = []
+    # for i in range(0,len(seg2_ang_pivot)):
+    #     contact_angle = seg2_ang_contact[i]
+    #     pivot_angle = seg2_ang_pivot[i]
+    #     # T_contact_object = get_transform(angle,z,0,0)
+    #     T_contact_dummy = get_transform(contact_angle-np.pi/2,0,dz,np.pi)
+    #     T_pivot_fixed = get_transform(pivot_angle,0,0,0)
+    #     T_ee_fixed = np.matmul(T_ee_palm,np.matmul(T_palm_contact,np.matmul(T_contact_dummy,np.matmul(T_dummy_pivot,T_pivot_fixed))))
+    #     # p_ee_path.append(np.matmul(np.linalg.inv(T_ee_object),p_object))
+    #     p_ee_path2.append(np.matmul(p_fixed,np.linalg.inv(T_ee_fixed)))
+
+    T_contact_dummy = get_transform(np.pi/2-np.pi/2,0,dz,0)
+    T_pivot_fixed = get_transform(theta_pivot,0,0,0)
+    T_ee_fixed = np.matmul(T_ee_palm,np.matmul(T_palm_contact,np.matmul(T_contact_dummy,np.matmul(T_dummy_pivot,T_pivot_fixed))))
+    # p_ee_path.append(np.matmul(np.linalg.inv(T_ee_object),p_object))
+    p_ee_path2.append(np.matmul(p_fixed,np.linalg.inv(T_ee_fixed)))
+
+    # print(p_ee_path2[-1])
 
     franka_ref2 = []
     for item in p_ee_path2:
@@ -238,28 +308,16 @@ def pivot(theta_finger,dx,theta_pivot,dz,dl):
     # set_friction_l = set_friction_right(0)
     # set_friction_r = set_friction_left(0)
 
-    rospy.wait_for_service('set_friction')
-    sf = rospy.ServiceProxy('set_friction', SetFriction)
-    resp = sf(0,True)
-    resp = sf(1,True)
     # move_to_pose: p_ee
-    rospy.wait_for_service('franka_act/move_pose')
-    for ref in franka_ref1:
-        try:
-            mtp = rospy.ServiceProxy('franka_act/move_pose', ArmPose)
-            resp = mtp(ref)
-        except rospy.ServiceException as e:
-            print("Service call failed: %s"%e)
-
-    print("First segment complete!")
     # set friction high
 
     # set_friction_l = set_friction_right(1)
     # set_friction_r = set_friction_left(1)
-    rospy.wait_for_service('set_friction')
-    sf = rospy.ServiceProxy('set_friction', SetFriction)
-    resp = sf(0,False)
-    resp = sf(1,False)
+    # rospy.wait_for_service('set_friction')
+    # sf = rospy.ServiceProxy('set_friction', SetFriction)
+    # resp = sf(0,False)
+    # resp = sf(1,False)
+    # time.sleep(2)
     # move back to first p_ee through the same points
 
     for ref in franka_ref2:
@@ -268,6 +326,9 @@ def pivot(theta_finger,dx,theta_pivot,dz,dl):
             resp = mtp(ref)
         except rospy.ServiceException as e:
             print("Service call failed: %s"%e)
+
+    time.sleep(5)
+    move_up(0.02)
 
 def angle_conversion(angle, flag):
     # angle = 180. * angle / np.pi
@@ -607,8 +668,11 @@ def execute_plan():
 if __name__ == "__main__":
     rospy.init_node('control_loop')
     # hold_object(angle_conversion(1.57,'left'),angle_conversion(1.57,'right'))
+    hold_object(0,0)
     # move_down(0.055)
     execute_plan()
+    time.sleep(5)
+    hold_object(0.5,0.5)
     # time.sleep(5)
     # release_object(angle_conversion(2.17,'left'),angle_conversion(0.97,'right'))
     # rospy.spin()

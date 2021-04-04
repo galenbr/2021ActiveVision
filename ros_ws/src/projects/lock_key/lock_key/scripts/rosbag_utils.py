@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 Saves messages from color and depth image ROS topics to JPEGs.
-Topics and bag are input by user.
+Topics and bag are input by user at the bottom of this file.
 
 Usage: python rosbag_utils.py
 '''

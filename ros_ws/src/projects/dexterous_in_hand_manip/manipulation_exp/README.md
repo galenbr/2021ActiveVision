@@ -1,3 +1,12 @@
+# manipulation_exp
+This package is used for a higher level planner implementation that combines services advertised by arm_controls and gripper_controls into some sequential manipulation strategies.
+> This package contains:
+> 1. Implementation of the ManipulationSequence class
+> 2. Server node for manipulation sequence services
+> 3. Deprecated test node for sequential manipulation test
+
+Following services are the main functionalities provided by this package.
+
 #### Available Services:
 
 Do not forget to source the workspace
@@ -32,6 +41,5 @@ Do not forget to source the workspace
 ```
   rosservice call /ih_manip/rotating_test "start: 0"
 ```
-
 
 These services can be used in combination with lower level (non-sequential) services to generate other desired sequences.

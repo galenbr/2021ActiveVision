@@ -13,12 +13,12 @@
   <link name="table">
     <visual>
       <geometry>
-	<box size="0.3 0.5 0.4" />
+	<box size="0.3 0.5 0.6" />
       </geometry>
     </visual>
     <collision>
       <geometry>
-	<box size="0.3 0.5 0.4" />
+	<box size="0.3 0.5 0.6" />
       </geometry>
     </collision>
     <inertial>
@@ -28,7 +28,7 @@
   </link>
 
   <joint name="fixed" type="fixed">
-    <origin rpy="0 0 0" xyz="0.8 0 0.225" />
+    <origin rpy="0 0 1.5708" xyz="0.4 -0.5 0.3" />
     <parent link="world" />
     <child link="table" />
   </joint>

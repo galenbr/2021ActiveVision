@@ -1,54 +1,34 @@
 # Dexterous In Hand Manipulation
-This project investigates in-hand manipulation strategies based on the integration of a variable friction (VF) hand and Franka Emika Panda arm. This folder currently contains low and high level planning nodes for both Franka arm and variable friction hand.
+This project investigates in-hand manipulation strategies based on the integration of a variable friction (VF) hand and Franka Emika Panda arm. This folder currently contains low and high level planning nodes for both Franka arm and variable friction hand, setups for manipulation environments and experiments, user interfaces for parameter modification and robot operation, simulation plugins, and a moveit setup for combined Franka arm and variable friction hand.
 
 ## Packages:
 
 ### arm_controls
-This package is used for high level motion planning of the Franka arm. Using the services advertised by the moveit_planner package, high level commands such as rest_pose, initialize_arm_pose, grasp_pose, move_up and move_down are implemented. To run the node, you can either launch arm_controller.launch or include the arm_ctrl node in your project specific launch file.
-> This package contains:
-> 1. yaml config files for parameters such as, initial, rest and grasp pose
-> 2. launch file for arm_ctrl node
-> 3. arm_ctrl node
-> 4. Readme file for available services
+This package is used for high level motion planning of the Franka arm.
 
 ### gripper_controls
 This package is based on the motion planning nodes in variable_friction_gripper project, which prepared to be used on hardware. Same logic and functionality is transferred to the gazebo simulation in this package.
 
-Low level controller is based on the class LowLvlController and deals with low level tasks such as receiving and publishing effort, position references, friction values for the left and right fingers.
-
-High level controller is based on the class Hand. It advertises services of high level commands such as, Hold_object, Slide_Left_Finger_Down, Slide_Left_Finger_Up, Slide_Right_Finger_Down, Slide_Right_Finger_Up, Rotate_clockwise, Rotate_anticlockwise, by using the low level commands.
-
-Also a sequential command node is included, that helps testing the services advertised by the high level controller. It is possible to use the torque publisher and a plotting method of your own choice to analyse the gripper behavior during tasks.
-
-high_lvl_ctrl and low_lvl_ctrl nodes can either be run seperately, or you may use the launch file that launches both controllers.
-> This package contains:
-> 1. yaml config files for low level and high level controller parameters
-> 2. launch file for gripper controller
-> 3. Implementation of high and low level controllers
-> 4. A sequential command node for testing the advertised services
-> 4. A torque publisher for analysing the gripper behavior
-> 5. Readme file for available services
-
 ### manipulation_env
-This package is used to generate a manipulation environment. Manipulation environment currently consists of a table and a rectangular block object. Collision characteristics of the block object plays an important role in the manipulation performance. Parameters such as friction coefficients, Kp and Kd can be modified within the corresponding description file.
-> This package contains:
-> 1. description files for objects
-> 2. launch file for launching the integrated arm & gripper in a manipulation environment
-> 3. launch file for gripper only (for testing purposes) in a manipulation environment
+This package is used to generate a manipulation environment.
 
 ### manipulation_exp
 This package is used for a higher level planner implementation that combines services advertised by arm_controls and gripper_controls into some sequential manipulation strategies.
-> This package contains:
-> 1. Implementation of the ManipulationSequence class
-> 2. Server node for manipulation sequence services
-> 3. Deprecated test node for sequential manipulation test
-> 4. Readme file for available services
 
-### simulation_plugings
-> This package contains a gazebo plugin for varying friction in runtime.
+### manipulation_planning
+This package is used to read and execute planned manipulation sequences.
+
+### planning_ui
+This package contains an easy-to-use user interface to perform experiments allowing users to adjust the initial states, execute manipulation plans, compute results, and reset simulation.
+
+### simulation_plugins
+This package contains gazebo plugins to switch between low and high friction states, and modify other friction related simulation parameters.
+
+### simulation_ui
+This package contains an easy-to-use user interface to modify simulation parameters and send motion primitive commands to the gazebo simulation.
 
 ### vf_moveit_config
-> This package contains moveit config and launch files for arm and gripper.
+This package contains moveit config and launch files for arm and gripper setup.
 
 ## Testing example:
 1. Source the workspace

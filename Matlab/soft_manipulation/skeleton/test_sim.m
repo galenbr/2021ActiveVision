@@ -1,10 +1,10 @@
 clear;
 
-l1 = 20; 
-l2 = -10;
+l1 = 90; 
+l2 = 75;
 
 th1 = 30;
-th2 = 30;
+th2 = -30
 % syms th1, th2;
 
 eeX = l1*cosd(th1) + l2*cosd(th1 + th2);
@@ -17,12 +17,12 @@ baseX = 0;
 baseY = 0;
 
 %% Equation of Link1
-link1PtsX = linspace(0, j2X, 3);
-link1PtsY = linspace(0, j2Y, 3);
+link1PtsX = linspace(0, j2X, 10);
+link1PtsY = linspace(0, j2Y, 10);
 
 %% Equation of Link2
-link2PtsX = linspace(j2X, eeX, 3);
-link2PtsY = linspace(j2Y, eeY, 3);
+link2PtsX = linspace(j2X, eeX, 8);
+link2PtsY = linspace(j2Y, eeY, 8);
 
 %% Plot robot
 figure(1)
@@ -36,10 +36,10 @@ curvePtsX = [link1PtsX, link2PtsX];
 curvePtsY = [link1PtsY, link2PtsY];
 xpts = [0, j2X, eeX];
 ypts = [0, j2Y, eeY];
-p = polyfit(curvePtsX,curvePtsY,4);
-x1 = linspace(0,eeX);
-f1 = polyval(p,x1);
-f=fit(transpose(curvePtsX),transpose(curvePtsY),'fourier2')
+% p = polyfit(curvePtsX,curvePtsY,6);
+% x1 = linspace(0,eeX);
+% f1 = polyval(p,x1);
+f=fit(transpose(curvePtsX),transpose(curvePtsY),'poly6')
 % plot(x1, f1, 'm--')
 plot(f, curvePtsX, curvePtsY)
 

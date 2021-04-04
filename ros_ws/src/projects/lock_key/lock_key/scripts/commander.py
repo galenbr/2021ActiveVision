@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Class for working with MoveIt Commander.
+Defines high-level interface for using MoveIt Commander with the Panda arm.
 
 https://frankaemika.github.io/docs/franka_ros.html?highlight=reflex
 """
@@ -16,7 +16,6 @@ import tf_conversions
 #Services
 from lock_key.srv import getAveWrench, getWrench
 from moveit_planner.srv import GetTF, GetPose
-from franka_msgs.srv import SetLoad, SetLoadRequest, SetEEFrame, SetEEFrameRequest
 #Messages
 from std_msgs.msg import Header
 import franka_gripper.msg
@@ -36,10 +35,11 @@ class Commander:
 			self.group_name="arm"
 		else:
 			self.group_name = group_name
+			from franka_msgs.srv import SetLoad, SetLoadRequest, SetEEFrame, SetEEFrameRequest
 		self.move_group = moveit_commander.MoveGroupCommander(self.group_name)
 		#Set velocity scale
 		self.set_vel_scale(vel_scale)
-		#Define joint home positions
+		#Define joint home positions (matches "start" pose)
 		self.joint_home=[0.0,-0.785,0.0,-2.356, 0.0, 1.57, 0.784]
 		#Wait for action server
 		self.gripper_client = actionlib.SimpleActionClient('franka_gripper/grasp', 

@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-ROS node for calling plane finder service.
+ROS node for calling plane finder service. 
+Publishes point clouds, lock orientation, and lock plane coefficients.
 """
 import rospy
 from sensor_msgs.msg import PointCloud2
@@ -42,6 +43,7 @@ class CloudClient:
         #Identify and print the min/maxes of XYZ
         key_xs=[]; key_ys=[]; key_zs=[]
         lock_xs=[]; lock_ys=[]; lock_zs=[]
+        #Read in point cloud XYZ locations.
         #TODO: Do this faster. Vector operations or something
         for p in pc2.read_points(response.key_cloud, field_names = ("x", "y", "z"), skip_nans=True):
             key_xs.append(p[0])
@@ -52,11 +54,14 @@ class CloudClient:
             lock_ys.append(p[1])
             lock_zs.append(p[2])
 
+        #Identify min/max bounds of the key and lock point clouds so that we
+        #know where to perform color segmentation.
         bounds={'key':{'min':{'x':min(key_xs),'y':min(key_ys),'z':min(key_zs)},
                        'max':{'x':max(key_xs),'y':max(key_ys),'z':max(key_zs)}},
                 'lock':{'min':{'x':min(lock_xs),'y':min(lock_ys),'z':min(key_zs)},
                         'max':{'x':max(lock_xs),'y':max(lock_ys),'z':max(lock_zs)}},
                 'frame':'/camera_depth_optical_frame'}
+        #Set as parameter so that it is globally available
         rospy.set_param('bounds',bounds)
         
         #Publish point clouds
@@ -75,6 +80,7 @@ class CloudClient:
         rospy.sleep(0.2)
 
     def convert_plane_coeffs(self, coeffs_msg):
+        '''Converts plane coefficients to standard plane formula format.'''
         coeffs=PlaneCoefficients()
         coeffs.a=coeffs_msg.a/coeffs_msg.d
         coeffs.b=coeffs_msg.b/coeffs_msg.d

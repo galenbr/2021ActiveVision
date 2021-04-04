@@ -57,36 +57,36 @@ int main(int argc, char **argv){
   ros::ServiceClient add_coll = n.serviceClient<moveit_planner::AddCollision>("add_collision_object");
   moveit_planner::AddCollision srv;
 
-  moveit_msgs::CollisionObject floor_table;
-  floor_table.header.frame_id = "/world";
-  floor_table.id = "floor";
-
-    /* A default pose */
-  geometry_msgs::Pose pose1;
-  pose1.position.x = 0;
-  pose1.position.y = 0.0;
-  pose1.position.z = 0;
-  pose1.orientation.w = 1.0;
-
-  /* Define a box to be attached */
-  shape_msgs::SolidPrimitive primitive1;
-  primitive1.type = primitive1.BOX;
-  primitive1.dimensions.resize(3);
-  primitive1.dimensions[0] = 2;
-  primitive1.dimensions[1] = 0.5;
-  primitive1.dimensions[2] = 0.05;
-
-  floor_table.primitives.push_back(primitive1);
-  floor_table.primitive_poses.push_back(pose1);
-
-  srv.request.collObject = floor_table;
-
-  if (add_coll.call(srv)){
-    ROS_INFO("Collision added");
-  }
-  else{
-    ROS_ERROR("Collision adding failed");
-  }
+  // moveit_msgs::CollisionObject floor_table;
+  // floor_table.header.frame_id = "/world";
+  // floor_table.id = "floor";
+  //
+  //   /* A default pose */
+  // geometry_msgs::Pose pose1;
+  // pose1.position.x = 0;
+  // pose1.position.y = 0.0;
+  // pose1.position.z = 0;
+  // pose1.orientation.w = 1.0;
+  //
+  // /* Define a box to be attached */
+  // shape_msgs::SolidPrimitive primitive1;
+  // primitive1.type = primitive1.BOX;
+  // primitive1.dimensions.resize(3);
+  // primitive1.dimensions[0] = 2;
+  // primitive1.dimensions[1] = 0.5;
+  // primitive1.dimensions[2] = 0.05;
+  //
+  // floor_table.primitives.push_back(primitive1);
+  // floor_table.primitive_poses.push_back(pose1);
+  //
+  // srv.request.collObject = floor_table;
+  //
+  // if (add_coll.call(srv)){
+  //   ROS_INFO("Collision added");
+  // }
+  // else{
+  //   ROS_ERROR("Collision adding failed");
+  // }
 
   moveit_msgs::CollisionObject table;
   table.header.frame_id = "/world";
@@ -115,12 +115,12 @@ int main(int argc, char **argv){
 
   srv.request.collObject = table;
 
-  // if (add_coll.call(srv)){
-  //   ROS_INFO("Collision added");
-  // }
-  // else{
-  //   ROS_ERROR("Collision adding failed");
-  // }
+  if (add_coll.call(srv)){
+    ROS_INFO("Collision added");
+  }
+  else{
+    ROS_ERROR("Collision adding failed");
+  }
 
 
   FrankaActions franka_acts;
