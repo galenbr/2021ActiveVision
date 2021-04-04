@@ -7,7 +7,7 @@ std::map<int, std::string> dirLookup = {{0, "Nil"},
 																	 	    {7, "W"}, {8, "NW"}};
 
 void setupViewer(ptCldVis::Ptr viewer, int nVps, std::vector<int> &vp){
-  if(!(nVps==1 || nVps==2 || nVps==3 || nVps==4 || nVps==9)) nVps = 1;
+  if(!(nVps==1 || nVps==2 || nVps==3 || nVps==4 || nVps==8 || nVps==9)) nVps = 1;
   viewer->initCameraParameters();
   vp.clear(); vp.resize(nVps);
   switch(nVps){
@@ -28,6 +28,18 @@ void setupViewer(ptCldVis::Ptr viewer, int nVps, std::vector<int> &vp){
       viewer->createViewPort(0.5,0.5,1.0,1.0,vp[1]);
       viewer->createViewPort(0.0,0.0,0.5,0.5,vp[2]);
       viewer->createViewPort(0.5,0.0,1.0,0.5,vp[3]);
+      break;
+    case 8:
+      viewer->createViewPort(0.00,0.66,0.33,1.00,vp[0]); viewer->createViewPortCamera(vp[0]);
+      viewer->createViewPort(0.33,0.66,0.66,1.00,vp[1]); viewer->createViewPortCamera(vp[1]);
+      viewer->createViewPort(0.66,0.66,1.00,1.00,vp[2]); viewer->createViewPortCamera(vp[2]);
+
+      viewer->createViewPort(0.00,0.33,0.33,0.66,vp[3]); viewer->createViewPortCamera(vp[3]);
+      viewer->createViewPort(0.33,0.33,0.66,0.66,vp[4]); viewer->createViewPortCamera(vp[4]);
+      viewer->createViewPort(0.66,0.33,1.00,0.66,vp[5]); viewer->createViewPortCamera(vp[5]);
+
+      viewer->createViewPort(0.00,0.00,0.50,0.33,vp[6]); viewer->createViewPortCamera(vp[6]);
+      viewer->createViewPort(0.50,0.00,1.00,0.33,vp[7]); viewer->createViewPortCamera(vp[7]);
       break;
     case 9:
       viewer->createViewPort(0.00,0.00,0.33,0.33,vp[6]); viewer->createViewPortCamera(vp[6]);
@@ -106,8 +118,8 @@ void addViewsphere(ptCldVis::Ptr viewer, int vp, pcl::PointXYZ centre, double &r
       }
     }
   }
-  viewer->addSphere(centre,rad,0,0,1,"Viewsphere",vp);
-  viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_REPRESENTATION,pcl::visualization::PCL_VISUALIZER_REPRESENTATION_WIREFRAME,"Viewsphere");
+  viewer->addSphere(centre,rad,0,0,1,"Viewsphere"+std::to_string(vp),vp);
+  viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_REPRESENTATION,pcl::visualization::PCL_VISUALIZER_REPRESENTATION_WIREFRAME,"Viewsphere"+std::to_string(vp));
 }
 
 keyboardEvent::keyboardEvent(ptCldVis::Ptr viewer, int num){

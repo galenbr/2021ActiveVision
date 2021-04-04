@@ -164,13 +164,15 @@ void testPtCldFuse(environment &av, int objID, int flag){
                                                   {av.viewsphereRad,0,M_PI/10},
                                                   {av.viewsphereRad,M_PI/2,M_PI/10}};
 
-  kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/8},
-                 {av.viewsphereRad,-M_PI-M_PI/4,M_PI/7},
-                 {av.viewsphereRad,-M_PI+M_PI/4,M_PI/7}};
+  kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/7},
+                 {av.viewsphereRad,-M_PI-M_PI/4,M_PI/4},
+                 {av.viewsphereRad,-M_PI+M_PI/4,M_PI/4}};
   for (int i = 0; i < 3; i++) {
+    if(av.simulationMode == "FRANKA") av.moveFrankaHome();
     av.moveKinectViewsphere(kinectPoses[i]);
     av.readKinect();
     av.fuseLastData();
+    av.dataExtract();
     if (flag == 1){
       addRGB(viewer,av.cPtrPtCldEnv,"Fuse "+std::to_string(i),vp[i]);
     }
@@ -197,16 +199,18 @@ void testDataExtract(environment &av, int objID, int flag){
                                                   {av.viewsphereRad,-M_PI/2,M_PI/10},
                                                   {av.viewsphereRad,0,M_PI/10},
                                                   {av.viewsphereRad,M_PI/2,M_PI/10}};
-  kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/8},
-                 {av.viewsphereRad,-M_PI-M_PI/4,M_PI/7},
-                 {av.viewsphereRad,-M_PI+M_PI/4,M_PI/7}};
+  kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/7},
+                 {av.viewsphereRad,-M_PI-M_PI/4,M_PI/4},
+                 {av.viewsphereRad,-M_PI+M_PI/4,M_PI/4}};
   for (int i = 0; i < 3; i++){
+    if(av.simulationMode == "FRANKA") av.moveFrankaHome();
     av.moveKinectViewsphere(kinectPoses[i]);
     av.readKinect();
     av.fuseLastData();
+    av.dataExtract();
   }
-  av.dataExtract();
   if(av.simulationMode == "FRANKA") av.moveFrankaHome();
+  av.editMoveItCollisions("OBJECT","ADD");
   if(flag==1){
     // Setting up the point cloud visualizer
     ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer")); std::vector<int> vp;
@@ -225,6 +229,7 @@ void testDataExtract(environment &av, int objID, int flag){
       boost::this_thread::sleep (boost::posix_time::microseconds(100000));
     }
   }
+  av.editMoveItCollisions("OBJECT","REMOVE");
   av.deleteObject(objID);
   std::cout << "*** End ***" << std::endl;
 }
@@ -238,7 +243,7 @@ void testGenUnexpPtCld(environment &av, int objID, int flag){
                                                   {av.viewsphereRad,-M_PI/2,M_PI/10},
                                                   {av.viewsphereRad,0,M_PI/10},
                                                   {av.viewsphereRad,M_PI/2,M_PI/10}};
-  kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/8},
+  kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/6},
                  {av.viewsphereRad,-M_PI-M_PI/4,M_PI/7},
                  {av.viewsphereRad,-M_PI+M_PI/4,M_PI/7}};
   for (int i = 0; i < 3; i++){
@@ -283,10 +288,11 @@ void testUpdateUnexpPtCld(environment &av, int objID, int flag){
                                                   {av.viewsphereRad,-M_PI/2,M_PI/8},
                                                   {av.viewsphereRad,0,M_PI/8},
                                                   {av.viewsphereRad,M_PI/2,M_PI/8}};
-  kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/8},
-                 {av.viewsphereRad,-M_PI-M_PI/4,M_PI/7},
-                 {av.viewsphereRad,-M_PI+M_PI/4,M_PI/7}};
-  for (int i = 0; i < 3; i++) {
+   kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/7},
+                 {av.viewsphereRad,-M_PI-M_PI/4,M_PI/4},
+                 {av.viewsphereRad,-M_PI+M_PI/4,M_PI/4}};
+  for (int i = 0; i < 3; i++){
+    if(av.simulationMode == "FRANKA") av.moveFrankaHome();
     av.moveKinectViewsphere(kinectPoses[i]);
     av.readKinect();
     av.fuseLastData();
@@ -296,7 +302,7 @@ void testUpdateUnexpPtCld(environment &av, int objID, int flag){
     }
     av.updateUnexploredPtCld();
     if (flag == 1){
-      addRGB(viewer,av.cPtrPtCldEnv,"Env "+std::to_string(i),vp[i]);
+      addRGB(viewer,av.cPtrPtCldObject,"Env "+std::to_string(i),vp[i]);
       addRGB(viewer,av.ptrPtCldUnexp,"Unexp "+std::to_string(i),vp[i]);
     }
   }
@@ -498,15 +504,16 @@ void testComplete(environment &av, int objID, int nVp, int graspMode, int flag, 
                                                   {av.viewsphereRad,0,M_PI/8},
                                                   {av.viewsphereRad,M_PI/2,M_PI/8}};
 
-  kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/8},
-                 {av.viewsphereRad,-M_PI-M_PI/3,M_PI/7},
-                 {av.viewsphereRad,-M_PI+M_PI/3,M_PI/7}};
+  kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/7},
+                 {av.viewsphereRad,-M_PI-M_PI/4,M_PI/4},
+                 {av.viewsphereRad,-M_PI+M_PI/4,M_PI/4}};
 
   start[0] = std::chrono::high_resolution_clock::now();
 
   start[1] = std::chrono::high_resolution_clock::now();
   // Read nViepoints and fuse them and update unexplord point cloud
   for (int i = 0; i < 3; i++){
+    if(av.simulationMode == "FRANKA") av.moveFrankaHome();
     av.moveKinectViewsphere(kinectPoses[i]);
     av.readKinect();
     av.fuseLastData();
@@ -967,9 +974,10 @@ void testObjectPickup(environment &av, int objID){
     graspData.addnlPitch = 0;
     graspData.gripperWidth = 0.0739628;
   }else{
-    {graspData.pose = {0.405151,-0.0112339,0.0975395,-1.5708,1.44629,-1.69696};}
-    graspData.addnlPitch = 0.785398;
-    graspData.gripperWidth = 0.0638898;
+    {graspData.pose = {0.453253,-0.0020611,0.184009,-1.5708,-1.55776,-1.10351};}
+    graspData.addnlPitch = -1.5708;
+    graspData.gripperWidth = 0.0488689;
+
     if(av.simulationMode != "FRANKA") return;
   }
 
@@ -998,15 +1006,15 @@ void testMoveItCollision(environment &av, int objID){
   av.spawnObject(objID,0,0);
 
   // 4 kinect position to capture and fuse
-  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/8},
-                                                  {av.viewsphereRad,-M_PI+0.11,M_PI/8},
-                                                  {av.viewsphereRad,-M_PI-0.11,M_PI/8}};
+  std::vector<std::vector<double>> kinectPoses = {{av.viewsphereRad,-M_PI,M_PI/7},
+                                                  {av.viewsphereRad,-M_PI-M_PI/4,M_PI/4},
+                                                  {av.viewsphereRad,-M_PI+M_PI/4,M_PI/4}};
   for (int i = 0; i < 3; i++) {
     av.moveKinectViewsphere(kinectPoses[i]);
     av.readKinect();
     av.fuseLastData();
+    av.dataExtract();
   }
-  av.dataExtract();
 
   int mode = 0;
   int object = 0;

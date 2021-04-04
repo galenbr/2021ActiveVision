@@ -253,6 +253,10 @@ add_executable(visDataRec src/visDataRec.cpp)
 add_dependencies(visDataRec active_vision ${catkin_EXPORTED_TARGETS})
 target_link_libraries(visDataRec active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
+add_executable(visDataRecV2 src/visDataRecV2.cpp)
+add_dependencies(visDataRecV2 active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(visDataRecV2 active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
 add_executable(visAllPaths src/visAllPaths.cpp)
 add_dependencies(visAllPaths active_vision ${catkin_EXPORTED_TARGETS})
 target_link_libraries(visAllPaths active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
@@ -293,6 +297,6 @@ target_link_libraries(3DheuristicPolicyService active_vision ${catkin_LIBRARIES}
 # add_dependencies(bfs active_vision ${catkin_EXPORTED_TARGETS})
 # target_link_libraries(bfs active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable(rgbd_to_rgb src/rgbd_to_rgb.cpp)
-add_dependencies(rgbd_to_rgb active_vision ${catkin_EXPORTED_TARGETS})
-target_link_libraries(rgbd_to_rgb active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
+# add_executable(rgbd_to_rgb src/rgbd_to_rgb.cpp)
+# add_dependencies(rgbd_to_rgb active_vision ${catkin_EXPORTED_TARGETS})
+# target_link_libraries(rgbd_to_rgb active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})

@@ -65,6 +65,8 @@ struct RouteData{
   int parentID{-1};
   int childID{-1};
   ptCldColor obj,unexp,env;
+  std::vector<ptCldColor> detailedEnv;
+  std::vector<float> timer;
   std::string objType;
   std::vector<double> objPose;
   bool goodInitialGrasp{false};
@@ -80,6 +82,8 @@ struct RouteData{
   void reset(){
     parentID = -1; childID = -1;
     obj.clear();unexp.clear();env.clear();
+    detailedEnv.clear();
+    timer.clear();
     objType.clear(); objPose.clear();
     goodInitialGrasp = false; success = false;
     graspQuality = -1;

@@ -38,6 +38,7 @@
 #include "moveit/move_group_interface/move_group_interface.h"
 #include "moveit/planning_scene/planning_scene.h"
 #include "moveit/planning_scene_interface/planning_scene_interface.h"
+#include "moveit/planning_scene_monitor/planning_scene_monitor.h"
 #include "moveit/trajectory_processing/iterative_time_parameterization.h"
 
 namespace moveit_planner {
@@ -57,7 +58,7 @@ namespace moveit_planner {
     bool addCollisionObjects(const std::vector<moveit_msgs::CollisionObject>& collObjs);
     bool setConstraints(const moveit_msgs::Constraints& constraints);
     bool ik(const geometry_msgs::Pose& pose, std::vector<double>& results);
-    bool ikWithSelfCollCheck(const geometry_msgs::Pose& pose, std::vector<double>& results);
+    bool ikWithCollCheck(const geometry_msgs::Pose& pose, std::vector<double>& results);
 
     // Getters/Setters
     std::string getGroup() {return armGroup;};
@@ -75,6 +76,7 @@ namespace moveit_planner {
     moveit::planning_interface::MoveGroupInterface moveGroup;
     moveit::planning_interface::PlanningSceneInterface planningSceneInterface;
     moveit::planning_interface::MoveGroupInterface::Plan curPlan;
+    planning_scene_monitor::PlanningSceneMonitorPtr planningSceneMonitorPtr;
     collision_detection::CollisionResult collision_result;
     collision_detection::CollisionRequest collision_request;
     // Core moveit objects

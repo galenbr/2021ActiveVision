@@ -11,13 +11,14 @@ namespace moveit_planner {
   MoveitPlanner::MoveitPlanner(ros::NodeHandle& nh, const std::string& arm)
     : n{nh}, spinner{0}, armGroup{arm}, moveGroup{armGroup}, curScaling{1.0},
       eef_step{0.005}, jump_threshold{0} {
-	spinner.start();
+    spinner.start();
 
-	setupServices();
-	setupMoveit();
+    setupServices();
+    setupMoveit();
 
-	ros::waitForShutdown();
-      }
+    ros::waitForShutdown();
+  }
+  
   MoveitPlanner::~MoveitPlanner() {}
 
   bool MoveitPlanner::getPose(geometry_msgs::Pose& pose) {
@@ -32,12 +33,12 @@ namespace moveit_planner {
       tempMsg.request.from = baseLink;
       tempMsg.request.to = endEffector;
       if(tempClient.call(tempMsg)) {
-	pose = tempMsg.response.pose;
-	return true;
+        pose = tempMsg.response.pose;
+        return true;
       }
       else {
-	ROS_ERROR_STREAM("Could not obtain transform from pose_node");
-	return false;
+        ROS_ERROR_STREAM("Could not obtain transform from pose_node");
+        return false;
       }
     }
     else {
@@ -121,12 +122,12 @@ namespace moveit_planner {
       //     0->0.5s->1s => We now arrive at 1
       //     For velocity/acceleration we need to divide instead (less time, faster speed)
       for(int i = 0; i < curPlan.trajectory_.joint_trajectory.points.size(); ++i) { // Scale each point
-	curPlan.trajectory_.joint_trajectory.points[i].time_from_start *= factor;
-	for(int j = 0; j < curPlan.trajectory_.joint_trajectory.points[i].velocities.size(); ++j) { // Scale each joint
-	  curPlan.trajectory_.joint_trajectory.points[i].velocities[j] /= factor;
-	  curPlan.trajectory_.joint_trajectory.points[i].accelerations[j] /= factor;
-	}
-	ROS_INFO_STREAM("Point " << i << " starts at " << curPlan.trajectory_.joint_trajectory.points[i].time_from_start);
+        curPlan.trajectory_.joint_trajectory.points[i].time_from_start *= factor;
+        for(int j = 0; j < curPlan.trajectory_.joint_trajectory.points[i].velocities.size(); ++j) { // Scale each joint
+          curPlan.trajectory_.joint_trajectory.points[i].velocities[j] /= factor;
+          curPlan.trajectory_.joint_trajectory.points[i].accelerations[j] /= factor;
+        }
+        ROS_INFO_STREAM("Point " << i << " starts at " << curPlan.trajectory_.joint_trajectory.points[i].time_from_start);
       }
     }
     double end = ros::Time::now().toSec();
@@ -225,21 +226,22 @@ namespace moveit_planner {
     return ik(req.pose, res.joint_vals);
   }
 
-  bool MoveitPlanner::ikWithSelfCollCheck(const geometry_msgs::Pose& pose, std::vector<double>& results) {
+  bool MoveitPlanner::ikWithCollCheck(const geometry_msgs::Pose& pose, std::vector<double>& results) {
     double timeout = 0.1;	// Time before quitting (no solution found)
     int attempts = 2;		// Number of tries
     bool ok = curState->setFromIK(jointModelGroup, pose, attempts, timeout);
     curState->copyJointGroupPositions(jointModelGroup, results);
 
-    static planning_scene::PlanningScene planning_scene(robotModel);
+    // static planning_scene::PlanningScene planning_scene(robotModel);
     collision_result.clear();
-    planning_scene.checkSelfCollision(collision_request, collision_result, *curState);
+    // planning_scene.checkSelfCollision(collision_request, collision_result, *curState);
+    planning_scene_monitor::LockedPlanningSceneRO(planningSceneMonitorPtr)->checkCollision(collision_request, collision_result, *curState);
     ok *= !(collision_result.collision);
     // std::cout << "Test 2: Current state is " << collision_result.collision << std::endl;
     return ok;
   }
   bool MoveitPlanner::invCollCheckClientCallback(moveit_planner::Inv::Request& req,moveit_planner::Inv::Response& res) {
-    return ikWithSelfCollCheck(req.pose, res.joint_vals);
+    return ikWithCollCheck(req.pose, res.joint_vals);
   }
 
   bool MoveitPlanner::rotClientCallback(moveit_planner::MoveQuat::Request& req,moveit_planner::MoveQuat::Response& res) {
@@ -286,6 +288,10 @@ namespace moveit_planner {
     curState = moveit::core::RobotStatePtr{new moveit::core::RobotState{robotModel}};
     curState->setToDefaultValues();
     jointModelGroup = robotModel->getJointModelGroup(armGroup);
+
+    planningSceneMonitorPtr = std::make_shared<planning_scene_monitor::PlanningSceneMonitor>("robot_description");
+    bool success = planningSceneMonitorPtr->requestPlanningSceneState("/get_planning_scene");
+    planningSceneMonitorPtr->startSceneMonitor("/move_group/monitored_planning_scene");
   }
 
 

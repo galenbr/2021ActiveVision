@@ -42,9 +42,9 @@ public:
       for(int y = 0 ; y < cloud_msg->width ; y++){
         projIndex = x*(cloud_msg->width)+y;
         cv::Vec3b &color = rgb.at<cv::Vec3b>(cv::Point(y,x));
-        color[0] = cloud_msg->points[projIndex].r;
+        color[0] = cloud_msg->points[projIndex].b;
         color[1] = cloud_msg->points[projIndex].g;
-        color[2] = cloud_msg->points[projIndex].b;
+        color[2] = cloud_msg->points[projIndex].r;
       }
     }
     sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", rgb).toImageMsg();

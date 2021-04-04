@@ -1,6 +1,7 @@
 #include <active_vision/toolDataHandling.h>
 
 void printRouteData(RouteData &in){
+	printf("\n Printing Route Data \n");
 	std::cout << in.objType << std::endl;
 	printf("(%1.2f, %1.2f, %1.2f)\n", in.objPose[0], in.objPose[1], in.objPose[2]);
 	printf("%1.2f\n", in.graspQuality);
@@ -13,17 +14,31 @@ void printRouteData(RouteData &in){
 		}
 		printf("\n");
 	}
+	printf("Timing Information in sec (Data Capture, Grasp, Policy)\n");
+	if(in.timer.size()>0){
+		for(int i=0; i < in.timer.size(); i+=3){
+			printf("Step %d : %1.2f,%1.2f,%1.2f\n",i/3,in.timer[i]/1000,in.timer[i+1]/1000,in.timer[i+2]/1000);
+		}
+	}
 }
 
 
 void saveData(RouteData &in, std::fstream &saveTo, std::string &dir, bool all){
+	// Converting timing info to string
+	std::string time = "";
+	float timeSum = 0;
+	for(int i=0; i < in.timer.size(); i++){
+		time += std::to_string(int(round(in.timer[i])));
+		time += ":";
+		timeSum += in.timer[i]/1000;
+	}
 	// Saving with some blank spaces to add information later if needed
 	saveTo  << in.objType << ","
 			<< in.objPose[0] << "," << in.objPose[1] << "," << in.objPose[2] << ","
 			<< in.goodInitialGrasp << ","
 			<< in.graspQuality << ","
-			<< "dummy"<< ","
-			<< "dummy"<< ","
+			<< timeSum << ","
+			<< time << ","
 			<< "dummy"<< ","
 			<< "dummy"<< ","
 			<< in.type << ","
@@ -44,6 +59,10 @@ void saveData(RouteData &in, std::fstream &saveTo, std::string &dir, bool all){
 	if(all){
 		*temp = in.obj; 	savePointCloud(temp,dir,in.filename,1);
 		*temp = in.unexp; savePointCloud(temp,dir,in.filename,2);
+		// Saving detailed pointclouds
+		for(int i = 0; i < in.detailedEnv.size(); i++){
+			pcl::io::savePCDFileASCII(dir+in.filename+"_detailed_"+std::to_string(i)+".pcd",in.detailedEnv[i]);
+		}
 	}
 	*temp = in.env; 	savePointCloud(temp,dir,in.filename,3);
 }

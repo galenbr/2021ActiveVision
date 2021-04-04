@@ -35,6 +35,9 @@ ros_ws/.vscode
 *.code-workspace
 .history/
 
+#Moveit Hand Eye Calibration Plugin
+ros_ws/src/moveit_calibration-master/
+
 #active vision data
 
 ros_ws/src/projects/active_vision/data/*

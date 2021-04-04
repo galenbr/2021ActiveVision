@@ -70,10 +70,15 @@ geometry_msgs::Pose viewsphereToFranka(std::vector<double> &pose){
 
   tfMat *= pcl::getTransformation(0,0,0,0,-M_PI/2,M_PI).matrix();
   Eigen::Matrix4f kinectOffset; kinectOffset.setIdentity();
-  kinectOffset(0,3) = -0.0300;
-  kinectOffset(1,3) = -0.0175;
-  kinectOffset(2,3) = -0.0700;
+  kinectOffset(0,3) = -0.037796115635;
+  kinectOffset(1,3) = +0.0298131982299;
+  kinectOffset(2,3) = -0.059671236405;
+  if(tfMat(0,0) < 0) tfMat *= pcl::getTransformation(0,0,0,0,0,M_PI).matrix();
   tfMat *= kinectOffset;
+
+  if(::simulationMode == "FRANKA"){
+    tfMat *= pcl::getTransformation(0,0,0,0,0,M_PI/4).matrix();
+  }
 
   Eigen::Quaternionf quat(tfMat.block<3,3>(0,0));
 
@@ -87,9 +92,9 @@ geometry_msgs::Pose viewsphereToFranka(std::vector<double> &pose){
 bool checkKinectOK(std::vector<double> &pose){
   bool check1 = checkValidPose(pose);
   bool check2 = true;
-  if(::simulationMode == "FRANKASIMULATION"){
+  if(::simulationMode != "SIMULATION"){
     geometry_msgs::Pose p = viewsphereToFranka(pose);
-    check2 = checkFrankReach(::IKClient,p);
+    check2 = checkFrankReach(::IKClient,p) || checkFrankReach(::IKClient,p);
   }
   return (check1 && check2);
 }
@@ -182,7 +187,7 @@ void extractUsefulUnexpPts(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, ptCldColo
 
   // Extracting the indices
   for(auto idx : usefulIndices){
-    if(unexp->points[idx].z >= 0.01){
+    if(unexp->points[idx].z >= ::table.z+0.01){
       res->points.push_back(unexp->points[idx]);
       res->points.back().r = 0;
       res->points.back().g = 200;
@@ -255,7 +260,7 @@ std::set<int> findVisibleUsefulUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr unexp,
   cpBoxObj2.setMin(cpBoxMin.getVector4fMap());
   cpBoxObj2.setMax(cpBoxMax.getVector4fMap());
 
-  int stepSize = std::max(1,int(round(double(tempUsefulUnexp->size())/1000.0)));
+  int stepSize = std::max(1,int(round(double(tempUsefulUnexp->size())/2000.0)));
 
   for(int i = 0; i < tempUsefulUnexp->points.size(); i+=stepSize){
     // indicesOK.clear(); indicesNotOK.clear();
@@ -455,29 +460,35 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
   std::vector<std::set<int>> indices;
   std::vector<int> res = {0,0,0,0,0,0,0,0};
   std::vector<int> step = {0,0,0,0,0,0,0,0};
+  std::vector<int> ok = {0,0,0,0,0,0,0,0};
+
+  for(int i = 1 ; i <= 8; i++){
+    std::vector<double> goToPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0));
+    ok[i-1] = checkKinectOK(goToPose);
+  }
   int maxRes = 0;
 
-  int stepSize = std::max(1,int(round(double(usefulUnexp->size())/1000.0)));
+  int stepSize = std::max(1,int(round(double(usefulUnexp->size())/2000.0)));
 
   for(int i = 1 ; i <= 8; i++){
     visibleIndices.clear();
-    std::vector<double> goToPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0));
-
-    std::vector<double> newPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0)); step[i-1] = 20;
-    if(checkKinectOK(goToPose)) visibleIndices = findVisibleUsefulUnexp(obj,unexp,usefulUnexp,newPose);
+    if(ok[i-1] == 1){
+      std::vector<double> newPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0)); step[i-1] = 20;
+      visibleIndices = findVisibleUsefulUnexp(obj,unexp,usefulUnexp,newPose);
+    }
     indices.push_back(visibleIndices);
   }
+
   for(int i = 0 ; i < 8; i++) res[i] = indices[i].size();
   maxRes = *std::max_element(res.begin(), res.end());
-
+  
   if(maxRes*stepSize < minVis){
     for(int i = 1 ; i <= 8; i++){
       visibleIndices.clear();
-      std::vector<double> goToPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0));
-
-      std::vector<double> newPose = calcExplorationPose(pose,i,mode,40*(M_PI/180.0)); step[i-1] = 40;
-      if(!checkKinectOK(newPose)) newPose = calcExplorationPose(pose,i,mode,20*(M_PI/180.0)); step[i-1] = 20;
-      if(checkKinectOK(goToPose)) visibleIndices = findVisibleUsefulUnexp(obj,unexp,usefulUnexp,newPose);
+      if(ok[i-1] == 1){
+        std::vector<double> newPose = calcExplorationPose(pose,i,mode,40*(M_PI/180.0)); step[i-1] = 40;
+        visibleIndices = findVisibleUsefulUnexp(obj,unexp,usefulUnexp,newPose);
+      }
       indices[i-1].insert(visibleIndices.begin(),visibleIndices.end());
     }
     for(int i = 0 ; i < 8; i++) res[i] = indices[i].size();
@@ -503,10 +514,10 @@ int findDirection(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double
   // addRGB(viewer,unexp,"unexp",vp[0]);
   // addRGB(viewer,usefulUnexp,"usefulUnexp",vp[0]);
   // viewer->removeCoordinateSystem();
-  //
+  
   // ptCldColor::Ptr result{new ptCldColor};
   // for(int i = 1 ; i <= 8; i++){
-  //   if(res[i-1] == 0) continue;
+  //   if(ok[i-1] == 0) continue;
   //   result->clear();
   //   for(auto idx : indices[i-1]){
   //     result->points.push_back(usefulUnexp->points[idx]);
@@ -577,7 +588,7 @@ int main(int argc, char** argv){
   ROS_INFO("3D Heuristic policy service ready.");
   ros::spin();
   return 0;
- }
+}
 
 // int main (int argc, char** argv){
 //   // Initialize ROS
@@ -588,64 +599,90 @@ int main(int argc, char** argv){
 //   nh.getParam("/active_vision/simulationMode", ::simulationMode);
 //   std::vector<double> tableCentre;
 //   nh.getParam("/active_vision/environment/tableCentre", tableCentre);
-//
+
 //   ::IKClient =  nh.serviceClient<moveit_planner::Inv>("inverse_kinematics_collision_check");
 //   ::table.x = tableCentre[0];
 //   ::table.y = tableCentre[1];
 //   ::table.z = tableCentre[2];
 //   environment activeVision(&nh);
 //   activeVision.loadGripper();
-//
+
 //   // Delay to ensure all publishers and subscribers are connected
 //   boost::this_thread::sleep(boost::posix_time::milliseconds(500));
-//
+
 //   if(argc != 4){
 //     std::cout << "ERROR. Incorrect number of arguments." << std::endl;
 //     return(-1);
 //   }
-//
+
 //   int objID = std::atoi(argv[1]);
 //   int pose = std::atoi(argv[2]);
 //   int yaw = std::atoi(argv[3]);
 //   int dir;
-//   std::vector<double> newPose = {activeVision.viewsphereRad,M_PI,M_PI/7};
+//   std::vector<double> newPose = {activeVision.viewsphereRad,-M_PI,M_PI/6.5};
+//   std::vector<double> tempPose;
 //   activeVision.spawnObject(objID,pose,yaw*M_PI/180);
-//
+
 //   singlePass(activeVision,newPose,true,true,2);
 //   int minPtsVis;
-//
+
 //   ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer"));
-//
+
 //   int nSteps = 0;
 //   while(activeVision.selectedGrasp == -1 && nSteps <= 5){
-//     minPtsVis = 0.15*(activeVision.ptrPtCldObject->points.size());
+//     minPtsVis = 0.20*(activeVision.ptrPtCldObject->points.size());
 //     dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,newPose,2,minPtsVis,viewer);
 //     // dir = findDirection(activeVision.ptrPtCldObject,activeVision.ptrPtCldUnexp,newPose,2,minPtsVis);
 //     std::cout << "Direction selected : " << dir << std::endl;
-//
-//     newPose = calcExplorationPose(newPose,dir,2);
-//     singlePass(activeVision,newPose,false,true,2);
+
+//     tempPose = calcExplorationPose(newPose,dir,2);
+//     if(activeVision.moveKinectViewsphere(tempPose,true)){
+//       singlePass(activeVision,tempPose,false,true,2);
+//       newPose = tempPose;
+//     }
 //     nSteps++;
 //   }
-//
-//   std::vector<int> vp;
-//   setupViewer(viewer, 1, vp);
-//   setCamView(viewer,{newPose[0],newPose[1],newPose[2]},::table,vp[0]);
-//   activeVision.updateGripper(activeVision.selectedGrasp,0);
-//   addRGB(viewer,activeVision.ptrPtCldEnv,"Env",vp[0]);
-//   addRGB(viewer,activeVision.ptrPtCldUnexp,"Unexp",vp[0]);
-//   addRGB(viewer,activeVision.ptrPtCldGripper,"Gripper",vp[0]);
-//   viewer->removeCoordinateSystem();
-//   viewer->spinOnce(100);
-//   boost::this_thread::sleep (boost::posix_time::microseconds(100000));
-//   std::cout << "Press Q to exit" << std::endl;
-//   while(!viewer->wasStopped()){
+
+//   if(activeVision.selectedGrasp != -1){
+//     std::cout << "Centroid : " << activeVision.cenObject[0] <<  "," 
+//                                << activeVision.cenObject[1] <<  ","
+//                                << activeVision.cenObject[2] << std::endl;
+//     std::cout << "Selected Grasp ID : " << activeVision.selectedGrasp << std::endl;
+//     std::cout << "Selected Grasp Quality : " << activeVision.graspsPossible[activeVision.selectedGrasp].quality << std::endl;
+//     std::cout << "graspData.pose = {" << activeVision.graspsPossible[activeVision.selectedGrasp].pose[0] << "," <<
+//                                         activeVision.graspsPossible[activeVision.selectedGrasp].pose[1] << "," <<
+//                                         activeVision.graspsPossible[activeVision.selectedGrasp].pose[2] << "," <<
+//                                         activeVision.graspsPossible[activeVision.selectedGrasp].pose[3] << "," <<
+//                                         activeVision.graspsPossible[activeVision.selectedGrasp].pose[4] << "," <<
+//                                         activeVision.graspsPossible[activeVision.selectedGrasp].pose[5] << "};" << std::endl;
+//     std::cout << "graspData.addnlPitch = " << activeVision.graspsPossible[activeVision.selectedGrasp].addnlPitch << ";" << std::endl;
+//     std::cout << "graspData.gripperWidth = " << activeVision.graspsPossible[activeVision.selectedGrasp].gripperWidth << ";" << std::endl;
+
+//     std::vector<int> vp;
+//     setupViewer(viewer, 1, vp);
+//     keyboardEvent keyPress(viewer,1);
+//     setCamView(viewer,{newPose[0],newPose[1],newPose[2]},::table,vp[0]);
+//     activeVision.updateGripper(activeVision.selectedGrasp,0);
+//     addRGB(viewer,activeVision.ptrPtCldEnv,"Env",vp[0]);
+//     addRGB(viewer,activeVision.ptrPtCldUnexp,"Unexp",vp[0]);
+//     addRGB(viewer,activeVision.ptrPtCldGripper,"Gripper",vp[0]);
+//     // viewer->removeCoordinateSystem();
 //     viewer->spinOnce(100);
 //     boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+//     std::cout << "Press Q to exit" << std::endl;
+//     while(!viewer->wasStopped()){
+//       viewer->spinOnce(100);
+//       boost::this_thread::sleep (boost::posix_time::microseconds(100000));
+//     }
+
+//     if(::simulationMode != "SIMULATION"){
+//       activeVision.graspObject(activeVision.graspsPossible[activeVision.selectedGrasp]);
+//     }
+//   }else{
+//     std::cout << "No grasp found" << std::endl;
 //   }
-//
-//   if(::simulationMode == "FRANKASIMULATION") activeVision.graspObject(activeVision.graspsPossible[activeVision.selectedGrasp]);
-//
+
+  
 //   activeVision.deleteObject(objID);
 //   boost::this_thread::sleep(boost::posix_time::milliseconds(500));
 // }

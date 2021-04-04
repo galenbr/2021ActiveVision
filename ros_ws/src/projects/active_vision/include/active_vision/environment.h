@@ -48,6 +48,9 @@
 #include <pcl/registration/icp.h>
 #include <pcl/registration/icp_nl.h>
 #include <pcl/registration/transforms.h>
+#include <pcl/registration/transformation_estimation_lm.h>
+#include <pcl/registration/warp_point_rigid_3d.h>
+#include <pcl/registration/warp_point_rigid.h>
 
 //Gazebo specific includes
 #include <gazebo_msgs/SetModelState.h>
@@ -63,7 +66,7 @@
 #include <moveit_planner/MovePose.h>
 // #include <moveit_planner/MoveJoint.h>
 #include <moveit_planner/Inv.h>
-// #include <moveit_planner/SetVelocity.h>
+#include <moveit_planner/SetVelocity.h>
 #include <moveit_planner/AddCollision.h>
 #include <moveit_planner/SetConstraints.h>
 #include <moveit_planner/MoveNamedState.h>
@@ -113,33 +116,6 @@ struct stateConfig{
   std::string description;          // Description of the configuration
   std::vector<double> unexpMin;
   std::vector<double> unexpMax;
-};
-
-//Defines target end-effector point with offsets
-struct pose_goal{
-    double x{0.0};
-    double y{0.0};
-    double z{0.0};
-    double roll{0.0};
-    double pitch{0.0};
-    double yaw{0.0};
-
-    double x_misalignment{0.0};
-    double y_misalignment{0.0};
-
-    double z_offset_far{0.0};
-    double z_offset_close{0.0};
-};
-
-//Defines arm position in joint space
-struct joint_space_pos{
-    double j1{0.0};
-    double j2{0.0};
-    double j3{0.0};
-    double j4{0.0};
-    double j5{0.0};
-    double j6{0.0};
-    double j7{0.0};
 };
 
 // Funstion to transpose a homogenous matrix
@@ -200,7 +176,7 @@ public:
   ros::ServiceClient poseClient;
   ros::ServiceClient IKClient;
   ros::ServiceClient cartMoveClient;
-  // ros::ServiceClient velScalingClient;
+  ros::ServiceClient velScalingClient;
   // ros::ServiceClient jointSpaceClient;
   ros::ServiceClient gripperPosClient;
   ros::ServiceClient collisionClient;
@@ -212,6 +188,7 @@ public:
 
   // PtCld: Last recorded viewpoint
   ptCldColor::Ptr ptrPtCldLast{new ptCldColor};      ptCldColor::ConstPtr cPtrPtCldLast{ptrPtCldLast};
+  ptCldColor::Ptr ptrPtCldLastFill{new ptCldColor};  ptCldColor::ConstPtr cPtrPtCldLastFill{ptrPtCldLastFill};
 
   // PtCld: Environment after fusing multiple view points, extracted table, object and its normal
   ptCldColor::Ptr ptrPtCldEnv{new ptCldColor};       ptCldColor::ConstPtr cPtrPtCldEnv{ptrPtCldEnv};
@@ -269,7 +246,8 @@ public:
   std::string simulationMode;                       // simulationMode
   Eigen::Affine3f tfGripper;                        // Transform : For gripper based on grasp points found
   float fingerZOffset;                              // Z axis offset between gripper hand and finger
-
+  Eigen::Matrix4f ICP_Tf;
+  
   environment(ros::NodeHandle *nh);
 
   // Function to reset the environment
@@ -289,6 +267,7 @@ public:
 
   // 2A: Spawning objects in gazebo on the table centre for a given pose option and yaw
   void spawnObject(int objectID, int choice, float yaw);
+  void spawnBoxOnTable();
 
   // 2B: Function to move the object. Same args as spawnObject
   void moveObject(int objectID, int choice, float yaw);
@@ -364,6 +343,49 @@ public:
 };
 
 // Function to do a single pass
-void singlePass(environment &av, std::vector<double> kinectPose, bool firstTime, bool findGrasp, int mode = 1);
+std::vector<double> singlePass(environment &av, std::vector<double> kinectPose, bool firstTime, bool findGrasp, int mode = 1);
+
+// Custom wrap function
+namespace pcl{
+  namespace registration{
+    /** \brief @b WarpPointXY enables XY only transformation
+      */
+    template <typename PointSourceT, typename PointTargetT, typename Scalar = float>
+    class WarpPointXY : public WarpPointRigid<PointSourceT, PointTargetT, Scalar>
+    {
+      public:
+        typedef typename WarpPointXY<PointSourceT, PointTargetT, Scalar>::Matrix4 Matrix4;
+        typedef typename WarpPointXY<PointSourceT, PointTargetT, Scalar>::VectorX VectorX;
+
+        typedef boost::shared_ptr<WarpPointXY<PointSourceT, PointTargetT, Scalar> > Ptr;
+        typedef boost::shared_ptr<const WarpPointXY<PointSourceT, PointTargetT, Scalar> > ConstPtr;
+
+        /** \brief Constructor. */
+        WarpPointXY () : WarpPointRigid<PointSourceT, PointTargetT, Scalar> (2) {}
+     
+        /** \brief Empty destructor */
+        virtual ~WarpPointXY () {}
+
+        /** \brief Set warp parameters.
+          * \param[in] p warp parameters (tx ty)
+          */
+        virtual void
+        setParam (const VectorX & p)        {
+          assert(p.rows() == this->getDimension());
+          Matrix4& trans = this->transform_matrix_;
+        
+          trans = Matrix4::Zero();
+          trans(0, 0) = 1;
+          trans(1, 1) = 1;
+          trans(2, 2) = 1;
+          trans(3, 3) = 1;
+
+          trans(0,3) = p[0];
+          trans(1,3) = p[1];
+          trans(2,3) = 0;
+        }
+    };
+  }
+}
 
 #endif
