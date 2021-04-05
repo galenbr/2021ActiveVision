@@ -23,10 +23,10 @@ Peg-in-Hole Insertion Simulation in Mujoco using RL.
 ### First Time Setup
 1. ```python3 -m venv insertion_env```
 2. ```source insertion_env/bin/activate```
-3. ```easy_install llvmlite```
+3. ```pip install llvmlite```
 	- Verify that a .so file is built: ```sudo find / -name libllvmlite.so*```
-	- TODO: Test this part. There is something strange with the numba/llvmlite installation step, but it is possible. The pip versions that ended up work are llvmlite (0.32.1) and numba (0.49.1). Using ```sudo``` might be required. LLVM must be installed first.
-4. ```pip install gym mujoco-py robosuite roboticstoolbox-python torch```
+	- TODO: Test this part. There is something strange with the numba/llvmlite installation step, but it is possible. Might need to use ```easy_install llvmlite```. The pip versions that ended up work are llvmlite (0.32.1) and numba (0.49.1). Using ```sudo``` might be required. LLVM must be installed first.
+4. ```pip install gym h5py mujoco-py robosuite roboticstoolbox-python torch```
 5. Replace robosuite (/home/<YOUR_USERNAME>/insertion_env/lib/python3.6/site-packages/robosuite) with the custom version in this folder (mer_lab/mujoco/insertion/robosuite).
 
 ## Notes

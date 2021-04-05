@@ -7,17 +7,11 @@ from robosuite.utils.mjcf_utils import CustomMaterial
 from robosuite.environments.manipulation.single_arm_env import SingleArmEnv
 
 from robosuite.models.arenas import TableArena
-from robosuite.models.objects import BoxObject, MujocoXMLObject#, PlateWithHoleObject 
+from robosuite.models.objects import BoxObject, MujocoXMLObject
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.placement_samplers import UniformRandomSampler
 from robosuite.utils.observables import Observable, sensor
 from robosuite.utils.mjcf_utils import xml_path_completion
-
-class InsertionPegObject(MujocoXMLObject):
-    def __init__(self, name):
-        super().__init__(xml_path_completion("objects/insertion_peg1.xml"),
-                         name=name, joints=[dict(type="free", damping="0.0005")],
-                         obj_type="all", duplicate_collision_geoms=True)
 
 class InsertionHoleObject(MujocoXMLObject):
     def __init__(self, name):
@@ -235,23 +229,29 @@ class Insert(SingleArmEnv):
         """
         reward = 0.
 
+        #TODO:
+        #   -Get Position of Peg Tip.
+        #   -Measure Distance from Peg Tip to Bottom of Initial Hole Position.
+        #   -xMinimize the Fx and Fy readings
+        #   -Minimize time
+        #   -Keep vertical orientation
+        #   -Check for "touching table"
+
         # sparse completion reward
-        if self._check_success():
-            reward = 2.25
+        # if self._check_success():
+        #     reward = 2.25
 
-        # use a shaping reward
-        elif self.reward_shaping:
+        #TODO: Use peg tip position rather than End-Effector
 
-            # reaching reward
-            hole_pos = self.sim.data.body_xpos[self.hole_body_id]
-            gripper_site_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
-            dist = np.linalg.norm(gripper_site_pos - hole_pos)
-            reaching_reward = 1 - np.tanh(10.0 * dist)
-            reward += reaching_reward
 
-            # grasping reward
-            if self._check_grasp(gripper=self.robots[0].gripper, object_geoms=self.hole):
-                reward += 0.25
+        wrist_force=self.robots[0].ee_force
+        # reaching reward
+        hole_pos = self.sim.data.body_xpos[self.hole_body_id] #XYZ
+        gripper_site_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
+        pos_dist = np.linalg.norm(gripper_site_pos - hole_pos)
+        force_dist = np.linalg.norm(wrist_force[0:2]) #X and Y components only
+        reaching_reward = 1 - np.tanh((9.5*pos_dist) + (0.5*force_dist))
+        reward += reaching_reward
 
         # Scale reward if requested
         if self.reward_scale is not None:
@@ -295,9 +295,7 @@ class Insert(SingleArmEnv):
         #     tex_attrib=tex_attrib,
         #     mat_attrib=mat_attrib,
         # )
-        self.peg = InsertionPegObject(
-            name="insert_peg",
-        )
+
         self.hole = InsertionHoleObject(
             name="free_insert_hole",
         )
@@ -305,10 +303,6 @@ class Insert(SingleArmEnv):
         # self.hole = FixedInsertionHoleObject(
         #     name="fixed_insert_hole",
         # )
-        # self.hole = PlateWithHoleObject(
-        #     name="plate",
-        # )
-
         # Original:
         # self.hole = BoxObject(
         #     name="hole",
@@ -335,7 +329,6 @@ class Insert(SingleArmEnv):
                 reference_pos=self.table_offset,
                 z_offset=0.0, #0.01
             )
-            print(dir(self.placement_initializer))
 
         # task includes arena, robot, and objects of interest
         self.model = ManipulationTask(
@@ -408,9 +401,9 @@ class Insert(SingleArmEnv):
 
             # Sample from the placement initializer for all objects
             object_placements = self.placement_initializer.sample()
-            print(object_placements)
+            #print(object_placements)
 
-            print(self.hole.joints)
+            #print(self.hole.joints)
             #TODO: Figure out how to spawn fixed objects
             if self.hole.joints != []:
                 # Loop through all objects and reset their positions
@@ -439,6 +432,8 @@ class Insert(SingleArmEnv):
 
         Returns:
             bool: True if hole has been lifted
+
+        TODO: Update this for the insertion task
         """
         hole_height = self.sim.data.body_xpos[self.hole_body_id][2]
         table_height = self.model.mujoco_arena.table_offset[2]
