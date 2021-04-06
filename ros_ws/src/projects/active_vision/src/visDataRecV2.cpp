@@ -11,22 +11,15 @@ void passThroughFilterZ(ptCldColor::Ptr ptrPtCld,float minZ, float maxZ){
 
 void help(){
   std::cout << "******* Recorded Data Visualizer Help *******" << std::endl;
-  std::cout << "Arguments : [Directory] [CSV filename] [Visual]" << std::endl;
+  std::cout << "Arguments : [Directory] [CSV filename]" << std::endl;
   std::cout << "Directory : Directory where csv and pcd files are there (./DataRecAV/)" << std::endl;
   std::cout << "CSV filename : CSV file name (Data.csv)" << std::endl;
-  std::cout << "Visual : 1 (result.pcd only), 2 (obj,unexp,result.pcd)" << std::endl;
   std::cout << "*******" << std::endl;
 }
 
 int main(int argc, char** argv){
-  if(argc != 4){
+  if(argc != 3){
     std::cout << "ERROR. Incorrect number of arguments." << std::endl;
-    help(); return(-1);
-  }
-  int visual;
-  visual = std::atoi(argv[3]);
-  if(visual != 1 && visual != 2){
-    std::cout << "ERROR. Incorrect visual." << std::endl;
     help(); return(-1);
   }
 
@@ -63,11 +56,11 @@ int main(int argc, char** argv){
 
       viewer->addText("Data No : "+std::to_string(i+1),5,5,25,1,0,0,"Data",vp.back());
       viewer->addText("nSteps : "+std::to_string(nSteps),5,65,25,1,0,0,"nSteps",vp.back());
-    
+
       for(int j = 0; j <= nSteps; j++){
         if(pcl::io::loadPCDFile(directory+data[i][pathColID-1]+"_detailed_"+std::to_string(j)+".pcd",*ptrPtCldTemp) != -1){
           addRGB(viewer,ptrPtCldTemp,"Data"+std::to_string(j),vp[j]);
-          
+
           pose[0] = std::atof(data[i][3*j+stepColID-1].c_str());
           pose[1] = std::atof(data[i][3*j+stepColID-1+1].c_str());
           pose[2] = std::atof(data[i][3*j+stepColID-1+2].c_str());
@@ -75,7 +68,7 @@ int main(int argc, char** argv){
           pose[0] *= 2; setCamView(viewer,pose,table,j+1);
         }
       }
-      
+
       pose[0] = std::atof(data[i][stepColID-1].c_str());
       pose[1] = std::atof(data[i][stepColID-1+1].c_str());
       pose[2] = std::atof(data[i][stepColID-1+2].c_str());
