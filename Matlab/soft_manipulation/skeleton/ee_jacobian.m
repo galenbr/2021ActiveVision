@@ -28,6 +28,7 @@ th2_ = th2_start;
 r = zeros(2,1);
 old_r = [th1_start; th2_start];
 ds = zeros(t_end,2);
+ds_noisy = zeros(t_end,2);
 dr = zeros(t_end,2);
 
 %% Move Robot locally
@@ -57,6 +58,8 @@ while(t<=t_end)
     end
     
     ds(t,:) = shape_change(pos, old_pos);
+    ds_noisy(t,1) = ds(t,1) + rand/200;
+    ds_noisy(t,2) = ds(t,2) + rand/100;
     old_pos = pos;
     dr(t,:) = angle_change(r, old_r);
     old_r = r;
@@ -89,7 +92,7 @@ Q =  noise + [-l1*sind(th1_) - l2*sind(th1_+th2_), -l2*sind(th1_+th2_); l1*cosd(
 qhat = Q;
 Jplot = [];
 while t<=t_end
-    [J, qhat_dot] = compute_energy_functional(ds, dr, qhat, t);
+    [J, qhat_dot] = compute_energy_functional(ds_noisy, dr, qhat, t);
     qhat = qhat + qhat_dot;
     Jplot = [Jplot; J];
      t = t+1;
@@ -100,3 +103,19 @@ figure()
 plot(theta1, 'ro')
 figure()
 plot(theta2, 'go')
+figure()
+plot(ds(:,1), 'go')
+hold on
+plot(ds_noisy(:,1), 'ro')
+figure()
+plot(ds_noisy(:,2), 'ro')
+hold on
+plot(ds(:,2), 'go')
+avg_SNRX = 0;
+avg_SNRY = 0;
+for i = 1:30
+    avg_SNRX = avg_SNRX + abs((ds(i,1)/(ds(i,1) - ds_noisy(i,1))));
+    avg_SNRY = avg_SNRY + abs((ds(i,2)/(ds(i,2) - ds_noisy(i,2))));
+end
+avg_SNRX = avg_SNRX/30
+avg_SNRY = avg_SNRY/30
