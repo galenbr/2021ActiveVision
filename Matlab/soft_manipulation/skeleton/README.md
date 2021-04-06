@@ -27,11 +27,11 @@ Returns change in angle given the cur angles and old angles.
 Inplements algorithm 1 from the paper, "Fourier-Based Shape Servoing: A New Feedback Method to Actively Deform Soft Objects into Desired 2-D Image Contours".
 Returns the model error (J) and change in Jacobian elements(qhat_dot).
 
->>>> [J, qhat_dot] = compute_energy_functional(dS, dR, qhat, t);
-
-> dS and dR are the change in shape and change in angle vectors of length T X 2, where T is the total sample instances
-> qhat is the approximated Jacobian that is being estimated
-> t is the time/sample instance
+>[J, qhat_dot] = compute_energy_functional(dS, dR, qhat, t);
+>
+>> dS and dR are the change in shape and change in angle vectors of length T X 2, where T is the total sample instances
+>> qhat is the approximated Jacobian that is being estimated
+>> t is the time/sample instance
 
 #### compute_pos.m
 Defines the robot model and computes the position of the end-effector and j2 for the 2 link planar robot given the current angle positions.
