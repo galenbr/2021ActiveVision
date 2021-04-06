@@ -19,29 +19,29 @@ This folder contains a mathematical simulation for shape servoing of a 2 link ro
 #### angle_change.m
 Returns change in angle given the cur angles and old angles.
 
-> dr = angle_change(cur_r, old_r);
->
->> Inputs cur_r and old_r can be any dimension as long as they have the same dimension.
+`dr = angle_change(cur_r, old_r);`
+
+> Inputs cur_r and old_r can be any dimension as long as they have the same dimension.
 
 #### compute_energy_functional.m
 Inplements algorithm 1 from the paper, "Fourier-Based Shape Servoing: A New Feedback Method to Actively Deform Soft Objects into Desired 2-D Image Contours".
 Returns the model error (J) and change in Jacobian elements(qhat_dot).
 
->[J, qhat_dot] = compute_energy_functional(dS, dR, qhat, t);
->
->> dS and dR are the change in shape and change in angle vectors of length T X 2, where T is the total sample instances
->> qhat is the approximated Jacobian that is being estimated
->> t is the time/sample instance
+`[J, qhat_dot] = compute_energy_functional(dS, dR, qhat, t);`
+
+> dS and dR are the change in shape and change in angle vectors of length T X 2, where T is the total sample instances
+> qhat is the approximated Jacobian that is being estimated
+> t is the time/sample instance
 
 #### compute_pos.m
 Defines the robot model and computes the position of the end-effector and j2 for the 2 link planar robot given the current angle positions.
 
-> [ee_pos, j2_pos] = compute_pos(cur_pos);
-> 
->> cur_pos is a 2X1 vector containing the angle positions for j1 and j2
->> ee_pos is a 2X1 vector containing the end effector pose
->> j2_pos is a 2X1 vector containing joint2 position
->> base position is assumed to be [0, 0] for visualization purposes
+`[ee_pos, j2_pos] = compute_pos(cur_pos);`
+
+> cur_pos is a 2X1 vector containing the angle positions for j1 and j2
+> ee_pos is a 2X1 vector containing the end effector pose
+> j2_pos is a 2X1 vector containing joint2 position
+> base position is assumed to be [0, 0] for visualization purposes
 
 #### fit_curve.m
 
