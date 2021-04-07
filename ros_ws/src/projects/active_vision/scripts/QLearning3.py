@@ -154,10 +154,10 @@ def keyboardInterruptHandler(signal, frame):
 
 def build_model():
     inputs = layers.Input(shape=(num_inputs,))
-    common = layers.Dense(10, activation="relu")(inputs)
-    common1 = layers.Dense(2, activation="relu")(common)
+    common = layers.Dense(20, activation="relu")(inputs)
+    common1 = layers.Dense(20, activation="relu")(common)
     action = layers.Dense(num_actions, activation="softmax")(common1)
-    common2 = layers.Dense(4, activation="relu")(common)
+    common2 = layers.Dense(20, activation="relu")(common)
     value = layers.Dense(1, activation=None)(common2)
     output = value + tf.subtract(action, tf.reduce_mean(action, axis=1, keepdims=True))
     return keras.Model(inputs=inputs, outputs=output)
@@ -173,7 +173,7 @@ model_target = build_model()
 #model = tf.keras.models.load_model(path)
 #model_target = tf.keras.models.load_model(path+"_target")
 
-optimizer = keras.optimizers.Adam(learning_rate=0.000025)
+optimizer = keras.optimizers.Adam(learning_rate=0.00025)
 
 disp = DisplayData()
 
@@ -195,7 +195,7 @@ epsilon_greedy_frames = 100000.0
 # Note: The Deepmind paper suggests 1000000 however this causes memory issues
 max_memory_length = 100000
 # Train the model after 4 actions
-update_after_actions = 4
+update_after_actions = 10
 # How often to update the target network
 update_target_network = 10000
 # How often to display data
@@ -255,7 +255,7 @@ while True:  # Run until solved
         rewards_history.append(reward)
         state = state_next
 
-        if frame_count % update_after_actions == 0 and steps > batch_size:
+        if frame_count % update_after_actions == 0 and len(done_history) > batch_size:
 
             # Get indices of samples for replay buffers
             indices = np.random.choice(range(len(done_history)), size=batch_size)

@@ -25,6 +25,7 @@
   <group if="$(eval arg('policy') == 'PCA_LDA' or
                     arg('policy') == 'PCA_LDA_LR' or
                     arg('policy') == 'PCA_LR' or
+                    arg('policy') == 'QLEARN' or 
                     arg('policy') == 'RANDOM')">
     <node name="trainedPolicyService" pkg="active_vision" type="trainedPolicyService.py" output="screen" launch-prefix="gnome-terminal --"/>
     <node name="policyTester" pkg="active_vision" type="policyTester" args="2" output="screen" launch-prefix="gnome-terminal --" />

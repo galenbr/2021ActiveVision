@@ -36,11 +36,6 @@ graspPoint::graspPoint(){
 
 // Function to compare grasp point for sorting
 bool compareGrasp(graspPoint A, graspPoint B){
-  // if(abs(A.lineDistance - B.lineDistance) <= 0.005){
-  //   return(A.pose[2] > B.pose[2]);
-  // }else{
-  //  return(A.lineDistance < B.lineDistance);
-  // }
   if(abs(A.distance - B.distance) <= 0.005){
     return(A.quality > B.quality);
   }else{
@@ -364,13 +359,13 @@ environment::environment(ros::NodeHandle *nh){
 
   if(simulationMode == "SIMULATION"){
     pubObjPose = nh->advertise<gazebo_msgs::ModelState> ("/gazebo/set_model_state", 1);
-    subKinectPtCld = nh->subscribe ("/camera/depth/points", 1, &environment::cbPtCld, this);
+    subKinectPtCld = nh->subscribe ("/camera/depth/points", 2, &environment::cbPtCld, this);
     gazeboSpawnModel = nh->serviceClient< gazebo_msgs::SpawnModel> ("/gazebo/spawn_sdf_model");
     gazeboCheckModel = nh->serviceClient< gazebo_msgs::GetModelState> ("/gazebo/get_model_state");
     gazeboDeleteModel = nh->serviceClient< gazebo_msgs::DeleteModel> ("/gazebo/delete_model");
   }else if(simulationMode == "FRANKASIMULATION"){
     pubObjPose = nh->advertise<gazebo_msgs::ModelState> ("/gazebo/set_model_state", 1);
-    subKinectPtCld = nh->subscribe ("/camera/depth/points", 1, &environment::cbPtCld, this);
+    subKinectPtCld = nh->subscribe ("/camera/depth/points", 2, &environment::cbPtCld, this);
     gazeboSpawnModel = nh->serviceClient< gazebo_msgs::SpawnModel> ("/gazebo/spawn_sdf_model");
     gazeboCheckModel = nh->serviceClient< gazebo_msgs::GetModelState> ("/gazebo/get_model_state");
     gazeboDeleteModel = nh->serviceClient< gazebo_msgs::DeleteModel> ("/gazebo/delete_model");
@@ -1665,6 +1660,7 @@ void environment::collisionCheck(){
   // nOrientations = 8; orientations = {90,45,135,0,180,315,225,270};
   // nOrientations = 9; orientations = {90,68,112,45,135,22,157,0,180};
   // nOrientations = 9; orientations = {-45,-68,-22,-90,0,-112,-135,-157,-180};
+  //ELEPHANT: rational?
   nOrientations = 7; orientations = {-90,-68,-122,-45,-135,-22,-157,0,180};
   // ptCldVis::Ptr viewer(new ptCldVis ("PCL Viewer")); std::vector<int> vp;
   // setupViewer(viewer, 1, vp);
@@ -1982,7 +1978,8 @@ bool environment::checkPreGrasp(graspPoint &graspData){
 // 17: Object grasping pipeline
 void environment::graspObject(graspPoint &graspData){
 
-  if(simulationMode == "SIMULATION") return;
+  //ELEPHANT: Removed, I'd like to use simulation sometimes
+  //if(simulationMode == "SIMULATION") return;
   
   clearAllConstraints();
   editMoveItCollisions("OBJECT","ADD");

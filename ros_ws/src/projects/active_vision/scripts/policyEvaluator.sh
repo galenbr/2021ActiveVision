@@ -2,7 +2,7 @@
 
 # ARGUMENTS for policyEvaluator.sh
 # [Path] [csv1] [csv2] ...
-# [Path] : Path (relative to active_vision pkg) to folder with state vector (Eg : /misc/State_vector/)
+# [Path] : Path (relative to active_vision pkg) to folder with state vector (Eg : /misc/State_Vector/)
 # [csv1] : Optional - csv file to be used, If not mentioned all files are used
 # [csv2] : Optional - csv file to be used,
 
@@ -29,36 +29,38 @@ csvDataRec='dataRec.csv'
 csvParams='parameters.csv'
 csvStorageSummary='storageSummary.csv'
 
-simulationMode="FRANKASIMULATION" # SIMULATION / FRANKASIMULATION / FRANKA
-objectID=(2 3)
-nDataPoints=10
+simulationMode="SIMULATION" # SIMULATION / FRANKASIMULATION / FRANKA
+objectID=(13)
+nDataPoints=100
 
 # "RANDOM" "PCA_LR" "PCA_LDA" "PCA_LDA_LR" "HEURISTIC")
 # List all the policies to be tested with the prefix "Policy"
 # Policyxxx = ("Policy" "Unique description" "Param 1 name" "Param 1 value" ...)
 
-# Policy1A=("HEURISTIC" "Heuristic")
-# Policy1B=("BRICK" "Brick")
-# Policy1C=("RANDOM" "Random")
+Policy1A=("HEURISTIC" "Heuristic")
+Policy1B=("BRICK" "Brick")
+Policy1C=("RANDOM" "Random")
 Policy1D=("3DHEURISTIC" "3D_Heuristic")
 # Policy2A=("PCA_LR" "PCA_LR_95"
 #           "/active_vision/policyTester/PCAcomponents" 0.95
 #           "/active_vision/policyTester/HAFstVecGridSize" 7)
-# Policy2B=("PCA_LR" "PCA_LR_85"
-#           "/active_vision/policyTester/PCAcomponents" 0.85
-#           "/active_vision/policyTester/HAFstVecGridSize" 7)
+Policy2B=("PCA_LR" "PCA_LR_85"
+           "/active_vision/policyTester/PCAcomponents" 0.85
+           "/active_vision/policyTester/HAFstVecGridSize" 5)
 # Policy2C=("PCA_LR" "PCA_LR_75"
 #           "/active_vision/policyTester/PCAcomponents" 0.75
 #           "/active_vision/policyTester/HAFstVecGridSize" 7)
 # Policy3A=("PCA_LDA" "PCA_LDA_95"
 #           "/active_vision/policyTester/PCAcomponents" 0.95
 #           "/active_vision/policyTester/HAFstVecGridSize" 7)
-# Policy3B=("PCA_LDA" "PCA_LDA_85"
-#            "/active_vision/policyTester/PCAcomponents" 0.85
-#            "/active_vision/policyTester/HAFstVecGridSize" 7)
+Policy3B=("PCA_LDA" "PCA_LDA_85"
+            "/active_vision/policyTester/PCAcomponents" 0.85
+            "/active_vision/policyTester/HAFstVecGridSize" 5)
 # Policy3C=("PCA_LDA" "PCA_LDA_75"
 #           "/active_vision/policyTester/PCAcomponents" 0.75
 #           "/active_vision/policyTester/HAFstVecGridSize" 7)
+Policy5=("QLEARN" "Q_Learning"
+            "/active_vision/policyTester/HAFstVecGridSize" 5)
 
 
 files=()

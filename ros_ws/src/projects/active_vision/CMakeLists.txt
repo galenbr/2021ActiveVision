@@ -78,6 +78,8 @@ add_service_files(
   FILES
   heuristicPolicySRV.srv
   trainedPolicySRV.srv
+  controlSRV.srv
+  restartObjSRV.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -280,6 +282,10 @@ target_link_libraries(genStateVec active_vision ${catkin_LIBRARIES} ${PCL_LIBRAR
 add_executable(policyTester src/policyTester.cpp)
 add_dependencies(policyTester active_vision ${catkin_EXPORTED_TARGETS})
 target_link_libraries(policyTester active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(kinectService src/kinectService.cpp)
+add_dependencies(kinectService active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(kinectService active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(heuristicPolicyService src/heuristicPolicyService.cpp)
 add_dependencies(heuristicPolicyService active_vision ${catkin_EXPORTED_TARGETS})

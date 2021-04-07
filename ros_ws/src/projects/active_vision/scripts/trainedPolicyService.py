@@ -1,10 +1,11 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 import trainingPolicy as TP
 import sys, csv, time, random, math, os, rospkg, rospy
 import numpy as np
 from os import path
 from matplotlib import pyplot as plt
 from active_vision.srv import trainedPolicySRV,trainedPolicySRVResponse
+from Q_controller2 import *
 
 model = None
 
@@ -51,6 +52,8 @@ if __name__ == "__main__":
         model = TP.PCA_LDA_Model(PCA_components)
     elif type == "PCA_LR":
         model = TP.PCA_LR_Model(PCA_components)
+    elif type == "QLEARN":
+        model = TP.Q_Model((pow(HAFstVecGridSize,2)*2)+2)
     elif type == "RANDOM":
         model = TP.Random_Model()
     elif type == "BRICK":

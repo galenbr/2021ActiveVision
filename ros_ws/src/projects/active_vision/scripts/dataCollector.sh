@@ -23,8 +23,8 @@ src=$pkgPath"/dataCollected/trainingData/"
 csvDataRec='dataRec.csv'
 csvParams='parameters.csv'
 csvStorageSummary='storageSummary.csv'
-objectID=(3)
-nData=(100)
+objectID=(19 20)
+nData=(100 100)
 
 now="$(date +'%Y/%m/%d %I:%M:%S')"
 printf "Started at yyyy/mm/dd hh:mm:ss format %s\n" "$now"
@@ -53,10 +53,10 @@ for ((i=0;i<${#objectID[@]};++i)); do
 		# screen -S session-dataCollection -X stuff $'sleep 7\nexit\n' 
 
 		# Standard data collection
-		screen -S session-dataCollection -X stuff $'rosrun active_vision dataCollector\nexit\n'
+		#screen -S session-dataCollection -X stuff $'rosrun active_vision dataCollector\nexit\n'
 
 		# BFS collection
-		#screen -S session-dataCollection -X stuff $'rosrun active_vision dataCollector 1\nexit\n'
+		screen -S session-dataCollection -X stuff $'rosrun active_vision dataCollector 1\nexit\n'
 
 		# Waiting till datacollection is over
 		screenOK="$(checkScreen session-dataCollection)"

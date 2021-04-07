@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 import sys, csv, time, random, math
 import numpy as np
 from os import path
@@ -11,6 +11,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 from sklearn.neighbors import KNeighborsClassifier
 from pickle import dump
+from Q_controller2 import *
 import pickle
 
 def helpDisp(text):
@@ -72,10 +73,25 @@ class PCA_LDA_LR_Model(methodPipeline):
 
     def predict(self, X):
         if(not self.ready):
-            return methodPipeline.applyFunction(self, X)
+            return int(methodPipeline.applyFunction(self, X))
         else:
-            return self.lr.predict(self.lda.transform(self.pca.transform(self.normalize(X))))
+            return int(self.lr.predict(self.lda.transform(self.pca.transform(self.normalize(X)))))
 
+class Q_Model(methodPipeline):
+    def __init__(self, num_inputs):
+        methodPipeline.__init__(self)
+        self.agent = Agent(alpha=0.005, gamma=0.99, n_actions=8, epsilon=0.01, batch_size=64, input_dims=num_inputs, epsilon_decount=0.996, epsilon_min=0.01, mem_size=1000000, fname='4layersall2_')
+
+    def train(self, X, y):
+        self.agent.load_model(None)
+        self.ready = True
+        return self.ready
+
+    def predict(self, X):
+        if(not self.ready):
+            return int(methodPipeline.applyFunction(self, X))
+        else:
+            return int(self.agent.choose_action(X)+1)
 
 # PCA -> LDA Model
 class PCA_LDA_Model(methodPipeline):
@@ -97,9 +113,9 @@ class PCA_LDA_Model(methodPipeline):
 
     def predict(self, X):
         if(not self.ready):
-            return methodPipeline.applyFunction(self, X)
+            return int(methodPipeline.applyFunction(self, X))
         else:
-            return self.lda.predict(self.pca.transform(self.normalize(X)))
+            return int(self.lda.predict(self.pca.transform(self.normalize(X))))
 
 # PCA -> LR Model
 class PCA_LR_Model(methodPipeline):
@@ -121,9 +137,9 @@ class PCA_LR_Model(methodPipeline):
 
     def predict(self, X):
         if(not self.ready):
-            return methodPipeline.applyFunction(self, X)
+            return int(methodPipeline.applyFunction(self, X))
         else:
-            return self.lr.predict(self.pca.transform(self.normalize(X)))
+            return int(self.lr.predict(self.pca.transform(self.normalize(X))))
 
 # Model that randomly returns a direction [1-8].
 class Random_Model(methodPipeline):
@@ -132,7 +148,7 @@ class Random_Model(methodPipeline):
         return methodPipeline.train(self, X, y)
 
     def predict(self, X):
-        return np.random.choice(range(1,9), X.shape[0])
+        return int(np.random.choice(range(1,9), X.shape[0]))
 
 # Model that always returns 2.
 class Brick_Model(methodPipeline):
@@ -141,7 +157,7 @@ class Brick_Model(methodPipeline):
         return methodPipeline.train(self, X, y)
 
     def predict(self, X):
-        return np.random.choice(range(2,3), X.shape[0])
+        return int(np.random.choice(range(2,3), X.shape[0]))
 
 # class BrickPipeline(methodPipeline):
 #     def __init__(self):
@@ -171,7 +187,7 @@ def readHAFStVec(fileName,dim):
                 states.append([float(i) for i in line[2:dim+2]])
                 dir.append([currentDirection])
 
-	return np.asarray(states),np.asarray(dir)
+    return np.asarray(states),np.asarray(dir)
 
 #K-fold validation of the given pipeline with the given model.
 # def kFold(filename, pipeline, model, name='na', dim=52, k=5):
