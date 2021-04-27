@@ -1,2 +1,0 @@
-float32 left_friction
-float32 right_friction

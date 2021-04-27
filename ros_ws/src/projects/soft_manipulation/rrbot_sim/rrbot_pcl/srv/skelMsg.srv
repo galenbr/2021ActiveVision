@@ -1,4 +1,0 @@
-sensor_msgs/PointCloud2 pc2
-bool view
----
-geometry_msgs/Point skeleton

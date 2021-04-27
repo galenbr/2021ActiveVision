@@ -1,4 +1,0 @@
-int8 left
-int8 right
----
-bool success

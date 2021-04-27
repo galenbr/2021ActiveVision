@@ -1,4 +1,0 @@
-float64 position
-int8 switch_surface
----
-bool success

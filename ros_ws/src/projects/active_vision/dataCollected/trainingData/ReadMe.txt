@@ -1,1 +1,0 @@
-Folder where dacaCollecter write the results to.

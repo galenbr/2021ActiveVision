@@ -1,4 +1,0 @@
-sensor_msgs/PointCloud2 cloud
-float64 size
----
-sensor_msgs/PointCloud2 cloud
