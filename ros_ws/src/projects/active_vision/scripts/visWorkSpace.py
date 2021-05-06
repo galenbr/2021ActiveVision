@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 import collections, copy, io
 import numpy as np
@@ -107,7 +107,7 @@ def genRadialGraph(key,pts):
     fig.suptitle(titleStr, fontsize='medium')
 
     if ctr!=len(pts):
-        print "ERROR"
+        print("ERROR")
         return
 
     fig.tight_layout(rect=[0, 0.03, 1, 0.90])
@@ -117,7 +117,7 @@ def genRadialGraph(key,pts):
 if __name__ == "__main__":
     plots = []
     name = "temp"
-    for k, v in viewablePointsC.iteritems():
+    for k, v in viewablePointsC.items():
         name = str(k[0])+"_"+str(k[1])+"_"+str(k[2])+"_reach.jpg"
         fig = genRadialGraph(k,v)
         plots.append(fig2img(fig))

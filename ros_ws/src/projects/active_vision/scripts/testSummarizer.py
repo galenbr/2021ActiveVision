@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import sys, csv, os, copy
 import numpy as np
 import matplotlib.pyplot as plt

@@ -7,6 +7,7 @@
   <env name="ROSCONSOLE_FORMAT" value='[${severity}]: ${message}'/>
   <include file="$(find active_vision)/launch/loadParams.launch" />
   <rosparam param="/active_vision/simulationMode" subst_value="True">$(arg simulationMode)</rosparam>
+  <node name="graspSynthesis" pkg="active_vision" type="graspSynthesis" args="0" output="screen"/>
 
   <!-- Simulation with floating Kinect -->
   <group if="$(eval arg('simulationMode') == 'SIMULATION')">
@@ -28,7 +29,7 @@
         <arg name="world_name" value="$(find active_vision)/worlds/environmentWithKinect.world"/>
         <arg name="paused" value="false"/>
         <arg name="use_sim_time" value="true"/>
-        <arg name="gui" value="true"/>
+        <arg name="gui" value="false"/>
         <arg name="headless" value="false"/>
         <arg name="recording" value="false"/>
         <arg name="debug" value="false"/>
@@ -54,13 +55,16 @@
 
     <!--Ripped off wholesale from Craig for the time being, just setting things up.-->
 
-    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find active_vision)/desc/franka_camera.xacro" />
+    <param name="robot_description" command="$(find xacro)/xacro $(find active_vision)/desc/franka_camera.xacro" />
     <rosparam file="$(find active_vision)/config/panda_control.yaml" command="load" />
 
-    <!--Add the YAML to the param Server-->
-    <rosparam command = "load" file="$(find active_vision)/config/sim_robot_params.yaml" />
-
     <node name="spawn_franka_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -model panda" />
+
+    <!-- Launch controllers -->
+    <node name="panda_arm_controller_spawnner" pkg="controller_manager" type="spawner" respawn="false"
+          output="screen" args="joint_state_controller gazebo_ros_control" ns="/panda" />
+    <node name="panda_finger_pos_controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
+          output="screen" args="panda_finger1_controller panda_finger2_controller" ns="/panda" />
 
     <!-- Start publishing to /tf for rviz -->
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true">
@@ -68,17 +72,11 @@
     </node>
 
     <!-- Start moveit -->
-    <include file="$(find active_vision)/launch/moveGroup.launch" />
+    <include file="$(find active_vision_moveit_config)/launch/move_group.launch"/>
+
     <!-- launch moveit API -->
     <node name="moveit_api" type="main_node" pkg="moveit_planner"/>
-
     <node name="get_pose" type="pose_node" pkg="moveit_planner" />
-
-    <!-- Launch controllers -->
-    <node name="panda_arm_controller_spawnner" pkg="controller_manager" type="spawner" respawn="false"
-          output="screen" args="joint_state_controller gazebo_ros_control" ns="/panda" />
-    <node name="panda_finger_pos_controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
-          output="screen" args="panda_finger1_controller panda_finger2_controller" ns="/panda" />
 
     <!-- <node name="gripper_node" type="gripper_node" pkg="franka_gripper_gazebo"/> -->
     <node name="pos_grasper_node" type="pos_grasper_node" pkg="franka_pos_grasping_gazebo"/>
@@ -91,9 +89,9 @@
     <!-- If needed, broadcast static tf for robot root -->
     <node pkg="tf2_ros" type="static_transform_publisher" name="virtual_joint_broadcaster_1" args="0 0 0 0 0 0 world panda_link0" />
     <!-- Map to world -->
-    <node pkg="tf2_ros" type="static_transform_publisher" name="virtual_joint_broadcaster_2" args="0 0 0 0 0 0 map world" /> 
+    <node pkg="tf2_ros" type="static_transform_publisher" name="virtual_joint_broadcaster_2" args="0 0 0 0 0 0 map world" />
     <!-- EE -->
-    <node pkg="tf2_ros" type="static_transform_publisher" name="virtual_joint_broadcaster_3" args="0 0 0 0 0 0 panda_EE end_effector_link" /> 
+    <node pkg="tf2_ros" type="static_transform_publisher" name="virtual_joint_broadcaster_3" args="0 0 0 0 0 0 panda_EE end_effector_link" />
 
     <arg name="robot_ip" default="172.16.0.2" />
     <arg name="load_gripper" default="true" />

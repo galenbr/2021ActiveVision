@@ -27,6 +27,7 @@
 #include "moveit_planner/AddCollision.h"
 #include "moveit_planner/SetConstraints.h"
 #include "moveit_planner/MoveNamedState.h"
+#include "moveit_planner/SetJointWithTime.h"
 #include "std_srvs/Empty.h"
 
 // moveit includes
@@ -102,6 +103,7 @@ namespace moveit_planner {
     ros::ServiceServer clearConstClient;
     ros::ServiceServer invClient;
     ros::ServiceServer invCollCheckClient;
+    ros::ServiceServer oneJointWithTimeClient;
 
     // Callbacks
     bool getPoseClientCallback(moveit_planner::GetPose::Request& req,moveit_planner::GetPose::Response& res);
@@ -117,6 +119,7 @@ namespace moveit_planner {
     bool clearConstraintsCallback(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
     bool invClientCallback(moveit_planner::Inv::Request& req,moveit_planner::Inv::Response& res);
     bool invCollCheckClientCallback(moveit_planner::Inv::Request& req,moveit_planner::Inv::Response& res);
+    bool oneJointWithTimeCallback(moveit_planner::SetJointWithTime::Request& req,moveit_planner::SetJointWithTime::Response& res);
 
     // Misc
     bool checkSuccess();

@@ -1,5 +1,0 @@
-float64 direction
----
-std_msgs/Float32MultiArray stateVec
-bool done
-int64 steps

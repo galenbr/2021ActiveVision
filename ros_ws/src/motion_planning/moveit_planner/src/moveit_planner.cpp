@@ -18,7 +18,7 @@ namespace moveit_planner {
 
     ros::waitForShutdown();
   }
-  
+
   MoveitPlanner::~MoveitPlanner() {}
 
   bool MoveitPlanner::getPose(geometry_msgs::Pose& pose) {
@@ -68,20 +68,13 @@ namespace moveit_planner {
       ROS_WARN_STREAM("ERROR MOVING TO POSE " << errCode);
     if(success && exe)
       moveGroup.execute(curPlan);
-
     return success;
   }
   bool MoveitPlanner::poseClientCallback(moveit_planner::MovePose::Request& req,moveit_planner::MovePose::Response& res) {
     bool success = moveToPose(req.val, req.execute);
-
     // Set timing info
     res.planning_time = curPlan.planning_time_;
-    res.arrival_time =
-      curPlan.trajectory_
-      .joint_trajectory
-      .points.back()
-      .time_from_start;
-
+    if(success) res.arrival_time = curPlan.trajectory_.joint_trajectory.points.back().time_from_start;
     return success;
   }
 
@@ -167,11 +160,7 @@ namespace moveit_planner {
     // Timing info & Planning
     bool success = moveToPose(targetPose, req.execute);
     res.planning_time = curPlan.planning_time_;
-    res.arrival_time =
-      curPlan.trajectory_
-      .joint_trajectory
-      .points.back()
-      .time_from_start;
+    if(success) res.arrival_time = curPlan.trajectory_.joint_trajectory.points.back().time_from_start;
 
     return success;
   }
@@ -214,12 +203,9 @@ namespace moveit_planner {
   }
 
   bool MoveitPlanner::ik(const geometry_msgs::Pose& pose, std::vector<double>& results) {
-    double timeout = 0.1;	// Time before quitting (no solution found)
-    int attempts = 2;		// Number of tries
-    bool found = curState->setFromIK(jointModelGroup, pose, attempts, timeout);
-
+    double timeout = 0.01;	// Time before quitting (no solution found)
+    bool found = curState->setFromIK(jointModelGroup, pose, timeout);
     curState->copyJointGroupPositions(jointModelGroup, results);
-
     return found;
   }
   bool MoveitPlanner::invClientCallback(moveit_planner::Inv::Request& req, moveit_planner::Inv::Response& res) {
@@ -227,21 +213,29 @@ namespace moveit_planner {
   }
 
   bool MoveitPlanner::ikWithCollCheck(const geometry_msgs::Pose& pose, std::vector<double>& results) {
-    double timeout = 0.1;	// Time before quitting (no solution found)
-    int attempts = 2;		// Number of tries
-    bool ok = curState->setFromIK(jointModelGroup, pose, attempts, timeout);
+    double timeout = 0.01;	// Time before quitting (no solution found)
+    bool ok = curState->setFromIK(jointModelGroup, pose, timeout);
     curState->copyJointGroupPositions(jointModelGroup, results);
 
-    // static planning_scene::PlanningScene planning_scene(robotModel);
     collision_result.clear();
-    // planning_scene.checkSelfCollision(collision_request, collision_result, *curState);
     planning_scene_monitor::LockedPlanningSceneRO(planningSceneMonitorPtr)->checkCollision(collision_request, collision_result, *curState);
     ok *= !(collision_result.collision);
-    // std::cout << "Test 2: Current state is " << collision_result.collision << std::endl;
     return ok;
   }
   bool MoveitPlanner::invCollCheckClientCallback(moveit_planner::Inv::Request& req,moveit_planner::Inv::Response& res) {
     return ikWithCollCheck(req.pose, res.joint_vals);
+  }
+
+  bool MoveitPlanner::oneJointWithTimeCallback(moveit_planner::SetJointWithTime::Request& req,moveit_planner::SetJointWithTime::Response& res) {
+    moveGroup.setJointValueTarget(req.joint_name,req.joint_angle);
+    auto errCode = moveGroup.plan(curPlan);
+    bool success = (errCode == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    if(success)
+      moveGroup.execute(curPlan);
+    else
+      ROS_WARN_STREAM("ERROR MOVING THE JOINT " << errCode);
+
+    return success;
   }
 
   bool MoveitPlanner::rotClientCallback(moveit_planner::MoveQuat::Request& req,moveit_planner::MoveQuat::Response& res) {
@@ -268,6 +262,7 @@ namespace moveit_planner {
     clearConstClient = n.advertiseService("clear_constraints", &MoveitPlanner::clearConstraintsCallback, this);
     invClient = n.advertiseService("inverse_kinematics", &MoveitPlanner::invClientCallback, this);
     invCollCheckClient = n.advertiseService("inverse_kinematics_collision_check", &MoveitPlanner::invCollCheckClientCallback, this);
+    oneJointWithTimeClient = n.advertiseService("one_joint_with_time", &MoveitPlanner::oneJointWithTimeCallback, this);
 
     // Not currently working, need to debug joint_states issue
     // rotClient = n.advertiseService("move_to_orientation", &MoveitPlanner::rotClientCallback, this);
@@ -293,6 +288,5 @@ namespace moveit_planner {
     bool success = planningSceneMonitorPtr->requestPlanningSceneState("/get_planning_scene");
     planningSceneMonitorPtr->startSceneMonitor("/move_group/monitored_planning_scene");
   }
-
 
 }

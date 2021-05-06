@@ -30,38 +30,38 @@ csvParams='parameters.csv'
 csvStorageSummary='storageSummary.csv'
 
 simulationMode="SIMULATION" # SIMULATION / FRANKASIMULATION / FRANKA
-objectID=(13)
-nDataPoints=100
+objectID=(12 13 14 15 16 18 19 20 21)
+nDataPoints=(10 10 10 10 10 10 10 10 10)
 
 # "RANDOM" "PCA_LR" "PCA_LDA" "PCA_LDA_LR" "HEURISTIC")
 # List all the policies to be tested with the prefix "Policy"
 # Policyxxx = ("Policy" "Unique description" "Param 1 name" "Param 1 value" ...)
 
-Policy1A=("HEURISTIC" "Heuristic")
-Policy1B=("BRICK" "Brick")
-Policy1C=("RANDOM" "Random")
+# Policy1A=("HEURISTIC" "Heuristic")
+# Policy1B=("BRICK" "Brick")
+# Policy1C=("RANDOM" "Random")
 Policy1D=("3DHEURISTIC" "3D_Heuristic")
-# Policy2A=("PCA_LR" "PCA_LR_95"
-#           "/active_vision/policyTester/PCAcomponents" 0.95
-#           "/active_vision/policyTester/HAFstVecGridSize" 7)
-Policy2B=("PCA_LR" "PCA_LR_85"
-           "/active_vision/policyTester/PCAcomponents" 0.85
-           "/active_vision/policyTester/HAFstVecGridSize" 5)
-# Policy2C=("PCA_LR" "PCA_LR_75"
-#           "/active_vision/policyTester/PCAcomponents" 0.75
-#           "/active_vision/policyTester/HAFstVecGridSize" 7)
-# Policy3A=("PCA_LDA" "PCA_LDA_95"
-#           "/active_vision/policyTester/PCAcomponents" 0.95
-#           "/active_vision/policyTester/HAFstVecGridSize" 7)
-Policy3B=("PCA_LDA" "PCA_LDA_85"
-            "/active_vision/policyTester/PCAcomponents" 0.85
-            "/active_vision/policyTester/HAFstVecGridSize" 5)
-# Policy3C=("PCA_LDA" "PCA_LDA_75"
-#           "/active_vision/policyTester/PCAcomponents" 0.75
-#           "/active_vision/policyTester/HAFstVecGridSize" 7)
-Policy5=("QLEARN" "Q_Learning"
-            "/active_vision/policyTester/HAFstVecGridSize" 5)
-
+# # Policy2A=("PCA_LR" "PCA_LR_95"
+# #           "/active_vision/policyTester/PCAcomponents" 0.95
+# #           "/active_vision/policyTester/HAFstVecGridSize" 7)
+# Policy2B=("PCA_LR" "PCA_LR_85"
+#            "/active_vision/policyTester/PCAcomponents" 0.85
+#            "/active_vision/policyTester/HAFstVecGridSize" 5)
+# # Policy2C=("PCA_LR" "PCA_LR_75"
+# #           "/active_vision/policyTester/PCAcomponents" 0.75
+# #           "/active_vision/policyTester/HAFstVecGridSize" 7)
+# # Policy3A=("PCA_LDA" "PCA_LDA_95"
+# #           "/active_vision/policyTester/PCAcomponents" 0.95
+# #           "/active_vision/policyTester/HAFstVecGridSize" 7)
+# Policy3B=("PCA_LDA" "PCA_LDA_85"
+#             "/active_vision/policyTester/PCAcomponents" 0.85
+#             "/active_vision/policyTester/HAFstVecGridSize" 5)
+# # Policy3C=("PCA_LDA" "PCA_LDA_75"
+# #           "/active_vision/policyTester/PCAcomponents" 0.75
+# #           "/active_vision/policyTester/HAFstVecGridSize" 7)
+# Policy5=("QLEARN" "Q_Learning"
+#             "/active_vision/policyTester/HAFstVecGridSize" 5)
+# Policy6=("PROBABILISTIC" "Prob_Paper")
 
 files=()
 
@@ -98,9 +98,10 @@ screen -S session-environment -X stuff $'roslaunch active_vision workspace.launc
 sleep 10
 
 # Looping over the objects and testing each policy for each.
+nDataPtsCtr=0
 for objID in ${objectID[@]}; do
   rosparam set /active_vision/policyTester/objID $objID
-  rosparam set /active_vision/policyTester/nDataPoints $nDataPoints
+  rosparam set /active_vision/policyTester/nDataPoints ${nDataPoints[nDataPtsCtr]}
 	for vars in ${!Policy*}; do
     # Setting the policy and its parameters
     declare -n policy=$vars
@@ -111,6 +112,7 @@ for objID in ${objectID[@]}; do
 
     nHeuristic=0 # To ensure heuristic is run only once
     n3DHeuristic=0 # To ensure heuristic is run only once
+    nProbabilistic=0 # To ensure probabilistic is run only once
 
     for stVec in ${files[@]}; do
       # Setting the csv state vector to be used
@@ -146,6 +148,12 @@ for objID in ${objectID[@]}; do
           # screen -S session-policyTester -X stuff $'sleep 7\n' #Debug line
           n3DHeuristic=1
         fi
+      elif [[ "$policy" == "PROBABILISTIC" ]]; then
+        if [[ "$nProbabilistic" -eq "0" ]]; then
+          screen -S session-policyTester -X stuff $'rosrun active_vision probabilisticPaper\n1\n exit\n'
+          # screen -S session-policyTester -X stuff $'sleep 7\n' #Debug line
+          nProbabilistic=1
+        fi
       else
         screen -S session-policyService -X stuff $'rosrun active_vision trainedPolicyService.py\n'
   			screen -S session-policyTester -X stuff $'rosrun active_vision policyTester 2\n1\n exit\n'
@@ -167,8 +175,8 @@ for objID in ${objectID[@]}; do
 
     done
 	done
+  nDataPtsCtr=$[$nDataPtsCtr+1]
 done
-
 
 # Closing gazebo
 printf "Closing gazebo ...\n"

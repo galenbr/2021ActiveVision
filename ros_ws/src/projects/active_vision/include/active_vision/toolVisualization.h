@@ -26,6 +26,8 @@ void addRGBN(ptCldVis::Ptr viewer, ptCldColor::ConstPtr cloud, ptCldNormal::Cons
 // Fuction to add the viewsphere
 void addViewsphere(ptCldVis::Ptr viewer, int vp, pcl::PointXYZ centre, double &rad, bool all);
 
+void addHelp(ptCldVis::Ptr viewer, int size, int vp);
+
 void setCamView(ptCldVis::Ptr viewer, std::vector<double> pose, pcl::PointXYZ &centre);
 
 void setCamView(ptCldVis::Ptr viewer, std::vector<double> pose, pcl::PointXYZ &centre, int vp);
@@ -40,7 +42,9 @@ public:
   int dir;
   int mode;
 
+  keyboardEvent();
   keyboardEvent(ptCldVis::Ptr viewer,int num);
+  void setup(ptCldVis::Ptr viewer,int num);
   void help();
   void keyboardEventOccurredA(const pcl::visualization::KeyboardEvent &event, void*);
   void keyboardEventOccurredB(const pcl::visualization::KeyboardEvent &event, void*);

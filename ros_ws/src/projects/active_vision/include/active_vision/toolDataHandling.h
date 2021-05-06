@@ -73,6 +73,7 @@ struct RouteData{
   bool success{false};
   float graspQuality{-1};
   int nSteps{0};
+  float EffnSteps{-1};
   std::vector<std::vector<double>> path;
   int direction{-1};
   int type{0};
@@ -88,6 +89,7 @@ struct RouteData{
     goodInitialGrasp = false; success = false;
     graspQuality = -1;
     nSteps = 0; path.clear();
+    EffnSteps = -1;
     direction = -1;
     type = 0;
     filename.clear();

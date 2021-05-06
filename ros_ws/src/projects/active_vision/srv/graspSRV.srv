@@ -1,0 +1,14 @@
+sensor_msgs/PointCloud2 object
+sensor_msgs/PointCloud2 unexplored
+float64 voxelGridSize
+bool thinObject
+---
+int64 totalGrasps
+int64 selectedID
+float64 execTime
+float64 graspQuality
+float64 graspWidth
+float64[] contactA
+float64[] contactB
+float64[] pose
+float64 addnlPitch

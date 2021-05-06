@@ -10,10 +10,10 @@ void passThroughFilter(ptCldColor::Ptr ptrPtCld,pcl::PointXYZRGB min, pcl::Point
   pass.setFilterFieldName("z"); pass.setFilterLimits(min.z,max.z); pass.filter(*ptrPtCld);
 }
 
-void HAFStVec1::setInput(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double> &kinect){
+void HAFStVec1::setInput(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double> &camera){
   ptrPtCldObj = obj;
   ptrPtCldUnexp = unexp;
-  kinViewsphere = kinect;
+  kinViewsphere = camera;
   dataSet = true;
 }
 
@@ -53,7 +53,7 @@ void HAFStVec1::print(){
     }
     std::cout << std::endl;
   }
-  // Kinect Position
+  // Camera Position
   std::cout << "Polar Angle : " << stateVec[2*gridDim*gridDim]*180/M_PI
             << ", Azhimuthal Angle : " << stateVec[2*gridDim*gridDim+1]*180/M_PI << std::endl << std::endl;
 }
@@ -138,7 +138,7 @@ void HAFStVec1::calculate(){
       stateVec.push_back(stateUnexp[i][j]*100);
     }
   }
-  // Adding kinect position
+  // Adding camera position
   stateVec.push_back(kinViewsphere[1]);
   stateVec.push_back(kinViewsphere[2]);
 }

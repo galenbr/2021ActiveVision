@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <fstream>
 #include <chrono>
+#include <boost/thread.hpp>
 #include <boost/make_shared.hpp>
 
 int arrID = 0;

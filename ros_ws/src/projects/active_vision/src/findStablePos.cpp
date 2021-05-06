@@ -7,6 +7,7 @@
 #include <string>
 #include <fstream>
 #include <chrono>
+#include <boost/thread.hpp>
 #include <boost/make_shared.hpp>
 
 #include <ros/ros.h>

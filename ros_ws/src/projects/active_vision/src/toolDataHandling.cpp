@@ -6,6 +6,7 @@ void printRouteData(RouteData &in){
 	printf("(%1.2f, %1.2f, %1.2f)\n", in.objPose[0], in.objPose[1], in.objPose[2]);
 	printf("%1.2f\n", in.graspQuality);
 	printf("Steps taken = %d\n", in.nSteps);
+	if(in.EffnSteps != -1) printf("Effective Steps taken = %1.2f\n", in.EffnSteps);
 	if(in.path.size() > 1){
 		printf("Direction = %d\n", in.direction);
 		printf("Step Path:\n");
@@ -40,7 +41,7 @@ void saveData(RouteData &in, std::fstream &saveTo, std::string &dir, bool all){
 			<< timeSum << ","
 			<< time << ","
 			<< "dummy"<< ","
-			<< "dummy"<< ","
+			<< in.EffnSteps << ","
 			<< in.type << ","
 			<< in.filename << ","
 			<< in.direction << ","
@@ -119,19 +120,19 @@ std::vector<std::vector<std::string>> readCSV(std::string filename){
 	// Create an input filestream
 	std::ifstream myFile(filename);
 	// Make sure the file is open
-  if(!myFile.is_open()) throw std::runtime_error("Could not open CSV file");
+	if(!myFile.is_open()) throw std::runtime_error("Could not open CSV file");
 
 	std::string line, element;
 
 	// Read data, line by line
-  while(std::getline(myFile, line)){
+	while(std::getline(myFile, line)){
     std::stringstream ss(line);
 		row.clear();
 		while(std::getline(ss, element, ',')){
-    	row.push_back(element);
-    }
+    		row.push_back(element);
+    	}
 		data.push_back(row);
-  }
+  	}
 
 	myFile.close();
 

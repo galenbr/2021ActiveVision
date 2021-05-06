@@ -63,21 +63,18 @@ Grasping novel objects using Heuristic and ML based active vision.
     | 03 | Move the realsense/franka to a custom position |
     | 04 | Continuously move the realsense in a viewsphere with centre on the table |
     | 05 | Read and view the data from realsense |
-    | 06 | Read and fuse the data from 4 different viewpoints |
+    | 06 | Read and fuse the data from different viewpoints |
     | 07 | Extract the table and object from the environment |
     | 08 | Generate the initial unexplored pointcloud based on the object |
-    | 09 | Update the unexplored pointcloud based on 4 different viewpoints |
-    | 10 | Grasp synthesis after fusing 4 viewpoints |
-    | 11 | Selecting a grasp after grasp synthesis and collision check for a object |
-    | 12 | Store and rollback configurations |
-    | 13 | Save point clouds |
-    | 14 | Read CSV and print a column |
-    | 15 | Read PCD based on CSV data |
-    | 16 | Surface patch testing |
-    | 17 | Gripper open close testing |
-    | 18 | Testing object pickup |
-    | 19 | Testing moveit collision add/remove |
-    | 20 | Testing moveit constraint |
+    | 09 | Update the unexplored pointcloud based on different viewpoints |
+    | 10 | Grasp synthesis based on different viewpoints. |
+    | 11 | Store and rollback configurations |
+    | 12 | Surface patch testing |
+    | 13 | Gripper open close testing |
+    | 14 | Testing object pickup |
+    | 15 | Testing moveit collision add/remove |
+    | 16 | Testing moveit constraint |
+    | 17 | Rotation and shaking test |
 
     *Note: Some of these functions only work in simulations*
 
@@ -237,4 +234,4 @@ Grasping novel objects using Heuristic and ML based active vision.
     <br> ``` roslaunch --ros-args <pkg-name> <launch-file-name> ```
 
 ## FAQs / Known issues
-  TODO
+    * Visibility constraint on moveit causing bad_alloc errors after ROS Noetic upgrade. Currently disabled.

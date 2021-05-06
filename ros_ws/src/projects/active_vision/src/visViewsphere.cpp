@@ -5,6 +5,7 @@
 #include <fstream>
 #include <chrono>
 #include <boost/make_shared.hpp>
+#include <boost/thread.hpp>
 
 void help(){
   std::cout << "******* Viewsphere Visualizer Help *******" << std::endl;
@@ -16,7 +17,6 @@ void help(){
 
 int main(int argc, char** argv){
   help();
-
   std::vector<double> homePose={1.0,M_PI,45*M_PI/180};
   std::vector<double> nextPose;
   std::vector<double> temp;
@@ -46,7 +46,7 @@ int main(int argc, char** argv){
   viewer->setCameraPosition(0,0,5,table.x,table.y,table.z,0,0,1);
 
   while(keyPress.ok){
-    // Adding the Kinect position
+    // Adding the Camera position
     if(keyPress.dir >=1 && keyPress.dir <= 8){
       nextPose = calcExplorationPose(path.back(),keyPress.dir,keyPress.mode);
       if(checkValidPose(nextPose) == true && checkIfNewPose(path,nextPose,keyPress.mode) == true){

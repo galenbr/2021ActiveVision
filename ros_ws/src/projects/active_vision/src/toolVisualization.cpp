@@ -59,6 +59,9 @@ void setupViewer(ptCldVis::Ptr viewer, int nVps, std::vector<int> &vp){
     viewer->setBackgroundColor(0.5,0.5,0.5,vp[i]);
   }
   viewer->addCoordinateSystem(0.5);
+  viewer->removeAllShapes();
+  viewer->removeAllPointClouds();
+  viewer->resetStoppedFlag();
 }
 
 // Fuction to add a rgb point cloud
@@ -122,14 +125,27 @@ void addViewsphere(ptCldVis::Ptr viewer, int vp, pcl::PointXYZ centre, double &r
   viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_REPRESENTATION,pcl::visualization::PCL_VISUALIZER_REPRESENTATION_WIREFRAME,"Viewsphere"+std::to_string(vp));
 }
 
-keyboardEvent::keyboardEvent(ptCldVis::Ptr viewer, int num){
-  type = num;
+void addHelp(ptCldVis::Ptr viewer, int size, int vp){
+  viewer->addText("Q -> Continue",size,5,25,1,0,0,"Help_1",vp);
+  viewer->addText("Esc -> Close viewer",size,35,25,1,0,0,"Help 2",vp);
+}
+
+keyboardEvent::keyboardEvent(){
   called = false;
   counter = 0;
   ok = true;
   skipTo = false;
   mode = 1;
   dir = 0;
+}
+
+keyboardEvent::keyboardEvent(ptCldVis::Ptr viewer, int num){
+  keyboardEvent();
+  setup(viewer,num);
+}
+
+void keyboardEvent::setup(ptCldVis::Ptr viewer, int num){
+  type = num;
   if(type == 1)
     viewer->registerKeyboardCallback(&keyboardEvent::keyboardEventOccurredA, *this);
   else if(type == 2)

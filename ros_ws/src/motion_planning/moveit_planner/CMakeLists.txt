@@ -32,6 +32,7 @@ add_service_files(
   AddCollision.srv
   SetConstraints.srv
   MoveNamedState.srv
+  SetJointWithTime.srv
 )
 
 generate_messages(

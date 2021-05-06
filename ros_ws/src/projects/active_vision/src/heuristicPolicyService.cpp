@@ -10,8 +10,11 @@ typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
 
 int visualize = 0;
 pcl::PointXYZ table;
+ros::ServiceClient IKClient;
+std::string simulationMode;
+Eigen::MatrixXf projectionMat;
 
-Eigen::Affine3f tfKinect(std::vector<double> &pose){
+Eigen::Affine3f tfCamera(std::vector<double> &pose){
   std::vector<double> cartesian = {0,0,0,0,0,0};
   cartesian[0] = ::table.x+pose[0]*sin(pose[2])*cos(pose[1]);
   cartesian[1] = ::table.y+pose[0]*sin(pose[2])*sin(pose[1]);
@@ -27,6 +30,49 @@ Eigen::Affine3f tfKinect(std::vector<double> &pose){
   return(tfGazWorld * tfKinOptGaz);
 }
 
+geometry_msgs::Pose viewsphereToFranka(std::vector<double> &pose){
+
+  Eigen::Matrix3f rotMat;
+  rotMat = Eigen::AngleAxisf(M_PI+pose[1], Eigen::Vector3f::UnitZ()) * Eigen:: AngleAxisf(M_PI/2-pose[2], Eigen::Vector3f::UnitY()) * Eigen::AngleAxisf(0, Eigen::Vector3f::UnitX());
+
+  // Incorporating the camera translation offset
+  Eigen::Matrix4f tfMat; tfMat.setIdentity();
+  tfMat.block<3,3>(0,0) = rotMat;
+  tfMat(0,3) = ::table.x+pose[0]*sin(pose[2])*cos(pose[1]);
+  tfMat(1,3) = ::table.y+pose[0]*sin(pose[2])*sin(pose[1]);
+  tfMat(2,3) = ::table.z+pose[0]*cos(pose[2]);
+
+  tfMat *= pcl::getTransformation(0,0,0,0,-M_PI/2,M_PI).matrix();
+  Eigen::Matrix4f cameraOffset; cameraOffset.setIdentity();
+  cameraOffset(0,3) = -0.037796115635;
+  cameraOffset(1,3) = +0.0298131982299;
+  cameraOffset(2,3) = -0.059671236405;
+  if(tfMat(0,0) < 0) tfMat *= pcl::getTransformation(0,0,0,0,0,M_PI).matrix();
+  tfMat *= cameraOffset;
+
+  if(::simulationMode == "FRANKA"){
+    tfMat *= pcl::getTransformation(0,0,0,0,0,M_PI/4).matrix();
+  }
+
+  Eigen::Quaternionf quat(tfMat.block<3,3>(0,0));
+
+  geometry_msgs::Pose p;
+  p.position.x = tfMat(0,3);  p.position.y = tfMat(1,3);  p.position.z = tfMat(2,3);
+  p.orientation.x = quat.x(); p.orientation.y = quat.y(); p.orientation.z = quat.z(); p.orientation.w = quat.w();
+
+  return p;
+}
+
+bool checkCameraOK(std::vector<double> &pose){
+  bool check1 = checkValidPose(pose);
+  bool check2 = true;
+  if(::simulationMode != "SIMULATION"){
+    geometry_msgs::Pose p = viewsphereToFranka(pose);
+    check2 = checkFrankReach(::IKClient,p) || checkFrankReach(::IKClient,p);
+  }
+  return (check1 && check2);
+}
+
 void cleanUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr unexp){
   pcl::PointXYZRGB minPtObj, maxPtObj;
   pcl::getMinMax3D(*obj, minPtObj, maxPtObj);
@@ -39,17 +85,11 @@ void cleanUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr unexp){
 }
 
 int findVisibleUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double> &pose, cv::Mat &res){
-  Eigen::Affine3f tf = tfKinect(pose);
+  Eigen::Affine3f tf = tfCamera(pose);
   ptCldColor::Ptr tempObj{new ptCldColor};
   ptCldColor::Ptr tempUnexp{new ptCldColor};
   pcl::transformPointCloud(*obj, *tempObj, homoMatTranspose(tf));
   pcl::transformPointCloud(*unexp, *tempUnexp, homoMatTranspose(tf));
-
-  Eigen::MatrixXf projectionMat;
-  projectionMat.resize(3,4);
-  projectionMat << 554.254691191187, 0.0, 320.5, -0.0,
-                   0.0, 554.254691191187, 240.5, 0.0,
-                   0.0, 0.0, 1.0, 0.0;
 
   cv::Mat projObj = cv::Mat::zeros(480,640,CV_8UC1);
   cv::Mat projUnexp = cv::Mat::zeros(480,640,CV_8UC1);
@@ -59,7 +99,7 @@ int findVisibleUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<dou
 
   for(int i = 0; i < tempUnexp->width; i++){
     v4fTemp = tempUnexp->points[i].getVector4fMap();
-    proj = projectionMat*v4fTemp;
+    proj = ::projectionMat*v4fTemp;
     proj = proj/proj[2];
     proj[0] = (round(proj[0])-1);
     proj[1] = (round(proj[1])-1);
@@ -70,7 +110,7 @@ int findVisibleUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<dou
   }
   for(int i = 0; i < tempObj->width; i++){
     v4fTemp = tempObj->points[i].getVector4fMap();
-    proj = projectionMat*v4fTemp;
+    proj = ::projectionMat*v4fTemp;
     proj = proj/proj[2];
     proj[0] = (round(proj[0])-1);
     proj[1] = (round(proj[1])-1);
@@ -80,7 +120,7 @@ int findVisibleUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<dou
     }
   }
 
-  int sA1 = 3, sA2 = 3;
+  int sA1 = 9, sA2 = 9;
   cv::Mat element1 = cv::getStructuringElement(0, cv::Size(2*sA1+1,2*sA1+1), cv::Point(sA1,sA1));
   cv::Mat element2 = cv::getStructuringElement(0, cv::Size(2*sA2+1,2*sA2+1), cv::Point(sA2,sA2));
   cv::morphologyEx(projObj,projObj,3,element1);
@@ -113,7 +153,7 @@ std::vector<int> findVisibleUnexp8Dir(ptCldColor::Ptr obj, ptCldColor::Ptr unexp
   cv::Mat single, final;
   for(int i = 1; i <= 8; i++){
     newPose = calcExplorationPose(pose.back(),i,mode);
-    if(checkValidPose(newPose) == true && checkIfNewPose(pose,newPose,mode) == true){
+    if(checkCameraOK(newPose)){
       temp = findVisibleUnexp(obj,unexp,newPose,single);
       cv::Size s = single.size();
       // std::cout << s.height << "," << s.width << std::endl;
@@ -187,11 +227,25 @@ int main(int argc, char** argv){
 	if(::visualize != 0 && ::visualize != 1) ::visualize = 0;
 
  	ros::NodeHandle nh;
+  nh.getParam("/active_vision/simulationMode", ::simulationMode);
   std::vector<double> tableCentre;
   nh.getParam("/active_vision/environment/tableCentre", tableCentre);
+  ::IKClient =  nh.serviceClient<moveit_planner::Inv>("inverse_kinematics_collision_check");
   ::table.x = tableCentre[0];
   ::table.y = tableCentre[1];
   ::table.z = tableCentre[2];
+
+  ::projectionMat.resize(3,4);
+  if(::simulationMode == "FRANKA"){
+    ::projectionMat << 383.28009033203125, 0.0, 323.4447021484375, 0.0,
+                       0.0, 383.28009033203125, 237.4062042236328, 0.0,
+                       0.0, 0.0, 1.0, 0.0;
+  }else{
+    ::projectionMat << 554.254691191187, 0.0, 320.5, 0.0,
+                       0.0, 554.254691191187, 240.5, 0.0,
+                       0.0, 0.0, 1.0, 0.0;
+  }
+
   ros::ServiceServer service = nh.advertiseService("/active_vision/heuristic_policy", heuristicPolicy);
   ROS_INFO("Heuristic policy service ready.");
   ros::spin();

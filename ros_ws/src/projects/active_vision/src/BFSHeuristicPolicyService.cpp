@@ -11,7 +11,7 @@ typedef pcl::PointCloud<pcl::PointXYZRGB> ptCldColor;
 int visualize = 0;
 pcl::PointXYZ table;
 
-Eigen::Affine3f tfKinect(std::vector<double> &pose){
+Eigen::Affine3f tfCamera(std::vector<double> &pose){
   std::vector<double> cartesian = {0,0,0,0,0,0};
   cartesian[0] = ::table.x+pose[0]*sin(pose[2])*cos(pose[1]);
   cartesian[1] = ::table.y+pose[0]*sin(pose[2])*sin(pose[1]);
@@ -39,7 +39,7 @@ void cleanUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr unexp){
 }
 
 int findVisibleUnexp(ptCldColor::Ptr obj, ptCldColor::Ptr unexp, std::vector<double> &pose, cv::Mat &res){
-  Eigen::Affine3f tf = tfKinect(pose);
+  Eigen::Affine3f tf = tfCamera(pose);
   ptCldColor::Ptr tempObj{new ptCldColor};
   ptCldColor::Ptr tempUnexp{new ptCldColor};
   pcl::transformPointCloud(*obj, *tempObj, homoMatTranspose(tf));

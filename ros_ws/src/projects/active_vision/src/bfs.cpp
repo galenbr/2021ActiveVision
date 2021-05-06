@@ -19,11 +19,11 @@ struct dataPoint{
 
 	void print(){
 		std::cout << std::setw(3) << nodeID <<
-		             std::setw(3) << parentID <<
-								 std::setw(3) << success <<
-								 std::setw(5) << ctr[0] << "/" << ctr[1] <<
-								 // std::setw(10) << std::setprecision(3) << reward <<
-								 "\t0";
+					 std::setw(3) << parentID <<
+					 std::setw(3) << success <<
+					 std::setw(5) << ctr[0] << "/" << ctr[1] <<
+					 // std::setw(10) << std::setprecision(3) << reward <<
+					 "\t0";
 		for(int i = 0; i < dir.size(); i++) {
 			std::cout << "-" << dir[i] ;
 		}
@@ -40,14 +40,14 @@ struct dataPoint{
 
 	void saveToCSV(std::fstream &saveTo){
 		saveTo << parentID << ","
-		       << nodeID << ","
-					 << success << ","
-					 << ctr[0] << ","
-					 << ctr[1] << ","
-					 << reward << ",";
+			   << nodeID << ","
+			   << success << ","
+			   << ctr[0] << ","
+			   << ctr[1] << ","
+			   << reward << ",";
 
 		saveTo << "0";
-	  for(int i = 0; i < dir.size(); i++){
+	  	for(int i = 0; i < dir.size(); i++){
 			saveTo << "-" << dir[i] ;
 		}
 		saveTo << "\n";
@@ -90,7 +90,7 @@ void checkGrasp(environment &env, dataPoint &data){
 				singlePass(env, data.path.back(), false, true);
 			}
 			::nSearches++;
-			data.success = (env.selectedGrasp != -1);
+			data.success = (env.graspID != -1);
 		}
 	}
 	data.reward = int(data.path.size()-1)*(::moveCost) + data.success*(::graspOKreward);
@@ -125,28 +125,27 @@ std::vector<dataPoint> bfsSearch(environment &env, std::vector<double> home, int
 }
 
 void help(){
-  std::cout << "******* Supervisor Node Help *******" << std::endl;
-  std::cout << "Arguments : [Object] [Depth] [Mode]" << std::endl;
+	std::cout << "******* Supervisor Node Help *******" << std::endl;
+	std::cout << "Arguments : [Object] [Depth] [Mode]" << std::endl;
 	std::cout << "Object : Object ID -> 0(Drill),1(Sq Prism),2(Rect Prism)" << std::endl;
 	std::cout << "Depth : 1-3" << std::endl;
 	std::cout << "Mode : 1->Normal, 2->New" << std::endl;
-  std::cout << "*******" << std::endl;
+	std::cout << "*******" << std::endl;
 }
 
 int main (int argc, char** argv){
 	ros::init(argc, argv, "BFS_Node");
 
 	if(argc != 4){
-    std::cout << "ERROR. Incorrect number of arguments." << std::endl;
-    help(); return(-1);
+	std::cout << "ERROR. Incorrect number of arguments." << std::endl;
+	help(); return(-1);
   }
 
  	ros::NodeHandle nh;
 	std::chrono::high_resolution_clock::time_point start,end;
 
- 	environment kinectControl(&nh);
+ 	environment av(&nh);
 	sleep(1);
-  kinectControl.loadGripper();
 
 	int objID = std::atoi(argv[1]);
 	if(objID < 0 && objID > 2) objID = 0;
@@ -156,9 +155,9 @@ int main (int argc, char** argv){
 	if(::mode < 1 && ::mode > 2) ::mode = 1;
 
 	int objPoseCode, objYaw;
-	printf("Enter the object pose code (0-%d) : ", int(kinectControl.objectPosesDict[objID].size()-1));
+	printf("Enter the object pose code (0-%d) : ", int(av.objectDict[objID].nPoses-1));
 	std::cin >> objPoseCode;
-	if(objPoseCode < 0 || objPoseCode > kinectControl.objectPosesDict[objID].size()-1) objPoseCode = 0;
+	if(objPoseCode < 0 || objPoseCode > av.objectDict[objID].nPoses-1) objPoseCode = 0;
 	printf("Enter the object yaw (deg) (0-360) : ");
 	std::cin >> objYaw;
 
@@ -167,24 +166,24 @@ int main (int argc, char** argv){
 	std::string csvName;
 	std::stringstream ss;
 	ss << "bfs_" <<
-	      "O" << argv[1] <<
-				"P" << std::to_string(objPoseCode) <<
-				"Y" << std::to_string(objYaw) <<
-				"D" << argv[2] <<
-				"M" << argv[3] <<
-				".csv";
+		  "O" << argv[1] <<
+		  "P" << std::to_string(objPoseCode) <<
+		  "Y" << std::to_string(objYaw) <<
+		  "D" << argv[2] <<
+		  "M" << argv[3] <<
+		  ".csv";
 	csvName = ss.str();
 
 	std::fstream fout;
  	fout.open(dir+csvName, std::ios::out);
 
-	fout<<kinectControl.objectDict[objID][1]<<","
-	    <<objPoseCode<<","
-			<<objYaw<<","
-			<<argv[2]<<","
-			<<argv[3]<<"\n";
+	fout<<av.objectDict[objID].fileName<<","
+		<<objPoseCode<<","
+		<<objYaw<<","
+		<<argv[2]<<","
+		<<argv[3]<<"\n";
 
-	kinectControl.spawnObject(objID,objPoseCode,objYaw*(M_PI/180.0));
+	av.spawnObject(objID,objPoseCode,objYaw*(M_PI/180.0));
 
 	std::vector<double> homePos = {1.0, 180*(M_PI/180.0), 45*(M_PI/180.0)};
 	std::cout << "Start Time : " << getCurTime() << std::endl;
@@ -193,7 +192,7 @@ int main (int argc, char** argv){
 	printf("***** Object #%d, Depth #%d *****\n",objID,depth);
 
 	std::vector<dataPoint> result;
-	result = bfsSearch(kinectControl, homePos, depth);
+	result = bfsSearch(av, homePos, depth);
 	for(int i = result.size()-1; i > 0; i--){
 		if(result[i].parentID == -1) printf("ERROR\n");
 		result[result[i].parentID].ctr[0] += result[i].ctr[0];
@@ -214,7 +213,7 @@ int main (int argc, char** argv){
 	end = std::chrono::high_resolution_clock::now();
 	std::cout << "End Time : " << getCurTime() << std::endl;
 
-	kinectControl.deleteObject(objID);
+	av.deleteObject(objID);
 
 	double elapsed = (std::chrono::duration_cast<std::chrono::milliseconds>(end - start)).count()/1000;
 	printf("Time Taken (sec) : %1.2f\n",elapsed);

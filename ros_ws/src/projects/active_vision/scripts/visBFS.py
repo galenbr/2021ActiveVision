@@ -1,6 +1,5 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
-# import rospkg
 import sys, csv
 import numpy as np
 from graphviz import Digraph

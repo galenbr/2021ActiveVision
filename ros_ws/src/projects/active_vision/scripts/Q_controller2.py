@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 from keras.layers import Dense, Activation, LeakyReLU
 from keras.models import Sequential, load_model
 from keras.optimizers import Adam

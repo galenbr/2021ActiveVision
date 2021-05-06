@@ -45,7 +45,7 @@ int main(int argc, char** argv){
   std::vector<double> pose={0,0,0};
   pcl::PointXYZ sphereCentre;
   pcl::PointXYZ table,a1,a2;
-  table.x = 0.55; table.y = 0; table.z = 0;
+  table.x = 0.45; table.y = 0; table.z = 0;
 
   ptCldColor::Ptr ptrPtCldTemp{new ptCldColor};
 
@@ -59,7 +59,7 @@ int main(int argc, char** argv){
 
   int i = 0;
   while(keyPress.ok){
-    if (pathColID <= data[i].size()){
+    if(pathColID <= data[i].size()){
       if(visual==2){
         readPointCloud(ptrPtCldTemp,directory,data[i][pathColID-1],1);
         addRGB(viewer,ptrPtCldTemp,"Obj",vp[0]);

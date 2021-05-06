@@ -16,9 +16,6 @@ devel
 /ros_ws/CMakeLists.txt
 /CMakeLists.txt
 
-#Matlab Results
-Matlab/piercing_sim/Results
-
 #build and devel files
 ros_ws/build/
 ros_ws/devel/
@@ -34,9 +31,6 @@ ros_ws/.vscode
 !.vscode/extensions.json
 *.code-workspace
 .history/
-
-#Moveit Hand Eye Calibration Plugin
-ros_ws/src/moveit_calibration-master/
 
 #active vision data
 

@@ -1,4 +1,5 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
+
 import sys, csv,os, copy, io
 import numpy as np
 from prettytable import PrettyTable
@@ -47,7 +48,7 @@ def updateSummary(policyWise, policyWise2, obj):
                 nSteps = int(each[13])
                 temp = calcStepsDir(each)
                 policyWise[keyPolicy][nSteps] += 1
-                for step,dir in zip(range(len(temp)),temp):
+                for step,dir in zip(list(range(len(temp))),temp):
                     if dir != 0:
                         policyWise2[keyPolicy][step][dir-1] += 1
 
@@ -87,14 +88,14 @@ def genSummary(path,fileNames):
                 policyWise[keyPolicy] = np.array(bins)
                 policyWise2[keyPolicy] = np.array(bin2)
             else:
-                if policyWise.has_key(keyPolicy) == False:
+                if (keyPolicy in policyWise) == False:
                     policyWise[keyPolicy] = {}
                     policyWise2[keyPolicy] = {}
                 policyWise[keyPolicy][stVec] = np.array(bins)
                 policyWise2[keyPolicy][stVec] = np.array(bin2)
                 policyWise[obj+"*BFS"] = np.array(bins)
                 policyWise2[obj+"*BFS"] = np.array(bin2)
-                if stVecWise.has_key(keyStVec) == False:
+                if (keyStVec in stVecWise) == False:
                     stVecWise[keyStVec] = {}
                 stVecWise[keyStVec][policy] = np.array(bins)
 
@@ -112,14 +113,14 @@ def genSummary(path,fileNames):
             temp = calcStepsDir(each)
             if policy in heuristicPolicies:
                 policyWise[keyPolicy][nSteps] += 1
-                for step,dir in zip(range(len(temp)),temp):
+                for step,dir in zip(list(range(len(temp))),temp):
                     if dir != 0:
                         policyWise2[keyPolicy][step][dir-1] += 1
             else:
                 updateSummary(policyWise, policyWise2, obj)
                 policyWise[keyPolicy][stVec][nSteps] += 1
                 stVecWise[keyStVec][policy][nSteps] += 1
-                for step,dir in zip(range(len(temp)),temp):
+                for step,dir in zip(list(range(len(temp))),temp):
                     if dir != 0:
                         policyWise2[keyPolicy][stVec][step][dir-1] += 1
 
@@ -147,17 +148,17 @@ def graphSummary(path,policyWise,policyWise2,stVecWise):
 
     # Creating stVecWise plots i.e. policy comparisons
     plots = []
-    for key, value in stVecWise.items():
+    for key, value in list(stVecWise.items()):
         keywords = key.split("*")
         fig, ax = plt.subplots(1,1); ax = np.ravel(ax)
         fig.set_size_inches(6, 4)
         fig.suptitle("Step number distribution - Comparison of various policies", fontsize='medium')
         idx = 0
         # print key, value
-        for policy, summary in value.items():
+        for policy, summary in list(value.items()):
             temp = np.cumsum(summary)
             nData = temp[-1]
-            avg = round(np.sum(np.array(summary)*np.array(range(len(summary))))/float(nData),1)
+            avg = round(np.sum(np.array(summary)*np.array(list(range(len(summary)))))/float(nData),1)
             temp = temp / float(temp[-1])
             # print "\t", policy, "--->" ,temp
             ax[0].plot(xAxis,temp[0:maxSteps+1]*100,color=graphColors[idx], marker=graphMarkers[idx], label = policy + " (" + str(avg) + ")")
@@ -166,10 +167,10 @@ def graphSummary(path,policyWise,policyWise2,stVecWise):
         # Adding the heuristic result if available
         for policy in heuristicPolicies:
             keyPolicy = keywords[0]+"*"+policy
-            if policyWise.has_key(keyPolicy):
+            if keyPolicy in policyWise:
                 temp = np.cumsum(policyWise[keyPolicy])
                 nData = temp[-1]
-                avg = round(np.sum(np.array(policyWise[keyPolicy])*np.array(range(len(policyWise[keyPolicy]))))/float(nData),1)
+                avg = round(np.sum(np.array(policyWise[keyPolicy])*np.array(list(range(len(policyWise[keyPolicy])))))/float(nData),1)
                 temp = temp / float(temp[-1])
                 # print "\t", policy, "--->" ,temp
                 ax[0].plot(xAxis,temp[0:maxSteps+1]*100,color=graphColors[idx], marker=graphMarkers[idx], label = policy + " (" + str(avg) + ")")
@@ -198,7 +199,7 @@ def graphSummary(path,policyWise,policyWise2,stVecWise):
 
     # Creating policyWise plots i.e. state vector comparisons
     plots = []
-    for key, value in policyWise.items():
+    for key, value in list(policyWise.items()):
         # Skipping the heuristics
         if isinstance(value,dict) == False:
             continue
@@ -212,10 +213,10 @@ def graphSummary(path,policyWise,policyWise2,stVecWise):
         fig.suptitle("Step number distribution - Comparison of various state vectors", fontsize='medium')
         idx = 0
 
-        for stVec, summary in value.items():
+        for stVec, summary in list(value.items()):
             temp = np.cumsum(summary)
             nData = temp[-1]
-            avg = round(np.sum(np.array(summary)*np.array(range(len(summary))))/float(nData),1)
+            avg = round(np.sum(np.array(summary)*np.array(list(range(len(summary)))))/float(nData),1)
             temp = temp / float(temp[-1])
             # print "\t", policy, "--->" ,temp
             ax[0].plot(xAxis,temp[0:maxSteps+1]*100,color=graphColors[idx], marker=graphMarkers[idx], label = stVec + " (" + str(avg) + ")")
@@ -245,7 +246,7 @@ def graphSummary(path,policyWise,policyWise2,stVecWise):
     # Heuristics only comparison
     plots = []
     unique = []
-    for key, value in policyWise.items():
+    for key, value in list(policyWise.items()):
         # Skipping non heuristics
         if isinstance(value,dict):
             continue
@@ -262,10 +263,10 @@ def graphSummary(path,policyWise,policyWise2,stVecWise):
             # Adding the heuristic result if available
             for policy in heuristicPolicies:
                 keyPolicy = keywords[0]+"*"+policy
-                if policyWise.has_key(keyPolicy):
+                if keyPolicy in policyWise:
                     temp = np.cumsum(policyWise[keyPolicy])
                     nData = temp[-1]
-                    avg = round(np.sum(np.array(policyWise[keyPolicy])*np.array(range(len(policyWise[keyPolicy]))))/float(nData),1)
+                    avg = round(np.sum(np.array(policyWise[keyPolicy])*np.array(list(range(len(policyWise[keyPolicy])))))/float(nData),1)
                     temp = temp / float(temp[-1])
                     # print "\t", policy, "--->" ,temp
                     ax[0].plot(xAxis,temp[0:maxSteps+1]*100,color=graphColors[idx], marker=graphMarkers[idx], label = policy + " (" + str(avg) + ")")
@@ -295,7 +296,7 @@ def graphSummary(path,policyWise,policyWise2,stVecWise):
     plots = []
     theta = list(np.linspace(0,np.pi/4*7,8))
     theta.append(0)
-    for key, value in policyWise2.items():
+    for key, value in list(policyWise2.items()):
         keywords = key.split("*")
         objDetails = keywords[0].split("&")
 
@@ -311,12 +312,12 @@ def graphSummary(path,policyWise,policyWise2,stVecWise):
 
         # Non-Heuristic
         if isinstance(value,dict):
-            for stVec, summary in value.items():
+            for stVec, summary in list(value.items()):
                 ax.set_title("Policy : "+keywords[1]+", St Vec : "+stVec, fontsize='small')
                 ax.set_theta_direction(-1)
                 ax.set_theta_offset(np.pi/2)
                 ax.set_thetagrids(np.degrees(theta), ["N","NE","E","SE","S","SW","W","NW","N"])
-                for step,i in zip(summary,range(len(summary))):
+                for step,i in zip(summary,list(range(len(summary)))):
                     if i == 3:
                         break
                     if(np.sum(step) > 0):
@@ -335,7 +336,7 @@ def graphSummary(path,policyWise,policyWise2,stVecWise):
             ax.set_theta_direction(-1)
             ax.set_theta_offset(np.pi/2)
             ax.set_thetagrids(np.degrees(theta), ["N","NE","E","SE","S","SW","W","NW","N"])
-            for step,i in zip(value,range(len(value))):
+            for step,i in zip(value,list(range(len(value)))):
                 if i == 3:
                     break
                 if(np.sum(step) > 0):
@@ -354,7 +355,7 @@ def graphSummary(path,policyWise,policyWise2,stVecWise):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Incorrect number of arguments ", len(sys.argv))
+        print(("Incorrect number of arguments ", len(sys.argv)))
         sys.exit()
 
     path = sys.argv[1]

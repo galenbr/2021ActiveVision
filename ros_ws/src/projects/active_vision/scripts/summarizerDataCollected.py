@@ -1,4 +1,5 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
+
 import sys, csv,os, copy, io
 import numpy as np
 from prettytable import PrettyTable
@@ -244,7 +245,7 @@ def graphSummary(path,summary):
 
         temp = np.cumsum(each[5])
         nData = temp[-1]
-        avg = round(np.sum(np.array(each[5])*np.array(range(len(each[5]))))/float(nData),1)
+        avg = round(np.sum(np.array(each[5])*np.array(list(range(len(each[5])))))/float(nData),1)
         temp = temp / float(temp[-1])
         ax[0].plot(xAxis,temp[0:maxSteps+1]*100,color='b', marker="o")
 
@@ -286,7 +287,7 @@ def graphSummary(path,summary):
         ax.set_theta_direction(-1)
         ax.set_theta_offset(np.pi/2)
         ax.set_thetagrids(np.degrees(theta), ["N","NE","E","SE","S","SW","W","NW","N"])
-        for step,i in zip(each[6],range(len(each[6]))):
+        for step,i in zip(each[6],list(range(len(each[6])))):
             if(np.sum(step) > 0):
                 sum = float(np.sum(step))
                 temp = list(np.array(step)/sum*100)

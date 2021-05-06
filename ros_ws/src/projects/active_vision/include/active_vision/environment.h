@@ -16,6 +16,9 @@
 #include <ros/package.h>
 #include <ros/master.h>
 #include <tf/transform_datatypes.h>
+#include <active_vision/graspSRV.h>
+#include <active_vision/graspVisSRV.h>
+#include <active_vision/toolDataHandling.h>
 
 // OpenCV Specific Includes
 #include <opencv2/imgproc.hpp>
@@ -58,8 +61,6 @@
 #include <gazebo_msgs/GetModelState.h>
 #include <gazebo_msgs/DeleteModel.h>
 
-#include <active_vision/toolDataHandling.h>
-
 //Moveit
 #include <moveit_planner/GetPose.h>
 #include <moveit_planner/MoveCart.h>
@@ -70,6 +71,7 @@
 #include <moveit_planner/AddCollision.h>
 #include <moveit_planner/SetConstraints.h>
 #include <moveit_planner/MoveNamedState.h>
+#include <moveit_planner/SetJointWithTime.h>
 #include <std_srvs/Empty.h>
 
 // #include <moveit/planning_scene_interface/planning_scene_interface.h>
@@ -93,26 +95,19 @@ bool ROSCheck(std::string type, std::string name);
 
 // Structure to store one grasp related data
 struct graspPoint{
-  float quality;
-  float distance;
-  float lineDistance;
-  bool aboveCOG;
-  float gripperWidth;
+  double quality;
+  double gripperWidth;
   pcl::PointXYZRGB p1;
   pcl::PointXYZRGB p2;
-  std::vector<float> pose;    // Note: This is not the final gripper pose
-  float addnlPitch;
-  graspPoint();
+  std::vector<double> pose;    // Note: This is not the final gripper pose
+  double addnlPitch;
 };
-
-// Function to compare grasp point for sorting
-bool compareGrasp(graspPoint A, graspPoint B);
 
 // Structure to store state for rollback
 struct stateConfig{
   ptCldColor env;                   // Environment point cloud
   ptCldColor unexp;                 // Unexplored point cloud
-  std::vector<double> kinectPose;   // Kinect Pose in Viewsphere
+  std::vector<double> cameraPose;   // Camera Pose in Viewsphere
   std::string description;          // Description of the configuration
   std::vector<double> unexpMin;
   std::vector<double> unexpMax;
@@ -131,9 +126,6 @@ Eigen::Affine3f calcTfFromNormal(pcl::Normal normal, pcl::PointXYZRGB point);
 
 void calcTfFromNormal(pcl::Normal normal, pcl::PointXYZRGB point, Eigen::Matrix3f &rot, Eigen::Vector3f &trans);
 
-// Estimating the contact patch
-bool isContactPatchOk(ptCldColor::Ptr obj, ptCldNormal::Ptr normal, long int ptIdx, float tolerance);
-
 void RGBtoHSV(float fR, float fG, float fB, float& fH, float& fS, float& fV);
 
 bool checkFrankReach(ros::ServiceClient &IKClient, geometry_msgs::Pose &p);
@@ -142,8 +134,8 @@ bool checkFrankReach(ros::ServiceClient &IKClient, geometry_msgs::Pose &p);
 class environment{
 private:
   ros::Rate r{10};                      // ROS sleep rate
-  ros::Publisher pubObjPose;            // Publisher : Kinect/Objects pose
-  ros::Subscriber subKinectPtCld;       // Subscriber : Kinect pointcloud
+  ros::Publisher pubObjPose;            // Publisher : Camera/Objects pose
+  ros::Subscriber subCameraPtCld;       // Subscriber : Camera pointcloud
   ros::ServiceClient gazeboSpawnModel;  // Service : Spawn Model
   ros::ServiceClient gazeboCheckModel;  // Service : Check Model
   ros::ServiceClient gazeboDeleteModel; // Service : Delete Model
@@ -158,19 +150,20 @@ private:
   pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;  // Normal Estimation
 
   Eigen::MatrixXf projectionMat;   // Camera projection matrix
-  Eigen::Affine3f tfKinOptGaz;     // Transform : Kinect Optical Frame to Kinect Gazebo frame
-  Eigen::Affine3f tfGazWorld;      // Transform : Kinect Gazebo Frame to Gazebo World frame
+  Eigen::Affine3f tfCamOptGaz;     // Transform : Camera Optical Frame to Camera Gazebo frame
+  Eigen::Affine3f tfGazWorld;      // Transform : Camera Gazebo Frame to Gazebo World frame
 
-  int readFlag[3];                 // Flag used to read data from kinect only when needed
+  int readFlag[3];                 // Flag used to read data from Camera only when needed
   bool addNoise;
   float depthNoise;                // Depth in %
   std::default_random_engine generator;
-  bool graspCurvatureConstraint;
-  bool graspSurPatchConstraint;
 
   std::string path;                // Path the active vision package
 
 public:
+
+  ros::ServiceClient graspClient;
+  ros::ServiceClient graspVisClient;
 
   ros::ServiceClient getPoseClient;
   ros::ServiceClient poseClient;
@@ -183,6 +176,7 @@ public:
   ros::ServiceClient setConstClient;
   ros::ServiceClient clearConstClient;
   ros::ServiceClient namedStateClient;
+  ros::ServiceClient oneJointWithTimeClient;
   // moveit_planner::SetVelocity velscale;
   tf::TransformListener listener;
 
@@ -194,25 +188,12 @@ public:
   ptCldColor::Ptr ptrPtCldEnv{new ptCldColor};       ptCldColor::ConstPtr cPtrPtCldEnv{ptrPtCldEnv};
   ptCldColor::Ptr ptrPtCldTable{new ptCldColor};     ptCldColor::ConstPtr cPtrPtCldTable{ptrPtCldTable};
   ptCldColor::Ptr ptrPtCldObject{new ptCldColor};    ptCldColor::ConstPtr cPtrPtCldObject{ptrPtCldObject};
-  ptCldNormal::Ptr ptrObjNormal{new ptCldNormal};    ptCldNormal::ConstPtr cPtrObjNormal{ptrObjNormal};
-  std::vector<bool> useForGrasp;  // Maps to object point cloud and stores if each point can be used in grasp synthesis or not
 
   // PtCld: Sorting the convex hull generated
   ptCldColor::Ptr ptrPtCldHull{new ptCldColor};      ptCldColor::ConstPtr cPtrPtCldHull{ptrPtCldHull};
 
   // PtCld: Unexplored point cloud
   ptCldColor::Ptr ptrPtCldUnexp{new ptCldColor};     ptCldColor::ConstPtr cPtrPtCldUnexp{ptrPtCldUnexp};
-  ptCldColor::Ptr ptrPtCldCollCheck{new ptCldColor}; ptCldColor::ConstPtr cPtrPtCldCollCheck{ptrPtCldCollCheck};
-
-  // PtCld: Gripper related
-  ptCldColor::Ptr ptrPtCldGrpHnd{new ptCldColor};    ptCldColor::ConstPtr cPtrPtCldGrpHnd{ptrPtCldGrpHnd};
-  ptCldColor::Ptr ptrPtCldGrpCam{new ptCldColor};    ptCldColor::ConstPtr cPtrPtCldGrpCam{ptrPtCldGrpCam};
-  ptCldColor::Ptr ptrPtCldGrpRfgr{new ptCldColor};   ptCldColor::ConstPtr cPtrPtCldGrpRfgr{ptrPtCldGrpRfgr};
-  ptCldColor::Ptr ptrPtCldGrpLfgr{new ptCldColor};   ptCldColor::ConstPtr cPtrPtCldGrpLfgr{ptrPtCldGrpLfgr};
-  ptCldColor::Ptr ptrPtCldGripper{new ptCldColor};   ptCldColor::ConstPtr cPtrPtCldGripper{ptrPtCldGripper};
-
-  // PtCld: Points colliding with gripper
-  ptCldColor::Ptr ptrPtCldCollided{new ptCldColor};  ptCldColor::ConstPtr cPtrPtCldCollided{ptrPtCldCollided};
 
   // PtCld: Temporary variable
   ptCldColor::Ptr ptrPtCldTemp{new ptCldColor};      ptCldColor::ConstPtr cPtrPtCldTemp{ptrPtCldTemp};
@@ -223,31 +204,32 @@ public:
   pcl::PointIndices::Ptr objectIndices{new pcl::PointIndices()};
 
   std::vector<pcl::Vertices> hullVertices;          // Used in convex hull during collision check
-  std::vector<double> lastKinectPoseCartesian;      // Last Kinect pose where it was moved in cartesian co-ordiantes
-  std::vector<double> lastKinectPoseViewsphere;     // Last Kinect pose where it was moved in viewsphere co-ordinates
+  std::vector<double> lastCameraPoseCartesian;      // Last Camera pose where it was moved in cartesian co-ordiantes
+  std::vector<double> lastCameraPoseViewsphere;     // Last Camera pose where it was moved in viewsphere co-ordinates
   std::vector<double> minUnexp, maxUnexp;           // Min and Max x,y,z of unexplored pointcloud generated
-  std::vector<graspPoint> graspsPossible;           // List of possible grasps
   pcl::PointXYZRGB minPtObj, maxPtObj;              // Min and Max x,y,z co-ordinates of the object
   pcl::PointXYZRGB minTable, maxTable;              // Min and Max x,y,z co-ordinates of the object
   Eigen::Vector4f cenTable,cenObject;
-  pcl::PointXYZRGB minPtGrp[4], maxPtGrp[4];        // Min and Max x,y,z co-ordinates of the gripper
-  pcl::PointXYZRGB minPtCol[6], maxPtCol[6];        // Min and Max x,y,z co-ordinates of the gripper used for collision check
 
   std::map<int,objectInfo> objectDict;              // Dictionary to store object info
   double voxelGridSize;                             // Voxel Grid size for environment
   double voxelGridSizeUnexp;                        // Voxel Grid size for unexplored point cloud
   std::vector<double> tableCentre;                  // Co-ordinates of table centre
   int scale;                                        // Scale value for unexplored point cloud generation
-  double maxGripperWidth;                           // Gripper max width (Actual is 8 cm)
-  double minGraspQuality;                           // Min grasp quality threshold
-  int selectedGrasp;                                // Index of the selected grasp
+  
   std::vector<stateConfig> configurations;          // Vector to store states for rollback
   float viewsphereRad;                              // Viewsphere Radius in m
   std::string simulationMode;                       // simulationMode
-  Eigen::Affine3f tfGripper;                        // Transform : For gripper based on grasp points found
   float fingerZOffset;                              // Z axis offset between gripper hand and finger
   Eigen::Matrix4f ICP_Tf;
-  
+
+  active_vision::graspSRV graspMsg;
+  active_vision::graspVisSRV graspVisMsg;
+  ptCldColor::Ptr ptrPtCldGripper{new ptCldColor};   ptCldColor::ConstPtr cPtrPtCldGripper{ptrPtCldGripper};
+  graspPoint graspData;
+  int nGrasps;
+  int graspID;
+
   environment(ros::NodeHandle *nh);
 
   // Function to reset the environment
@@ -275,34 +257,28 @@ public:
   // 3: Deleting objects in gazebo
   void deleteObject(int objectID);
 
-  // 4: Load Gripper Hand and Finger file
-  void loadGripper();
-
-  // 5: Update gripper
-  // 0 -> Visualization
-  // 1 -> Axis Collision Check
-  // 2 -> Gripper Collision Check
+  // 5: Update gripper (Only for visualization)
   void updateGripper(int index ,int choice);
 
-  // 6A: Function to move the kinect. Args: Array of X,Y,Z,Roll,Pitch,Yaw
-  bool moveKinectCartesian(std::vector<double> pose, bool execute = true);
+  // 6A: Function to move the camera. Args: Array of X,Y,Z,Roll,Pitch,Yaw
+  bool moveCameraCartesian(std::vector<double> pose, bool execute = true);
 
-  // 6B: Funtion to move the Kinect in a viewsphere which has the table cente as its centre
+  // 6B: Funtion to move the Camera in a viewsphere which has the table cente as its centre
   // R (Radius)
   // Theta (Polar Angle) -> 0 to 2*PI
   // Phi (Azhimuthal angle) -> 0 to PI/2
-  bool moveKinectViewsphere(std::vector<double> pose, bool execute = true);
+  bool moveCameraViewsphere(std::vector<double> pose, bool execute = true);
 
   // Function to move franka
-  bool moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isKinect ,bool execute, geometry_msgs::Pose &p);
+  bool moveFranka(Eigen::Matrix4f tfMat, std::string mode ,bool isCamera ,bool execute, geometry_msgs::Pose &p);
   void moveGripper(double Grasp_Width, bool grasp = false);
-  void moveFrankaHome();
+  void moveFrankaHome(bool gripper = true);
   void addVisibilityConstraint();
   void addOrientationConstraint(Eigen::Affine3f tf);
   void clearAllConstraints();
 
-  // 7: Function to read the kinect data.
-  void readKinect();
+  // 7: Function to read the camera data.
+  void readCamera();
 
   // 8: Function to Fuse last data with existing data
   void fuseLastData();
@@ -322,15 +298,6 @@ public:
   // 12: Finding normals and pairs of grasp points from object point cloud
   void graspsynthesis();
 
-  // 13: Given a grasp point pair find the gripper orientation
-  void findGripperPose(int index);
-
-  // 14: Collision check for gripper and unexplored point cloud
-  void collisionCheck();
-
-  // 15: Grasp and Collision check combined
-  int graspAndCollisionCheck();
-
   // 16: Modify moveit collision elements
   void editMoveItCollisions(std::string object, std::string mode);
 
@@ -343,7 +310,7 @@ public:
 };
 
 // Function to do a single pass
-std::vector<double> singlePass(environment &av, std::vector<double> kinectPose, bool firstTime, bool findGrasp, int mode = 1);
+std::vector<double> singlePass(environment &av, std::vector<double> cameraPose, bool firstTime, bool findGrasp, int mode = 1);
 
 // Custom wrap function
 namespace pcl{
@@ -362,7 +329,7 @@ namespace pcl{
 
         /** \brief Constructor. */
         WarpPointXY () : WarpPointRigid<PointSourceT, PointTargetT, Scalar> (2) {}
-     
+
         /** \brief Empty destructor */
         virtual ~WarpPointXY () {}
 
@@ -373,7 +340,7 @@ namespace pcl{
         setParam (const VectorX & p)        {
           assert(p.rows() == this->getDimension());
           Matrix4& trans = this->transform_matrix_;
-        
+
           trans = Matrix4::Zero();
           trans(0, 0) = 1;
           trans(1, 1) = 1;

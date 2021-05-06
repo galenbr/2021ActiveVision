@@ -1,6 +1,6 @@
 moveit_setup_assistant_config:
   URDF:
-    package: ref_benchmark
+    package: active_vision
     relative_path: desc/franka_camera.xacro
     xacro_args: ""
   SRDF:
@@ -8,4 +8,4 @@ moveit_setup_assistant_config:
   CONFIG:
     author_name: Sabhari Natarajan
     author_email: snatarajan@wpi.edu
-    generated_timestamp: 1613858050
+    generated_timestamp: 1620081296

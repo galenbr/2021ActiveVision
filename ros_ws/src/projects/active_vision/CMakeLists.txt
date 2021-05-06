@@ -1,11 +1,12 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(active_vision)
 
-## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11)
-find_package(PCL 1.5 REQUIRED)
-find_package(OpenCV REQUIRED)
-include_directories(${OpenCV_INCLUDE_DIRS})
+## Compile as C++14, supported in ROS Neotic
+add_compile_options(-std=c++14)
+find_package(PCL 1.10 REQUIRED)
+find_package(OpenCV 4.2 REQUIRED)
+message("*****OpenCV version: ${OpenCV_VERSION}"*****)
+message("*****PCL version: ${PCL_VERSION}"*****)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -76,6 +77,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate services in the 'srv' folder
 add_service_files(
   FILES
+  graspSRV.srv
+  graspVisSRV.srv
   heuristicPolicySRV.srv
   trainedPolicySRV.srv
   controlSRV.srv
@@ -143,8 +146,8 @@ catkin_package(
 include_directories(
 include
   ${catkin_INCLUDE_DIRS}
-  # ${OpenCV_LIBRARIES}
-  # ${PCL_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
+  ${PCL_INCLUDE_DIRS}
 )
 
 # add_definitions(${PCL_DEFINITIONS})
@@ -299,6 +302,10 @@ add_executable(3DheuristicPolicyService src/3DheuristicPolicyService.cpp)
 add_dependencies(3DheuristicPolicyService active_vision ${catkin_EXPORTED_TARGETS})
 target_link_libraries(3DheuristicPolicyService active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
+add_executable(probabilisticPaper src/probabilisticPaper.cpp)
+add_dependencies(probabilisticPaper active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(probabilisticPaper active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
 # add_executable(bfs src/bfs.cpp)
 # add_dependencies(bfs active_vision ${catkin_EXPORTED_TARGETS})
 # target_link_libraries(bfs active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
@@ -306,3 +313,7 @@ target_link_libraries(3DheuristicPolicyService active_vision ${catkin_LIBRARIES}
 # add_executable(rgbd_to_rgb src/rgbd_to_rgb.cpp)
 # add_dependencies(rgbd_to_rgb active_vision ${catkin_EXPORTED_TARGETS})
 # target_link_libraries(rgbd_to_rgb active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
+
+add_executable(graspSynthesis src/toolGraspSynthesis.cpp)
+add_dependencies(graspSynthesis active_vision ${catkin_EXPORTED_TARGETS})
+target_link_libraries(graspSynthesis active_vision ${catkin_LIBRARIES} ${PCL_LIBRARIES})
