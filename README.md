@@ -15,6 +15,8 @@ In this work, we present several heuristic-based and data-driven active vision s
 
 <br>
 
+YouTube video
+
 [![](/figures/fig_YoutubeVideo_Thumbnail.png)](https://youtu.be/S4s_JRCgqFI)
 
 </center>
